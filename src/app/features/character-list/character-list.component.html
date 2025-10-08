@@ -2,103 +2,181 @@
   <div class="character-list">
     <div class="list-header">
       <h2>Characters</h2>
-      <button class="btn btn-primary" (click)="createNewCharacter()">
-        Create New Character
+      <div class="header-actions">
+        <button class="btn btn-secondary" (click)="testLoadSpecificFile()" [disabled]="!currentProject || isLoading" title="Test loading a specific character file">
+          <i class="icon-file"></i>
+          Load Specific File
+        </button>
+        <button class="btn btn-secondary" (click)="scanForCharacters()" [disabled]="!currentProject || isLoading" title="Scan for existing character files">
+          <i class="icon-search"></i>
+          Scan for Characters
+        </button>
+        <button class="btn btn-secondary" (click)="refreshCharacters()" [disabled]="!currentProject || isLoading" title="Refresh character list">
+          <i class="icon-refresh"></i>
+          Refresh
+        </button>
+        <button class="btn btn-primary" (click)="createNewCharacter()" [disabled]="!currentProject">
+          <i class="icon-plus"></i>
+          Create New Character
+        </button>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div class="loading-state" *ngIf="isLoading">
+      <p>Loading characters...</p>
+    </div>
+
+    <!-- Error State -->
+    <div class="error-state" *ngIf="error">
+      <p class="error-message">{{ error }}</p>
+      <button class="btn btn-secondary" (click)="loadCharacters()">
+        Retry
       </button>
     </div>
 
-    <div class="filters card">
-      <div class="filter-row">
-        <div class="search-box">
-          <input 
-            type="text" 
-            class="form-control" 
-            placeholder="Search characters..." 
-            [(ngModel)]="searchTerm"
-            (input)="onSearchChange()">
-        </div>
-        
-        <div class="category-filter">
-          <select 
-            class="form-control" 
-            [(ngModel)]="selectedCategory"
-            (change)="onCategoryChange()">
-            <option value="">All Categories</option>
-            <option *ngFor="let category of categories" [value]="category.id">
-              {{ category.name }}
-            </option>
-          </select>
-        </div>
-        
-        <button class="btn btn-secondary" (click)="clearFilters()">
-          Clear Filters
-        </button>
-      </div>
-      
-      <div class="tag-filters" *ngIf="tags.length > 0">
-        <span class="filter-label">Tags:</span>
-        <div class="tag-list">
-          <label *ngFor="let tag of tags" class="tag-checkbox">
-            <input 
-              type="checkbox" 
-              [checked]="selectedTags.includes(tag.id)"
-              (change)="onTagToggle(tag.id)">
-            <span class="tag-name">{{ tag.name }}</span>
-          </label>
-        </div>
-      </div>
+    <!-- No Project State -->
+    <div class="no-project-state" *ngIf="!currentProject && !isLoading">
+      <p>Please select or create a project to manage characters.</p>
     </div>
 
-    <div class="character-grid" *ngIf="filteredCharacters.length > 0">
-      <div 
-        *ngFor="let character of filteredCharacters" 
-        class="character-card card"
-        (click)="editCharacter(character)">
-        
-        <div class="character-thumbnail" *ngIf="character.thumbnail">
-          <img [src]="character.thumbnail" [alt]="character.name">
-        </div>
-        
-        <div class="character-info">
-          <h3 class="character-name">{{ character.name }}</h3>
-          <p class="character-category">{{ getCategoryName(character.category) }}</p>
-          
-          <div class="character-tags" *ngIf="character.tags.length > 0">
-            <span 
-              *ngFor="let tagId of character.tags" 
-              class="tag">
-              {{ getTagName(tagId) }}
-            </span>
+    <!-- Main Content -->
+    <div *ngIf="currentProject && !isLoading && !error">
+      <div class="filters card">
+        <div class="filter-row">
+          <div class="search-box">
+            <input 
+              type="text" 
+              class="form-control" 
+              placeholder="Search characters by name, category, tags, or description..." 
+              [(ngModel)]="searchTerm"
+              (input)="onSearchChange()">
           </div>
           
-          <p class="character-description" *ngIf="character.description">
-            {{ character.description.substring(0, 100) }}
-            <span *ngIf="character.description.length > 100">...</span>
-          </p>
+          <div class="category-filter">
+            <select 
+              class="form-control" 
+              [(ngModel)]="selectedCategory"
+              (change)="onCategoryChange()">
+              <option value="">All Categories</option>
+              <option *ngFor="let category of categories" [value]="category.id">
+                {{ category.name }}
+              </option>
+            </select>
+          </div>
+          
+          <button class="btn btn-secondary" (click)="clearFilters()" 
+                  [disabled]="!searchTerm && !selectedCategory && selectedTags.length === 0">
+            Clear Filters
+          </button>
         </div>
         
-        <div class="character-actions">
-          <button 
-            class="btn btn-secondary btn-sm"
-            (click)="editCharacter(character); $event.stopPropagation()">
-            Edit
-          </button>
-          <button 
-            class="btn btn-danger btn-sm"
-            (click)="deleteCharacter(character); $event.stopPropagation()">
-            Delete
-          </button>
+        <div class="tag-filters" *ngIf="tags.length > 0">
+          <span class="filter-label">Filter by tags:</span>
+          <div class="tag-list">
+            <label *ngFor="let tag of tags" class="tag-checkbox">
+              <input 
+                type="checkbox" 
+                [checked]="selectedTags.includes(tag.id)"
+                (change)="onTagToggle(tag.id)">
+              <span class="tag-name" [style.color]="tag.color">{{ tag.name }}</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Filter Summary -->
+        <div class="filter-summary" *ngIf="getFilterSummary()">
+          <small>{{ getFilterSummary() }} - {{ filteredCharacters.length }} character(s) found</small>
         </div>
       </div>
-    </div>
 
-    <div class="empty-state" *ngIf="filteredCharacters.length === 0">
-      <p *ngIf="searchTerm || selectedCategory || selectedTags.length > 0">
-        No characters match your current filters.
-      </p>
-      <p *ngIf="!searchTerm && !selectedCategory && selectedTags.length === 0">
-        No characters yet. Create your first character to get started!
-      </p>
+      <div class="character-grid" *ngIf="filteredCharacters.length > 0">
+        <div 
+          *ngFor="let character of filteredCharacters" 
+          class="character-card card"
+          (click)="editCharacter(character)">
+          
+          <div class="character-thumbnail">
+            <img 
+              *ngIf="getCharacterThumbnailDataUrl(character)" 
+              [src]="getCharacterThumbnailDataUrl(character)" 
+              [alt]="character.name"
+              (error)="onImageError($event)">
+            <div *ngIf="!getCharacterThumbnailDataUrl(character)" class="thumbnail-placeholder">
+              <i class="icon-user"></i>
+            </div>
+          </div>
+          
+          <div class="character-info">
+            <h3 class="character-name">{{ character.name }}</h3>
+            <p class="character-category" [style.color]="getCategoryColor(character.category)">
+              {{ getCategoryName(character.category) }}
+            </p>
+            
+            <div class="character-tags" *ngIf="character.tags.length > 0">
+              <span 
+                *ngFor="let tagId of character.tags" 
+                class="tag"
+                [style.background-color]="getTagColor(tagId)"
+                [style.color]="'white'">
+                {{ getTagName(tagId) }}
+              </span>
+            </div>
+            
+            <p class="character-description" *ngIf="character.description">
+              {{ character.description.length > 120 ? (character.description.substring(0, 120) + '...') : character.description }}
+            </p>
+
+            <div class="character-meta">
+              <small class="created-date">Created: {{ character.created | date:'short' }}</small>
+              <small class="modified-date" *ngIf="character.modified !== character.created">
+                Modified: {{ character.modified | date:'short' }}
+              </small>
+            </div>
+          </div>
+          
+          <div class="character-actions">
+            <button 
+              class="btn btn-secondary btn-sm"
+              (click)="editCharacter(character); $event.stopPropagation()"
+              title="Edit character">
+              <i class="icon-edit"></i>
+              Edit
+            </button>
+            <button 
+              class="btn btn-danger btn-sm"
+              (click)="deleteCharacter(character, $event)"
+              title="Delete character">
+              <i class="icon-trash"></i>
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="empty-state" *ngIf="filteredCharacters.length === 0">
+        <div class="empty-icon">
+          <i class="icon-users"></i>
+        </div>
+        <h3 *ngIf="searchTerm || selectedCategory || selectedTags.length > 0">
+          No characters match your filters
+        </h3>
+        <h3 *ngIf="!searchTerm && !selectedCategory && selectedTags.length === 0">
+          No characters yet
+        </h3>
+        <p *ngIf="searchTerm || selectedCategory || selectedTags.length > 0">
+          Try adjusting your search criteria or clearing the filters to see more characters.
+        </p>
+        <p *ngIf="!searchTerm && !selectedCategory && selectedTags.length === 0">
+          Create your first character to get started with your project!
+        </p>
+        <button 
+          *ngIf="!searchTerm && !selectedCategory && selectedTags.length === 0"
+          class="btn btn-primary"
+          (click)="createNewCharacter()">
+          Create Your First Character
+        </button>
+      </div>
     </div>
   </div>
 </div>

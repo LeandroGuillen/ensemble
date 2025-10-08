@@ -126,4 +126,135 @@ export class ElectronService {
     }
     return await this.ipcRenderer.invoke('get-version');
   }
+
+  // Additional file operations needed for character management
+  async deleteFile(filePath: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.isElectron()) {
+      return { success: false, error: 'Not running in Electron' };
+    }
+    
+    try {
+      return await this.ipcRenderer.invoke('delete-file', filePath);
+    } catch (error) {
+      // Fallback to direct fs access
+      return await this.fallbackDeleteFile(filePath);
+    }
+  }
+
+  private async fallbackDeleteFile(filePath: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      if (this.isElectron() && window.require) {
+        const fs = window.require('fs');
+        
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+          return { success: true };
+        } else {
+          return { success: false, error: 'File does not exist' };
+        }
+      }
+    } catch (error) {
+      return { success: false, error: `Delete failed: ${error}` };
+    }
+    
+    return { success: false, error: 'File deletion not available' };
+  }
+
+  async listDirectory(dirPath: string): Promise<{ success: boolean; files?: string[]; error?: string }> {
+    if (!this.isElectron()) {
+      return { success: false, error: 'Not running in Electron' };
+    }
+    
+    try {
+      return await this.ipcRenderer.invoke('list-directory', dirPath);
+    } catch (error) {
+      // If the handler is not implemented, try a fallback approach
+      console.warn('list-directory handler not implemented, trying fallback approach');
+      return await this.fallbackListDirectory(dirPath);
+    }
+  }
+
+  private async fallbackListDirectory(dirPath: string): Promise<{ success: boolean; files?: string[]; error?: string }> {
+    try {
+      // Try using Node.js fs module directly if available in Electron renderer
+      if (this.isElectron() && window.require) {
+        const fs = window.require('fs');
+        const path = window.require('path');
+        
+        // Check if directory exists
+        if (!fs.existsSync(dirPath)) {
+          return { success: false, error: 'Directory does not exist' };
+        }
+        
+        // Read directory contents
+        const files = fs.readdirSync(dirPath);
+        
+        // Filter for markdown files
+        const markdownFiles = files.filter((f: string) => f.endsWith('.md'));
+        
+        return { success: true, files: markdownFiles };
+      }
+    } catch (error) {
+      // Silent fallback - direct fs access not available
+    }
+
+    // If direct fs access fails, we're stuck with pattern matching for now
+    return { success: false, error: 'Directory listing not available - Electron main process handlers needed' };
+  }
+
+  async copyFile(sourcePath: string, destPath: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.isElectron()) {
+      return { success: false, error: 'Not running in Electron' };
+    }
+    
+    try {
+      return await this.ipcRenderer.invoke('copy-file', sourcePath, destPath);
+    } catch (error) {
+      // Fallback to direct fs access
+      return await this.fallbackCopyFile(sourcePath, destPath);
+    }
+  }
+
+  private async fallbackCopyFile(sourcePath: string, destPath: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      if (this.isElectron() && window.require) {
+        const fs = window.require('fs');
+        const path = window.require('path');
+        
+        // Ensure destination directory exists
+        const destDir = path.dirname(destPath);
+        if (!fs.existsSync(destDir)) {
+          fs.mkdirSync(destDir, { recursive: true });
+        }
+        
+        // Copy file
+        fs.copyFileSync(sourcePath, destPath);
+        return { success: true };
+      }
+    } catch (error) {
+      return { success: false, error: `Copy failed: ${error}` };
+    }
+    
+    return { success: false, error: 'File copying not available' };
+  }
+
+  async getFileStats(filePath: string): Promise<{ success: boolean; stats?: any; error?: string }> {
+    if (!this.isElectron()) {
+      return { success: false, error: 'Not running in Electron' };
+    }
+    return await this.ipcRenderer.invoke('get-file-stats', filePath);
+  }
+
+  async getImageAsDataUrl(filePath: string): Promise<string | null> {
+    if (!this.isElectron()) {
+      return null;
+    }
+    
+    try {
+      return await this.ipcRenderer.invoke('get-image-data-url', filePath);
+    } catch (error) {
+      console.error('Failed to get image as data URL:', error);
+      return null;
+    }
+  }
 }

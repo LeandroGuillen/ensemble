@@ -191,3 +191,88 @@ ipcMain.handle("sanitize-filename", (event, filename) => {
     .toLowerCase()
     .substring(0, 255); // Limit length
 });
+
+// Handle file deletion
+ipcMain.handle("delete-file", async (event, filePath) => {
+  try {
+    await fs.unlink(filePath);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Handle directory listing
+ipcMain.handle("list-directory", async (event, dirPath) => {
+  try {
+    const files = await fs.readdir(dirPath);
+    return { success: true, files };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Handle file copying
+ipcMain.handle("copy-file", async (event, sourcePath, destPath) => {
+  try {
+    // Ensure destination directory exists
+    const destDir = pathModule.dirname(destPath);
+    await fs.mkdir(destDir, { recursive: true });
+    
+    // Copy file
+    await fs.copyFile(sourcePath, destPath);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Handle file stats
+ipcMain.handle("get-file-stats", async (event, filePath) => {
+  try {
+    const stats = await fs.stat(filePath);
+    return { 
+      success: true, 
+      stats: {
+        size: stats.size,
+        isFile: stats.isFile(),
+        isDirectory: stats.isDirectory(),
+        mtime: stats.mtime,
+        ctime: stats.ctime
+      }
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Handle converting image to data URL
+ipcMain.handle("get-image-data-url", async (event, filePath) => {
+  try {
+    const imageBuffer = await fs.readFile(filePath);
+    const ext = pathModule.extname(filePath).toLowerCase();
+    
+    let mimeType = 'image/jpeg'; // default
+    switch (ext) {
+      case '.png':
+        mimeType = 'image/png';
+        break;
+      case '.gif':
+        mimeType = 'image/gif';
+        break;
+      case '.webp':
+        mimeType = 'image/webp';
+        break;
+      case '.jpg':
+      case '.jpeg':
+        mimeType = 'image/jpeg';
+        break;
+    }
+    
+    const base64 = imageBuffer.toString('base64');
+    return `data:${mimeType};base64,${base64}`;
+  } catch (error) {
+    console.error('Failed to convert image to data URL:', error);
+    return null;
+  }
+});

@@ -1,107 +1,227 @@
 <div class="container">
   <div class="character-detail">
     <div class="detail-header">
-      <h2>{{ isEditing ? 'Edit Character' : 'Create New Character' }}</h2>
+      <h2>{{ isEditing ? "Edit Character" : "Create New Character" }}</h2>
       <button class="btn btn-secondary" (click)="onCancel()">
+        <i class="icon-arrow-left"></i>
         Back to List
       </button>
     </div>
 
-    <div class="character-form card">
+    <!-- Loading State -->
+    <div class="loading-state" *ngIf="isLoading">
+      <p>Loading character...</p>
+    </div>
+
+    <!-- No Project State -->
+    <div class="no-project-state" *ngIf="!currentProject && !isLoading">
+      <p>Please select or create a project to manage characters.</p>
+    </div>
+
+    <!-- Main Form -->
+    <div class="character-form card" *ngIf="currentProject && !isLoading">
       <form [formGroup]="characterForm" (ngSubmit)="onSubmit()">
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="name">Name *</label>
-            <input 
-              type="text" 
-              id="name"
-              class="form-control" 
-              formControlName="name"
-              placeholder="Character name">
-            <div class="error-text" *ngIf="characterForm.get('name')?.invalid && characterForm.get('name')?.touched">
-              Name is required
-            </div>
-          </div>
+        <div class="form-section">
+          <h3>Basic Information</h3>
 
-          <div class="form-group">
-            <label class="form-label" for="category">Category *</label>
-            <select 
-              id="category"
-              class="form-control" 
-              formControlName="category">
-              <option value="">Select a category</option>
-              <option *ngFor="let category of categories" [value]="category.id">
-                {{ category.name }}
-              </option>
-            </select>
-            <div class="error-text" *ngIf="characterForm.get('category')?.invalid && characterForm.get('category')?.touched">
-              Category is required
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="name">
+                Name *
+                <span class="field-hint">The character's full name</span>
+              </label>
+              <input
+                type="text"
+                id="name"
+                class="form-control"
+                formControlName="name"
+                placeholder="Enter character name"
+                [class.error]="getFieldError('name')"
+              />
+              <div class="error-text" *ngIf="getFieldError('name')">
+                {{ getFieldError("name") }}
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="category">
+                Category *
+                <span class="field-hint">Character's role or type</span>
+              </label>
+              <select
+                id="category"
+                class="form-control"
+                formControlName="category"
+                [class.error]="getFieldError('category')"
+              >
+                <option value="">Select a category</option>
+                <option
+                  *ngFor="let category of categories"
+                  [value]="category.id"
+                >
+                  {{ category.name }}
+                </option>
+              </select>
+              <div class="error-text" *ngIf="getFieldError('category')">
+                {{ getFieldError("category") }}
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="form-group" *ngIf="tags.length > 0">
-          <label class="form-label">Tags</label>
-          <div class="tag-selection">
-            <label *ngFor="let tag of tags" class="tag-checkbox">
-              <input 
-                type="checkbox" 
-                [checked]="isTagSelected(tag.id)"
-                (change)="onTagChange(tag.id, $any($event.target).checked)">
-              <span class="tag-name">{{ tag.name }}</span>
+        <div class="form-section" *ngIf="tags.length > 0">
+          <h3>Tags</h3>
+          <div class="form-group">
+            <label class="form-label">
+              Character Tags
+              <span class="field-hint">Select all applicable tags</span>
             </label>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Thumbnail</label>
-          <div class="thumbnail-section">
-            <div class="thumbnail-preview" *ngIf="characterForm.get('thumbnail')?.value">
-              <img [src]="characterForm.get('thumbnail')?.value" alt="Character thumbnail">
+            <div class="tag-selection">
+              <label *ngFor="let tag of tags" class="tag-checkbox">
+                <input
+                  type="checkbox"
+                  [checked]="isTagSelected(tag.id)"
+                  (change)="onTagCheckboxChange($event, tag.id)"
+                />
+                <span class="tag-name" [style.color]="getTagColor(tag.id)">
+                  {{ tag.name }}
+                </span>
+              </label>
             </div>
-            <button type="button" class="btn btn-secondary" (click)="selectThumbnail()">
-              {{ characterForm.get('thumbnail')?.value ? 'Change Thumbnail' : 'Select Thumbnail' }}
-            </button>
           </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label" for="description">Description</label>
-          <textarea 
-            id="description"
-            class="form-control" 
-            formControlName="description"
-            rows="4"
-            placeholder="Physical description and appearance..."></textarea>
+        <div class="form-section">
+          <h3>Appearance</h3>
+          <div class="form-group">
+            <label class="form-label">
+              Thumbnail
+              <span class="field-hint">Character portrait or image</span>
+            </label>
+            <div class="thumbnail-section">
+              <div class="thumbnail-preview" *ngIf="thumbnailPreview">
+                <img
+                  [src]="thumbnailPreview"
+                  alt="Character thumbnail"
+                  (error)="thumbnailPreview = null"
+                />
+                <button
+                  type="button"
+                  class="thumbnail-remove"
+                  (click)="removeThumbnail()"
+                  title="Remove thumbnail"
+                >
+                  <i class="icon-x"></i>
+                </button>
+              </div>
+              <div class="thumbnail-placeholder" *ngIf="!thumbnailPreview">
+                <i class="icon-image"></i>
+                <span>No image selected</span>
+              </div>
+              <div class="thumbnail-actions">
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  (click)="selectThumbnail()"
+                >
+                  <i class="icon-upload"></i>
+                  {{ thumbnailPreview ? "Change Image" : "Select Image" }}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label" for="notes">Notes</label>
-          <textarea 
-            id="notes"
-            class="form-control" 
-            formControlName="notes"
-            rows="6"
-            placeholder="Character development notes, personality traits, backstory..."></textarea>
+        <div class="form-section">
+          <h3>Character Details</h3>
+
+          <div class="form-group">
+            <label class="form-label" for="description">
+              Description
+              <span class="field-hint"
+                >Physical appearance and characteristics (max 1000
+                characters)</span
+              >
+            </label>
+            <textarea
+              id="description"
+              class="form-control"
+              formControlName="description"
+              rows="4"
+              placeholder="Describe the character's physical appearance, clothing, distinctive features..."
+              [class.error]="getFieldError('description')"
+            ></textarea>
+            <div class="char-count">
+              {{ characterForm.get("description")?.value?.length || 0 }}/1000
+            </div>
+            <div class="error-text" *ngIf="getFieldError('description')">
+              {{ getFieldError("description") }}
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="notes">
+              Notes
+              <span class="field-hint"
+                >Character development, personality, backstory (max 5000
+                characters)</span
+              >
+            </label>
+            <textarea
+              id="notes"
+              class="form-control"
+              formControlName="notes"
+              rows="8"
+              placeholder="Character development notes, personality traits, backstory, relationships, goals, motivations..."
+              [class.error]="getFieldError('notes')"
+            ></textarea>
+            <div class="char-count">
+              {{ characterForm.get("notes")?.value?.length || 0 }}/5000
+            </div>
+            <div class="error-text" *ngIf="getFieldError('notes')">
+              {{ getFieldError("notes") }}
+            </div>
+          </div>
         </div>
 
+        <!-- Form Actions -->
         <div class="form-actions">
-          <button 
-            type="button" 
-            class="btn btn-secondary" 
-            (click)="onCancel()">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            (click)="onCancel()"
+            [disabled]="isSaving"
+          >
+            <i class="icon-x"></i>
             Cancel
           </button>
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             class="btn btn-primary"
-            [disabled]="characterForm.invalid || isLoading">
-            {{ isLoading ? 'Saving...' : (isEditing ? 'Update Character' : 'Create Character') }}
+            [disabled]="characterForm.invalid || isSaving"
+          >
+            <i class="icon-save" *ngIf="!isSaving"></i>
+            <i class="icon-loader" *ngIf="isSaving"></i>
+            {{
+              isSaving
+                ? "Saving..."
+                : isEditing
+                ? "Update Character"
+                : "Create Character"
+            }}
           </button>
         </div>
 
+        <!-- Error Message -->
         <div class="error-message" *ngIf="error">
+          <i class="icon-alert-circle"></i>
           {{ error }}
+        </div>
+
+        <!-- Form Status -->
+        <div class="form-status" *ngIf="characterForm.dirty && !error">
+          <i class="icon-info"></i>
+          You have unsaved changes
         </div>
       </form>
     </div>

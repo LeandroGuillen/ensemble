@@ -1,4 +1,5 @@
-import { FileUtils } from './file.utils';
+// Note: File I/O methods removed due to Node.js module conflicts in browser environment
+// File operations should be handled through ElectronService in this Electron app
 
 export interface JsonParseResult<T = any> {
   success: boolean;
@@ -37,88 +38,6 @@ export class JsonUtils {
   }
 
   /**
-   * Reads and parses a JSON file from disk
-   */
-  static async readJsonFile<T = any>(filePath: string): Promise<T> {
-    try {
-      const content = await FileUtils.readFileContent(filePath);
-      const parseResult = this.parseJson<T>(content);
-      
-      if (!parseResult.success) {
-        throw new Error(parseResult.error);
-      }
-      
-      return parseResult.data!;
-    } catch (error) {
-      throw new Error(`Failed to read JSON file ${filePath}: ${error}`);
-    }
-  }
-
-  /**
-   * Writes object to JSON file with formatting
-   */
-  static async writeJsonFile<T = any>(filePath: string, data: T, indent: number = 2): Promise<void> {
-    try {
-      const jsonContent = this.stringify(data, indent);
-      await FileUtils.writeFileContent(filePath, jsonContent);
-    } catch (error) {
-      throw new Error(`Failed to write JSON file ${filePath}: ${error}`);
-    }
-  }
-
-  /**
-   * Reads JSON file with fallback to default value if file doesn't exist
-   */
-  static async readJsonFileWithDefault<T = any>(filePath: string, defaultValue: T): Promise<T> {
-    try {
-      const exists = await FileUtils.fileExists(filePath);
-      if (!exists) {
-        return defaultValue;
-      }
-      
-      return await this.readJsonFile<T>(filePath);
-    } catch (error) {
-      // If file exists but can't be read/parsed, throw error
-      // If file doesn't exist, return default
-      const exists = await FileUtils.fileExists(filePath);
-      if (exists) {
-        throw error;
-      }
-      return defaultValue;
-    }
-  }
-
-  /**
-   * Updates a JSON file by merging with existing data
-   */
-  static async updateJsonFile<T extends Record<string, any>>(
-    filePath: string, 
-    updates: Partial<T>, 
-    createIfNotExists: boolean = true
-  ): Promise<T> {
-    try {
-      let existingData: T;
-      
-      const exists = await FileUtils.fileExists(filePath);
-      if (!exists) {
-        if (!createIfNotExists) {
-          throw new Error(`File does not exist: ${filePath}`);
-        }
-        existingData = {} as T;
-      } else {
-        existingData = await this.readJsonFile<T>(filePath);
-      }
-
-      const updatedData = { ...existingData, ...updates };
-      await this.writeJsonFile(filePath, updatedData);
-      
-      return updatedData;
-    } catch (error) {
-      throw new Error(`Failed to update JSON file ${filePath}: ${error}`);
-    }
-  }
-
-  /**
    * Validates JSON file structure against a schema
    */
   static validateJsonStructure<T = any>(
@@ -146,45 +65,6 @@ export class JsonUtils {
       isValid: errors.length === 0,
       errors
     };
-  }
-
-  /**
-   * Creates a backup of a JSON file before modifying it
-   */
-  static async backupJsonFile(filePath: string): Promise<string> {
-    try {
-      return await FileUtils.createBackup(filePath);
-    } catch (error) {
-      throw new Error(`Failed to backup JSON file ${filePath}: ${error}`);
-    }
-  }
-
-  /**
-   * Safely writes JSON file with atomic operation (write to temp file first)
-   */
-  static async writeJsonFileAtomic<T = any>(filePath: string, data: T, indent: number = 2): Promise<void> {
-    const tempFilePath = `${filePath}.tmp.${Date.now()}`;
-    
-    try {
-      // Write to temporary file first
-      await this.writeJsonFile(tempFilePath, data, indent);
-      
-      // Move temp file to target location (atomic on most filesystems)
-      const fs = require('fs');
-      const { promisify } = require('util');
-      const rename = promisify(fs.rename);
-      
-      await rename(tempFilePath, filePath);
-    } catch (error) {
-      // Clean up temp file if it exists
-      try {
-        await FileUtils.deleteFile(tempFilePath);
-      } catch {
-        // Ignore cleanup errors
-      }
-      
-      throw new Error(`Failed to write JSON file atomically ${filePath}: ${error}`);
-    }
   }
 
   /**
@@ -241,19 +121,17 @@ export class JsonUtils {
   }
 
   /**
-   * Extracts specific property from JSON file without loading entire file into memory
+   * Extracts specific property from JSON object using dot notation
    */
-  static async getJsonProperty<T = any>(filePath: string, propertyPath: string): Promise<T | undefined> {
+  static getProperty<T = any>(data: any, propertyPath: string): T | undefined {
     try {
-      const data = await this.readJsonFile(filePath);
-      
       // Simple property path resolution (e.g., "settings.autoSave")
       const properties = propertyPath.split('.');
       let current = data;
       
       for (const prop of properties) {
         if (current && typeof current === 'object' && prop in current) {
-          current = (current as any)[prop];
+          current = current[prop];
         } else {
           return undefined;
         }
@@ -261,7 +139,31 @@ export class JsonUtils {
       
       return current as T;
     } catch (error) {
-      throw new Error(`Failed to get property ${propertyPath} from ${filePath}: ${error}`);
+      return undefined;
+    }
+  }
+
+  /**
+   * Sets a property in an object using dot notation
+   */
+  static setProperty<T = any>(data: T, propertyPath: string, value: any): T {
+    try {
+      const properties = propertyPath.split('.');
+      const cloned = this.deepClone(data);
+      let current = cloned as any;
+      
+      for (let i = 0; i < properties.length - 1; i++) {
+        const prop = properties[i];
+        if (!(prop in current) || typeof current[prop] !== 'object') {
+          current[prop] = {};
+        }
+        current = current[prop];
+      }
+      
+      current[properties[properties.length - 1]] = value;
+      return cloned;
+    } catch (error) {
+      throw new Error(`Failed to set property ${propertyPath}: ${error}`);
     }
   }
 }
