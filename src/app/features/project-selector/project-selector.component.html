@@ -1,0 +1,41 @@
+<div class="container">
+  <div class="project-selector">
+    <div class="welcome-card card">
+      <h2>Welcome to Ensemble</h2>
+      <p>Character management for writers and worldbuilders</p>
+      
+      <div class="project-actions">
+        <button 
+          class="btn btn-primary action-btn" 
+          (click)="selectExistingProject()"
+          [disabled]="isLoading">
+          <span *ngIf="!isLoading">Open Existing Project</span>
+          <span *ngIf="isLoading">Loading...</span>
+        </button>
+        
+        <button 
+          class="btn btn-secondary action-btn" 
+          (click)="createNewProject()"
+          [disabled]="isLoading">
+          <span *ngIf="!isLoading">Create New Project</span>
+          <span *ngIf="isLoading">Creating...</span>
+        </button>
+      </div>
+      
+      <div class="error-message" *ngIf="error">
+        {{ error }}
+      </div>
+    </div>
+    
+    <div class="info-card card">
+      <h3>Getting Started</h3>
+      <ul>
+        <li>Create a new project or open an existing one</li>
+        <li>All data is stored as plain text files in your chosen folder</li>
+        <li>Characters are saved as markdown files</li>
+        <li>Relationships and metadata are stored as JSON files</li>
+        <li>You can edit files externally and changes will be reflected in the app</li>
+      </ul>
+    </div>
+  </div>
+</div>

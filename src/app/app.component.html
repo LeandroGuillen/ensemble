@@ -1,0 +1,16 @@
+<div class="app-container">
+  <header class="app-header" *ngIf="hasProject">
+    <div class="header-content">
+      <h1 class="app-title">{{ title }}</h1>
+      <nav class="app-nav">
+        <button class="btn btn-secondary" (click)="navigateToList()">Characters</button>
+        <button class="btn btn-secondary" (click)="navigateToGraph()">Graph View</button>
+        <button class="btn btn-primary" (click)="selectProject()">Change Project</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <router-outlet></router-outlet>
+  </main>
+</div>

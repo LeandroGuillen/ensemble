@@ -1,0 +1,104 @@
+<div class="container">
+  <div class="character-list">
+    <div class="list-header">
+      <h2>Characters</h2>
+      <button class="btn btn-primary" (click)="createNewCharacter()">
+        Create New Character
+      </button>
+    </div>
+
+    <div class="filters card">
+      <div class="filter-row">
+        <div class="search-box">
+          <input 
+            type="text" 
+            class="form-control" 
+            placeholder="Search characters..." 
+            [(ngModel)]="searchTerm"
+            (input)="onSearchChange()">
+        </div>
+        
+        <div class="category-filter">
+          <select 
+            class="form-control" 
+            [(ngModel)]="selectedCategory"
+            (change)="onCategoryChange()">
+            <option value="">All Categories</option>
+            <option *ngFor="let category of categories" [value]="category.id">
+              {{ category.name }}
+            </option>
+          </select>
+        </div>
+        
+        <button class="btn btn-secondary" (click)="clearFilters()">
+          Clear Filters
+        </button>
+      </div>
+      
+      <div class="tag-filters" *ngIf="tags.length > 0">
+        <span class="filter-label">Tags:</span>
+        <div class="tag-list">
+          <label *ngFor="let tag of tags" class="tag-checkbox">
+            <input 
+              type="checkbox" 
+              [checked]="selectedTags.includes(tag.id)"
+              (change)="onTagToggle(tag.id)">
+            <span class="tag-name">{{ tag.name }}</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="character-grid" *ngIf="filteredCharacters.length > 0">
+      <div 
+        *ngFor="let character of filteredCharacters" 
+        class="character-card card"
+        (click)="editCharacter(character)">
+        
+        <div class="character-thumbnail" *ngIf="character.thumbnail">
+          <img [src]="character.thumbnail" [alt]="character.name">
+        </div>
+        
+        <div class="character-info">
+          <h3 class="character-name">{{ character.name }}</h3>
+          <p class="character-category">{{ getCategoryName(character.category) }}</p>
+          
+          <div class="character-tags" *ngIf="character.tags.length > 0">
+            <span 
+              *ngFor="let tagId of character.tags" 
+              class="tag">
+              {{ getTagName(tagId) }}
+            </span>
+          </div>
+          
+          <p class="character-description" *ngIf="character.description">
+            {{ character.description.substring(0, 100) }}
+            <span *ngIf="character.description.length > 100">...</span>
+          </p>
+        </div>
+        
+        <div class="character-actions">
+          <button 
+            class="btn btn-secondary btn-sm"
+            (click)="editCharacter(character); $event.stopPropagation()">
+            Edit
+          </button>
+          <button 
+            class="btn btn-danger btn-sm"
+            (click)="deleteCharacter(character); $event.stopPropagation()">
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="empty-state" *ngIf="filteredCharacters.length === 0">
+      <p *ngIf="searchTerm || selectedCategory || selectedTags.length > 0">
+        No characters match your current filters.
+      </p>
+      <p *ngIf="!searchTerm && !selectedCategory && selectedTags.length === 0">
+        No characters yet. Create your first character to get started!
+      </p>
+    </div>
+  </div>
+</div>

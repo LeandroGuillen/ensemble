@@ -1,0 +1,80 @@
+{
+  "name": "ensemble",
+  "version": "1.0.0",
+  "description": "Character management application for writers and worldbuilders",
+  "main": "main.js",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "electron": "electron .",
+    "electron-dev": "concurrently \"ng serve\" \"wait-on http://localhost:4200 && electron .\"",
+    "electron-prod": "ng build --configuration production && electron .",
+    "build-electron": "ng build --configuration production && electron-builder",
+    "test": "ng test --watch=false",
+    "test-electron": "electron test-electron.js",
+    "verify": "node verify-setup.js",
+    "lint": "ng lint",
+    "e2e": "ng e2e"
+  },
+  "keywords": [
+    "character-management",
+    "worldbuilding",
+    "writing",
+    "electron",
+    "angular"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@angular-devkit/build-angular": "^17.0.0",
+    "@angular/cli": "^17.0.0",
+    "@angular/compiler-cli": "^17.0.0",
+    "@types/node": "^20.0.0",
+    "concurrently": "^8.2.2",
+    "electron": "^27.0.0",
+    "electron-builder": "^24.0.0",
+    "typescript": "~5.2.0",
+    "wait-on": "^7.0.0"
+  },
+  "dependencies": {
+    "@angular/animations": "^17.0.0",
+    "@angular/common": "^17.0.0",
+    "@angular/compiler": "^17.0.0",
+    "@angular/core": "^17.0.0",
+    "@angular/forms": "^17.0.0",
+    "@angular/platform-browser": "^17.0.0",
+    "@angular/platform-browser-dynamic": "^17.0.0",
+    "@angular/router": "^17.0.0",
+    "chokidar": "^3.5.0",
+    "remark": "^15.0.0",
+    "remark-frontmatter": "^5.0.0",
+    "remark-parse": "^11.0.0",
+    "remark-stringify": "^11.0.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0",
+    "unified": "^11.0.0",
+    "vis-network": "^9.1.0",
+    "zone.js": "~0.14.0"
+  },
+  "build": {
+    "appId": "com.ensemble.app",
+    "productName": "Ensemble",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "node_modules/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}

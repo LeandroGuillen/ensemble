@@ -1,0 +1,61 @@
+.project-selector {
+  max-width: 600px;
+  margin: 40px auto;
+  padding: 20px;
+}
+
+.welcome-card {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.welcome-card h2 {
+  color: #2c3e50;
+  margin-bottom: 10px;
+}
+
+.welcome-card p {
+  color: #7f8c8d;
+  margin-bottom: 30px;
+}
+
+.project-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.action-btn {
+  padding: 15px 30px;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.error-message {
+  color: #e74c3c;
+  background-color: #fdf2f2;
+  border: 1px solid #fecaca;
+  border-radius: 4px;
+  padding: 12px;
+  margin-top: 15px;
+}
+
+.info-card {
+  background-color: #f8f9fa;
+}
+
+.info-card h3 {
+  color: #2c3e50;
+  margin-bottom: 15px;
+}
+
+.info-card ul {
+  text-align: left;
+  color: #5a6c7d;
+  line-height: 1.6;
+}
+
+.info-card li {
+  margin-bottom: 8px;
+}

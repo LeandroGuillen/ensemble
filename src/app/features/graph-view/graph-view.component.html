@@ -1,0 +1,53 @@
+<div class="container">
+  <div class="graph-view">
+    <div class="graph-header">
+      <h2>Character Relationships</h2>
+      <div class="graph-controls">
+        <button class="btn btn-primary" (click)="onCreateRelationship()">
+          Add Relationship
+        </button>
+        <button class="btn btn-secondary" (click)="onLayoutNodes()">
+          Auto Layout
+        </button>
+        <button class="btn btn-secondary" (click)="onResetView()">
+          Reset View
+        </button>
+      </div>
+    </div>
+
+    <div class="graph-container card">
+      <div #graphContainer class="graph-canvas">
+        <!-- vis.js network will be rendered here -->
+        <div class="placeholder-message">
+          <h3>Graph View</h3>
+          <p>Character relationship visualization will be implemented here using vis.js</p>
+          <p>Features will include:</p>
+          <ul>
+            <li>Interactive node positioning</li>
+            <li>Relationship creation and editing</li>
+            <li>Automatic layout algorithms</li>
+            <li>Zoom and pan controls</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="graph-legend card">
+      <h4>Legend</h4>
+      <div class="legend-items">
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: #3498db;"></div>
+          <span>Main Character</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: #2ecc71;"></div>
+          <span>Supporting Character</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: #e74c3c;"></div>
+          <span>Antagonist</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
