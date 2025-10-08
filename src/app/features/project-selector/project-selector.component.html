@@ -1,41 +1,174 @@
 <div class="container">
   <div class="project-selector">
-    <div class="welcome-card card">
-      <h2>Welcome to Ensemble</h2>
+    <!-- Welcome Header -->
+    <div class="welcome-header">
+      <h1>Welcome to Ensemble</h1>
       <p>Character management for writers and worldbuilders</p>
+    </div>
+
+    <!-- Error Message -->
+    <div class="error-message" *ngIf="error">
+      <i class="icon-alert"></i>
+      {{ error }}
+    </div>
+
+    <!-- Recent Projects Section -->
+    <div class="recent-projects-section" *ngIf="recentProjects.length > 0 && !showCreateForm">
+      <div class="section-header">
+        <h2>Recent Projects</h2>
+        <button class="btn btn-link clear-btn" (click)="clearRecentProjects()">
+          Clear All
+        </button>
+      </div>
       
-      <div class="project-actions">
+      <div class="recent-projects-list">
+        <div 
+          class="recent-project-item" 
+          *ngFor="let project of recentProjects"
+          [class.unavailable]="!project.exists"
+          (click)="project.exists && openRecentProject(project.path)">
+          
+          <div class="project-info">
+            <div class="project-name">{{ project.name }}</div>
+            <div class="project-path">{{ getDisplayPath(project.path) }}</div>
+            <div class="project-meta">
+              <span class="last-accessed">{{ formatLastAccessed(project.lastAccessed) }}</span>
+              <span class="status" *ngIf="!project.exists">• Unavailable</span>
+            </div>
+          </div>
+          
+          <button 
+            class="btn btn-icon remove-btn" 
+            (click)="removeFromRecent(project.path, $event)"
+            title="Remove from recent projects">
+            ×
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Actions -->
+    <div class="main-actions" *ngIf="!showCreateForm">
+      <div class="action-card">
+        <h3>Open Existing Project</h3>
+        <p>Browse for a folder containing an existing Ensemble project</p>
         <button 
           class="btn btn-primary action-btn" 
           (click)="selectExistingProject()"
           [disabled]="isLoading">
-          <span *ngIf="!isLoading">Open Existing Project</span>
+          <span *ngIf="!isLoading">Browse Folders</span>
           <span *ngIf="isLoading">Loading...</span>
         </button>
-        
+      </div>
+
+      <div class="action-card">
+        <h3>Create New Project</h3>
+        <p>Set up a new project in a folder of your choice</p>
         <button 
           class="btn btn-secondary action-btn" 
-          (click)="createNewProject()"
+          (click)="showCreateProjectForm()"
           [disabled]="isLoading">
-          <span *ngIf="!isLoading">Create New Project</span>
+          <span *ngIf="!isLoading">Create Project</span>
           <span *ngIf="isLoading">Creating...</span>
         </button>
       </div>
-      
-      <div class="error-message" *ngIf="error">
-        {{ error }}
+    </div>
+
+    <!-- Create Project Form -->
+    <div class="create-project-form" *ngIf="showCreateForm">
+      <div class="form-header">
+        <h2>Create New Project</h2>
+        <button class="btn btn-link back-btn" (click)="hideCreateProjectForm()">
+          ← Back
+        </button>
+      </div>
+
+      <div class="form-content">
+        <div class="form-group">
+          <label for="projectName">Project Name</label>
+          <input 
+            type="text" 
+            id="projectName"
+            class="form-control"
+            [(ngModel)]="newProjectName"
+            placeholder="Enter project name"
+            [disabled]="isLoading">
+        </div>
+
+        <div class="form-group">
+          <label for="projectPath">Project Location</label>
+          <div class="path-input-group">
+            <input 
+              type="text" 
+              id="projectPath"
+              class="form-control"
+              [(ngModel)]="newProjectPath"
+              placeholder="Select folder where project will be created"
+              readonly
+              [disabled]="isLoading">
+            <button 
+              class="btn btn-outline browse-btn"
+              (click)="selectNewProjectLocation()"
+              [disabled]="isLoading">
+              Browse
+            </button>
+          </div>
+          <small class="form-help" *ngIf="newProjectPath && newProjectName">
+            Project will be created at: {{ newProjectPath }}/{{ newProjectName }}
+          </small>
+        </div>
+
+        <div class="form-actions">
+          <button 
+            class="btn btn-secondary"
+            (click)="hideCreateProjectForm()"
+            [disabled]="isLoading">
+            Cancel
+          </button>
+          <button 
+            class="btn btn-primary"
+            (click)="createNewProject()"
+            [disabled]="isLoading || !newProjectName.trim() || !newProjectPath.trim()">
+            <span *ngIf="!isLoading">Create Project</span>
+            <span *ngIf="isLoading">Creating...</span>
+          </button>
+        </div>
       </div>
     </div>
-    
-    <div class="info-card card">
-      <h3>Getting Started</h3>
-      <ul>
-        <li>Create a new project or open an existing one</li>
-        <li>All data is stored as plain text files in your chosen folder</li>
-        <li>Characters are saved as markdown files</li>
-        <li>Relationships and metadata are stored as JSON files</li>
-        <li>You can edit files externally and changes will be reflected in the app</li>
-      </ul>
+
+    <!-- Info Section -->
+    <div class="info-section" *ngIf="!showCreateForm">
+      <h3>About Ensemble</h3>
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-icon">📝</div>
+          <div class="info-text">
+            <strong>Plain Text Storage</strong>
+            <p>All data stored as markdown and JSON files</p>
+          </div>
+        </div>
+        <div class="info-item">
+          <div class="info-icon">🔄</div>
+          <div class="info-text">
+            <strong>External Editing</strong>
+            <p>Edit files in your favorite text editor</p>
+          </div>
+        </div>
+        <div class="info-item">
+          <div class="info-icon">🌐</div>
+          <div class="info-text">
+            <strong>Relationship Graphs</strong>
+            <p>Visualize character connections</p>
+          </div>
+        </div>
+        <div class="info-item">
+          <div class="info-icon">🔍</div>
+          <div class="info-text">
+            <strong>Search & Filter</strong>
+            <p>Find characters by tags and categories</p>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>

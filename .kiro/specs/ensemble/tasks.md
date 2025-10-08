@@ -22,16 +22,16 @@
     - Add file path validation and error handling
     - _Requirements: 7.1, 7.2, 7.3_
 
-- [ ] 3. Create project management system
+- [x] 3. Create project management system
 
-  - [ ] 3.1 Implement ProjectService for work folder management
+  - [x] 3.1 Implement ProjectService for work folder management
 
     - Handle work folder selection and initialization
     - Create directory structure (characters/, thumbnails/)
     - Generate initial metadata.json with default categories and tags
     - _Requirements: 2.1, 2.2, 3.1_
 
-  - [ ] 3.2 Build project selector component
+  - [x] 3.2 Build project selector component
     - Create UI for selecting existing or creating new work folders
     - Implement folder browser dialog integration
     - Add recent projects list functionality

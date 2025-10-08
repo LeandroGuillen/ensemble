@@ -82,3 +82,112 @@ ipcMain.handle("select-image", async () => {
 ipcMain.handle("get-version", () => {
   return app.getVersion();
 });
+
+// File system operations for project management
+const fs = require('fs').promises;
+const pathModule = require('path');
+
+// Handle directory creation
+ipcMain.handle("create-directory", async (event, dirPath) => {
+  try {
+    await fs.mkdir(dirPath, { recursive: true });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Handle file existence check
+ipcMain.handle("file-exists", async (event, filePath) => {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+});
+
+// Handle directory check
+ipcMain.handle("is-directory", async (event, dirPath) => {
+  try {
+    const stats = await fs.stat(dirPath);
+    return stats.isDirectory();
+  } catch {
+    return false;
+  }
+});
+
+// Handle file reading
+ipcMain.handle("read-file", async (event, filePath) => {
+  try {
+    const content = await fs.readFile(filePath, 'utf8');
+    return { success: true, content };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Handle file writing
+ipcMain.handle("write-file", async (event, filePath, content) => {
+  try {
+    // Ensure directory exists
+    const dirPath = pathModule.dirname(filePath);
+    await fs.mkdir(dirPath, { recursive: true });
+    
+    await fs.writeFile(filePath, content, 'utf8');
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Handle atomic file writing (write to temp file first)
+ipcMain.handle("write-file-atomic", async (event, filePath, content) => {
+  const tempFilePath = `${filePath}.tmp.${Date.now()}`;
+  
+  try {
+    // Ensure directory exists
+    const dirPath = pathModule.dirname(filePath);
+    await fs.mkdir(dirPath, { recursive: true });
+    
+    // Write to temporary file first
+    await fs.writeFile(tempFilePath, content, 'utf8');
+    
+    // Move temp file to target location (atomic on most filesystems)
+    await fs.rename(tempFilePath, filePath);
+    
+    return { success: true };
+  } catch (error) {
+    // Clean up temp file if it exists
+    try {
+      await fs.unlink(tempFilePath);
+    } catch {
+      // Ignore cleanup errors
+    }
+    
+    return { success: false, error: error.message };
+  }
+});
+
+// Handle path operations
+ipcMain.handle("path-join", (event, ...paths) => {
+  return pathModule.join(...paths);
+});
+
+ipcMain.handle("path-basename", (event, filePath, ext) => {
+  return pathModule.basename(filePath, ext);
+});
+
+ipcMain.handle("path-dirname", (event, filePath) => {
+  return pathModule.dirname(filePath);
+});
+
+// Handle filename sanitization
+ipcMain.handle("sanitize-filename", (event, filename) => {
+  return filename
+    .replace(/[<>:"|?*]/g, '') // Remove invalid characters
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/[^\w\-_.]/g, '') // Keep only word characters, hyphens, underscores, and dots
+    .toLowerCase()
+    .substring(0, 255); // Limit length
+});
