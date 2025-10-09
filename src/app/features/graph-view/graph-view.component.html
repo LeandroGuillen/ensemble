@@ -12,42 +12,283 @@
         <button class="btn btn-secondary" (click)="onResetView()">
           Reset View
         </button>
+        <button class="btn btn-secondary" (click)="onTogglePhysics()">
+          Toggle Physics
+        </button>
+        <button class="btn btn-secondary" (click)="onToggleGrid()">
+          {{ showGrid ? "Hide Grid" : "Show Grid" }}
+        </button>
+        <button class="btn btn-secondary" (click)="onToggleSnapToGrid()">
+          {{ snapToGrid ? "Disable Snap" : "Enable Snap" }}
+        </button>
+        <button class="btn btn-info" (click)="onRefreshGraph()">
+          Refresh Graph
+        </button>
+        <button class="btn btn-warning" (click)="onDebugPositions()">
+          Debug Positions
+        </button>
       </div>
     </div>
 
     <div class="graph-container card">
       <div #graphContainer class="graph-canvas">
         <!-- vis.js network will be rendered here -->
-        <div class="placeholder-message">
-          <h3>Graph View</h3>
-          <p>Character relationship visualization will be implemented here using vis.js</p>
-          <p>Features will include:</p>
-          <ul>
-            <li>Interactive node positioning</li>
-            <li>Relationship creation and editing</li>
-            <li>Automatic layout algorithms</li>
-            <li>Zoom and pan controls</li>
-          </ul>
-        </div>
       </div>
     </div>
 
     <div class="graph-legend card">
       <h4>Legend</h4>
       <div class="legend-items">
-        <div class="legend-item">
-          <div class="legend-color" style="background-color: #3498db;"></div>
-          <span>Main Character</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-color" style="background-color: #2ecc71;"></div>
-          <span>Supporting Character</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-color" style="background-color: #e74c3c;"></div>
-          <span>Antagonist</span>
+        <div class="legend-item" *ngFor="let category of getLegendItems()">
+          <div
+            class="legend-color"
+            [style.background-color]="category.color"
+          ></div>
+          <span>{{ category.name }}</span>
         </div>
       </div>
+      <div class="graph-settings">
+        <h5>Grid Settings:</h5>
+        <div class="setting-group">
+          <label for="gridSize">Grid Size:</label>
+          <input
+            type="range"
+            id="gridSize"
+            [value]="gridSize"
+            min="10"
+            max="100"
+            step="5"
+            (input)="onGridSizeChange($event)"
+          />
+          <span class="grid-size-value">{{ gridSize }}px</span>
+        </div>
+        <div class="setting-group">
+          <label>
+            <input
+              type="checkbox"
+              [checked]="showGrid"
+              (change)="onToggleGrid()"
+            />
+            Show Grid
+          </label>
+        </div>
+        <div class="setting-group">
+          <label>
+            <input
+              type="checkbox"
+              [checked]="snapToGrid"
+              (change)="onToggleSnapToGrid()"
+            />
+            Snap to Grid
+          </label>
+        </div>
+      </div>
+
+      <div class="graph-instructions">
+        <h5>Instructions:</h5>
+        <ul>
+          <li>
+            Select two characters and click "Add Relationship" to create a
+            connection
+          </li>
+          <li>
+            Double-click on two selected characters to quickly create a
+            relationship
+          </li>
+          <li>Click on a relationship line to edit or delete it</li>
+          <li>
+            Drag characters to reposition them{{
+              snapToGrid ? " (snaps to grid)" : ""
+            }}
+          </li>
+          <li>Use mouse wheel to zoom, drag to pan</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Relationship Creation Dialog -->
+<div
+  class="modal-overlay"
+  *ngIf="showRelationshipDialog"
+  (click)="closeDialogs()"
+>
+  <div class="modal-dialog" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Create Relationship</h3>
+      <button class="close-btn" (click)="closeDialogs()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form (ngSubmit)="saveRelationship()">
+        <div class="form-group">
+          <label>From:</label>
+          <span class="character-name">{{
+            getCharacterName(relationshipForm.source)
+          }}</span>
+        </div>
+
+        <div class="form-group">
+          <label>To:</label>
+          <span class="character-name">{{
+            getCharacterName(relationshipForm.target)
+          }}</span>
+        </div>
+
+        <div class="form-group">
+          <label for="relationshipType">Relationship Type:</label>
+          <select
+            id="relationshipType"
+            [(ngModel)]="relationshipForm.type"
+            name="type"
+            (change)="onRelationshipTypeChange()"
+            required
+          >
+            <option *ngFor="let type of relationshipTypes" [value]="type">
+              {{ type | titlecase }}
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="relationshipLabel">Label:</label>
+          <input
+            type="text"
+            id="relationshipLabel"
+            [(ngModel)]="relationshipForm.label"
+            name="label"
+            placeholder="e.g., 'brother', 'best friend', 'mentor'"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="relationshipColor">Color:</label>
+          <input
+            type="color"
+            id="relationshipColor"
+            [(ngModel)]="relationshipForm.color"
+            name="color"
+          />
+        </div>
+
+        <div class="form-group checkbox-group">
+          <label>
+            <input
+              type="checkbox"
+              [(ngModel)]="relationshipForm.bidirectional"
+              name="bidirectional"
+            />
+            Bidirectional (arrows on both ends)
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            (click)="closeDialogs()"
+          >
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary">
+            Create Relationship
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Relationship Edit Dialog -->
+<div class="modal-overlay" *ngIf="showEditDialog" (click)="closeDialogs()">
+  <div class="modal-dialog" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Edit Relationship</h3>
+      <button class="close-btn" (click)="closeDialogs()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form (ngSubmit)="saveRelationship()">
+        <div class="form-group">
+          <label>From:</label>
+          <span class="character-name">{{
+            getCharacterName(relationshipForm.source)
+          }}</span>
+        </div>
+
+        <div class="form-group">
+          <label>To:</label>
+          <span class="character-name">{{
+            getCharacterName(relationshipForm.target)
+          }}</span>
+        </div>
+
+        <div class="form-group">
+          <label for="editRelationshipType">Relationship Type:</label>
+          <select
+            id="editRelationshipType"
+            [(ngModel)]="relationshipForm.type"
+            name="type"
+            (change)="onRelationshipTypeChange()"
+            required
+          >
+            <option *ngFor="let type of relationshipTypes" [value]="type">
+              {{ type | titlecase }}
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="editRelationshipLabel">Label:</label>
+          <input
+            type="text"
+            id="editRelationshipLabel"
+            [(ngModel)]="relationshipForm.label"
+            name="label"
+            placeholder="e.g., 'brother', 'best friend', 'mentor'"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="editRelationshipColor">Color:</label>
+          <input
+            type="color"
+            id="editRelationshipColor"
+            [(ngModel)]="relationshipForm.color"
+            name="color"
+          />
+        </div>
+
+        <div class="form-group checkbox-group">
+          <label>
+            <input
+              type="checkbox"
+              [(ngModel)]="relationshipForm.bidirectional"
+              name="bidirectional"
+            />
+            Bidirectional (arrows on both ends)
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button
+            type="button"
+            class="btn btn-danger"
+            (click)="deleteRelationship()"
+          >
+            Delete
+          </button>
+          <button
+            type="button"
+            class="btn btn-secondary"
+            (click)="closeDialogs()"
+          >
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
     </div>
   </div>
 </div>

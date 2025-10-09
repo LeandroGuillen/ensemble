@@ -76,9 +76,9 @@
     - Add project settings configuration
     - _Requirements: 3.1, 3.2_
 
-- [ ] 6. Create relationship management system
+- [x] 6. Create relationship management system
 
-  - [ ] 6.1 Implement RelationshipService
+  - [x] 6.1 Implement RelationshipService
 
     - Handle relationships.json file operations
     - Provide CRUD operations for character relationships
@@ -86,7 +86,7 @@
     - Convert data format for vis.js Network consumption
     - _Requirements: 5.1, 5.4, 5.5_
 
-  - [ ] 6.2 Build graph view component with vis.js
+  - [x] 6.2 Build graph view component with vis.js
     - Integrate vis.js Network for interactive graph visualization
     - Display characters as nodes with thumbnails and names
     - Implement drag and drop for node positioning
