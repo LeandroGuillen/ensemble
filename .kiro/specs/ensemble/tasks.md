@@ -95,23 +95,6 @@
     - Save node positions and relationship data to JSON file
     - _Requirements: 5.1, 5.2, 5.3, 5.4_
 
-- [ ] 7. Implement file watching and external editing support
-
-  - [ ] 7.1 Create FileWatcherService
-
-    - Set up chokidar to monitor work folder for file changes
-    - Handle file creation, modification, and deletion events
-    - Implement debouncing for rapid file changes
-    - Trigger UI updates when external changes are detected
-    - _Requirements: 1.5, 7.5_
-
-  - [ ] 7.2 Add external editing integration
-    - Detect when markdown files are modified externally
-    - Refresh character data and UI when files change
-    - Handle metadata.json and relationships.json external modifications
-    - Provide conflict resolution for simultaneous edits
-    - _Requirements: 3.4, 7.5_
-
 - [ ] 8. Implement navigation and routing
 
   - [ ] 8.1 Set up Angular routing
@@ -145,7 +128,7 @@
     - Create backup functionality for critical operations
     - _Requirements: 1.4, 3.3, 7.6_
 
-- [ ] 11. Build and package the application
+- [-] 11. Build and package the application
 
   - [ ] 11.1 Configure Electron packaging
     - Set up electron-builder for cross-platform builds

@@ -1,3 +1,9 @@
 dist
 node_modules
 .angular/cache
+
+# Build artifacts
+release
+
+# Electron builder cache
+.cache/electron-builder

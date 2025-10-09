@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="240" fill="#2c3e50" stroke="#34495e" stroke-width="8"/>
+  
+  <!-- Main icon - representing characters/people in a network -->
+  <!-- Central character -->
+  <circle cx="256" cy="200" r="35" fill="#3498db" stroke="#ffffff" stroke-width="3"/>
+  <circle cx="256" cy="240" r="50" fill="#3498db" stroke="#ffffff" stroke-width="3" opacity="0.8"/>
+  
+  <!-- Connected characters -->
+  <circle cx="180" cy="150" r="25" fill="#e74c3c" stroke="#ffffff" stroke-width="2"/>
+  <circle cx="180" cy="180" r="35" fill="#e74c3c" stroke="#ffffff" stroke-width="2" opacity="0.8"/>
+  
+  <circle cx="332" cy="150" r="25" fill="#2ecc71" stroke="#ffffff" stroke-width="2"/>
+  <circle cx="332" cy="180" r="35" fill="#2ecc71" stroke="#ffffff" stroke-width="2" opacity="0.8"/>
+  
+  <circle cx="200" cy="320" r="25" fill="#f39c12" stroke="#ffffff" stroke-width="2"/>
+  <circle cx="200" cy="350" r="35" fill="#f39c12" stroke="#ffffff" stroke-width="2" opacity="0.8"/>
+  
+  <circle cx="312" cy="320" r="25" fill="#9b59b6" stroke="#ffffff" stroke-width="2"/>
+  <circle cx="312" cy="350" r="35" fill="#9b59b6" stroke="#ffffff" stroke-width="2" opacity="0.8"/>
+  
+  <!-- Connection lines -->
+  <line x1="220" y1="170" x2="220" y2="200" stroke="#ffffff" stroke-width="3" opacity="0.6"/>
+  <line x1="292" y1="170" x2="292" y2="200" stroke="#ffffff" stroke-width="3" opacity="0.6"/>
+  <line x1="230" y1="280" x2="230" y2="320" stroke="#ffffff" stroke-width="3" opacity="0.6"/>
+  <line x1="282" y1="280" x2="282" y2="320" stroke="#ffffff" stroke-width="3" opacity="0.6"/>
+  
+  <!-- App name -->
+  <text x="256" y="450" font-family="Arial, sans-serif" font-size="36" font-weight="bold" text-anchor="middle" fill="#ffffff">Ensemble</text>
+</svg>

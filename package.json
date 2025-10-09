@@ -11,6 +11,15 @@
     "electron-dev": "concurrently \"ng serve\" \"wait-on http://localhost:4200 && electron .\"",
     "electron-prod": "ng build --configuration production && electron .",
     "build-electron": "ng build --configuration production && electron-builder",
+    "build-electron-all": "ng build --configuration production && electron-builder --mac --win --linux",
+    "build-electron-mac": "ng build --configuration production && electron-builder --mac",
+    "build-electron-win": "ng build --configuration production && electron-builder --win",
+    "build-electron-linux": "ng build --configuration production && electron-builder --linux",
+    "build-electron-linux-appimage": "ng build --configuration production && electron-builder --linux AppImage",
+    "build-electron-linux-deb": "ng build --configuration production && electron-builder --linux deb",
+    "dist": "npm run build-electron-all",
+    "build-icons": "node scripts/build-icons.js",
+    "prebuild-electron": "npm run build-icons",
     "test": "ng test --watch=false",
     "test-electron": "electron test-electron.js",
     "verify": "node verify-setup.js",
@@ -24,16 +33,26 @@
     "electron",
     "angular"
   ],
-  "author": "",
+  "author": {
+    "name": "Ensemble Team",
+    "email": "contact@ensemble.app"
+  },
+  "homepage": "https://github.com/ensemble/ensemble",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ensemble/ensemble.git"
+  },
   "license": "MIT",
   "devDependencies": {
     "@angular-devkit/build-angular": "^17.0.0",
     "@angular/cli": "^17.0.0",
     "@angular/compiler-cli": "^17.0.0",
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.0.0",
     "concurrently": "^8.2.2",
     "electron": "^27.0.0",
     "electron-builder": "^24.0.0",
+    "electron-icon-builder": "^2.0.1",
     "typescript": "~5.2.0",
     "wait-on": "^7.0.0"
   },
@@ -61,21 +80,130 @@
   "build": {
     "appId": "com.ensemble.app",
     "productName": "Ensemble",
+    "copyright": "Copyright © 2024 Ensemble",
     "directories": {
-      "output": "release"
+      "output": "release",
+      "buildResources": "build"
     },
     "files": [
       "dist/**/*",
-      "node_modules/**/*"
+      "main.js",
+      "package.json",
+      "node_modules/**/*",
+      "!node_modules/.cache",
+      "!node_modules/@angular/cli",
+      "!node_modules/@angular-devkit",
+      "!node_modules/typescript",
+      "!node_modules/electron-builder",
+      "!node_modules/concurrently",
+      "!node_modules/wait-on"
+    ],
+    "extraResources": [
+      {
+        "from": "build/icons",
+        "to": "icons",
+        "filter": [
+          "**/*"
+        ]
+      }
     ],
     "mac": {
-      "category": "public.app-category.productivity"
+      "category": "public.app-category.productivity",
+      "icon": "build/icons/icon.icns",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "darkModeSupport": true,
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
     },
     "win": {
-      "target": "nsis"
+      "icon": "build/icons/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "ia32"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64",
+            "ia32"
+          ]
+        }
+      ],
+      "publisherName": "Ensemble",
+      "verifyUpdateCodeSignature": false
     },
     "linux": {
-      "target": "AppImage"
-    }
+      "icon": "build/icons",
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "Office",
+      "desktop": {
+        "Name": "Ensemble",
+        "Comment": "Character management for writers and worldbuilders",
+        "Keywords": "writing;characters;worldbuilding;story;"
+      }
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Ensemble"
+    },
+    "dmg": {
+      "title": "Ensemble ${version}",
+      "backgroundColor": "#2c3e50",
+      "window": {
+        "width": 540,
+        "height": 380
+      },
+      "contents": [
+        {
+          "x": 410,
+          "y": 190,
+          "type": "link",
+          "path": "/Applications"
+        },
+        {
+          "x": 130,
+          "y": 190,
+          "type": "file"
+        }
+      ]
+    },
+    "publish": null
   }
 }
