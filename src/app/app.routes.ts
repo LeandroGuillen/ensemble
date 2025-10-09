@@ -22,5 +22,9 @@ export const routes: Routes = [
     path: 'graph', 
     loadComponent: () => import('./features/graph-view/graph-view.component').then(m => m.GraphViewComponent)
   },
+  { 
+    path: 'metadata', 
+    loadComponent: () => import('./features/metadata-management/metadata-management.component').then(m => m.MetadataManagementComponent)
+  },
   { path: '**', redirectTo: '/project-selector' }
 ];

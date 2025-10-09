@@ -187,14 +187,14 @@ export class ProjectService {
         { id: 'main-character', name: 'Main Character', color: '#3498db' },
         { id: 'supporting', name: 'Supporting Character', color: '#2ecc71' },
         { id: 'antagonist', name: 'Antagonist', color: '#e74c3c' },
-        { id: 'minor', name: 'Minor Character', color: '#95a5a6' }
+        { id: 'minor', name: 'Minor Character', color: '#9b59b6' }
       ],
       tags: [
-        { id: 'protagonist', name: 'Protagonist', color: '#e74c3c' },
+        { id: 'protagonist', name: 'Protagonist', color: '#e91e63' },
         { id: 'magic-user', name: 'Magic User', color: '#9b59b6' },
         { id: 'noble', name: 'Noble', color: '#f39c12' },
-        { id: 'warrior', name: 'Warrior', color: '#e67e22' },
-        { id: 'scholar', name: 'Scholar', color: '#3498db' }
+        { id: 'warrior', name: 'Warrior', color: '#ff5722' },
+        { id: 'scholar', name: 'Scholar', color: '#1abc9c' }
       ],
       settings: {
         defaultCategory: 'main-character',

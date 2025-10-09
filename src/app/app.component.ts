@@ -33,6 +33,10 @@ export class AppComponent implements OnInit {
     this.router.navigate(["/graph"]);
   }
 
+  navigateToMetadata() {
+    this.router.navigate(["/metadata"]);
+  }
+
   selectProject() {
     this.router.navigate(["/project-selector"]);
   }
