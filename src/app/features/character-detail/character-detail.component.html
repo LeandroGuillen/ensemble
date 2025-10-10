@@ -1,36 +1,97 @@
-<div class="container">
-  <div class="character-detail">
-    <div class="detail-header">
-      <h2>{{ isEditing ? "Edit Character" : "Create New Character" }}</h2>
-      <button class="btn btn-secondary" (click)="onCancel()">
-        <i class="icon-arrow-left"></i>
-        Back to List
-      </button>
-    </div>
+<div class="character-detail">
+  <div class="detail-content">
+    <div class="detail-inner">
+      <div class="detail-header">
+        <h2>{{ isEditing ? "Edit Character" : "Create New Character" }}</h2>
+      </div>
 
-    <!-- Loading State -->
-    <div class="loading-state" *ngIf="isLoading">
-      <p>Loading character...</p>
-    </div>
+      <!-- Loading State -->
+      <div class="loading-state" *ngIf="isLoading">
+        <p>Loading character...</p>
+      </div>
 
-    <!-- No Project State -->
-    <div class="no-project-state" *ngIf="!currentProject && !isLoading">
-      <p>Please select or create a project to manage characters.</p>
-    </div>
+      <!-- No Project State -->
+      <div class="no-project-state" *ngIf="!currentProject && !isLoading">
+        <p>Please select or create a project to manage characters.</p>
+      </div>
 
-    <!-- Main Form -->
-    <div class="character-form card" *ngIf="currentProject && !isLoading">
+      <!-- Main Form -->
+      <div class="character-form card" *ngIf="currentProject && !isLoading">
       <form [formGroup]="characterForm" (ngSubmit)="onSubmit()">
+        <!-- Form Actions at Top -->
+        <div class="form-actions-top">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            (click)="onCancel()"
+            [disabled]="isSaving"
+            title="Cancel (ESC)"
+          >
+            <i class="icon-x"></i>
+            Cancel
+            <kbd class="shortcut-hint">ESC</kbd>
+          </button>
+          <button
+            type="submit"
+            class="btn btn-primary"
+            [disabled]="characterForm.invalid || isSaving"
+            title="Save (Ctrl+Enter)"
+          >
+            <i class="icon-save" *ngIf="!isSaving"></i>
+            <i class="icon-loader" *ngIf="isSaving"></i>
+            {{
+              isSaving
+                ? "Saving..."
+                : isEditing
+                ? "Update Character"
+                : "Create Character"
+            }}
+            <kbd class="shortcut-hint" *ngIf="!isSaving">Ctrl+Enter</kbd>
+          </button>
+        </div>
+
+        <!-- Error Message at Top -->
+        <div class="error-message" *ngIf="error">
+          <i class="icon-alert-circle"></i>
+          {{ error }}
+        </div>
+
+        <!-- Form Status at Top -->
+        <div class="form-status" *ngIf="characterForm.dirty && !error">
+          <i class="icon-info"></i>
+          You have unsaved changes
+        </div>
+
         <div class="form-section">
           <h3>Basic Information</h3>
 
-          <div class="form-row">
-            <div class="form-group">
+          <div class="basic-info-row">
+            <!-- Thumbnail -->
+            <div class="thumbnail-upload" (click)="selectThumbnail()" title="Click to select image">
+              <div class="thumbnail-preview-inline" *ngIf="thumbnailPreview">
+                <img [src]="thumbnailPreview" alt="Character thumbnail">
+                <button
+                  type="button"
+                  class="thumbnail-remove-inline"
+                  (click)="removeThumbnail(); $event.stopPropagation()"
+                  title="Remove thumbnail"
+                >
+                  ✕
+                </button>
+              </div>
+              <div class="thumbnail-placeholder-inline" *ngIf="!thumbnailPreview">
+                <span class="upload-icon">📷</span>
+                <span class="upload-text">Add Photo</span>
+              </div>
+            </div>
+
+            <!-- Name -->
+            <div class="form-group form-group-flex">
               <label class="form-label" for="name">
                 Name *
-                <span class="field-hint">The character's full name</span>
               </label>
               <input
+                #nameInput
                 type="text"
                 id="name"
                 class="form-control"
@@ -43,10 +104,10 @@
               </div>
             </div>
 
-            <div class="form-group">
+            <!-- Category -->
+            <div class="form-group form-group-category">
               <label class="form-label" for="category">
                 Category *
-                <span class="field-hint">Character's role or type</span>
               </label>
               <select
                 id="category"
@@ -54,7 +115,7 @@
                 formControlName="category"
                 [class.error]="getFieldError('category')"
               >
-                <option value="">Select a category</option>
+                <option value="">Select category</option>
                 <option
                   *ngFor="let category of categories"
                   [value]="category.id"
@@ -87,47 +148,6 @@
                   {{ tag.name }}
                 </span>
               </label>
-            </div>
-          </div>
-        </div>
-
-        <div class="form-section">
-          <h3>Appearance</h3>
-          <div class="form-group">
-            <label class="form-label">
-              Thumbnail
-              <span class="field-hint">Character portrait or image</span>
-            </label>
-            <div class="thumbnail-section">
-              <div class="thumbnail-preview" *ngIf="thumbnailPreview">
-                <img
-                  [src]="thumbnailPreview"
-                  alt="Character thumbnail"
-                  (error)="thumbnailPreview = null"
-                />
-                <button
-                  type="button"
-                  class="thumbnail-remove"
-                  (click)="removeThumbnail()"
-                  title="Remove thumbnail"
-                >
-                  <i class="icon-x"></i>
-                </button>
-              </div>
-              <div class="thumbnail-placeholder" *ngIf="!thumbnailPreview">
-                <i class="icon-image"></i>
-                <span>No image selected</span>
-              </div>
-              <div class="thumbnail-actions">
-                <button
-                  type="button"
-                  class="btn btn-secondary"
-                  (click)="selectThumbnail()"
-                >
-                  <i class="icon-upload"></i>
-                  {{ thumbnailPreview ? "Change Image" : "Select Image" }}
-                </button>
-              </div>
             </div>
           </div>
         </div>
@@ -184,46 +204,8 @@
           </div>
         </div>
 
-        <!-- Form Actions -->
-        <div class="form-actions">
-          <button
-            type="button"
-            class="btn btn-secondary"
-            (click)="onCancel()"
-            [disabled]="isSaving"
-          >
-            <i class="icon-x"></i>
-            Cancel
-          </button>
-          <button
-            type="submit"
-            class="btn btn-primary"
-            [disabled]="characterForm.invalid || isSaving"
-          >
-            <i class="icon-save" *ngIf="!isSaving"></i>
-            <i class="icon-loader" *ngIf="isSaving"></i>
-            {{
-              isSaving
-                ? "Saving..."
-                : isEditing
-                ? "Update Character"
-                : "Create Character"
-            }}
-          </button>
-        </div>
-
-        <!-- Error Message -->
-        <div class="error-message" *ngIf="error">
-          <i class="icon-alert-circle"></i>
-          {{ error }}
-        </div>
-
-        <!-- Form Status -->
-        <div class="form-status" *ngIf="characterForm.dirty && !error">
-          <i class="icon-info"></i>
-          You have unsaved changes
-        </div>
       </form>
+    </div>
     </div>
   </div>
 </div>

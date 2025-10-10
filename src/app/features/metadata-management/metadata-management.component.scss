@@ -1,5 +1,18 @@
 .metadata-management {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.metadata-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: var(--spacing-lg);
+}
+
+.metadata-inner {
   max-width: 1200px;
   margin: 0 auto;
 

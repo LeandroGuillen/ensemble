@@ -1,0 +1,45 @@
+<div class="command-palette-backdrop" *ngIf="isOpen" (click)="onBackdropClick()">
+  <div class="command-palette" (click)="onPaletteClick($event)">
+    <div class="command-search">
+      <input
+        #searchInput
+        type="text"
+        class="command-search-input"
+        placeholder="Type a command or search..."
+        [(ngModel)]="searchQuery"
+        (input)="onSearchChange()"
+        autocomplete="off">
+      <span class="command-search-hint">ESC to close</span>
+    </div>
+
+    <div class="command-list" *ngIf="filteredCommands.length > 0">
+      <div
+        *ngFor="let command of filteredCommands; let i = index"
+        class="command-item"
+        [class.selected]="i === selectedIndex"
+        (mouseenter)="selectCommand(i)"
+        (click)="executeCommand(command)">
+        <div class="command-thumbnail" *ngIf="command.thumbnail">
+          <img [src]="command.thumbnail" [alt]="command.label">
+        </div>
+        <span class="command-icon" *ngIf="command.icon && !command.thumbnail">{{ command.icon }}</span>
+        <div class="command-content">
+          <span class="command-label">{{ command.label }}</span>
+          <span class="command-metadata" *ngIf="command.metadata">{{ command.metadata }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="command-empty" *ngIf="filteredCommands.length === 0 && searchQuery">
+      <p>No commands found</p>
+    </div>
+
+    <div class="command-footer">
+      <div class="command-shortcuts">
+        <span class="shortcut-item"><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
+        <span class="shortcut-item"><kbd>Enter</kbd> Execute</span>
+        <span class="shortcut-item"><kbd>ESC</kbd> Close</span>
+      </div>
+    </div>
+  </div>
+</div>

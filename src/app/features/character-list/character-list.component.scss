@@ -1,5 +1,37 @@
+.container {
+  height: 100%;
+  padding: 0;
+  max-width: none;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 .character-list {
-  min-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  padding: var(--spacing-lg);
+  min-height: 0;
+}
+
+.content-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.controls-section {
+  flex-shrink: 0;
+}
+
+.scrollable-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px; // Prevent content jump when scrollbar appears
 }
 
 // Header enhancements
@@ -18,25 +50,6 @@
   align-items: center;
   gap: var(--spacing-lg);
   flex-shrink: 0;
-}
-
-.header-center {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  max-width: 500px;
-  margin: 0 auto;
-
-  .search-input input {
-    border: none;
-    border-bottom: 1px solid var(--color-border);
-    border-radius: 0;
-
-    &:focus {
-      border-bottom-color: var(--color-accent-primary);
-      box-shadow: none;
-    }
-  }
 }
 
 .page-title {
@@ -69,6 +82,22 @@
   gap: var(--spacing-md);
   align-items: center;
   flex-shrink: 0;
+
+  .btn {
+    position: relative;
+  }
+
+  .shortcut-hint {
+    margin-left: var(--spacing-sm);
+    padding: 2px 6px;
+    font-size: 0.7rem;
+    font-family: monospace;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-sm);
+    opacity: 0.8;
+    font-weight: 600;
+  }
 }
 
 // View Toggle Switch
@@ -577,6 +606,10 @@
   .page-actions {
     width: 100%;
     justify-content: space-between;
+
+    .shortcut-hint {
+      display: none; // Hide keyboard hints on mobile
+    }
   }
 
   .filter-row {

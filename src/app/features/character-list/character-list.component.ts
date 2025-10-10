@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -6,6 +6,7 @@ import { Observable, Subject, combineLatest } from 'rxjs';
 import { takeUntil, map, debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { Character, Category, Tag, Project } from '../../core/interfaces';
 import { CharacterService, ProjectService, ElectronService } from '../../core/services';
+import { CommandPaletteService } from '../../shared/command-palette/command-palette.service';
 
 @Component({
   selector: 'app-character-list',
@@ -38,7 +39,8 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     private characterService: CharacterService,
     private projectService: ProjectService,
     private electronService: ElectronService,
-    private router: Router
+    private router: Router,
+    private commandPaletteService: CommandPaletteService
   ) {
     this.characters$ = this.characterService.getCharacters();
   }
@@ -60,6 +62,9 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       this.sortDirection = savedSortDirection;
     }
 
+    // Register command palette commands
+    this.registerCommands();
+
     // Subscribe to project changes
     this.projectService.currentProject$
       .pipe(takeUntil(this.destroy$))
@@ -78,13 +83,89 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe(characters => {
         this.filteredCharacters = this.filterAndSortCharacters(characters);
-        this.loadThumbnailDataUrls(characters);
+        this.loadThumbnailDataUrls(characters).then(() => {
+          // Update command palette after thumbnails are loaded
+          this.updateCharacterCommands(characters);
+        });
       });
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  handleKeyboardEvent(event: KeyboardEvent): void {
+    // Ignore if user is typing in an input, textarea, or select
+    const target = event.target as HTMLElement;
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+      return;
+    }
+
+    // N to create new character
+    if (event.key === 'n' || event.key === 'N') {
+      event.preventDefault();
+      this.createNewCharacter();
+      return;
+    }
+
+    // L to toggle list/grid view
+    if (event.key === 'l' || event.key === 'L') {
+      event.preventDefault();
+      this.toggleViewMode();
+      return;
+    }
+  }
+
+  private registerCommands(): void {
+    const baseCommands = [
+      {
+        id: 'new-character',
+        label: 'New Character',
+        icon: '➕',
+        keywords: ['create', 'add', 'character'],
+        group: 'actions',
+        action: () => this.createNewCharacter()
+      },
+      {
+        id: 'toggle-view',
+        label: `Toggle View (Currently: ${this.viewMode === 'grid' ? 'Grid' : 'List'})`,
+        icon: this.viewMode === 'grid' ? '📋' : '📱',
+        keywords: ['view', 'grid', 'list', 'toggle', 'switch'],
+        group: 'actions',
+        action: () => this.toggleViewMode()
+      }
+    ];
+
+    this.commandPaletteService.registerCommands(baseCommands);
+  }
+
+  private updateCharacterCommands(characters: Character[]): void {
+    // Remove old character commands
+    const currentCommands = this.commandPaletteService['commandsSubject'].value;
+    const nonCharacterCommands = currentCommands.filter(cmd => cmd.group !== 'characters');
+
+    // Create commands for each character
+    const characterCommands = characters.map(character => ({
+      id: `character-${character.id}`,
+      label: character.name,
+      thumbnail: this.thumbnailDataUrls.get(character.id) || undefined,
+      metadata: this.getCategoryName(character.category),
+      keywords: [
+        character.name,
+        this.getCategoryName(character.category),
+        ...character.tags.map(tagId => this.getTagName(tagId))
+      ],
+      group: 'characters',
+      action: () => this.editCharacter(character)
+    }));
+
+    // Register all commands
+    this.commandPaletteService.registerCommands([
+      ...nonCharacterCommands,
+      ...characterCommands
+    ]);
   }
 
   async loadCharacters(): Promise<void> {

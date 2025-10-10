@@ -1,12 +1,22 @@
+.container {
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 .graph-view {
-  padding: 20px 0;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--spacing-lg);
 }
 
 .graph-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: var(--spacing-lg);
 }
 
 .graph-header h2 {
@@ -405,30 +415,34 @@
 }
 
 @media (max-width: 768px) {
+  .graph-view {
+    padding: var(--spacing-md);
+  }
+
   .graph-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 15px;
+    gap: var(--spacing-md);
   }
-  
+
   .graph-controls {
     flex-wrap: wrap;
   }
-  
+
   .graph-container {
     height: 400px;
   }
-  
+
   .modal-dialog {
     width: 95%;
     margin: 10px;
   }
-  
+
   .modal-actions {
     flex-direction: column;
   }
-  
+
   .legend-items {
-    gap: 10px;
+    gap: var(--spacing-sm);
   }
 }

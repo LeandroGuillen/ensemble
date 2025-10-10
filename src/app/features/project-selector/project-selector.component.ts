@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, HostListener } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -34,6 +34,33 @@ export class ProjectSelectorComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     await this.loadRecentProjects();
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  handleKeyboardEvent(event: KeyboardEvent): void {
+    // Ignore if user is typing in an input or textarea
+    const target = event.target as HTMLElement;
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+      return;
+    }
+
+    // Ignore if in create form mode
+    if (this.showCreateForm) {
+      return;
+    }
+
+    // Handle number keys 1-9 for recent projects
+    const key = event.key;
+    if (/^[1-9]$/.test(key)) {
+      const index = parseInt(key, 10) - 1;
+      if (index < this.recentProjects.length) {
+        const project = this.recentProjects[index];
+        if (project.exists) {
+          event.preventDefault();
+          this.openRecentProject(project.path);
+        }
+      }
+    }
   }
 
   /**

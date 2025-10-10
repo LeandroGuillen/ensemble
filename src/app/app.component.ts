@@ -3,11 +3,13 @@ import { Router, RouterOutlet, NavigationEnd } from "@angular/router";
 import { CommonModule } from "@angular/common";
 import { ProjectService } from "./core/services";
 import { filter } from "rxjs/operators";
+import { CommandPaletteComponent } from "./shared/command-palette/command-palette.component";
+import { CommandPaletteService } from "./shared/command-palette/command-palette.service";
 
 @Component({
   selector: "app-root",
   standalone: true,
-  imports: [CommonModule, RouterOutlet],
+  imports: [CommonModule, RouterOutlet, CommandPaletteComponent],
   templateUrl: "./app.component.html",
   styleUrls: ["./app.component.scss"],
 })
@@ -17,7 +19,11 @@ export class AppComponent implements OnInit {
   currentProjectName = "";
   currentRoute = "";
 
-  constructor(private projectService: ProjectService, private router: Router) {}
+  constructor(
+    private projectService: ProjectService,
+    private router: Router,
+    private commandPaletteService: CommandPaletteService
+  ) {}
 
   async ngOnInit() {
     // Try to auto-load the most recent project
@@ -64,5 +70,9 @@ export class AppComponent implements OnInit {
 
   selectProject() {
     this.router.navigate(["/project-selector"]);
+  }
+
+  openCommandPalette() {
+    this.commandPaletteService.open();
   }
 }

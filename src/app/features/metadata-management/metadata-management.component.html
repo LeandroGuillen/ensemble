@@ -1,26 +1,28 @@
 <div class="metadata-management">
-  <div class="header">
-    <h1>Project Metadata Management</h1>
-    <p>Manage categories, tags, and project settings for your character database.</p>
-  </div>
+  <div class="metadata-content">
+    <div class="metadata-inner">
+      <div class="header">
+        <h1>Project Metadata Management</h1>
+        <p>Manage categories, tags, and project settings for your character database.</p>
+      </div>
 
-  <!-- Loading State -->
-  <div *ngIf="loading" class="loading">
-    <div class="spinner"></div>
-    <p>Loading metadata...</p>
-  </div>
+      <!-- Loading State -->
+      <div *ngIf="loading" class="loading">
+        <div class="spinner"></div>
+        <p>Loading metadata...</p>
+      </div>
 
-  <!-- Error Display -->
-  <div *ngIf="error" class="error-banner">
-    <div class="error-content">
-      <span class="error-icon">⚠️</span>
-      <span class="error-message">{{ error }}</span>
-      <button class="error-close" (click)="error = null">×</button>
-    </div>
-  </div>
+      <!-- Error Display -->
+      <div *ngIf="error" class="error-banner">
+        <div class="error-content">
+          <span class="error-icon">⚠️</span>
+          <span class="error-message">{{ error }}</span>
+          <button class="error-close" (click)="error = null">×</button>
+        </div>
+      </div>
 
-  <!-- Main Content -->
-  <div *ngIf="!loading" class="content">
+      <!-- Main Content -->
+      <div *ngIf="!loading" class="content">
     
     <!-- Categories Section -->
     <section class="section">
@@ -414,5 +416,7 @@
       </div>
     </section>
 
+      </div>
+    </div>
   </div>
 </div>

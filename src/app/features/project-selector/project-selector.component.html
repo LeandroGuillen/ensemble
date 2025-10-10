@@ -22,12 +22,14 @@
       </div>
       
       <div class="recent-projects-list">
-        <div 
-          class="recent-project-item" 
-          *ngFor="let project of recentProjects"
+        <div
+          class="recent-project-item"
+          *ngFor="let project of recentProjects; let i = index"
           [class.unavailable]="!project.exists"
           (click)="project.exists && openRecentProject(project.path)">
-          
+
+          <kbd class="project-shortcut" *ngIf="i < 9">{{ i + 1 }}</kbd>
+
           <div class="project-info">
             <div class="project-name">{{ project.name }}</div>
             <div class="project-path">{{ getDisplayPath(project.path) }}</div>
@@ -36,9 +38,9 @@
               <span class="status" *ngIf="!project.exists">• Unavailable</span>
             </div>
           </div>
-          
-          <button 
-            class="btn btn-icon remove-btn" 
+
+          <button
+            class="btn btn-icon remove-btn"
             (click)="removeFromRecent(project.path, $event)"
             title="Remove from recent projects">
             ×

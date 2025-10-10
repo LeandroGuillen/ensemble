@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -14,20 +14,22 @@ import { CharacterService, ProjectService, ElectronService } from '../../core/se
   templateUrl: './character-detail.component.html',
   styleUrls: ['./character-detail.component.scss']
 })
-export class CharacterDetailComponent implements OnInit, OnDestroy {
+export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewInit {
+  @ViewChild('nameInput') nameInput?: ElementRef<HTMLInputElement>;
+
   private destroy$ = new Subject<void>();
-  
+
   characterForm: FormGroup;
   character: Character | null = null;
   categories: Category[] = [];
   tags: Tag[] = [];
   currentProject: Project | null = null;
-  
+
   isEditing = false;
   isLoading = false;
   isSaving = false;
   error: string | null = null;
-  
+
   selectedThumbnailPath: string | null = null;
   thumbnailPreview: string | null = null;
 
@@ -70,6 +72,30 @@ export class CharacterDetailComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  ngAfterViewInit(): void {
+    // Focus the name input after view is initialized
+    setTimeout(() => {
+      this.nameInput?.nativeElement.focus();
+    }, 0);
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  handleKeyboardEvent(event: KeyboardEvent): void {
+    // Escape to cancel
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.onCancel();
+      return;
+    }
+
+    // Ctrl+Enter to save
+    if (event.ctrlKey && event.key === 'Enter') {
+      event.preventDefault();
+      this.onSubmit();
+      return;
+    }
   }
 
   private createForm(): FormGroup {
