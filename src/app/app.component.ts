@@ -1,4 +1,4 @@
-import { Component, OnInit } from "@angular/core";
+import { Component, OnInit, HostListener } from "@angular/core";
 import { Router, RouterOutlet, NavigationEnd } from "@angular/router";
 import { CommonModule } from "@angular/common";
 import { ProjectService } from "./core/services";
@@ -18,6 +18,7 @@ export class AppComponent implements OnInit {
   hasProject = false;
   currentProjectName = "";
   currentRoute = "";
+  isWelcomeScreen = false;
 
   constructor(
     private projectService: ProjectService,
@@ -49,6 +50,7 @@ export class AppComponent implements OnInit {
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
       .subscribe((event: NavigationEnd) => {
         this.currentRoute = event.url;
+        this.isWelcomeScreen = event.url === '/project-selector' || event.url === '/';
       });
   }
 
@@ -74,5 +76,17 @@ export class AppComponent implements OnInit {
 
   openCommandPalette() {
     this.commandPaletteService.open();
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  handleGlobalKeydown(event: KeyboardEvent): void {
+    // Handle command palette shortcuts at the app level
+    if ((event.ctrlKey && event.key === 'p') || 
+        (event.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA')) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.commandPaletteService.open();
+      return;
+    }
   }
 }

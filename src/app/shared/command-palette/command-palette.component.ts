@@ -52,13 +52,6 @@ export class CommandPaletteComponent implements OnInit, OnDestroy {
 
   @HostListener('document:keydown', ['$event'])
   handleKeyboardEvent(event: KeyboardEvent): void {
-    // Open palette with Ctrl+P or /
-    if ((event.ctrlKey && event.key === 'p') || (event.key === '/' && !this.isOpen && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA')) {
-      event.preventDefault();
-      this.commandPaletteService.open();
-      return;
-    }
-
     if (!this.isOpen) return;
 
     switch (event.key) {

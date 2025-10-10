@@ -1,5 +1,5 @@
 <div class="app-container">
-  <nav class="app-nav" *ngIf="hasProject">
+  <nav class="app-nav" *ngIf="hasProject && !isWelcomeScreen">
     <div class="nav-brand" (click)="selectProject()" style="cursor: pointer;" title="Change Project">
       <span class="brand-icon">✨</span>
       <span class="brand-name">{{ title }}</span>
@@ -13,6 +13,7 @@
         </svg>
         <span class="command-palette-label">Search</span>
         <kbd class="shortcut-hint">Ctrl+P</kbd>
+        <kbd class="shortcut-hint">/</kbd>
       </button>
     </div>
     <div class="nav-links">

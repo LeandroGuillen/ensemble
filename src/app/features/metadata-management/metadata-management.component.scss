@@ -183,6 +183,84 @@
       font-size: 0.8125rem;
       margin-top: var(--spacing-xs);
     }
+
+    .form-control {
+      width: 100%;
+      padding: 10px 12px;
+      background-color: var(--color-bg-tertiary);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      color: var(--color-text-primary);
+      font-size: 0.9375rem;
+      font-weight: 500;
+      transition: all var(--transition-fast);
+
+      &:hover {
+        border-color: var(--color-accent-primary);
+        background-color: var(--color-bg-elevated);
+      }
+
+      &:focus {
+        outline: none;
+        border-color: var(--color-accent-primary);
+        background-color: var(--color-bg-elevated);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
+
+      &.error {
+        border-color: var(--color-error);
+      }
+
+      // Select dropdown specific styling
+      &[type="select-one"] {
+        cursor: pointer;
+        
+        option {
+          background-color: var(--color-bg-tertiary);
+          color: var(--color-text-primary);
+          padding: 8px 12px;
+
+          &:hover {
+            background-color: var(--color-bg-elevated);
+          }
+
+          &:checked {
+            background-color: var(--color-accent-primary);
+            color: white;
+          }
+        }
+      }
+    }
+
+    // Select element styling (outside of .form-control)
+    select.form-control {
+      cursor: pointer;
+      
+      option {
+        background-color: var(--color-bg-tertiary);
+        color: var(--color-text-primary);
+        padding: 8px 12px;
+
+        &:hover {
+          background-color: var(--color-bg-elevated);
+        }
+
+        &:checked {
+          background-color: var(--color-accent-primary);
+          color: white;
+        }
+      }
+
+      // Input specific styling
+      &[type="text"], 
+      &[type="email"], 
+      &[type="password"] {
+        &::placeholder {
+          color: var(--color-text-muted);
+          opacity: 0.7;
+        }
+      }
+    }
   }
 
   .color-input-group {

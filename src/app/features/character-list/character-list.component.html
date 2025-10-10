@@ -34,6 +34,20 @@
               <rect x="1" y="12" width="14" height="2" rx="1"/>
             </svg>
           </button>
+          <button
+            class="toggle-option"
+            [class.active]="viewMode === 'compact'"
+            (click)="setViewMode('compact')"
+            [disabled]="!currentProject"
+            title="Compact view">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <rect x="1" y="1" width="14" height="1" rx="0.5"/>
+              <rect x="1" y="4" width="14" height="1" rx="0.5"/>
+              <rect x="1" y="7" width="14" height="1" rx="0.5"/>
+              <rect x="1" y="10" width="14" height="1" rx="0.5"/>
+              <rect x="1" y="13" width="14" height="1" rx="0.5"/>
+            </svg>
+          </button>
         </div>
         <button class="btn btn-primary" (click)="createNewCharacter()" [disabled]="!currentProject" title="New Character (N)">
           New Character
@@ -132,8 +146,10 @@
         <!-- Grid View (Cards) -->
         <div class="character-grid" *ngIf="filteredCharacters.length > 0 && viewMode === 'grid'">
         <div
-          *ngFor="let character of filteredCharacters"
-          class="character-card card"
+          *ngFor="let character of filteredCharacters; let i = index"
+          class="character-card card character-item"
+          [class.selected]="selectedCharacterIndex === i"
+          [attr.data-index]="i"
           (click)="editCharacter(character)">
 
           <div class="character-thumbnail">
@@ -185,11 +201,13 @@
         </div>
       </div>
 
-      <!-- List View (Compact) -->
+      <!-- List View -->
       <div class="character-list-view" *ngIf="filteredCharacters.length > 0 && viewMode === 'list'">
         <div
-          *ngFor="let character of filteredCharacters"
-          class="character-list-item"
+          *ngFor="let character of filteredCharacters; let i = index"
+          class="character-list-item character-item"
+          [class.selected]="selectedCharacterIndex === i"
+          [attr.data-index]="i"
           (click)="editCharacter(character)">
 
           <div class="list-item-thumbnail">
@@ -235,6 +253,64 @@
             </button>
             <button
               class="icon-btn delete-btn"
+              (click)="deleteCharacter(character, $event)"
+              title="Delete character">
+              🗑️
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Compact View -->
+      <div class="character-compact-view" *ngIf="filteredCharacters.length > 0 && viewMode === 'compact'">
+        <div
+          *ngFor="let character of filteredCharacters; let i = index"
+          class="character-compact-item character-item"
+          [class.selected]="selectedCharacterIndex === i"
+          [attr.data-index]="i"
+          (click)="editCharacter(character)">
+
+          <div class="compact-item-thumbnail">
+            <img
+              *ngIf="getCharacterThumbnailDataUrl(character)"
+              [src]="getCharacterThumbnailDataUrl(character)"
+              [alt]="character.name"
+              (error)="onImageError($event)">
+            <div *ngIf="!getCharacterThumbnailDataUrl(character)" class="thumbnail-placeholder-tiny">
+              👤
+            </div>
+          </div>
+
+          <div class="compact-item-content">
+            <div class="compact-item-main">
+              <h3 class="compact-item-name">{{ character.name }}</h3>
+              <span class="compact-item-category" [style.color]="getCategoryColor(character.category)">
+                {{ getCategoryName(character.category) }}
+              </span>
+            </div>
+
+            <div class="compact-item-tags" *ngIf="character.tags.length > 0">
+              <span
+                *ngFor="let tag of getCharacterTagsInOrder(character); let i = index"
+                class="tag tag-xs"
+                [style.background-color]="tag.color"
+                [style.color]="'white'"
+                [style.display]="i < 3 ? 'inline-block' : 'none'">
+                {{ tag.name }}
+              </span>
+              <span *ngIf="character.tags.length > 3" class="tag-overflow">+{{ character.tags.length - 3 }}</span>
+            </div>
+          </div>
+
+          <div class="compact-item-actions">
+            <button
+              class="icon-btn icon-btn-sm"
+              (click)="editCharacter(character); $event.stopPropagation()"
+              title="Edit character">
+              ✏️
+            </button>
+            <button
+              class="icon-btn icon-btn-sm delete-btn"
               (click)="deleteCharacter(character, $event)"
               title="Delete character">
               🗑️
