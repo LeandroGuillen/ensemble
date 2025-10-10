@@ -371,7 +371,10 @@ export class RelationshipService {
         },
 
         labelHighlightBold: false,
-        fixed: false, // Allow manual positioning
+        fixed: {
+          x: false, // Allow manual x positioning
+          y: false  // Allow manual y positioning
+        },
         physics: false // Disable physics for this node
       };
 

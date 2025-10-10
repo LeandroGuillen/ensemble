@@ -47,7 +47,11 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
   
   // Error handling
   error: string | null = null;
-  
+
+  // Drag and drop state
+  draggedIndex: number | null = null;
+  dragOverIndex: number | null = null;
+
   // Color presets - distinct and visually unique colors
   colorPresets = [
     '#e74c3c', // Red
@@ -344,5 +348,100 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
 
   canDeleteCategory(category: Category): boolean {
     return !this.isDefaultCategory(category.id);
+  }
+
+  // Drag and Drop Methods for Categories
+  onDragStart(event: DragEvent, index: number): void {
+    this.draggedIndex = index;
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/html', ''); // Required for Firefox
+    }
+  }
+
+  onDragOver(event: DragEvent, index: number): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move';
+    }
+    // Don't apply drag-over to the dragged item itself
+    if (this.draggedIndex !== null && this.draggedIndex !== index) {
+      this.dragOverIndex = index;
+    }
+  }
+
+  onDrop(event: DragEvent, dropIndex: number): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (this.draggedIndex !== null) {
+      this.performReorder(dropIndex);
+    }
+
+    this.draggedIndex = null;
+    this.dragOverIndex = null;
+  }
+
+  onDragEnd(): void {
+    // If we have a valid dragOverIndex, treat it as a drop at that position
+    if (this.draggedIndex !== null && this.dragOverIndex !== null) {
+      this.performReorder(this.dragOverIndex);
+    }
+
+    this.draggedIndex = null;
+    this.dragOverIndex = null;
+  }
+
+  private performReorder(dropIndex: number): void {
+    if (this.draggedIndex === null) {
+      return;
+    }
+
+    // Don't do anything if dropping in the same position
+    if (this.draggedIndex === dropIndex) {
+      return;
+    }
+
+    // Reorder the categories array
+    const newCategories = [...this.categories];
+    const draggedCategory = newCategories[this.draggedIndex];
+
+    // Remove from old position
+    newCategories.splice(this.draggedIndex, 1);
+
+    // Adjust drop index if dropping after the removed item
+    const adjustedDropIndex = dropIndex > this.draggedIndex ? dropIndex - 1 : dropIndex;
+
+    // Insert at new position
+    newCategories.splice(adjustedDropIndex, 0, draggedCategory);
+
+    // Update categories in metadata and save
+    this.categories = newCategories;
+    this.saveReorderedCategories(newCategories);
+  }
+
+  private async saveReorderedCategories(newCategories: Category[]): Promise<void> {
+    try {
+      this.saving = true;
+      this.error = null;
+
+      const metadata = this.metadataService.getCurrentMetadata();
+      if (!metadata) {
+        throw new Error('No metadata loaded');
+      }
+
+      const updatedMetadata = {
+        ...metadata,
+        categories: newCategories
+      };
+
+      await this.metadataService.saveMetadata(updatedMetadata);
+    } catch (error) {
+      console.error('Failed to save reordered categories:', error);
+      this.error = `Failed to save category order: ${error}`;
+    } finally {
+      this.saving = false;
+    }
   }
 }

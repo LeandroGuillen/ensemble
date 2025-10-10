@@ -104,16 +104,37 @@
 
       <!-- Categories List -->
       <div class="items-list">
-        <div *ngFor="let category of categories" class="item-row">
+        <div
+          *ngFor="let category of categories; let i = index"
+          class="item-row"
+          draggable="true"
+          (dragstart)="onDragStart($event, i)"
+          (dragover)="onDragOver($event, i)"
+          (drop)="onDrop($event, i)"
+          (dragend)="onDragEnd()"
+          [class.dragging]="draggedIndex === i"
+          [class.drag-over]="dragOverIndex === i">
+          <!-- Drag Handle -->
+          <div class="drag-handle" *ngIf="!editingCategory || editingCategory.id !== category.id" draggable="false">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" draggable="false">
+              <circle cx="6" cy="3" r="1.5"/>
+              <circle cx="10" cy="3" r="1.5"/>
+              <circle cx="6" cy="8" r="1.5"/>
+              <circle cx="10" cy="8" r="1.5"/>
+              <circle cx="6" cy="13" r="1.5"/>
+              <circle cx="10" cy="13" r="1.5"/>
+            </svg>
+          </div>
+
           <!-- Regular item display -->
-          <div *ngIf="!editingCategory || editingCategory.id !== category.id" class="item-content" (click)="showEditCategoryForm(category)">
+          <div *ngIf="!editingCategory || editingCategory.id !== category.id" class="item-content" (click)="showEditCategoryForm(category)" draggable="false">
             <div class="item-color" [style.background-color]="category.color"></div>
             <div class="item-info">
               <span class="item-name">{{ category.name }}</span>
               <span *ngIf="isDefaultCategory(category.id)" class="default-badge">Default</span>
             </div>
           </div>
-          <div *ngIf="!editingCategory || editingCategory.id !== category.id" class="item-actions">
+          <div *ngIf="!editingCategory || editingCategory.id !== category.id" class="item-actions" draggable="false">
             <button
               class="btn-icon btn-danger"
               (click)="deleteCategory(category); $event.stopPropagation()"
@@ -172,6 +193,15 @@
               </div>
             </form>
           </div>
+        </div>
+
+        <!-- Drop zone for last position -->
+        <div
+          *ngIf="draggedIndex !== null"
+          class="drop-zone-last"
+          (dragover)="onDragOver($event, categories.length)"
+          (drop)="onDrop($event, categories.length)"
+          [class.drag-over]="dragOverIndex === categories.length">
         </div>
       </div>
     </section>

@@ -23,6 +23,10 @@ export class ProjectService {
     return [...this.recentProjects];
   }
 
+  getMostRecentProject(): string | null {
+    return this.recentProjects.length > 0 ? this.recentProjects[0] : null;
+  }
+
   /**
    * Opens Electron folder selection dialog
    */

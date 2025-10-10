@@ -30,6 +30,9 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   thumbnailDataUrls: Map<string, string> = new Map();
   isLoading = false;
   error: string | null = null;
+  viewMode: 'grid' | 'list' = 'grid'; // Toggle between grid (cards) and list view
+  sortBy: 'name' | 'category' = 'name';
+  sortDirection: 'asc' | 'desc' = 'asc';
 
   constructor(
     private characterService: CharacterService,
@@ -41,6 +44,22 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    // Load saved view mode preference
+    const savedViewMode = localStorage.getItem('characterViewMode') as 'grid' | 'list';
+    if (savedViewMode) {
+      this.viewMode = savedViewMode;
+    }
+
+    // Load saved sort preferences
+    const savedSortBy = localStorage.getItem('characterSortBy') as 'name' | 'category';
+    if (savedSortBy) {
+      this.sortBy = savedSortBy;
+    }
+    const savedSortDirection = localStorage.getItem('characterSortDirection') as 'asc' | 'desc';
+    if (savedSortDirection) {
+      this.sortDirection = savedSortDirection;
+    }
+
     // Subscribe to project changes
     this.projectService.currentProject$
       .pipe(takeUntil(this.destroy$))
@@ -48,17 +67,17 @@ export class CharacterListComponent implements OnInit, OnDestroy {
         this.currentProject = project;
         this.categories = this.projectService.getCategories();
         this.tags = this.projectService.getTags();
-        
+
         if (project) {
           this.loadCharacters();
         }
       });
-    
+
     // Subscribe to character changes and apply filters
     this.characters$
       .pipe(takeUntil(this.destroy$))
       .subscribe(characters => {
-        this.filteredCharacters = this.filterCharacters(characters);
+        this.filteredCharacters = this.filterAndSortCharacters(characters);
         this.loadThumbnailDataUrls(characters);
       });
   }
@@ -188,25 +207,28 @@ export class CharacterListComponent implements OnInit, OnDestroy {
 
   private applyFilters(): void {
     this.characters$.pipe(takeUntil(this.destroy$)).subscribe(characters => {
-      this.filteredCharacters = this.filterCharacters(characters);
+      this.filteredCharacters = this.filterAndSortCharacters(characters);
     });
+  }
+
+  private filterAndSortCharacters(characters: Character[]): Character[] {
+    const filtered = this.filterCharacters(characters);
+    return this.sortCharacters(filtered);
   }
 
   private filterCharacters(characters: Character[]): Character[] {
     return characters.filter(character => {
-      // Search term filter - search across names, categories, tags, and descriptions
+      // Search term filter - search names, categories, and tags
       if (this.searchTerm) {
         const searchLower = this.searchTerm.toLowerCase();
         const categoryName = this.getCategoryName(character.category).toLowerCase();
         const tagNames = character.tags.map(tagId => this.getTagName(tagId).toLowerCase());
-        
-        const matchesSearch = 
+
+        const matchesSearch =
           character.name.toLowerCase().includes(searchLower) ||
-          character.description.toLowerCase().includes(searchLower) ||
-          character.notes.toLowerCase().includes(searchLower) ||
           categoryName.includes(searchLower) ||
           tagNames.some(tagName => tagName.includes(searchLower));
-        
+
         if (!matchesSearch) return false;
       }
       
@@ -314,5 +336,63 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     if (img) {
       img.style.display = 'none';
     }
+  }
+
+  toggleViewMode(): void {
+    this.viewMode = this.viewMode === 'grid' ? 'list' : 'grid';
+    localStorage.setItem('characterViewMode', this.viewMode);
+  }
+
+  setViewMode(mode: 'grid' | 'list'): void {
+    this.viewMode = mode;
+    localStorage.setItem('characterViewMode', this.viewMode);
+  }
+
+  setSortBy(sortBy: 'name' | 'category'): void {
+    if (this.sortBy === sortBy) {
+      // Toggle direction if clicking the same sort
+      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      // Default to ascending for new sort
+      this.sortBy = sortBy;
+      this.sortDirection = 'asc';
+    }
+
+    localStorage.setItem('characterSortBy', this.sortBy);
+    localStorage.setItem('characterSortDirection', this.sortDirection);
+    this.applyFilters();
+  }
+
+  private sortCharacters(characters: Character[]): Character[] {
+    const sorted = [...characters];
+
+    if (this.sortBy === 'name') {
+      sorted.sort((a, b) => {
+        const comparison = a.name.localeCompare(b.name);
+        return this.sortDirection === 'asc' ? comparison : -comparison;
+      });
+    } else if (this.sortBy === 'category') {
+      // Sort by category position in the categories array
+      sorted.sort((a, b) => {
+        const aCategoryIndex = this.categories.findIndex(cat => cat.id === a.category);
+        const bCategoryIndex = this.categories.findIndex(cat => cat.id === b.category);
+
+        // If category not found, put at end
+        const aIndex = aCategoryIndex === -1 ? 9999 : aCategoryIndex;
+        const bIndex = bCategoryIndex === -1 ? 9999 : bCategoryIndex;
+
+        // Primary sort by category order
+        const categoryComparison = aIndex - bIndex;
+
+        if (categoryComparison !== 0) {
+          return this.sortDirection === 'asc' ? categoryComparison : -categoryComparison;
+        }
+
+        // Secondary sort by name within same category
+        return a.name.localeCompare(b.name);
+      });
+    }
+
+    return sorted;
   }
 }

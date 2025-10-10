@@ -1,10 +1,10 @@
-import { Component, OnInit, OnDestroy, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Observable, Subscription } from 'rxjs';
-import { GraphData, Character, Relationship } from '../../core/interfaces';
-import { RelationshipService, CharacterService, ProjectService } from '../../core/services';
-import { Network, DataSet, Node, Edge, Options } from 'vis-network/standalone';
+import { DataSet, Edge, Network, Node, Options } from 'vis-network/standalone';
+import { Character, GraphData, Relationship } from '../../core/interfaces';
+import { CharacterService, ProjectService, RelationshipService } from '../../core/services';
 
 interface RelationshipFormData {
   source: string;
@@ -20,26 +20,26 @@ interface RelationshipFormData {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './graph-view.component.html',
-  styleUrls: ['./graph-view.component.scss']
+  styleUrls: ['./graph-view.component.scss'],
 })
 export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('graphContainer', { static: true }) graphContainer!: ElementRef;
-  
+
   graphData$: Observable<GraphData>;
   characters$: Observable<Character[]>;
-  
+
   private subscriptions = new Subscription();
   private network: Network | null = null;
   private nodes: DataSet<Node> = new DataSet([]);
   private edges: DataSet<Edge> = new DataSet([]);
-  
+
   // UI state
   showRelationshipDialog = false;
   showEditDialog = false;
   selectedNodes: string[] = [];
   characters: Character[] = [];
   relationshipTypes: string[] = [];
-  
+
   // Grid configuration
   gridSize = 100; // Fixed grid size
   showGrid = false;
@@ -48,8 +48,8 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
   // Zoom configuration
   zoomLevels = [0.5, 1.0, 1.5, 2.0, 2.5];
   currentZoomIndex = 1; // Start at 1.0x
-  lastMousePosition: { x: number, y: number } | null = null;
-  
+  lastMousePosition: { x: number; y: number } | null = null;
+
   // Form data
   relationshipForm: RelationshipFormData = {
     source: '',
@@ -57,9 +57,9 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
     type: 'friend',
     label: '',
     color: '#848484',
-    bidirectional: false
+    bidirectional: false,
   };
-  
+
   editingRelationship: Relationship | null = null;
 
   constructor(
@@ -73,6 +73,14 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnInit(): void {
+    // Check if project is loaded
+    const project = this.projectService.getCurrentProject();
+
+    if (!project) {
+      console.error('No project loaded in graph view!');
+      return;
+    }
+
     this.subscribeToData();
   }
 
@@ -96,7 +104,7 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private initializeGraph(): void {
     const container = this.graphContainer.nativeElement;
-    
+
     const options: Options = {
       nodes: {
         shape: 'dot',
@@ -109,11 +117,11 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
           multi: false,
           strokeWidth: 2,
           strokeColor: '#0a0e1a',
-          bold: '500'
+          bold: '500',
         },
         borderWidth: 2,
         shadow: true,
-        labelHighlightBold: false
+        labelHighlightBold: false,
       },
       edges: {
         width: 2,
@@ -121,43 +129,45 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
         smooth: {
           enabled: true,
           type: 'continuous',
-          roundness: 0.5
+          roundness: 0.5,
         },
         arrows: {
-          to: { enabled: true, scaleFactor: 1 }
+          to: { enabled: true, scaleFactor: 1 },
         },
         font: {
           size: 12,
           color: '#e5e7eb',
           strokeWidth: 1,
-          strokeColor: '#0a0e1a'
-        }
+          strokeColor: '#0a0e1a',
+        },
       },
       physics: {
         enabled: false, // Completely disable physics
-        stabilization: false // Disable stabilization
+        stabilization: false, // Disable stabilization
       },
       layout: {
-        randomSeed: undefined, // Disable random positioning
+        randomSeed: 42, // Fixed seed to prevent random positioning
         improvedLayout: false, // Disable improved layout algorithm
-        clusterThreshold: 150,
-        hierarchical: false
+        hierarchical: false,
       },
       interaction: {
         dragNodes: true,
-        dragView: true,
+        dragView: false, // Disable default panning - we'll use middle-click
         zoomView: false, // Disable default zoom to use our discrete zoom
-        selectConnectedEdges: false
+        selectConnectedEdges: false,
+        multiselect: true, // Enable multi-select with left-click drag
+        selectable: true,
       },
       manipulation: {
-        enabled: false
-      }
+        enabled: false,
+      },
     };
 
     this.network = new Network(container, { nodes: this.nodes, edges: this.edges }, options);
 
     this.setupNetworkEvents();
     this.setupDiscreteZoom();
+    this.setupMiddleClickPan();
   }
 
   private setupDiscreteZoom(): void {
@@ -171,29 +181,104 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
         const rect = canvas.getBoundingClientRect();
         this.lastMousePosition = {
           x: event.clientX - rect.left,
-          y: event.clientY - rect.top
+          y: event.clientY - rect.top,
         };
       });
 
-      canvas.addEventListener('wheel', (event: WheelEvent) => {
+      canvas.addEventListener(
+        'wheel',
+        (event: WheelEvent) => {
+          event.preventDefault();
+
+          // Get mouse position for zoom center
+          const rect = canvas.getBoundingClientRect();
+          const mousePos = {
+            x: event.clientX - rect.left,
+            y: event.clientY - rect.top,
+          };
+
+          if (event.deltaY < 0) {
+            // Zoom in
+            this.zoomIn(mousePos);
+          } else {
+            // Zoom out
+            this.zoomOut(mousePos);
+          }
+        },
+        { passive: false }
+      );
+    }
+  }
+
+  private setupMiddleClickPan(): void {
+    if (!this.network) return;
+
+    const canvas = this.graphContainer.nativeElement.querySelector('canvas');
+    if (!canvas) return;
+
+    let isPanning = false;
+    let startPos = { x: 0, y: 0 };
+    let startViewPos = { x: 0, y: 0 };
+
+    canvas.addEventListener('mousedown', (event: MouseEvent) => {
+      // Middle mouse button (button === 1)
+      if (event.button === 1) {
+        event.preventDefault();
+        isPanning = true;
+        startPos = { x: event.clientX, y: event.clientY };
+        if (this.network) {
+          startViewPos = this.network.getViewPosition();
+        }
+        canvas.style.cursor = 'grabbing';
+      }
+    });
+
+    canvas.addEventListener('mousemove', (event: MouseEvent) => {
+      if (isPanning && this.network) {
         event.preventDefault();
 
-        // Get mouse position for zoom center
-        const rect = canvas.getBoundingClientRect();
-        const mousePos = {
-          x: event.clientX - rect.left,
-          y: event.clientY - rect.top
+        const dx = event.clientX - startPos.x;
+        const dy = event.clientY - startPos.y;
+
+        const scale = this.network.getScale();
+
+        // Move view in opposite direction of mouse movement
+        const newViewPos = {
+          x: startViewPos.x - dx / scale,
+          y: startViewPos.y - dy / scale,
         };
 
-        if (event.deltaY < 0) {
-          // Zoom in
-          this.zoomIn(mousePos);
-        } else {
-          // Zoom out
-          this.zoomOut(mousePos);
-        }
-      }, { passive: false });
-    }
+        this.network.moveTo({
+          position: newViewPos,
+          scale: scale,
+          animation: false,
+        });
+      }
+    });
+
+    const handleMouseUp = (event: MouseEvent) => {
+      if (event.button === 1 && isPanning) {
+        isPanning = false;
+        canvas.style.cursor = 'default';
+
+        // Save view state after panning
+        setTimeout(() => {
+          this.saveViewState();
+          this.constrainView();
+        }, 100);
+      }
+    };
+
+    canvas.addEventListener('mouseup', handleMouseUp);
+    // Handle case where mouse is released outside canvas
+    document.addEventListener('mouseup', handleMouseUp);
+
+    // Prevent context menu on middle click
+    canvas.addEventListener('contextmenu', (event: MouseEvent) => {
+      if (event.button === 1) {
+        event.preventDefault();
+      }
+    });
   }
 
   private setupNetworkEvents(): void {
@@ -240,7 +325,7 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
         if (this.snapToGrid) {
           targetPos = {
             x: Math.round(targetPos.x / this.gridSize) * this.gridSize,
-            y: Math.round(targetPos.y / this.gridSize) * this.gridSize
+            y: Math.round(targetPos.y / this.gridSize) * this.gridSize,
           };
         }
 
@@ -272,11 +357,11 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
         if (this.snapToGrid) {
           const snappedPositions: { [key: string]: { x: number; y: number } } = {};
 
-          Object.keys(positions).forEach(nodeId => {
+          Object.keys(positions).forEach((nodeId) => {
             const pos = positions[nodeId];
             let snappedPos = {
               x: Math.round(pos.x / this.gridSize) * this.gridSize,
-              y: Math.round(pos.y / this.gridSize) * this.gridSize
+              y: Math.round(pos.y / this.gridSize) * this.gridSize,
             };
 
             // Check if snapped position is occupied by another node
@@ -294,17 +379,17 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
           });
 
           // Update positions in the network
-          Object.keys(snappedPositions).forEach(nodeId => {
+          Object.keys(snappedPositions).forEach((nodeId) => {
             this.network!.moveNode(nodeId, snappedPositions[nodeId].x, snappedPositions[nodeId].y);
           });
 
           // Save snapped positions
-          Object.keys(snappedPositions).forEach(nodeId => {
+          Object.keys(snappedPositions).forEach((nodeId) => {
             this.relationshipService.updateNodePosition(nodeId, snappedPositions[nodeId]);
           });
         } else {
           // Save original positions (no snapping, but still check collisions)
-          Object.keys(positions).forEach(nodeId => {
+          Object.keys(positions).forEach((nodeId) => {
             let finalPos = positions[nodeId];
 
             // Check for collisions
@@ -368,10 +453,9 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private subscribeToData(): void {
-    
     // Subscribe to character changes to ensure nodes exist
     this.subscriptions.add(
-      this.characters$.subscribe(characters => {
+      this.characters$.subscribe((characters) => {
         this.characters = characters;
         this.relationshipService.ensureNodesForCharacters(characters);
       })
@@ -379,7 +463,7 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Subscribe to graph data changes
     this.subscriptions.add(
-      this.graphData$.subscribe(async graphData => {
+      this.graphData$.subscribe(async (graphData) => {
         await this.updateGraph(graphData);
       })
     );
@@ -387,24 +471,29 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private async updateGraph(graphData: GraphData): Promise<void> {
     if (!this.network) {
+      console.warn('updateGraph called but network is not initialized');
       return;
     }
 
     // Convert to vis.js format with thumbnails loaded dynamically
     const visData = await this.relationshipService.getVisJsDataWithThumbnails(this.characters);
-    
+
     // Update nodes
     this.nodes.clear();
     this.nodes.add(visData.nodes);
-    
+
     // Update edges
     this.edges.clear();
     this.edges.add(visData.edges);
 
-    // Explicitly set node positions after a short delay to ensure they're applied
+    // Force redraw to ensure positions are applied
+    this.network.redraw();
+
+    // Explicitly enforce node positions immediately and again after a short delay
+    this.enforceNodePositions(graphData);
     setTimeout(() => {
       this.enforceNodePositions(graphData);
-    }, 100);
+    }, 50);
   }
 
   /**
@@ -414,9 +503,24 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
     if (!this.network) return;
 
     for (const node of graphData.nodes) {
-      this.network.moveNode(node.id, node.position.x, node.position.y);
+      // Check if node exists in the DataSet before trying to move it
+      const existingNode = this.nodes.get(node.id);
+      if (existingNode) {
+        try {
+          // Update the node in the DataSet to ensure position is set
+          this.nodes.update({
+            id: node.id,
+            x: node.position.x,
+            y: node.position.y,
+          });
+          // Also use moveNode for immediate visual update
+          this.network.moveNode(node.id, node.position.x, node.position.y);
+        } catch (error) {
+          console.warn(`Failed to move node ${node.id}:`, error);
+        }
+      }
     }
-    
+
     // Disable physics to prevent any automatic repositioning
     this.network.setOptions({ physics: { enabled: false } });
   }
@@ -426,9 +530,11 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
     // We need to get the current value synchronously
     let relationship: Relationship | null = null;
     this.subscriptions.add(
-      currentData.subscribe(data => {
-        relationship = data.edges.find(edge => edge.id === edgeId) || null;
-      }).unsubscribe()
+      currentData
+        .subscribe((data) => {
+          relationship = data.edges.find((edge) => edge.id === edgeId) || null;
+        })
+        .unsubscribe()
     );
     return relationship;
   }
@@ -462,7 +568,7 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  zoomIn(mousePos?: { x: number, y: number }): void {
+  zoomIn(mousePos?: { x: number; y: number }): void {
     if (this.network && this.currentZoomIndex < this.zoomLevels.length - 1) {
       this.currentZoomIndex++;
       const scale = this.zoomLevels[this.currentZoomIndex];
@@ -475,8 +581,8 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
           scale,
           animation: {
             duration: 200,
-            easingFunction: 'easeInOutQuad'
-          }
+            easingFunction: 'easeInOutQuad',
+          },
         });
       } else {
         // Zoom to center
@@ -484,8 +590,8 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
           scale,
           animation: {
             duration: 200,
-            easingFunction: 'easeInOutQuad'
-          }
+            easingFunction: 'easeInOutQuad',
+          },
         });
       }
 
@@ -497,7 +603,7 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  zoomOut(mousePos?: { x: number, y: number }): void {
+  zoomOut(mousePos?: { x: number; y: number }): void {
     if (this.network && this.currentZoomIndex > 0) {
       this.currentZoomIndex--;
       const scale = this.zoomLevels[this.currentZoomIndex];
@@ -510,8 +616,8 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
           scale,
           animation: {
             duration: 200,
-            easingFunction: 'easeInOutQuad'
-          }
+            easingFunction: 'easeInOutQuad',
+          },
         });
       } else {
         // Zoom to center
@@ -519,8 +625,8 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
           scale,
           animation: {
             duration: 200,
-            easingFunction: 'easeInOutQuad'
-          }
+            easingFunction: 'easeInOutQuad',
+          },
         });
       }
 
@@ -551,21 +657,19 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
 
   onDebugPositions(): void {
     if (!this.network) return;
-    
+
     // Get current vis.js positions
     const visPositions = this.network.getPositions();
-    
+
     // Get stored positions from service
     this.relationshipService.debugLogGraphState();
-    
+
     // Compare them
     const currentData = this.relationshipService.getGraphData();
     let storedData: any = null;
-    const sub = currentData.subscribe(data => storedData = data);
+    const sub = currentData.subscribe((data) => (storedData = data));
     sub.unsubscribe();
-    
   }
-
 
   private redrawGrid(): void {
     if (this.network) {
@@ -594,8 +698,8 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Calculate the offset based on view position
     // This determines where grid (0,0) appears on screen
-    const offsetX = (centerX - (viewPosition.x * scale)) % gridScreenSize;
-    const offsetY = (centerY - (viewPosition.y * scale)) % gridScreenSize;
+    const offsetX = (centerX - viewPosition.x * scale) % gridScreenSize;
+    const offsetY = (centerY - viewPosition.y * scale) % gridScreenSize;
 
     // Set grid line style - dark theme
     ctx.strokeStyle = 'rgba(45, 55, 72, 0.5)';
@@ -657,10 +761,12 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
       const canvasPos = this.network.canvasToDOM(positions[nodeId]);
 
       // Check if this node center is visible within the viewport bounds (with margin)
-      if (canvasPos.x >= margin &&
-          canvasPos.x <= canvasWidth - margin &&
-          canvasPos.y >= margin &&
-          canvasPos.y <= canvasHeight - margin) {
+      if (
+        canvasPos.x >= margin &&
+        canvasPos.x <= canvasWidth - margin &&
+        canvasPos.y >= margin &&
+        canvasPos.y <= canvasHeight - margin
+      ) {
         hasVisibleNode = true;
         break;
       }
@@ -692,8 +798,8 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
           scale,
           animation: {
             duration: 200,
-            easingFunction: 'easeInOutQuad'
-          }
+            easingFunction: 'easeInOutQuad',
+          },
         });
       }
     }
@@ -701,9 +807,9 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Relationship Dialog Methods
   openRelationshipDialog(sourceId: string, targetId: string): void {
-    const sourceChar = this.characters.find(c => c.id === sourceId);
-    const targetChar = this.characters.find(c => c.id === targetId);
-    
+    const sourceChar = this.characters.find((c) => c.id === sourceId);
+    const targetChar = this.characters.find((c) => c.id === targetId);
+
     if (!sourceChar || !targetChar) {
       alert('Invalid character selection.');
       return;
@@ -715,9 +821,9 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
       type: 'friend',
       label: `${sourceChar.name} - ${targetChar.name}`,
       color: '#848484',
-      bidirectional: false
+      bidirectional: false,
     };
-    
+
     this.showRelationshipDialog = true;
   }
 
@@ -729,7 +835,7 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
       type: relationship.type,
       label: relationship.label,
       color: relationship.color,
-      bidirectional: relationship.bidirectional
+      bidirectional: relationship.bidirectional,
     };
     this.showEditDialog = true;
   }
@@ -738,15 +844,12 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
     try {
       if (this.editingRelationship) {
         // Update existing relationship
-        await this.relationshipService.updateRelationship(
-          this.editingRelationship.id,
-          this.relationshipForm
-        );
+        await this.relationshipService.updateRelationship(this.editingRelationship.id, this.relationshipForm);
       } else {
         // Create new relationship
         await this.relationshipService.createRelationship(this.relationshipForm);
       }
-      
+
       this.closeDialogs();
     } catch (error) {
       alert('Failed to save relationship. Please try again.');
@@ -755,7 +858,7 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
 
   async deleteRelationship(): Promise<void> {
     if (!this.editingRelationship) return;
-    
+
     if (confirm('Are you sure you want to delete this relationship?')) {
       try {
         await this.relationshipService.deleteRelationship(this.editingRelationship.id);
@@ -776,28 +879,28 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
       type: 'friend',
       label: '',
       color: '#848484',
-      bidirectional: false
+      bidirectional: false,
     };
   }
 
   // Helper methods
   getCharacterName(characterId: string): string {
-    const character = this.characters.find(c => c.id === characterId);
+    const character = this.characters.find((c) => c.id === characterId);
     return character ? character.name : 'Unknown';
   }
 
   getRelationshipTypeColor(type: string): string {
     const colors: { [key: string]: string } = {
-      'family': '#e74c3c',
-      'friend': '#2ecc71',
-      'enemy': '#c0392b',
-      'romantic': '#e91e63',
-      'mentor': '#9b59b6',
-      'colleague': '#3498db',
-      'rival': '#f39c12',
-      'ally': '#1abc9c',
-      'subordinate': '#95a5a6',
-      'superior': '#34495e'
+      family: '#e74c3c',
+      friend: '#2ecc71',
+      enemy: '#c0392b',
+      romantic: '#e91e63',
+      mentor: '#9b59b6',
+      colleague: '#3498db',
+      rival: '#f39c12',
+      ally: '#1abc9c',
+      subordinate: '#95a5a6',
+      superior: '#34495e',
     };
     return colors[type] || '#848484';
   }
@@ -820,7 +923,7 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
     let graphData: GraphData | null = null;
 
     // Get the current value synchronously
-    const subscription = currentGraphData.subscribe(data => {
+    const subscription = currentGraphData.subscribe((data) => {
       graphData = data;
     });
     subscription.unsubscribe();
@@ -839,11 +942,11 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
     const viewPosition = this.network.getViewPosition();
     const state = {
       zoomIndex: this.currentZoomIndex,
-      viewPosition: { x: viewPosition.x, y: viewPosition.y }
+      viewPosition: { x: viewPosition.x, y: viewPosition.y },
     };
 
     // Save asynchronously without blocking UI
-    this.projectService.saveGraphViewState(state).catch(error => {
+    this.projectService.saveGraphViewState(state).catch((error) => {
       console.warn('Failed to save graph view state:', error);
     });
   }
@@ -869,8 +972,8 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
             scale: this.zoomLevels[this.currentZoomIndex],
             animation: {
               duration: 300,
-              easingFunction: 'easeInOutQuad'
-            }
+              easingFunction: 'easeInOutQuad',
+            },
           });
         }
       }, 500); // Delay to ensure graph is fully initialized

@@ -258,13 +258,31 @@
     overflow: hidden;
   }
 
+  .drop-zone-last {
+    min-height: 20px;
+    transition: all var(--transition-base);
+
+    &.drag-over {
+      min-height: 48px;
+      background-color: rgba(59, 130, 246, 0.05);
+      border-radius: var(--radius-sm);
+    }
+  }
+
   .item-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: var(--spacing-sm) var(--spacing-md);
     border-bottom: 1px solid var(--color-border);
-    transition: background-color var(--transition-fast);
+    transition: margin-top var(--transition-base), opacity var(--transition-fast), background-color var(--transition-fast);
+    cursor: move;
+    margin-top: 0;
+    outline: none;
+
+    &:focus {
+      outline: none;
+    }
 
     &:last-child {
       border-bottom: none;
@@ -278,6 +296,56 @@
       }
     }
 
+    &.dragging {
+      .drag-handle,
+      .item-content,
+      .item-actions {
+        visibility: hidden;
+      }
+    }
+
+    &.drag-over {
+      margin-top: 48px;
+      position: relative;
+
+      &::before {
+        content: '';
+        position: absolute;
+        top: -48px;
+        left: 0;
+        right: 0;
+        height: 48px;
+        background-color: rgba(59, 130, 246, 0.05);
+        border-radius: var(--radius-sm);
+      }
+    }
+
+    .drag-handle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      color: var(--color-text-muted);
+      cursor: grab;
+      opacity: 0.6;
+      transition: opacity var(--transition-fast);
+      margin-right: var(--spacing-sm);
+      flex-shrink: 0;
+
+      &:hover {
+        opacity: 1;
+      }
+
+      &:active {
+        cursor: grabbing;
+      }
+
+      svg {
+        display: block;
+      }
+    }
+
     .item-content {
       display: flex;
       align-items: center;
@@ -287,6 +355,7 @@
       margin: calc(var(--spacing-xs) * -1);
       border-radius: var(--radius-sm);
       transition: background-color var(--transition-fast);
+      pointer-events: auto;
 
       &:hover {
         background-color: rgba(59, 130, 246, 0.05);

@@ -19,7 +19,18 @@ export class AppComponent implements OnInit {
 
   constructor(private projectService: ProjectService, private router: Router) {}
 
-  ngOnInit() {
+  async ngOnInit() {
+    // Try to auto-load the most recent project
+    const mostRecentProject = this.projectService.getMostRecentProject();
+    if (mostRecentProject) {
+      try {
+        await this.projectService.loadProject(mostRecentProject);
+      } catch (error) {
+        console.warn('Failed to auto-load most recent project:', error);
+        // If loading fails, user will be redirected to project selector by subscription below
+      }
+    }
+
     this.projectService.currentProject$.subscribe((project: any) => {
       this.hasProject = !!project;
       this.currentProjectName = project?.name || "";
