@@ -169,55 +169,70 @@
 .filters {
   margin-bottom: var(--spacing-md);
   padding: var(--spacing-sm) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
 }
 
 .filter-row {
   display: flex;
   gap: var(--spacing-md);
   align-items: center;
+}
 
-  .category-filter {
+// Category Toggle (similar to view toggle)
+.category-toggle {
+  position: relative;
+  display: flex;
+  background-color: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 2px;
+  gap: 2px;
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none; // Firefox
+  -ms-overflow-style: none; // IE/Edge
+
+  // Hide scrollbar for webkit browsers
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  .toggle-option {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
+    background: transparent;
+    border: none;
+    border-radius: calc(var(--radius-md) - 2px);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    white-space: nowrap;
     flex-shrink: 0;
-    min-width: 180px;
+    min-width: fit-content;
 
-    .form-control {
-      width: 100%;
-      padding: 8px 12px;
-      background-color: var(--color-bg-secondary);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-md);
+    &:hover:not(.active) {
       color: var(--color-text-primary);
-      font-size: 0.875rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all var(--transition-fast);
+      background-color: var(--color-bg-elevated);
+    }
 
-      &:hover {
-        border-color: var(--color-accent-primary);
-        background-color: var(--color-bg-tertiary);
-      }
+    &.active {
+      background-color: var(--color-accent-primary);
+      color: white;
+      font-weight: 600;
+    }
 
-      &:focus {
-        outline: none;
-        border-color: var(--color-accent-primary);
-        background-color: var(--color-bg-tertiary);
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-      }
+    // Special styling for "All" button to make it stand out
+    &:first-child {
+      font-weight: 600;
 
-      option {
-        background-color: var(--color-bg-secondary);
+      &:not(.active) {
         color: var(--color-text-primary);
-        padding: 8px 12px;
-        border: none;
-
-        &:hover {
-          background-color: var(--color-bg-tertiary);
-        }
-
-        &:checked {
-          background-color: var(--color-accent-primary);
-          color: white;
-        }
       }
     }
   }
@@ -227,11 +242,13 @@
   flex: 1;
   display: flex;
   align-items: center;
+  width: 100%;
 
   .tag-list {
     display: flex;
     flex-wrap: wrap;
     gap: var(--spacing-xs);
+    width: 100%;
   }
 
   .tag-filter {
@@ -901,10 +918,18 @@
   .filter-row {
     flex-direction: column;
     gap: var(--spacing-sm);
+    align-items: stretch;
 
-    .category-filter {
+    .category-toggle {
       width: 100%;
-      min-width: 0;
+      flex-wrap: wrap;
+      overflow-x: visible;
+
+      .toggle-option {
+        flex: 1;
+        min-width: 0;
+        padding: 8px 12px;
+      }
     }
 
     .tag-filters {

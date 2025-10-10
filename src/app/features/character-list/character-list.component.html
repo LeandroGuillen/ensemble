@@ -91,24 +91,32 @@
     <div class="content-wrapper" *ngIf="currentProject && !isLoading && !error">
       <div class="controls-section">
         <div class="filters" *ngIf="categories.length > 0 || tags.length > 0">
-          <div class="filter-row">
-            <div class="category-filter" *ngIf="categories.length > 0">
-              <select
-                class="form-control"
-                [(ngModel)]="selectedCategory"
-                (change)="onCategoryChange()"
+          <!-- Category Toggle Row -->
+          <div class="filter-row" *ngIf="categories.length > 0">
+            <div class="category-toggle">
+              <button
+                class="toggle-option"
+                [class.active]="selectedCategory === ''"
+                (click)="onCategoryToggle('')"
+                title="Show all categories"
               >
-                <option value="">All Categories</option>
-                <option
-                  *ngFor="let category of categories"
-                  [value]="category.id"
-                >
-                  {{ category.name }}
-                </option>
-              </select>
+                All
+              </button>
+              <button
+                *ngFor="let category of categories"
+                class="toggle-option"
+                [class.active]="selectedCategory === category.id"
+                (click)="onCategoryToggle(category.id)"
+                [title]="'Filter by ' + category.name"
+              >
+                {{ category.name }}
+              </button>
             </div>
+          </div>
 
-            <div class="tag-filters" *ngIf="tags.length > 0">
+          <!-- Tags Row -->
+          <div class="filter-row" *ngIf="tags.length > 0">
+            <div class="tag-filters">
               <div class="tag-list">
                 <button
                   *ngFor="let tag of tags"

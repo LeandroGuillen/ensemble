@@ -283,6 +283,16 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
     }
   }
 
+  onCategorySelect(categoryId: string): void {
+    this.characterForm.patchValue({ category: categoryId });
+    this.characterForm.markAsDirty();
+  }
+
+  onTagToggle(tagId: string): void {
+    const isSelected = this.isTagSelected(tagId);
+    this.onTagChange(tagId, !isSelected);
+  }
+
   private markFormGroupTouched(formGroup: FormGroup): void {
     Object.keys(formGroup.controls).forEach(key => {
       const control = formGroup.get(key);

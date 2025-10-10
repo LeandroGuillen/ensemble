@@ -57,8 +57,6 @@
           </div>
 
           <div class="form-section">
-            <h3>Basic Information</h3>
-
             <div class="basic-info-row">
               <!-- Thumbnail -->
               <div class="thumbnail-upload" (click)="selectThumbnail()" title="Click to select image">
@@ -95,53 +93,60 @@
                   {{ getFieldError('name') }}
                 </div>
               </div>
+            </div>
+          </div>
 
-              <!-- Category -->
-              <div class="form-group form-group-category">
-                <label class="form-label" for="category"> Category * </label>
-                <select
-                  id="category"
-                  class="form-control"
-                  formControlName="category"
+          <div class="form-section" *ngIf="categories.length > 0">
+            <!-- Category -->
+            <div class="form-group form-group-category">
+              <label class="form-label"> Category * </label>
+              <div class="category-toggle">
+                <button
+                  type="button"
+                  class="toggle-option"
+                  [class.active]="characterForm.get('category')?.value === ''"
+                  (click)="onCategorySelect('')"
                   [class.error]="getFieldError('category')"
                 >
-                  <option value="">Select category</option>
-                  <option *ngFor="let category of categories" [value]="category.id">
-                    {{ category.name }}
-                  </option>
-                </select>
-                <div class="error-text" *ngIf="getFieldError('category')">
-                  {{ getFieldError('category') }}
-                </div>
+                  None
+                </button>
+                <button
+                  *ngFor="let category of categories"
+                  type="button"
+                  class="toggle-option"
+                  [class.active]="characterForm.get('category')?.value === category.id"
+                  (click)="onCategorySelect(category.id)"
+                  [class.error]="getFieldError('category')"
+                >
+                  {{ category.name }}
+                </button>
+              </div>
+              <div class="error-text" *ngIf="getFieldError('category')">
+                {{ getFieldError('category') }}
               </div>
             </div>
           </div>
 
           <div class="form-section" *ngIf="tags.length > 0">
-            <h3>Tags</h3>
             <div class="form-group">
-              <label class="form-label">
-                Character Tags
-                <span class="field-hint">Select all applicable tags</span>
-              </label>
               <div class="tag-selection">
-                <label *ngFor="let tag of tags" class="tag-checkbox">
-                  <input
-                    type="checkbox"
-                    [checked]="isTagSelected(tag.id)"
-                    (change)="onTagCheckboxChange($event, tag.id)"
-                  />
-                  <span class="tag-name" [style.color]="getTagColor(tag.id)">
-                    {{ tag.name }}
-                  </span>
-                </label>
+                <button
+                  *ngFor="let tag of tags"
+                  type="button"
+                  class="tag tag-filter"
+                  [class.active]="isTagSelected(tag.id)"
+                  [style.background-color]="isTagSelected(tag.id) ? tag.color : 'transparent'"
+                  [style.color]="isTagSelected(tag.id) ? 'white' : tag.color"
+                  [style.border-color]="tag.color"
+                  (click)="onTagToggle(tag.id)"
+                >
+                  {{ tag.name }}
+                </button>
               </div>
             </div>
           </div>
 
           <div class="form-section">
-            <h3>Character Details</h3>
-
             <div class="form-group">
               <label class="form-label" for="mangamaster">
                 Mangamaster prompt

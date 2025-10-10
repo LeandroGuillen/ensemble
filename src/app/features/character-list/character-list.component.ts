@@ -363,6 +363,14 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     this.applyFilters();
   }
 
+  onCategoryToggle(categoryId: string): void {
+    // Single selection - set the selected category
+    this.selectedCategory = categoryId;
+    // Save selected category to localStorage
+    localStorage.setItem("characterSelectedCategory", this.selectedCategory);
+    this.applyFilters();
+  }
+
   onTagToggle(tagId: string): void {
     const index = this.selectedTags.indexOf(tagId);
     if (index > -1) {
