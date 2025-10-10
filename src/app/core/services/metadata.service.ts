@@ -1,27 +1,24 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
-import { ProjectMetadata, Category, Tag, ProjectSettings } from '../interfaces/project.interface';
+import { BehaviorSubject } from 'rxjs';
 import { Character, CharacterFormData } from '../interfaces/character.interface';
+import { Category, ProjectMetadata, ProjectSettings, Tag } from '../interfaces/project.interface';
 import { ValidationResult } from '../interfaces/validation.interface';
-import { ElectronService } from './electron.service';
-import { ProjectValidator } from '../validators/project.validator';
 import { CharacterValidator } from '../validators/character.validator';
+import { ProjectValidator } from '../validators/project.validator';
+import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class MetadataService {
   private metadataSubject = new BehaviorSubject<ProjectMetadata | null>(null);
   public metadata$ = this.metadataSubject.asObservable();
   private currentProjectPath: string | null = null;
 
-  constructor(
-    private electronService: ElectronService,
-    private projectService: ProjectService
-  ) {
+  constructor(private electronService: ElectronService, private projectService: ProjectService) {
     // Subscribe to project changes to keep metadata in sync
-    this.projectService.currentProject$.subscribe(project => {
+    this.projectService.currentProject$.subscribe((project) => {
       if (project) {
         this.metadataSubject.next(project.metadata);
         this.currentProjectPath = project.path;
@@ -57,7 +54,7 @@ export class MetadataService {
       // Validate metadata structure
       const validation = ProjectValidator.validateProjectMetadata(metadata);
       if (!validation.isValid) {
-        const errorMessages = validation.errors.map(e => `${e.field}: ${e.message}`).join(', ');
+        const errorMessages = validation.errors.map((e) => `${e.field}: ${e.message}`).join(', ');
         throw new Error(`Invalid metadata structure: ${errorMessages}`);
       }
 
@@ -81,7 +78,7 @@ export class MetadataService {
       // Validate metadata before saving
       const validation = ProjectValidator.validateProjectMetadata(metadata);
       if (!validation.isValid) {
-        const errorMessages = validation.errors.map(e => `${e.field}: ${e.message}`).join(', ');
+        const errorMessages = validation.errors.map((e) => `${e.field}: ${e.message}`).join(', ');
         throw new Error(`Invalid metadata: ${errorMessages}`);
       }
 
@@ -106,20 +103,19 @@ export class MetadataService {
         { id: 'main-character', name: 'Main Character', color: '#3498db' },
         { id: 'supporting', name: 'Supporting Character', color: '#2ecc71' },
         { id: 'antagonist', name: 'Antagonist', color: '#e74c3c' },
-        { id: 'minor', name: 'Minor Character', color: '#9b59b6' }
+        { id: 'minor', name: 'Minor Character', color: '#9b59b6' },
       ],
       tags: [
-        { id: 'protagonist', name: 'Protagonist', color: '#e91e63' },
         { id: 'magic-user', name: 'Magic User', color: '#9b59b6' },
-        { id: 'noble', name: 'Noble', color: '#f39c12' },
+        { id: 'noble', name: 'Noble', color: '#e91e63' },
         { id: 'warrior', name: 'Warrior', color: '#ff5722' },
-        { id: 'scholar', name: 'Scholar', color: '#1abc9c' }
+        { id: 'scholar', name: 'Scholar', color: '#1abc9c' },
       ],
       settings: {
         defaultCategory: 'main-character',
         autoSave: true,
-        fileWatchEnabled: true
-      }
+        fileWatchEnabled: true,
+      },
     };
   }
 
@@ -138,7 +134,7 @@ export class MetadataService {
    */
   getCategoryById(id: string): Category | undefined {
     const categories = this.getCategories();
-    return categories.find(cat => cat.id === id);
+    return categories.find((cat) => cat.id === id);
   }
 
   /**
@@ -157,12 +153,12 @@ export class MetadataService {
     // Validate the new category
     const validation = ProjectValidator.validateCategory(newCategory);
     if (!validation.isValid) {
-      const errorMessages = validation.errors.map(e => `${e.field}: ${e.message}`).join(', ');
+      const errorMessages = validation.errors.map((e) => `${e.field}: ${e.message}`).join(', ');
       throw new Error(`Invalid category: ${errorMessages}`);
     }
 
     // Check for duplicate ID
-    const existingCategory = metadata.categories.find(cat => cat.id === id);
+    const existingCategory = metadata.categories.find((cat) => cat.id === id);
     if (existingCategory) {
       throw new Error(`Category with ID '${id}' already exists`);
     }
@@ -170,7 +166,7 @@ export class MetadataService {
     // Add category and save
     const updatedMetadata = {
       ...metadata,
-      categories: [...metadata.categories, newCategory]
+      categories: [...metadata.categories, newCategory],
     };
 
     await this.saveMetadata(updatedMetadata);
@@ -186,7 +182,7 @@ export class MetadataService {
       throw new Error('No metadata loaded');
     }
 
-    const categoryIndex = metadata.categories.findIndex(cat => cat.id === id);
+    const categoryIndex = metadata.categories.findIndex((cat) => cat.id === id);
     if (categoryIndex === -1) {
       throw new Error(`Category with ID '${id}' not found`);
     }
@@ -196,7 +192,7 @@ export class MetadataService {
     // Validate the updated category
     const validation = ProjectValidator.validateCategory(updatedCategory);
     if (!validation.isValid) {
-      const errorMessages = validation.errors.map(e => `${e.field}: ${e.message}`).join(', ');
+      const errorMessages = validation.errors.map((e) => `${e.field}: ${e.message}`).join(', ');
       throw new Error(`Invalid category: ${errorMessages}`);
     }
 
@@ -206,7 +202,7 @@ export class MetadataService {
 
     const updatedMetadata = {
       ...metadata,
-      categories: updatedCategories
+      categories: updatedCategories,
     };
 
     await this.saveMetadata(updatedMetadata);
@@ -222,7 +218,7 @@ export class MetadataService {
       throw new Error('No metadata loaded');
     }
 
-    const categoryExists = metadata.categories.some(cat => cat.id === id);
+    const categoryExists = metadata.categories.some((cat) => cat.id === id);
     if (!categoryExists) {
       throw new Error(`Category with ID '${id}' not found`);
     }
@@ -235,7 +231,7 @@ export class MetadataService {
     // Remove category and save
     const updatedMetadata = {
       ...metadata,
-      categories: metadata.categories.filter(cat => cat.id !== id)
+      categories: metadata.categories.filter((cat) => cat.id !== id),
     };
 
     await this.saveMetadata(updatedMetadata);
@@ -256,7 +252,7 @@ export class MetadataService {
    */
   getTagById(id: string): Tag | undefined {
     const tags = this.getTags();
-    return tags.find(tag => tag.id === id);
+    return tags.find((tag) => tag.id === id);
   }
 
   /**
@@ -275,12 +271,12 @@ export class MetadataService {
     // Validate the new tag
     const validation = ProjectValidator.validateTag(newTag);
     if (!validation.isValid) {
-      const errorMessages = validation.errors.map(e => `${e.field}: ${e.message}`).join(', ');
+      const errorMessages = validation.errors.map((e) => `${e.field}: ${e.message}`).join(', ');
       throw new Error(`Invalid tag: ${errorMessages}`);
     }
 
     // Check for duplicate ID
-    const existingTag = metadata.tags.find(tag => tag.id === id);
+    const existingTag = metadata.tags.find((tag) => tag.id === id);
     if (existingTag) {
       throw new Error(`Tag with ID '${id}' already exists`);
     }
@@ -288,7 +284,7 @@ export class MetadataService {
     // Add tag and save
     const updatedMetadata = {
       ...metadata,
-      tags: [...metadata.tags, newTag]
+      tags: [...metadata.tags, newTag],
     };
 
     await this.saveMetadata(updatedMetadata);
@@ -304,7 +300,7 @@ export class MetadataService {
       throw new Error('No metadata loaded');
     }
 
-    const tagIndex = metadata.tags.findIndex(tag => tag.id === id);
+    const tagIndex = metadata.tags.findIndex((tag) => tag.id === id);
     if (tagIndex === -1) {
       throw new Error(`Tag with ID '${id}' not found`);
     }
@@ -314,7 +310,7 @@ export class MetadataService {
     // Validate the updated tag
     const validation = ProjectValidator.validateTag(updatedTag);
     if (!validation.isValid) {
-      const errorMessages = validation.errors.map(e => `${e.field}: ${e.message}`).join(', ');
+      const errorMessages = validation.errors.map((e) => `${e.field}: ${e.message}`).join(', ');
       throw new Error(`Invalid tag: ${errorMessages}`);
     }
 
@@ -324,7 +320,7 @@ export class MetadataService {
 
     const updatedMetadata = {
       ...metadata,
-      tags: updatedTags
+      tags: updatedTags,
     };
 
     await this.saveMetadata(updatedMetadata);
@@ -340,7 +336,7 @@ export class MetadataService {
       throw new Error('No metadata loaded');
     }
 
-    const tagExists = metadata.tags.some(tag => tag.id === id);
+    const tagExists = metadata.tags.some((tag) => tag.id === id);
     if (!tagExists) {
       throw new Error(`Tag with ID '${id}' not found`);
     }
@@ -348,7 +344,7 @@ export class MetadataService {
     // Remove tag and save
     const updatedMetadata = {
       ...metadata,
-      tags: metadata.tags.filter(tag => tag.id !== id)
+      tags: metadata.tags.filter((tag) => tag.id !== id),
     };
 
     await this.saveMetadata(updatedMetadata);
@@ -378,13 +374,13 @@ export class MetadataService {
     // Validate the updated settings
     const validation = ProjectValidator.validateProjectSettings(updatedSettings);
     if (!validation.isValid) {
-      const errorMessages = validation.errors.map(e => `${e.field}: ${e.message}`).join(', ');
+      const errorMessages = validation.errors.map((e) => `${e.field}: ${e.message}`).join(', ');
       throw new Error(`Invalid settings: ${errorMessages}`);
     }
 
     // If defaultCategory is being updated, validate it exists
     if (updates.defaultCategory) {
-      const categoryExists = metadata.categories.some(cat => cat.id === updates.defaultCategory);
+      const categoryExists = metadata.categories.some((cat) => cat.id === updates.defaultCategory);
       if (!categoryExists) {
         throw new Error(`Default category '${updates.defaultCategory}' does not exist`);
       }
@@ -393,7 +389,7 @@ export class MetadataService {
     // Update settings and save
     const updatedMetadata = {
       ...metadata,
-      settings: updatedSettings
+      settings: updatedSettings,
     };
 
     await this.saveMetadata(updatedMetadata);
@@ -410,11 +406,13 @@ export class MetadataService {
     if (!metadata) {
       return {
         isValid: false,
-        errors: [{
-          field: 'metadata',
-          message: 'No metadata loaded',
-          code: 'NO_METADATA'
-        }]
+        errors: [
+          {
+            field: 'metadata',
+            message: 'No metadata loaded',
+            code: 'NO_METADATA',
+          },
+        ],
       };
     }
 
@@ -429,11 +427,13 @@ export class MetadataService {
     if (!metadata) {
       return {
         isValid: false,
-        errors: [{
-          field: 'metadata',
-          message: 'No metadata loaded',
-          code: 'NO_METADATA'
-        }]
+        errors: [
+          {
+            field: 'metadata',
+            message: 'No metadata loaded',
+            code: 'NO_METADATA',
+          },
+        ],
       };
     }
 
@@ -441,25 +441,25 @@ export class MetadataService {
 
     // Validate category exists in metadata
     if (formData.category) {
-      const categoryExists = metadata.categories.some(cat => cat.id === formData.category);
+      const categoryExists = metadata.categories.some((cat) => cat.id === formData.category);
       if (!categoryExists) {
         errors.push({
           field: 'category',
           message: `Category '${formData.category}' does not exist in project metadata`,
-          code: 'INVALID_REFERENCE'
+          code: 'INVALID_REFERENCE',
         });
       }
     }
 
     // Validate tags exist in metadata
     if (Array.isArray(formData.tags)) {
-      formData.tags.forEach(tagId => {
-        const tagExists = metadata.tags.some(tag => tag.id === tagId);
+      formData.tags.forEach((tagId) => {
+        const tagExists = metadata.tags.some((tag) => tag.id === tagId);
         if (!tagExists) {
           errors.push({
             field: 'tags',
             message: `Tag '${tagId}' does not exist in project metadata`,
-            code: 'INVALID_REFERENCE'
+            code: 'INVALID_REFERENCE',
           });
         }
       });
@@ -467,7 +467,7 @@ export class MetadataService {
 
     return {
       isValid: errors.length === 0,
-      errors
+      errors,
     };
   }
 
@@ -475,10 +475,10 @@ export class MetadataService {
    * Gets available category options for character forms
    */
   getCategoryOptions(): { id: string; name: string; color: string }[] {
-    return this.getCategories().map(cat => ({
+    return this.getCategories().map((cat) => ({
       id: cat.id,
       name: cat.name,
-      color: cat.color
+      color: cat.color,
     }));
   }
 
@@ -486,10 +486,10 @@ export class MetadataService {
    * Gets available tag options for character forms
    */
   getTagOptions(): { id: string; name: string; color: string }[] {
-    return this.getTags().map(tag => ({
+    return this.getTags().map((tag) => ({
       id: tag.id,
       name: tag.name,
-      color: tag.color
+      color: tag.color,
     }));
   }
 

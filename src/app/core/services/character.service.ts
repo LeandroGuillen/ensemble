@@ -455,6 +455,7 @@ export class CharacterService {
         category: frontmatter.category || '',
         tags: frontmatter.tags || [],
         thumbnail: frontmatter.thumbnail,
+        mangamaster: sections.mangamaster,
         description: sections.description,
         notes: sections.notes,
         created: frontmatter.created ? new Date(frontmatter.created) : new Date(),
@@ -483,7 +484,7 @@ export class CharacterService {
         modified: character.modified.toISOString()
       };
 
-      const content = this.generateCharacterContent(character.description, character.notes);
+      const content = this.generateCharacterContent(character.mangamaster, character.description, character.notes);
       const markdownContent = MarkdownUtils.generateMarkdown(frontmatter, content);
 
       const writeResult = await this.electronService.writeFileAtomic(character.filePath, markdownContent);
@@ -615,10 +616,11 @@ export class CharacterService {
   }
 
   /**
-   * Parses character content into description and notes sections
+   * Parses character content into mangamaster, description and notes sections
    */
-  private parseCharacterContent(content: string): { description: string; notes: string } {
+  private parseCharacterContent(content: string): { mangamaster: string; description: string; notes: string } {
     const lines = content.split('\n');
+    let mangamaster = '';
     let description = '';
     let notes = '';
     let currentSection = '';
@@ -626,7 +628,10 @@ export class CharacterService {
     for (const line of lines) {
       const trimmedLine = line.trim();
       
-      if (trimmedLine.startsWith('## Description')) {
+      if (trimmedLine.startsWith('## Mangamaster')) {
+        currentSection = 'mangamaster';
+        continue;
+      } else if (trimmedLine.startsWith('## Description')) {
         currentSection = 'description';
         continue;
       } else if (trimmedLine.startsWith('## Notes')) {
@@ -638,7 +643,9 @@ export class CharacterService {
         continue;
       }
 
-      if (currentSection === 'description') {
+      if (currentSection === 'mangamaster') {
+        mangamaster += line + '\n';
+      } else if (currentSection === 'description') {
         description += line + '\n';
       } else if (currentSection === 'notes') {
         notes += line + '\n';
@@ -646,16 +653,21 @@ export class CharacterService {
     }
 
     return {
+      mangamaster: mangamaster.trim(),
       description: description.trim(),
       notes: notes.trim()
     };
   }
 
   /**
-   * Generates character content with description and notes sections
+   * Generates character content with mangamaster, description and notes sections
    */
-  private generateCharacterContent(description: string, notes: string): string {
+  private generateCharacterContent(mangamaster: string, description: string, notes: string): string {
     let content = '';
+    
+    if (mangamaster) {
+      content += `## Mangamaster\n\n${mangamaster}\n\n`;
+    }
     
     if (description) {
       content += `## Description\n\n${description}\n\n`;

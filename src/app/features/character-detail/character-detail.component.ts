@@ -104,6 +104,7 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
       category: ['', Validators.required],
       tags: [[]],
       thumbnail: [''],
+      mangamaster: [''],
       description: [''],
       notes: ['']
     });
@@ -121,6 +122,7 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
           category: this.character.category,
           tags: this.character.tags,
           thumbnail: this.character.thumbnail,
+          mangamaster: this.character.mangamaster,
           description: this.character.description,
           notes: this.character.notes
         });
