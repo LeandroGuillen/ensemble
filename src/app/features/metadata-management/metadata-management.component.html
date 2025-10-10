@@ -290,15 +290,36 @@
 
       <!-- Tags List -->
       <div class="items-list">
-        <div *ngFor="let tag of tags" class="item-row">
+        <div
+          *ngFor="let tag of tags; let i = index"
+          class="item-row"
+          draggable="true"
+          (dragstart)="onTagDragStart($event, i)"
+          (dragover)="onTagDragOver($event, i)"
+          (drop)="onTagDrop($event, i)"
+          (dragend)="onTagDragEnd()"
+          [class.dragging]="tagDraggedIndex === i"
+          [class.drag-over]="tagDragOverIndex === i">
+          <!-- Drag Handle -->
+          <div class="drag-handle" *ngIf="!editingTag || editingTag.id !== tag.id" draggable="false">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" draggable="false">
+              <circle cx="6" cy="3" r="1.5"/>
+              <circle cx="10" cy="3" r="1.5"/>
+              <circle cx="6" cy="8" r="1.5"/>
+              <circle cx="10" cy="8" r="1.5"/>
+              <circle cx="6" cy="13" r="1.5"/>
+              <circle cx="10" cy="13" r="1.5"/>
+            </svg>
+          </div>
+
           <!-- Regular item display -->
-          <div *ngIf="!editingTag || editingTag.id !== tag.id" class="item-content" (click)="showEditTagForm(tag)">
+          <div *ngIf="!editingTag || editingTag.id !== tag.id" class="item-content" (click)="showEditTagForm(tag)" draggable="false">
             <div class="item-color" [style.background-color]="tag.color"></div>
             <div class="item-info">
               <span class="item-name">{{ tag.name }}</span>
             </div>
           </div>
-          <div *ngIf="!editingTag || editingTag.id !== tag.id" class="item-actions">
+          <div *ngIf="!editingTag || editingTag.id !== tag.id" class="item-actions" draggable="false">
             <button
               class="btn-icon btn-danger"
               (click)="deleteTag(tag); $event.stopPropagation()"
@@ -357,6 +378,15 @@
               </div>
             </form>
           </div>
+        </div>
+
+        <!-- Drop zone for last position -->
+        <div
+          *ngIf="tagDraggedIndex !== null"
+          class="drop-zone-last"
+          (dragover)="onTagDragOver($event, tags.length)"
+          (drop)="onTagDrop($event, tags.length)"
+          [class.drag-over]="tagDragOverIndex === tags.length">
         </div>
       </div>
     </section>

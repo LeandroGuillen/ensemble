@@ -155,11 +155,11 @@
 
             <div class="character-tags" *ngIf="character.tags.length > 0">
               <span
-                *ngFor="let tagId of character.tags"
+                *ngFor="let tag of getCharacterTagsInOrder(character)"
                 class="tag"
-                [style.background-color]="getTagColor(tagId)"
+                [style.background-color]="tag.color"
                 [style.color]="'white'">
-                {{ getTagName(tagId) }}
+                {{ tag.name }}
               </span>
             </div>
 
@@ -213,11 +213,11 @@
 
             <div class="list-item-tags" *ngIf="character.tags.length > 0">
               <span
-                *ngFor="let tagId of character.tags"
+                *ngFor="let tag of getCharacterTagsInOrder(character)"
                 class="tag tag-sm"
-                [style.background-color]="getTagColor(tagId)"
+                [style.background-color]="tag.color"
                 [style.color]="'white'">
-                {{ getTagName(tagId) }}
+                {{ tag.name }}
               </span>
             </div>
 

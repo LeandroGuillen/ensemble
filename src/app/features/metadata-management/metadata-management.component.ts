@@ -48,9 +48,13 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
   // Error handling
   error: string | null = null;
 
-  // Drag and drop state
+  // Drag and drop state for categories
   draggedIndex: number | null = null;
   dragOverIndex: number | null = null;
+
+  // Drag and drop state for tags
+  tagDraggedIndex: number | null = null;
+  tagDragOverIndex: number | null = null;
 
   // Color presets - distinct and visually unique colors
   colorPresets = [
@@ -440,6 +444,101 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
     } catch (error) {
       console.error('Failed to save reordered categories:', error);
       this.error = `Failed to save category order: ${error}`;
+    } finally {
+      this.saving = false;
+    }
+  }
+
+  // Drag and Drop Methods for Tags
+  onTagDragStart(event: DragEvent, index: number): void {
+    this.tagDraggedIndex = index;
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/html', ''); // Required for Firefox
+    }
+  }
+
+  onTagDragOver(event: DragEvent, index: number): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move';
+    }
+    // Don't apply drag-over to the dragged item itself
+    if (this.tagDraggedIndex !== null && this.tagDraggedIndex !== index) {
+      this.tagDragOverIndex = index;
+    }
+  }
+
+  onTagDrop(event: DragEvent, dropIndex: number): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (this.tagDraggedIndex !== null) {
+      this.performTagReorder(dropIndex);
+    }
+
+    this.tagDraggedIndex = null;
+    this.tagDragOverIndex = null;
+  }
+
+  onTagDragEnd(): void {
+    // If we have a valid tagDragOverIndex, treat it as a drop at that position
+    if (this.tagDraggedIndex !== null && this.tagDragOverIndex !== null) {
+      this.performTagReorder(this.tagDragOverIndex);
+    }
+
+    this.tagDraggedIndex = null;
+    this.tagDragOverIndex = null;
+  }
+
+  private performTagReorder(dropIndex: number): void {
+    if (this.tagDraggedIndex === null) {
+      return;
+    }
+
+    // Don't do anything if dropping in the same position
+    if (this.tagDraggedIndex === dropIndex) {
+      return;
+    }
+
+    // Reorder the tags array
+    const newTags = [...this.tags];
+    const draggedTag = newTags[this.tagDraggedIndex];
+
+    // Remove from old position
+    newTags.splice(this.tagDraggedIndex, 1);
+
+    // Adjust drop index if dropping after the removed item
+    const adjustedDropIndex = dropIndex > this.tagDraggedIndex ? dropIndex - 1 : dropIndex;
+
+    // Insert at new position
+    newTags.splice(adjustedDropIndex, 0, draggedTag);
+
+    // Update tags in metadata and save
+    this.tags = newTags;
+    this.saveReorderedTags(newTags);
+  }
+
+  private async saveReorderedTags(newTags: Tag[]): Promise<void> {
+    try {
+      this.saving = true;
+      this.error = null;
+
+      const metadata = this.metadataService.getCurrentMetadata();
+      if (!metadata) {
+        throw new Error('No metadata loaded');
+      }
+
+      const updatedMetadata = {
+        ...metadata,
+        tags: newTags
+      };
+
+      await this.metadataService.saveMetadata(updatedMetadata);
+    } catch (error) {
+      console.error('Failed to save reordered tags:', error);
+      this.error = `Failed to save tag order: ${error}`;
     } finally {
       this.saving = false;
     }

@@ -350,6 +350,11 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     return tag?.color || '#95a5a6';
   }
 
+  getCharacterTagsInOrder(character: Character): Tag[] {
+    // Return tags in the order they appear in the metadata, filtered by what the character has
+    return this.tags.filter(tag => character.tags.includes(tag.id));
+  }
+
   getThumbnailPath(character: Character): string | null {
     if (!character.thumbnail || !this.currentProject) {
       return null;
