@@ -68,9 +68,8 @@ export class FileWatcherService {
   }
 
   private isRelevantFile(filename: string): boolean {
-    return filename.endsWith('.md') || 
-           filename === 'metadata.json' || 
-           filename === 'relationships.json' ||
+    return filename.endsWith('.md') ||
+           filename === 'ensemble.json' ||
            filename.match(/\.(jpg|jpeg|png|gif|webp)$/i) !== null;
   }
 }

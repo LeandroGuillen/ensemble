@@ -1,20 +1,7 @@
-export interface Relationship {
-  id: string;
-  source: string;
-  target: string;
-  type: string;
-  label: string;
-  color: string;
-  bidirectional: boolean;
-}
+import { Relationship, GraphNode } from './project.interface';
 
-export interface GraphNode {
-  id: string;
-  name: string;
-  position: { x: number; y: number };
-  category?: string;
-  color?: string;
-}
+// Re-export from project.interface to maintain backward compatibility
+export type { Relationship, GraphNode } from './project.interface';
 
 export interface GraphData {
   nodes: GraphNode[];

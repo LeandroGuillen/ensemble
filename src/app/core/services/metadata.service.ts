@@ -6,6 +6,7 @@ import { ValidationResult } from '../interfaces/validation.interface';
 import { ElectronService } from './electron.service';
 import { ProjectValidator } from '../validators/project.validator';
 import { CharacterValidator } from '../validators/character.validator';
+import { ProjectService } from './project.service';
 
 @Injectable({
   providedIn: 'root'
@@ -15,7 +16,21 @@ export class MetadataService {
   public metadata$ = this.metadataSubject.asObservable();
   private currentProjectPath: string | null = null;
 
-  constructor(private electronService: ElectronService) {}
+  constructor(
+    private electronService: ElectronService,
+    private projectService: ProjectService
+  ) {
+    // Subscribe to project changes to keep metadata in sync
+    this.projectService.currentProject$.subscribe(project => {
+      if (project) {
+        this.metadataSubject.next(project.metadata);
+        this.currentProjectPath = project.path;
+      } else {
+        this.metadataSubject.next(null);
+        this.currentProjectPath = null;
+      }
+    });
+  }
 
   /**
    * Gets the current metadata
@@ -25,29 +40,19 @@ export class MetadataService {
   }
 
   /**
-   * Loads metadata from the specified project path
+   * Loads metadata from the specified project path via ProjectService
    */
   async loadMetadata(projectPath: string): Promise<ProjectMetadata> {
     try {
       this.currentProjectPath = projectPath;
-      const metadataPath = await this.electronService.pathJoin(projectPath, 'metadata.json');
-      
-      const exists = await this.electronService.fileExists(metadataPath);
-      if (!exists) {
-        throw new Error('Metadata file does not exist');
+
+      // Get metadata from the current project loaded in ProjectService
+      const project = this.projectService.getCurrentProject();
+      if (!project || project.path !== projectPath) {
+        throw new Error('Project not loaded in ProjectService');
       }
 
-      const readResult = await this.electronService.readFile(metadataPath);
-      if (!readResult.success) {
-        throw new Error(`Failed to read metadata file: ${readResult.error}`);
-      }
-
-      let metadata: ProjectMetadata;
-      try {
-        metadata = JSON.parse(readResult.content!);
-      } catch (parseError) {
-        throw new Error(`Invalid JSON in metadata file: ${parseError}`);
-      }
+      const metadata = project.metadata;
 
       // Validate metadata structure
       const validation = ProjectValidator.validateProjectMetadata(metadata);
@@ -65,7 +70,7 @@ export class MetadataService {
   }
 
   /**
-   * Saves metadata to the project's metadata.json file
+   * Saves metadata via ProjectService (updates ensemble.json)
    */
   async saveMetadata(metadata: ProjectMetadata): Promise<void> {
     if (!this.currentProjectPath) {
@@ -80,13 +85,8 @@ export class MetadataService {
         throw new Error(`Invalid metadata: ${errorMessages}`);
       }
 
-      const metadataPath = await this.electronService.pathJoin(this.currentProjectPath, 'metadata.json');
-      const content = JSON.stringify(metadata, null, 2);
-      
-      const writeResult = await this.electronService.writeFileAtomic(metadataPath, content);
-      if (!writeResult.success) {
-        throw new Error(`Failed to write metadata file: ${writeResult.error}`);
-      }
+      // Use ProjectService to update metadata (which saves to ensemble.json)
+      await this.projectService.updateMetadata(metadata);
 
       this.metadataSubject.next(metadata);
     } catch (error) {

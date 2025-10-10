@@ -106,7 +106,7 @@
       <div class="items-list">
         <div *ngFor="let category of categories" class="item-row">
           <!-- Regular item display -->
-          <div *ngIf="!editingCategory || editingCategory.id !== category.id" class="item-content">
+          <div *ngIf="!editingCategory || editingCategory.id !== category.id" class="item-content" (click)="showEditCategoryForm(category)">
             <div class="item-color" [style.background-color]="category.color"></div>
             <div class="item-info">
               <span class="item-name">{{ category.name }}</span>
@@ -114,12 +114,9 @@
             </div>
           </div>
           <div *ngIf="!editingCategory || editingCategory.id !== category.id" class="item-actions">
-            <button class="btn-icon" (click)="showEditCategoryForm(category)" title="Edit category">
-              ✏️
-            </button>
-            <button 
-              class="btn-icon btn-danger" 
-              (click)="deleteCategory(category)"
+            <button
+              class="btn-icon btn-danger"
+              (click)="deleteCategory(category); $event.stopPropagation()"
               [disabled]="!canDeleteCategory(category) || saving"
               [title]="!canDeleteCategory(category) ? 'Cannot delete default category' : 'Delete category'"
             >
@@ -263,19 +260,16 @@
       <div class="items-list">
         <div *ngFor="let tag of tags" class="item-row">
           <!-- Regular item display -->
-          <div *ngIf="!editingTag || editingTag.id !== tag.id" class="item-content">
+          <div *ngIf="!editingTag || editingTag.id !== tag.id" class="item-content" (click)="showEditTagForm(tag)">
             <div class="item-color" [style.background-color]="tag.color"></div>
             <div class="item-info">
               <span class="item-name">{{ tag.name }}</span>
             </div>
           </div>
           <div *ngIf="!editingTag || editingTag.id !== tag.id" class="item-actions">
-            <button class="btn-icon" (click)="showEditTagForm(tag)" title="Edit tag">
-              ✏️
-            </button>
-            <button 
-              class="btn-icon btn-danger" 
-              (click)="deleteTag(tag)"
+            <button
+              class="btn-icon btn-danger"
+              (click)="deleteTag(tag); $event.stopPropagation()"
               [disabled]="saving"
               title="Delete tag"
             >

@@ -41,9 +41,14 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
   relationshipTypes: string[] = [];
   
   // Grid configuration
-  gridSize = 40; // Default grid size
-  showGrid = true;
+  gridSize = 100; // Fixed grid size
+  showGrid = false;
   snapToGrid = true;
+
+  // Zoom configuration
+  zoomLevels = [0.5, 1.0, 1.5, 2.0, 2.5];
+  currentZoomIndex = 1; // Start at 1.0x
+  lastMousePosition: { x: number, y: number } | null = null;
   
   // Form data
   relationshipForm: RelationshipFormData = {
@@ -77,6 +82,8 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
       this.initializeGraph();
       // Force a refresh of the graph data after initialization
       this.refreshGraphData();
+      // Restore saved view state
+      this.restoreViewState();
     }, 0);
   }
 
@@ -95,12 +102,14 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
         shape: 'dot',
         size: 20,
         font: {
-          size: 13,
-          color: '#343434',
+          size: 14,
+          color: '#ffffff',
           face: 'Arial, sans-serif',
           align: 'center',
           multi: false,
-          strokeWidth: 0
+          strokeWidth: 2,
+          strokeColor: '#0a0e1a',
+          bold: '500'
         },
         borderWidth: 2,
         shadow: true,
@@ -119,7 +128,9 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
         },
         font: {
           size: 12,
-          color: '#343434'
+          color: '#e5e7eb',
+          strokeWidth: 1,
+          strokeColor: '#0a0e1a'
         }
       },
       physics: {
@@ -135,7 +146,7 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
       interaction: {
         dragNodes: true,
         dragView: true,
-        zoomView: true,
+        zoomView: false, // Disable default zoom to use our discrete zoom
         selectConnectedEdges: false
       },
       manipulation: {
@@ -144,8 +155,45 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
     };
 
     this.network = new Network(container, { nodes: this.nodes, edges: this.edges }, options);
-    
+
     this.setupNetworkEvents();
+    this.setupDiscreteZoom();
+  }
+
+  private setupDiscreteZoom(): void {
+    if (!this.network) return;
+
+    // Override the default zoom behavior
+    const canvas = this.graphContainer.nativeElement.querySelector('canvas');
+    if (canvas) {
+      // Track mouse position
+      canvas.addEventListener('mousemove', (event: MouseEvent) => {
+        const rect = canvas.getBoundingClientRect();
+        this.lastMousePosition = {
+          x: event.clientX - rect.left,
+          y: event.clientY - rect.top
+        };
+      });
+
+      canvas.addEventListener('wheel', (event: WheelEvent) => {
+        event.preventDefault();
+
+        // Get mouse position for zoom center
+        const rect = canvas.getBoundingClientRect();
+        const mousePos = {
+          x: event.clientX - rect.left,
+          y: event.clientY - rect.top
+        };
+
+        if (event.deltaY < 0) {
+          // Zoom in
+          this.zoomIn(mousePos);
+        } else {
+          // Zoom out
+          this.zoomOut(mousePos);
+        }
+      }, { passive: false });
+    }
   }
 
   private setupNetworkEvents(): void {
@@ -181,21 +229,36 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
       }
     });
 
-    // Handle dragging with grid snapping
+    // Handle dragging with grid snapping and collision detection
     this.network.on('dragging', (params) => {
-      if (params.nodes.length > 0 && this.snapToGrid) {
+      if (params.nodes.length > 0) {
         const positions = this.network!.getPositions(params.nodes);
-        const snappedPositions: { [key: string]: { x: number; y: number } } = {};
-        
-        Object.keys(positions).forEach(nodeId => {
-          const pos = positions[nodeId];
-          snappedPositions[nodeId] = {
-            x: Math.round(pos.x / this.gridSize) * this.gridSize,
-            y: Math.round(pos.y / this.gridSize) * this.gridSize
+        const draggedNodeId = params.nodes[0];
+        let targetPos = positions[draggedNodeId];
+
+        // Apply grid snapping if enabled
+        if (this.snapToGrid) {
+          targetPos = {
+            x: Math.round(targetPos.x / this.gridSize) * this.gridSize,
+            y: Math.round(targetPos.y / this.gridSize) * this.gridSize
           };
-        });
-        
-        this.network!.moveNode(params.nodes[0], snappedPositions[params.nodes[0]].x, snappedPositions[params.nodes[0]].y);
+        }
+
+        // Check for collisions with other nodes
+        const allPositions = this.network!.getPositions();
+        let finalPos = targetPos;
+
+        for (const [nodeId, nodePos] of Object.entries(allPositions)) {
+          if (nodeId !== draggedNodeId) {
+            // Check if positions are the same
+            if (Math.abs(nodePos.x - targetPos.x) < 1 && Math.abs(nodePos.y - targetPos.y) < 1) {
+              // Position is occupied, don't allow the move
+              return;
+            }
+          }
+        }
+
+        this.network!.moveNode(draggedNodeId, finalPos.x, finalPos.y);
       }
     });
 
@@ -203,32 +266,58 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
     this.network.on('dragEnd', (params) => {
       if (params.nodes.length > 0) {
         const positions = this.network!.getPositions(params.nodes);
-        
-        // Apply grid snapping if enabled
+        const allPositions = this.network!.getPositions();
+
+        // Apply grid snapping and collision detection if enabled
         if (this.snapToGrid) {
           const snappedPositions: { [key: string]: { x: number; y: number } } = {};
-          
+
           Object.keys(positions).forEach(nodeId => {
             const pos = positions[nodeId];
-            snappedPositions[nodeId] = {
+            let snappedPos = {
               x: Math.round(pos.x / this.gridSize) * this.gridSize,
               y: Math.round(pos.y / this.gridSize) * this.gridSize
             };
+
+            // Check if snapped position is occupied by another node
+            for (const [otherId, otherPos] of Object.entries(allPositions)) {
+              if (otherId !== nodeId) {
+                if (Math.abs(otherPos.x - snappedPos.x) < 1 && Math.abs(otherPos.y - snappedPos.y) < 1) {
+                  // Position is occupied, keep original position
+                  snappedPos = pos;
+                  break;
+                }
+              }
+            }
+
+            snappedPositions[nodeId] = snappedPos;
           });
-          
+
           // Update positions in the network
           Object.keys(snappedPositions).forEach(nodeId => {
             this.network!.moveNode(nodeId, snappedPositions[nodeId].x, snappedPositions[nodeId].y);
           });
-          
+
           // Save snapped positions
           Object.keys(snappedPositions).forEach(nodeId => {
             this.relationshipService.updateNodePosition(nodeId, snappedPositions[nodeId]);
           });
         } else {
-          // Save original positions
+          // Save original positions (no snapping, but still check collisions)
           Object.keys(positions).forEach(nodeId => {
-            this.relationshipService.updateNodePosition(nodeId, positions[nodeId]);
+            let finalPos = positions[nodeId];
+
+            // Check for collisions
+            for (const [otherId, otherPos] of Object.entries(allPositions)) {
+              if (otherId !== nodeId) {
+                if (Math.abs(otherPos.x - finalPos.x) < 1 && Math.abs(otherPos.y - finalPos.y) < 1) {
+                  // Position is occupied, don't save (node will snap back)
+                  return;
+                }
+              }
+            }
+
+            this.relationshipService.updateNodePosition(nodeId, finalPos);
           });
         }
       }
@@ -237,9 +326,28 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
     // Handle zoom and pan events to redraw grid
     this.network.on('zoom', () => {
       this.redrawGrid();
+      this.constrainView();
+    });
+
+    // Listen to view position changes (panning)
+    let dragTimeout: any = null;
+    this.network.on('dragging', () => {
+      // Clear previous timeout
+      if (dragTimeout) clearTimeout(dragTimeout);
+
+      // Set new timeout to check constraint after dragging settles
+      dragTimeout = setTimeout(() => {
+        this.constrainView();
+      }, 100);
     });
 
     this.network.on('dragEnd', () => {
+      // Constrain view to keep at least one node visible
+      setTimeout(() => this.constrainView(), 50);
+
+      // Save view state after panning
+      setTimeout(() => this.saveViewState(), 100);
+
       // Redraw grid after view changes (but delay to avoid conflicts with node dragging)
       setTimeout(() => {
         this.redrawGrid();
@@ -354,6 +462,80 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
+  zoomIn(mousePos?: { x: number, y: number }): void {
+    if (this.network && this.currentZoomIndex < this.zoomLevels.length - 1) {
+      this.currentZoomIndex++;
+      const scale = this.zoomLevels[this.currentZoomIndex];
+
+      if (mousePos) {
+        // Zoom towards mouse position
+        const pointer = this.network.DOMtoCanvas(mousePos);
+        this.network.moveTo({
+          position: pointer,
+          scale,
+          animation: {
+            duration: 200,
+            easingFunction: 'easeInOutQuad'
+          }
+        });
+      } else {
+        // Zoom to center
+        this.network.moveTo({
+          scale,
+          animation: {
+            duration: 200,
+            easingFunction: 'easeInOutQuad'
+          }
+        });
+      }
+
+      // Constrain view after zoom completes
+      setTimeout(() => {
+        this.constrainView();
+        this.saveViewState();
+      }, 250);
+    }
+  }
+
+  zoomOut(mousePos?: { x: number, y: number }): void {
+    if (this.network && this.currentZoomIndex > 0) {
+      this.currentZoomIndex--;
+      const scale = this.zoomLevels[this.currentZoomIndex];
+
+      if (mousePos) {
+        // Zoom towards mouse position
+        const pointer = this.network.DOMtoCanvas(mousePos);
+        this.network.moveTo({
+          position: pointer,
+          scale,
+          animation: {
+            duration: 200,
+            easingFunction: 'easeInOutQuad'
+          }
+        });
+      } else {
+        // Zoom to center
+        this.network.moveTo({
+          scale,
+          animation: {
+            duration: 200,
+            easingFunction: 'easeInOutQuad'
+          }
+        });
+      }
+
+      // Constrain view after zoom completes
+      setTimeout(() => {
+        this.constrainView();
+        this.saveViewState();
+      }, 250);
+    }
+  }
+
+  getCurrentZoomLevel(): string {
+    return `${(this.zoomLevels[this.currentZoomIndex] * 100).toFixed(0)}%`;
+  }
+
   onToggleGrid(): void {
     this.showGrid = !this.showGrid;
     this.redrawGrid();
@@ -384,18 +566,6 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
     
   }
 
-  onGridSizeChange(event: Event): void {
-    const target = event.target as HTMLInputElement;
-    const newSize = parseInt(target.value, 10);
-    this.gridSize = Math.max(10, Math.min(100, newSize)); // Clamp between 10 and 100
-    this.redrawGrid();
-  }
-
-  updateGridDisplay(): void {
-    // Grid is now drawn via canvas in beforeDrawing event
-    // Just trigger a redraw
-    this.redrawGrid();
-  }
 
   private redrawGrid(): void {
     if (this.network) {
@@ -406,54 +576,127 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
   private drawGridOnCanvas(ctx: CanvasRenderingContext2D): void {
     if (!this.network) return;
 
-    // Get the current view position and scale
+    // Get the current view position and scale from vis.js
     const scale = this.network.getScale();
     const viewPosition = this.network.getViewPosition();
-    
+
     // Get canvas dimensions
     const canvas = ctx.canvas;
     const canvasWidth = canvas.width;
     const canvasHeight = canvas.height;
-    
-    // Calculate the world coordinates bounds
-    const topLeftWorld = {
-      x: (0 - canvasWidth / 2) / scale + viewPosition.x,
-      y: (0 - canvasHeight / 2) / scale + viewPosition.y
-    };
-    
-    const bottomRightWorld = {
-      x: (canvasWidth - canvasWidth / 2) / scale + viewPosition.x,
-      y: (canvasHeight - canvasHeight / 2) / scale + viewPosition.y
-    };
-    
-    // Calculate grid bounds in world coordinates
-    const startX = Math.floor(topLeftWorld.x / this.gridSize) * this.gridSize;
-    const endX = Math.ceil(bottomRightWorld.x / this.gridSize) * this.gridSize;
-    const startY = Math.floor(topLeftWorld.y / this.gridSize) * this.gridSize;
-    const endY = Math.ceil(bottomRightWorld.y / this.gridSize) * this.gridSize;
-    
-    // Set grid line style
-    ctx.strokeStyle = 'rgba(224, 224, 224, 0.4)';
-    ctx.lineWidth = Math.max(0.5, 1 / scale); // Ensure minimum visibility
+
+    // Center of the canvas
+    const centerX = canvasWidth / 2;
+    const centerY = canvasHeight / 2;
+
+    // Grid size in screen pixels
+    const gridScreenSize = this.gridSize * scale;
+
+    // Calculate the offset based on view position
+    // This determines where grid (0,0) appears on screen
+    const offsetX = (centerX - (viewPosition.x * scale)) % gridScreenSize;
+    const offsetY = (centerY - (viewPosition.y * scale)) % gridScreenSize;
+
+    // Set grid line style - dark theme
+    ctx.strokeStyle = 'rgba(45, 55, 72, 0.5)';
+    ctx.lineWidth = 1;
     ctx.setLineDash([]);
-    
+
     ctx.beginPath();
-    
+
     // Draw vertical lines
-    for (let x = startX; x <= endX; x += this.gridSize) {
-      const canvasX = (x - viewPosition.x) * scale + canvasWidth / 2;
-      ctx.moveTo(canvasX, 0);
-      ctx.lineTo(canvasX, canvasHeight);
+    for (let x = offsetX; x < canvasWidth; x += gridScreenSize) {
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, canvasHeight);
     }
-    
+    for (let x = offsetX - gridScreenSize; x > 0; x -= gridScreenSize) {
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, canvasHeight);
+    }
+
     // Draw horizontal lines
-    for (let y = startY; y <= endY; y += this.gridSize) {
-      const canvasY = (y - viewPosition.y) * scale + canvasHeight / 2;
-      ctx.moveTo(0, canvasY);
-      ctx.lineTo(canvasWidth, canvasY);
+    for (let y = offsetY; y < canvasHeight; y += gridScreenSize) {
+      ctx.moveTo(0, y);
+      ctx.lineTo(canvasWidth, y);
     }
-    
+    for (let y = offsetY - gridScreenSize; y > 0; y -= gridScreenSize) {
+      ctx.moveTo(0, y);
+      ctx.lineTo(canvasWidth, y);
+    }
+
     ctx.stroke();
+  }
+
+  /**
+   * Constrains the view to ensure at least one node is fully visible
+   */
+  private constrainView(): void {
+    if (!this.network) return;
+
+    const positions = this.network.getPositions();
+    const nodeIds = Object.keys(positions);
+
+    if (nodeIds.length === 0) return;
+
+    // Get viewport boundaries
+    const canvas = this.graphContainer.nativeElement.querySelector('canvas');
+    if (!canvas) return;
+
+    const canvasWidth = canvas.clientWidth;
+    const canvasHeight = canvas.clientHeight;
+    const scale = this.network.getScale();
+
+    // Node size in screen pixels (including some padding for the label)
+    const nodeSize = 20 * scale; // Scale with zoom
+    const labelPadding = 80; // Extra padding for labels
+    const margin = nodeSize + labelPadding;
+
+    // Check if at least one node is fully visible (with label)
+    let hasVisibleNode = false;
+    for (const nodeId of nodeIds) {
+      const canvasPos = this.network.canvasToDOM(positions[nodeId]);
+
+      // Check if this node center is visible within the viewport bounds (with margin)
+      if (canvasPos.x >= margin &&
+          canvasPos.x <= canvasWidth - margin &&
+          canvasPos.y >= margin &&
+          canvasPos.y <= canvasHeight - margin) {
+        hasVisibleNode = true;
+        break;
+      }
+    }
+
+    // If no node is fully visible, find the closest node and move view to show it
+    if (!hasVisibleNode) {
+      const viewPosition = this.network.getViewPosition();
+      let closestNode: string | null = null;
+      let minDistance = Infinity;
+
+      // Find the node closest to the current view center
+      for (const nodeId of nodeIds) {
+        const pos = positions[nodeId];
+        const dx = pos.x - viewPosition.x;
+        const dy = pos.y - viewPosition.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestNode = nodeId;
+        }
+      }
+
+      // Move view to show the closest node (centered)
+      if (closestNode) {
+        this.network.moveTo({
+          position: positions[closestNode],
+          scale,
+          animation: {
+            duration: 200,
+            easingFunction: 'easeInOutQuad'
+          }
+        });
+      }
+    }
   }
 
   // Relationship Dialog Methods
@@ -571,19 +814,66 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
   /**
    * Forces a refresh of the graph data
    */
-  private async refreshGraphData(): Promise<void> {    
+  private async refreshGraphData(): Promise<void> {
     // Get current graph data
     const currentGraphData = this.relationshipService.getGraphData();
     let graphData: GraphData | null = null;
-    
+
     // Get the current value synchronously
     const subscription = currentGraphData.subscribe(data => {
       graphData = data;
     });
     subscription.unsubscribe();
-    
+
     if (graphData) {
       await this.updateGraph(graphData);
+    }
+  }
+
+  /**
+   * Saves the current zoom and pan state to project settings
+   */
+  private saveViewState(): void {
+    if (!this.network) return;
+
+    const viewPosition = this.network.getViewPosition();
+    const state = {
+      zoomIndex: this.currentZoomIndex,
+      viewPosition: { x: viewPosition.x, y: viewPosition.y }
+    };
+
+    // Save asynchronously without blocking UI
+    this.projectService.saveGraphViewState(state).catch(error => {
+      console.warn('Failed to save graph view state:', error);
+    });
+  }
+
+  /**
+   * Restores the saved zoom and pan state from project settings
+   */
+  private restoreViewState(): void {
+    if (!this.network) return;
+
+    const state = this.projectService.getGraphViewState();
+    if (state) {
+      // Restore zoom level
+      if (state.zoomIndex >= 0 && state.zoomIndex < this.zoomLevels.length) {
+        this.currentZoomIndex = state.zoomIndex;
+      }
+
+      // Restore view position
+      setTimeout(() => {
+        if (this.network) {
+          this.network.moveTo({
+            position: state.viewPosition,
+            scale: this.zoomLevels[this.currentZoomIndex],
+            animation: {
+              duration: 300,
+              easingFunction: 'easeInOutQuad'
+            }
+          });
+        }
+      }, 500); // Delay to ensure graph is fully initialized
     }
   }
 }

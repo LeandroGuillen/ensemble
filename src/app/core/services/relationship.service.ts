@@ -21,7 +21,7 @@ export class RelationshipService {
     this.projectService.currentProject$.subscribe(project => {
       if (project && project.path !== this.currentProjectPath) {
         this.currentProjectPath = project.path;
-        this.loadRelationships(project.path);
+        this.loadRelationshipsFromProject(project);
       } else if (!project) {
         this.currentProjectPath = null;
         this.graphDataSubject.next({ nodes: [], edges: [] });
@@ -29,61 +29,28 @@ export class RelationshipService {
     });
   }
 
+  /**
+   * Loads relationships from the project metadata
+   */
+  private loadRelationshipsFromProject(project: any): void {
+    const relationships = this.projectService.getRelationships();
+    this.relationshipsLoaded = true;
+    this.graphDataSubject.next(relationships);
+  }
+
   getGraphData(): Observable<GraphData> {
     return this.graphData$;
   }
 
   /**
-   * Loads relationships from the relationships.json file
+   * @deprecated This method is no longer used - relationships are loaded from ensemble.json via ProjectService
    */
   async loadRelationships(projectPath: string): Promise<void> {
-    try {
-      const relationshipsPath = await this.electronService.pathJoin(projectPath, 'relationships.json');
-      const fileExists = await this.electronService.fileExists(relationshipsPath);
-      
-      if (!fileExists) {
-        // Create empty relationships file if it doesn't exist
-        const emptyData: GraphData = { nodes: [], edges: [] };
-        await this.saveRelationshipsToFile(projectPath, emptyData);
-        this.relationshipsLoaded = true;
-        this.graphDataSubject.next(emptyData);
-        return;
-      }
-
-      const result = await this.electronService.readFile(relationshipsPath);
-      if (!result.success) {
-        throw new Error(`Failed to read relationships file: ${result.error}`);
-      }
-
-      try {
-        const graphData: GraphData = JSON.parse(result.content!);
-        
-        // Validate the structure
-        if (!this.isValidGraphData(graphData)) {
-          throw new Error('Invalid relationships file structure');
-        }
-
-        console.log('Loaded relationships from file:', {
-          nodeCount: graphData.nodes.length,
-          edgeCount: graphData.edges.length,
-          nodes: graphData.nodes.map(n => ({ id: n.id, name: n.name, position: n.position }))
-        });
-
-        this.relationshipsLoaded = true;
-        this.graphDataSubject.next(graphData);
-      } catch (parseError) {
-        throw new Error(`Invalid JSON in relationships file: ${parseError}`);
-      }
-    } catch (error) {
-      console.error('Failed to load relationships:', error);
-      // Initialize with empty data on error
-      this.graphDataSubject.next({ nodes: [], edges: [] });
-      throw error;
-    }
+    // No-op: relationships are now loaded from project metadata
   }
 
   /**
-   * Creates a new relationship and saves to file
+   * Creates a new relationship and saves to ensemble.json
    */
   async createRelationship(relationship: Omit<Relationship, 'id'>): Promise<Relationship> {
     if (!this.currentProjectPath) {
@@ -94,21 +61,21 @@ export class RelationshipService {
       id: this.generateId(),
       ...relationship
     };
-    
+
     const currentData = this.graphDataSubject.value;
     const updatedData = {
       ...currentData,
       edges: [...currentData.edges, newRelationship]
     };
-    
-    await this.saveRelationshipsToFile(this.currentProjectPath, updatedData);
+
+    await this.projectService.updateRelationships(updatedData);
     this.graphDataSubject.next(updatedData);
-    
+
     return newRelationship;
   }
 
   /**
-   * Updates an existing relationship and saves to file
+   * Updates an existing relationship and saves to ensemble.json
    */
   async updateRelationship(id: string, updates: Partial<Relationship>): Promise<Relationship | null> {
     if (!this.currentProjectPath) {
@@ -117,26 +84,26 @@ export class RelationshipService {
 
     const currentData = this.graphDataSubject.value;
     const edgeIndex = currentData.edges.findIndex(edge => edge.id === id);
-    
+
     if (edgeIndex === -1) return null;
-    
+
     const updatedEdge = { ...currentData.edges[edgeIndex], ...updates };
     const updatedEdges = [...currentData.edges];
     updatedEdges[edgeIndex] = updatedEdge;
-    
+
     const updatedData = {
       ...currentData,
       edges: updatedEdges
     };
-    
-    await this.saveRelationshipsToFile(this.currentProjectPath, updatedData);
+
+    await this.projectService.updateRelationships(updatedData);
     this.graphDataSubject.next(updatedData);
-    
+
     return updatedEdge;
   }
 
   /**
-   * Deletes a relationship and saves to file
+   * Deletes a relationship and saves to ensemble.json
    */
   async deleteRelationship(id: string): Promise<boolean> {
     if (!this.currentProjectPath) {
@@ -145,22 +112,22 @@ export class RelationshipService {
 
     const currentData = this.graphDataSubject.value;
     const filteredEdges = currentData.edges.filter(edge => edge.id !== id);
-    
+
     if (filteredEdges.length === currentData.edges.length) return false;
-    
+
     const updatedData = {
       ...currentData,
       edges: filteredEdges
     };
-    
-    await this.saveRelationshipsToFile(this.currentProjectPath, updatedData);
+
+    await this.projectService.updateRelationships(updatedData);
     this.graphDataSubject.next(updatedData);
-    
+
     return true;
   }
 
   /**
-   * Updates node position and saves to file
+   * Updates node position and saves to ensemble.json
    */
   async updateNodePosition(nodeId: string, position: { x: number; y: number }): Promise<void> {
     if (!this.currentProjectPath) {
@@ -169,23 +136,23 @@ export class RelationshipService {
 
     const currentData = this.graphDataSubject.value;
     const nodeIndex = currentData.nodes.findIndex(node => node.id === nodeId);
-    
+
     if (nodeIndex === -1) {
       console.warn('Attempted to update position for non-existent node:', nodeId);
       return;
     }
-    
+
     console.log('Updating node position:', { nodeId, position });
-    
+
     const updatedNodes = [...currentData.nodes];
     updatedNodes[nodeIndex] = { ...updatedNodes[nodeIndex], position };
-    
+
     const updatedData = {
       ...currentData,
       nodes: updatedNodes
     };
-    
-    await this.saveRelationshipsToFile(this.currentProjectPath, updatedData);
+
+    await this.projectService.updateRelationships(updatedData);
     this.graphDataSubject.next(updatedData);
   }
 
@@ -285,9 +252,9 @@ export class RelationshipService {
         nodes: filteredNodes,
         edges: validEdges
       };
-      
-      console.log('Saving updated data to file...');
-      await this.saveRelationshipsToFile(this.currentProjectPath, updatedData);
+
+      console.log('Saving updated data to ensemble.json...');
+      await this.projectService.updateRelationships(updatedData);
       this.graphDataSubject.next(updatedData);
     } else {
       console.log('No changes detected, skipping save');
@@ -311,12 +278,12 @@ export class RelationshipService {
     }
 
     const currentData = this.graphDataSubject.value;
-    
+
     // Remove the node
     const updatedNodes = currentData.nodes.filter(node => node.id !== characterId);
-    
+
     // Remove all edges involving this character
-    const updatedEdges = currentData.edges.filter(edge => 
+    const updatedEdges = currentData.edges.filter(edge =>
       edge.source !== characterId && edge.target !== characterId
     );
 
@@ -324,8 +291,8 @@ export class RelationshipService {
       nodes: updatedNodes,
       edges: updatedEdges
     };
-    
-    await this.saveRelationshipsToFile(this.currentProjectPath, updatedData);
+
+    await this.projectService.updateRelationships(updatedData);
     this.graphDataSubject.next(updatedData);
   }
 
@@ -393,12 +360,14 @@ export class RelationshipService {
         x: node.position.x,
         y: node.position.y,
         font: {
-          color: '#343434',
-          size: 13,
+          color: '#ffffff',
+          size: 14,
           face: 'Arial, sans-serif',
           align: 'center',
           multi: false,
-          strokeWidth: 0
+          strokeWidth: 2,
+          strokeColor: '#0a0e1a',
+          bold: '500'
         },
 
         labelHighlightBold: false,
@@ -488,8 +457,8 @@ export class RelationshipService {
       ...currentData,
       nodes: updatedNodes
     };
-    
-    await this.saveRelationshipsToFile(this.currentProjectPath, updatedData);
+
+    await this.projectService.updateRelationships(updatedData);
     this.graphDataSubject.next(updatedData);
   }
 
@@ -512,46 +481,10 @@ export class RelationshipService {
   }
 
   /**
-   * Saves relationships data to file
+   * @deprecated No longer needed - relationships are saved via ProjectService.updateRelationships
    */
   private async saveRelationshipsToFile(projectPath: string, data: GraphData): Promise<void> {
-    try {
-      const relationshipsPath = await this.electronService.pathJoin(projectPath, 'relationships.json');
-      const content = JSON.stringify(data, null, 2);
-      const result = await this.electronService.writeFileAtomic(relationshipsPath, content);
-      
-      if (!result.success) {
-        throw new Error(`Failed to save relationships: ${result.error}`);
-      }
-    } catch (error) {
-      console.error('Failed to save relationships to file:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Validates graph data structure
-   */
-  private isValidGraphData(data: any): data is GraphData {
-    return (
-      data &&
-      Array.isArray(data.nodes) &&
-      Array.isArray(data.edges) &&
-      data.nodes.every((node: any) => 
-        node.id && 
-        node.name && 
-        node.position && 
-        typeof node.position.x === 'number' && 
-        typeof node.position.y === 'number'
-      ) &&
-      data.edges.every((edge: any) => 
-        edge.id && 
-        edge.source && 
-        edge.target && 
-        edge.type && 
-        typeof edge.bidirectional === 'boolean'
-      )
-    );
+    // No-op: relationships are now saved via ProjectService
   }
 
   /**

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { Project, ProjectMetadata, Category, Tag } from '../interfaces/project.interface';
+import { Project, ProjectMetadata, Category, Tag, GraphViewState, GraphNode, Relationship } from '../interfaces/project.interface';
 import { ElectronService } from './electron.service';
 
 @Injectable({
@@ -46,24 +46,62 @@ export class ProjectService {
         throw new Error(`Project path is not a directory: ${projectPath}`);
       }
 
-      // Load metadata.json
+      // Load ensemble.json (or fallback to metadata.json for migration)
+      const ensemblePath = await this.electronService.pathJoin(projectPath, 'ensemble.json');
       const metadataPath = await this.electronService.pathJoin(projectPath, 'metadata.json');
+      const ensembleExists = await this.electronService.fileExists(ensemblePath);
       const metadataExists = await this.electronService.fileExists(metadataPath);
-      
+
       let metadata: ProjectMetadata;
-      if (metadataExists) {
-        const result = await this.electronService.readFile(metadataPath);
+      if (ensembleExists) {
+        const result = await this.electronService.readFile(ensemblePath);
         if (!result.success) {
-          throw new Error(`Failed to read metadata: ${result.error}`);
+          throw new Error(`Failed to read ensemble.json: ${result.error}`);
         }
-        
+
         try {
           metadata = JSON.parse(result.content!);
-          
+
           // Validate metadata structure
           if (!this.isValidMetadata(metadata)) {
             throw new Error('Invalid metadata structure in project');
           }
+        } catch (parseError) {
+          throw new Error(`Invalid JSON in ensemble.json: ${parseError}`);
+        }
+      } else if (metadataExists) {
+        // Migrate from old metadata.json
+        const result = await this.electronService.readFile(metadataPath);
+        if (!result.success) {
+          throw new Error(`Failed to read metadata: ${result.error}`);
+        }
+
+        try {
+          metadata = JSON.parse(result.content!);
+
+          // Load relationships.json if it exists
+          const relationshipsPath = await this.electronService.pathJoin(projectPath, 'relationships.json');
+          const relationshipsExists = await this.electronService.fileExists(relationshipsPath);
+          if (relationshipsExists) {
+            const relResult = await this.electronService.readFile(relationshipsPath);
+            if (relResult.success) {
+              const relationshipsData = JSON.parse(relResult.content!);
+              metadata.relationships = relationshipsData;
+            }
+          }
+
+          // Validate metadata structure
+          if (!this.isValidMetadata(metadata)) {
+            throw new Error('Invalid metadata structure in project');
+          }
+
+          // Save as ensemble.json and delete old files
+          await this.saveMetadata(projectPath, metadata);
+          if (relationshipsExists) {
+            const relationshipsPath = await this.electronService.pathJoin(projectPath, 'relationships.json');
+            await this.electronService.deleteFile(relationshipsPath);
+          }
+          await this.electronService.deleteFile(metadataPath);
         } catch (parseError) {
           throw new Error(`Invalid JSON in metadata file: ${parseError}`);
         }
@@ -116,21 +154,9 @@ export class ProjectService {
       // Create directory structure
       await this.ensureProjectStructure(projectPath);
 
-      // Create default metadata
+      // Create default metadata with empty relationships
       const metadata = this.createDefaultMetadata(projectName);
       await this.saveMetadata(projectPath, metadata);
-
-      // Create empty relationships.json
-      const relationshipsPath = await this.electronService.pathJoin(projectPath, 'relationships.json');
-      const emptyRelationships = {
-        nodes: [],
-        edges: []
-      };
-      const relationshipsContent = JSON.stringify(emptyRelationships, null, 2);
-      const writeResult = await this.electronService.writeFile(relationshipsPath, relationshipsContent);
-      if (!writeResult.success) {
-        throw new Error(`Failed to create relationships file: ${writeResult.error}`);
-      }
 
       const project: Project = {
         path: projectPath,
@@ -200,17 +226,21 @@ export class ProjectService {
         defaultCategory: 'main-character',
         autoSave: true,
         fileWatchEnabled: true
+      },
+      relationships: {
+        nodes: [],
+        edges: []
       }
     };
   }
 
   /**
-   * Saves metadata to the project's metadata.json file
+   * Saves metadata to the project's ensemble.json file
    */
   private async saveMetadata(projectPath: string, metadata: ProjectMetadata): Promise<void> {
-    const metadataPath = await this.electronService.pathJoin(projectPath, 'metadata.json');
+    const ensemblePath = await this.electronService.pathJoin(projectPath, 'ensemble.json');
     const content = JSON.stringify(metadata, null, 2);
-    const result = await this.electronService.writeFileAtomic(metadataPath, content);
+    const result = await this.electronService.writeFileAtomic(ensemblePath, content);
     if (!result.success) {
       throw new Error(`Failed to save metadata: ${result.error}`);
     }
@@ -387,5 +417,49 @@ export class ProjectService {
 
   private generateId(): string {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
+  }
+
+  /**
+   * Saves graph view state to project settings
+   */
+  async saveGraphViewState(state: GraphViewState): Promise<void> {
+    const project = this.currentProjectSubject.value;
+    if (!project) {
+      throw new Error('No project loaded');
+    }
+
+    project.metadata.settings.graphView = state;
+    await this.saveMetadata(project.path, project.metadata);
+    this.currentProjectSubject.next({ ...project });
+  }
+
+  /**
+   * Gets the saved graph view state from project settings
+   */
+  getGraphViewState(): GraphViewState | null {
+    const project = this.currentProjectSubject.value;
+    return project?.metadata.settings.graphView || null;
+  }
+
+  /**
+   * Gets relationships data from the current project
+   */
+  getRelationships(): { nodes: GraphNode[]; edges: Relationship[] } {
+    const project = this.currentProjectSubject.value;
+    return project?.metadata.relationships || { nodes: [], edges: [] };
+  }
+
+  /**
+   * Updates relationships data in the current project
+   */
+  async updateRelationships(relationships: { nodes: GraphNode[]; edges: Relationship[] }): Promise<void> {
+    const project = this.currentProjectSubject.value;
+    if (!project) {
+      throw new Error('No project loaded');
+    }
+
+    project.metadata.relationships = relationships;
+    await this.saveMetadata(project.path, project.metadata);
+    this.currentProjectSubject.next({ ...project });
   }
 }

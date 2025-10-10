@@ -4,28 +4,25 @@
       <h2>Character Relationships</h2>
       <div class="graph-controls">
         <button class="btn btn-primary" (click)="onCreateRelationship()">
-          Add Relationship
+          ➕ Add Relationship
         </button>
-        <button class="btn btn-secondary" (click)="onLayoutNodes()">
-          Auto Layout
+        <div class="zoom-controls">
+          <button class="icon-btn" (click)="zoomOut()" [disabled]="currentZoomIndex === 0" title="Zoom out">
+            🔍➖
+          </button>
+          <span class="zoom-level">{{ getCurrentZoomLevel() }}</span>
+          <button class="icon-btn" (click)="zoomIn()" [disabled]="currentZoomIndex === zoomLevels.length - 1" title="Zoom in">
+            🔍➕
+          </button>
+        </div>
+        <button class="icon-btn" (click)="onResetView()" title="Fit to view">
+          🎯
         </button>
-        <button class="btn btn-secondary" (click)="onResetView()">
-          Reset View
+        <button class="icon-btn" (click)="onToggleGrid()" [title]="showGrid ? 'Hide Grid' : 'Show Grid'">
+          {{ showGrid ? "📐" : "📏" }}
         </button>
-        <button class="btn btn-secondary" (click)="onTogglePhysics()">
-          Toggle Physics
-        </button>
-        <button class="btn btn-secondary" (click)="onToggleGrid()">
-          {{ showGrid ? "Hide Grid" : "Show Grid" }}
-        </button>
-        <button class="btn btn-secondary" (click)="onToggleSnapToGrid()">
-          {{ snapToGrid ? "Disable Snap" : "Enable Snap" }}
-        </button>
-        <button class="btn btn-info" (click)="onRefreshGraph()">
-          Refresh Graph
-        </button>
-        <button class="btn btn-warning" (click)="onDebugPositions()">
-          Debug Positions
+        <button class="icon-btn" (click)="onToggleSnapToGrid()" [title]="snapToGrid ? 'Disable Snap' : 'Enable Snap'">
+          {{ snapToGrid ? "🧲" : "✋" }}
         </button>
       </div>
     </div>
@@ -47,43 +44,6 @@
           <span>{{ category.name }}</span>
         </div>
       </div>
-      <div class="graph-settings">
-        <h5>Grid Settings:</h5>
-        <div class="setting-group">
-          <label for="gridSize">Grid Size:</label>
-          <input
-            type="range"
-            id="gridSize"
-            [value]="gridSize"
-            min="10"
-            max="100"
-            step="5"
-            (input)="onGridSizeChange($event)"
-          />
-          <span class="grid-size-value">{{ gridSize }}px</span>
-        </div>
-        <div class="setting-group">
-          <label>
-            <input
-              type="checkbox"
-              [checked]="showGrid"
-              (change)="onToggleGrid()"
-            />
-            Show Grid
-          </label>
-        </div>
-        <div class="setting-group">
-          <label>
-            <input
-              type="checkbox"
-              [checked]="snapToGrid"
-              (change)="onToggleSnapToGrid()"
-            />
-            Snap to Grid
-          </label>
-        </div>
-      </div>
-
       <div class="graph-instructions">
         <h5>Instructions:</h5>
         <ul>

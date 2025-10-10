@@ -1,7 +1,8 @@
 import { Component, OnInit } from "@angular/core";
-import { Router, RouterOutlet } from "@angular/router";
+import { Router, RouterOutlet, NavigationEnd } from "@angular/router";
 import { CommonModule } from "@angular/common";
 import { ProjectService } from "./core/services";
+import { filter } from "rxjs/operators";
 
 @Component({
   selector: "app-root",
@@ -13,16 +14,29 @@ import { ProjectService } from "./core/services";
 export class AppComponent implements OnInit {
   title = "Ensemble";
   hasProject = false;
+  currentProjectName = "";
+  currentRoute = "";
 
   constructor(private projectService: ProjectService, private router: Router) {}
 
   ngOnInit() {
     this.projectService.currentProject$.subscribe((project: any) => {
       this.hasProject = !!project;
+      this.currentProjectName = project?.name || "";
       if (!project) {
         this.router.navigate(["/project-selector"]);
       }
     });
+
+    this.router.events
+      .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
+      .subscribe((event: NavigationEnd) => {
+        this.currentRoute = event.url;
+      });
+  }
+
+  isActive(route: string): boolean {
+    return this.currentRoute.startsWith(route);
   }
 
   navigateToList() {

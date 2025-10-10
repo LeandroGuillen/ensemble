@@ -1,17 +1,28 @@
 <div class="app-container">
-  <header class="app-header" *ngIf="hasProject">
-    <div class="header-content">
-      <h1 class="app-title">{{ title }}</h1>
-      <nav class="app-nav">
-        <button class="btn btn-secondary" (click)="navigateToList()">Characters</button>
-        <button class="btn btn-secondary" (click)="navigateToGraph()">Graph View</button>
-        <button class="btn btn-secondary" (click)="navigateToMetadata()">Settings</button>
-        <button class="btn btn-primary" (click)="selectProject()">Change Project</button>
-      </nav>
+  <nav class="app-nav" *ngIf="hasProject">
+    <div class="nav-brand">
+      <span class="brand-icon">✨</span>
+      <span class="brand-name">{{ title }}</span>
+      <span class="project-name" *ngIf="currentProjectName">{{ currentProjectName }}</span>
     </div>
-  </header>
+    <div class="nav-links">
+      <button class="nav-link" [class.active]="isActive('/characters')" (click)="navigateToList()" title="Characters">
+        👥
+      </button>
+      <button class="nav-link" [class.active]="isActive('/graph')" (click)="navigateToGraph()" title="Graph View">
+        🌐
+      </button>
+      <button class="nav-link" [class.active]="isActive('/metadata')" (click)="navigateToMetadata()" title="Settings">
+        ⚙️
+      </button>
+      <div class="nav-divider"></div>
+      <button class="icon-btn" (click)="selectProject()" title="Change Project">
+        📁
+      </button>
+    </div>
+  </nav>
 
-  <main class="app-main">
+  <main class="app-main" [class.with-nav]="hasProject">
     <router-outlet></router-outlet>
   </main>
 </div>
