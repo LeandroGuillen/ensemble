@@ -34,8 +34,8 @@
     "angular"
   ],
   "author": {
-    "name": "Ensemble Team",
-    "email": "contact@ensemble.app"
+    "name": "Leandro Guillen",
+    "email": "hi@leandroguillen.com"
   },
   "homepage": "https://github.com/ensemble/ensemble",
   "repository": {
@@ -80,7 +80,7 @@
   "build": {
     "appId": "com.ensemble.app",
     "productName": "Ensemble",
-    "copyright": "Copyright © 2024 Ensemble",
+    "copyright": "Copyright © 2025 Ensemble",
     "directories": {
       "output": "release",
       "buildResources": "build"

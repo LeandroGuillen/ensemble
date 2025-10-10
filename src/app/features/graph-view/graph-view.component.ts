@@ -1,10 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Observable, Subscription } from 'rxjs';
 import { DataSet, Edge, Network, Node, Options } from 'vis-network/standalone';
 import { Character, GraphData, Relationship } from '../../core/interfaces';
-import { CharacterService, ProjectService, RelationshipService } from '../../core/services';
+import { CharacterService, ProjectService, RelationshipService, ElectronService } from '../../core/services';
 
 interface RelationshipFormData {
   source: string;
@@ -36,9 +36,15 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
   // UI state
   showRelationshipDialog = false;
   showEditDialog = false;
+  showAddNodeDialog = false;
   selectedNodes: string[] = [];
   characters: Character[] = [];
   relationshipTypes: string[] = [];
+
+  // Add node dialog state
+  characterFilter = '';
+  filteredCharacters: Character[] = [];
+  thumbnailDataUrls: Map<string, string> = new Map();
 
   // Grid configuration
   gridSize = 100; // Fixed grid size
@@ -65,7 +71,8 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
   constructor(
     private relationshipService: RelationshipService,
     private characterService: CharacterService,
-    private projectService: ProjectService
+    private projectService: ProjectService,
+    private electronService: ElectronService
   ) {
     this.graphData$ = this.relationshipService.getGraphData();
     this.characters$ = this.characterService.getCharacters();
@@ -99,6 +106,14 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
     this.subscriptions.unsubscribe();
     if (this.network) {
       this.network.destroy();
+    }
+  }
+
+  @HostListener('document:keydown.escape', ['$event'])
+  handleEscapeKey(event: KeyboardEvent): void {
+    if (this.showAddNodeDialog || this.showRelationshipDialog || this.showEditDialog) {
+      event.preventDefault();
+      this.closeDialogs();
     }
   }
 
@@ -453,11 +468,13 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private subscribeToData(): void {
-    // Subscribe to character changes to ensure nodes exist
+    // Subscribe to character changes (but don't automatically add nodes)
     this.subscriptions.add(
-      this.characters$.subscribe((characters) => {
+      this.characters$.subscribe(async (characters) => {
         this.characters = characters;
-        this.relationshipService.ensureNodesForCharacters(characters);
+        // Load thumbnails for character selection dialog
+        await this.loadThumbnailDataUrls(characters);
+        // No longer automatically adding nodes for all characters
       })
     );
 
@@ -872,7 +889,10 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
   closeDialogs(): void {
     this.showRelationshipDialog = false;
     this.showEditDialog = false;
+    this.showAddNodeDialog = false;
     this.editingRelationship = null;
+    this.characterFilter = '';
+    this.filteredCharacters = [];
     this.relationshipForm = {
       source: '',
       target: '',
@@ -881,6 +901,85 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
       color: '#848484',
       bidirectional: false,
     };
+  }
+
+  // Add Node Dialog Methods
+  openAddNodeDialog(): void {
+    this.characterFilter = '';
+    this.updateFilteredCharacters();
+    this.showAddNodeDialog = true;
+  }
+
+  updateFilteredCharacters(): void {
+    const currentGraphData = this.relationshipService.getGraphData();
+    let graphNodes: string[] = [];
+
+    // Get current nodes synchronously
+    const sub = currentGraphData.subscribe(data => {
+      graphNodes = data.nodes.map(node => node.id);
+    });
+    sub.unsubscribe();
+
+    // Filter out characters that are already in the graph
+    let availableCharacters = this.characters.filter(char => !graphNodes.includes(char.id));
+
+    // Apply search filter if present
+    if (this.characterFilter.trim()) {
+      const filter = this.characterFilter.toLowerCase();
+      availableCharacters = availableCharacters.filter(char =>
+        char.name.toLowerCase().includes(filter) ||
+        char.category.toLowerCase().includes(filter)
+      );
+    }
+
+    this.filteredCharacters = availableCharacters;
+  }
+
+  async addCharacterToGraph(character: Character): Promise<void> {
+    try {
+      console.log('Adding character to graph:', character.name, 'gridSize:', this.gridSize);
+      await this.relationshipService.addNode(character, this.gridSize);
+      console.log('Character added successfully');
+      this.closeDialogs();
+    } catch (error) {
+      console.error('Failed to add character to graph:', error);
+      console.error('Error details:', error);
+      alert(`Failed to add character to graph: ${error}`);
+    }
+  }
+
+  getCategoryColor(category: string): string {
+    const project = this.projectService.getCurrentProject();
+    if (project) {
+      const categoryData = project.metadata.categories.find(cat => cat.id === category);
+      if (categoryData) {
+        return categoryData.color;
+      }
+    }
+    return '#95a5a6';
+  }
+
+  getThumbnailDataUrl(character: Character): string | null {
+    return this.thumbnailDataUrls.get(character.id) || null;
+  }
+
+  private async loadThumbnailDataUrls(characters: Character[]): Promise<void> {
+    const project = this.projectService.getCurrentProject();
+    if (!project) return;
+
+    for (const character of characters) {
+      if (character.thumbnail && !this.thumbnailDataUrls.has(character.id)) {
+        try {
+          const thumbnailPath = `${project.path}/thumbnails/${character.thumbnail}`;
+          const dataUrl = await this.electronService.getImageAsDataUrl(thumbnailPath);
+          if (dataUrl) {
+            this.thumbnailDataUrls.set(character.id, dataUrl);
+          }
+        } catch (error) {
+          console.error(`Failed to load thumbnail for character ${character.name}:`, error);
+        }
+      }
+    }
   }
 
   // Helper methods

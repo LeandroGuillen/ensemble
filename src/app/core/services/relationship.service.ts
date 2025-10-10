@@ -34,8 +34,17 @@ export class RelationshipService {
    */
   private loadRelationshipsFromProject(project: any): void {
     const relationships = this.projectService.getRelationships();
+
+    // Ensure the data structure is valid
+    const validRelationships = {
+      nodes: relationships?.nodes || [],
+      edges: relationships?.edges || []
+    };
+
     this.relationshipsLoaded = true;
-    this.graphDataSubject.next(relationships);
+    this.graphDataSubject.next(validRelationships);
+
+    console.log('Loaded relationships:', validRelationships);
   }
 
   getGraphData(): Observable<GraphData> {
@@ -523,12 +532,97 @@ export class RelationshipService {
       hash = ((hash << 5) - hash) + char;
       hash = hash & hash; // Convert to 32-bit integer
     }
-    
+
     // Convert hash to position within a reasonable range
     const x = (Math.abs(hash) % 800) - 400; // Range: -400 to 400
     const y = (Math.abs(hash >> 16) % 600) - 300; // Range: -300 to 300
-    
+
     return { x, y };
+  }
+
+  /**
+   * Finds an unoccupied position for a new node considering existing nodes and grid size
+   */
+  findUnoccupiedPosition(gridSize: number = 100): { x: number; y: number } {
+    const currentData = this.graphDataSubject.value;
+    const occupiedPositions = new Set<string>();
+
+    // Build a set of occupied grid positions (only if nodes exist)
+    if (currentData && currentData.nodes && currentData.nodes.length > 0) {
+      currentData.nodes.forEach(node => {
+        // Snap existing positions to grid
+        const gridX = Math.round(node.position.x / gridSize) * gridSize;
+        const gridY = Math.round(node.position.y / gridSize) * gridSize;
+        occupiedPositions.add(`${gridX},${gridY}`);
+      });
+    }
+
+    // Try to find an unoccupied position in a spiral pattern from origin
+    let radius = 0;
+    const maxRadius = 20; // Maximum search radius in grid cells
+
+    while (radius <= maxRadius) {
+      // Try positions in a spiral pattern at this radius
+      for (let angle = 0; angle < 360; angle += 45) {
+        const radians = (angle * Math.PI) / 180;
+        const x = Math.round(Math.cos(radians) * radius) * gridSize;
+        const y = Math.round(Math.sin(radians) * radius) * gridSize;
+        const posKey = `${x},${y}`;
+
+        if (!occupiedPositions.has(posKey)) {
+          return { x, y };
+        }
+      }
+      radius++;
+    }
+
+    // If all positions in the spiral are occupied (unlikely), generate a random position far away
+    return {
+      x: (Math.random() - 0.5) * 2000,
+      y: (Math.random() - 0.5) * 2000
+    };
+  }
+
+  /**
+   * Adds a single node to the graph at an unoccupied position
+   */
+  async addNode(character: any, gridSize: number = 100): Promise<void> {
+    if (!this.currentProjectPath) {
+      throw new Error('No project loaded');
+    }
+
+    const currentData = this.graphDataSubject.value;
+
+    // Ensure nodes array exists
+    if (!currentData || !currentData.nodes) {
+      console.error('Invalid graph data structure:', currentData);
+      throw new Error('Graph data is not properly initialized');
+    }
+
+    // Check if node already exists
+    if (currentData.nodes.some(node => node.id === character.id)) {
+      console.warn('Node already exists for character:', character.name);
+      return;
+    }
+
+    // Find an unoccupied position
+    const position = this.findUnoccupiedPosition(gridSize);
+
+    const newNode: GraphNode = {
+      id: character.id,
+      name: character.name,
+      position,
+      category: character.category,
+      color: this.getCategoryColor(character.category)
+    };
+
+    const updatedData = {
+      nodes: [...(currentData.nodes || []), newNode],
+      edges: [...(currentData.edges || [])]
+    };
+
+    await this.projectService.updateRelationships(updatedData);
+    this.graphDataSubject.next(updatedData);
   }
 
   /**
