@@ -2,13 +2,8 @@ import { Component, OnInit, OnDestroy, HostListener } from "@angular/core";
 import { Router } from "@angular/router";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
-import { Observable, Subject, combineLatest } from "rxjs";
-import {
-  takeUntil,
-  map,
-  debounceTime,
-  distinctUntilChanged,
-} from "rxjs/operators";
+import { Observable, Subject } from "rxjs";
+import { takeUntil } from "rxjs/operators";
 import { Character, Category, Tag, Project } from "../../core/interfaces";
 import {
   CharacterService,
@@ -77,6 +72,25 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     ) as "asc" | "desc";
     if (savedSortDirection) {
       this.sortDirection = savedSortDirection;
+    }
+
+    // Load saved filter preferences
+    const savedSearchTerm = localStorage.getItem("characterSearchTerm");
+    if (savedSearchTerm) {
+      this.searchTerm = savedSearchTerm;
+    }
+    const savedSelectedCategory = localStorage.getItem("characterSelectedCategory");
+    if (savedSelectedCategory) {
+      this.selectedCategory = savedSelectedCategory;
+    }
+    const savedSelectedTags = localStorage.getItem("characterSelectedTags");
+    if (savedSelectedTags) {
+      try {
+        this.selectedTags = JSON.parse(savedSelectedTags);
+      } catch (error) {
+        console.warn("Failed to parse saved selected tags:", error);
+        this.selectedTags = [];
+      }
     }
 
     // Register command palette commands
@@ -149,26 +163,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     }
   }
 
-  private navigateDown(): void {
-    if (this.filteredCharacters.length === 0) return;
-    
-    this.selectedCharacterIndex = Math.min(
-      this.selectedCharacterIndex + 1,
-      this.filteredCharacters.length - 1
-    );
-    this.scrollToSelectedCharacter();
-  }
 
-  private navigateUp(): void {
-    if (this.filteredCharacters.length === 0) return;
-    
-    if (this.selectedCharacterIndex <= 0) {
-      this.selectedCharacterIndex = 0;
-    } else {
-      this.selectedCharacterIndex--;
-    }
-    this.scrollToSelectedCharacter();
-  }
 
   private scrollToSelectedCharacter(): void {
     if (this.selectedCharacterIndex < 0) return;
@@ -291,8 +286,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     try {
       this.isLoading = true;
       this.error = null;
-      const foundCount =
-        await this.characterService.scanForExistingCharacters();
+      await this.characterService.scanForExistingCharacters();
 
       // Scan completed successfully
     } catch (error) {
@@ -357,11 +351,15 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   }
 
   onSearchChange(): void {
+    // Save search term to localStorage
+    localStorage.setItem("characterSearchTerm", this.searchTerm);
     // Apply filters immediately when search term changes
     this.applyFilters();
   }
 
   onCategoryChange(): void {
+    // Save selected category to localStorage
+    localStorage.setItem("characterSelectedCategory", this.selectedCategory);
     this.applyFilters();
   }
 
@@ -372,6 +370,8 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     } else {
       this.selectedTags.push(tagId);
     }
+    // Save selected tags to localStorage
+    localStorage.setItem("characterSelectedTags", JSON.stringify(this.selectedTags));
     this.applyFilters();
   }
 
@@ -379,6 +379,16 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     this.searchTerm = "";
     this.selectedCategory = "";
     this.selectedTags = [];
+    // Clear saved filter state
+    localStorage.removeItem("characterSearchTerm");
+    localStorage.removeItem("characterSelectedCategory");
+    localStorage.removeItem("characterSelectedTags");
+    this.applyFilters();
+  }
+
+  clearSearchTerm(): void {
+    this.searchTerm = "";
+    localStorage.removeItem("characterSearchTerm");
     this.applyFilters();
   }
 

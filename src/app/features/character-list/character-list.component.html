@@ -3,7 +3,12 @@
     <div class="page-header">
       <div class="header-left">
         <h1 class="page-title">Characters</h1>
-        <a class="refresh-link" (click)="refreshCharacters()" [class.disabled]="!currentProject || isLoading" title="Refresh characters">
+        <a
+          class="refresh-link"
+          (click)="refreshCharacters()"
+          [class.disabled]="!currentProject || isLoading"
+          title="Refresh characters"
+        >
           Refresh
         </a>
       </div>
@@ -14,12 +19,13 @@
             [class.active]="viewMode === 'grid'"
             (click)="setViewMode('grid')"
             [disabled]="!currentProject"
-            title="Grid view">
+            title="Grid view"
+          >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="1" y="1" width="6" height="6" rx="1"/>
-              <rect x="9" y="1" width="6" height="6" rx="1"/>
-              <rect x="1" y="9" width="6" height="6" rx="1"/>
-              <rect x="9" y="9" width="6" height="6" rx="1"/>
+              <rect x="1" y="1" width="6" height="6" rx="1" />
+              <rect x="9" y="1" width="6" height="6" rx="1" />
+              <rect x="1" y="9" width="6" height="6" rx="1" />
+              <rect x="9" y="9" width="6" height="6" rx="1" />
             </svg>
           </button>
           <button
@@ -27,11 +33,12 @@
             [class.active]="viewMode === 'list'"
             (click)="setViewMode('list')"
             [disabled]="!currentProject"
-            title="List view">
+            title="List view"
+          >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="1" y="2" width="14" height="2" rx="1"/>
-              <rect x="1" y="7" width="14" height="2" rx="1"/>
-              <rect x="1" y="12" width="14" height="2" rx="1"/>
+              <rect x="1" y="2" width="14" height="2" rx="1" />
+              <rect x="1" y="7" width="14" height="2" rx="1" />
+              <rect x="1" y="12" width="14" height="2" rx="1" />
             </svg>
           </button>
           <button
@@ -39,17 +46,23 @@
             [class.active]="viewMode === 'compact'"
             (click)="setViewMode('compact')"
             [disabled]="!currentProject"
-            title="Compact view">
+            title="Compact view"
+          >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="1" y="1" width="14" height="1" rx="0.5"/>
-              <rect x="1" y="4" width="14" height="1" rx="0.5"/>
-              <rect x="1" y="7" width="14" height="1" rx="0.5"/>
-              <rect x="1" y="10" width="14" height="1" rx="0.5"/>
-              <rect x="1" y="13" width="14" height="1" rx="0.5"/>
+              <rect x="1" y="1" width="14" height="1" rx="0.5" />
+              <rect x="1" y="4" width="14" height="1" rx="0.5" />
+              <rect x="1" y="7" width="14" height="1" rx="0.5" />
+              <rect x="1" y="10" width="14" height="1" rx="0.5" />
+              <rect x="1" y="13" width="14" height="1" rx="0.5" />
             </svg>
           </button>
         </div>
-        <button class="btn btn-primary" (click)="createNewCharacter()" [disabled]="!currentProject" title="New Character (N)">
+        <button
+          class="btn btn-primary"
+          (click)="createNewCharacter()"
+          [disabled]="!currentProject"
+          title="New Character (N)"
+        >
           New Character
           <kbd class="shortcut-hint">N</kbd>
         </button>
@@ -83,9 +96,13 @@
               <select
                 class="form-control"
                 [(ngModel)]="selectedCategory"
-                (change)="onCategoryChange()">
+                (change)="onCategoryChange()"
+              >
                 <option value="">All Categories</option>
-                <option *ngFor="let category of categories" [value]="category.id">
+                <option
+                  *ngFor="let category of categories"
+                  [value]="category.id"
+                >
                   {{ category.name }}
                 </option>
               </select>
@@ -93,49 +110,93 @@
 
             <div class="tag-filters" *ngIf="tags.length > 0">
               <div class="tag-list">
-                <button *ngFor="let tag of tags"
-                        class="tag tag-filter"
-                        [class.active]="selectedTags.includes(tag.id)"
-                        [style.background-color]="selectedTags.includes(tag.id) ? tag.color : 'transparent'"
-                        [style.color]="selectedTags.includes(tag.id) ? 'white' : tag.color"
-                        [style.border-color]="tag.color"
-                        (click)="onTagToggle(tag.id)">
+                <button
+                  *ngFor="let tag of tags"
+                  class="tag tag-filter"
+                  [class.active]="selectedTags.includes(tag.id)"
+                  [style.background-color]="
+                    selectedTags.includes(tag.id) ? tag.color : 'transparent'
+                  "
+                  [style.color]="
+                    selectedTags.includes(tag.id) ? 'white' : tag.color
+                  "
+                  [style.border-color]="tag.color"
+                  (click)="onTagToggle(tag.id)"
+                >
                   {{ tag.name }}
                 </button>
               </div>
             </div>
 
-            <a class="clear-filters-link"
-               *ngIf="selectedCategory || selectedTags.length > 0"
-               (click)="clearFilters()"
-               title="Clear filters">
+            <a
+              class="clear-filters-link"
+              *ngIf="searchTerm || selectedCategory || selectedTags.length > 0"
+              (click)="clearFilters()"
+              title="Clear all filters"
+            >
               Clear
             </a>
           </div>
         </div>
 
-        <!-- Results Count and Sort -->
-        <div class="results-bar" *ngIf="filteredCharacters.length > 0 || (searchTerm || selectedCategory || selectedTags.length > 0)">
-          <span class="text-muted text-sm">{{ filteredCharacters.length }} character{{ filteredCharacters.length !== 1 ? 's' : '' }}</span>
+        <!-- Results Count, Filter, and Sort -->
+        <div
+          class="results-bar"
+          *ngIf="
+            filteredCharacters.length > 0 ||
+            searchTerm ||
+            selectedCategory ||
+            selectedTags.length > 0
+          "
+        >
+          <span class="text-muted text-sm"
+            >{{ filteredCharacters.length }} character{{
+              filteredCharacters.length !== 1 ? "s" : ""
+            }}</span
+          >
+
+          <div class="name-filter">
+            <div class="filter-input-wrapper">
+              <input
+                type="text"
+                class="filter-input"
+                placeholder="Filter by name..."
+                [(ngModel)]="searchTerm"
+                (input)="onSearchChange()"
+                title="Filter characters by name"
+              />
+              <button
+                *ngIf="searchTerm"
+                class="clear-search-btn"
+                (click)="clearSearchTerm()"
+                title="Clear search"
+                type="button"
+              >
+                ×
+              </button>
+            </div>
+          </div>
 
           <div class="sort-controls">
             <span class="sort-label">Sort by:</span>
             <button
               class="sort-button"
               [class.active]="sortBy === 'name'"
-              (click)="setSortBy('name')">
+              (click)="setSortBy('name')"
+            >
               Name
               <span class="sort-indicator" *ngIf="sortBy === 'name'">
-                {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                {{ sortDirection === "asc" ? "↑" : "↓" }}
               </span>
             </button>
             <button
               class="sort-button"
               [class.active]="sortBy === 'category'"
-              (click)="setSortBy('category')">
+              (click)="setSortBy('category')"
+            >
               Category
               <span class="sort-indicator" *ngIf="sortBy === 'category'">
-                {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                {{ sortDirection === "asc" ? "↑" : "↓" }}
               </span>
             </button>
           </div>
@@ -144,180 +205,232 @@
 
       <div class="scrollable-content">
         <!-- Grid View (Cards) -->
-        <div class="character-grid" *ngIf="filteredCharacters.length > 0 && viewMode === 'grid'">
         <div
-          *ngFor="let character of filteredCharacters; let i = index"
-          class="character-card card character-item"
-          [class.selected]="selectedCharacterIndex === i"
-          [attr.data-index]="i"
-          (click)="editCharacter(character)">
-
-          <div class="character-thumbnail">
-            <img
-              *ngIf="getCharacterThumbnailDataUrl(character)"
-              [src]="getCharacterThumbnailDataUrl(character)"
-              [alt]="character.name"
-              (error)="onImageError($event)">
-            <div *ngIf="!getCharacterThumbnailDataUrl(character)" class="thumbnail-placeholder">
-              <i class="icon-user"></i>
-            </div>
-          </div>
-
-          <div class="character-info">
-            <h3 class="character-name">{{ character.name }}</h3>
-            <p class="character-category" [style.color]="getCategoryColor(character.category)">
-              {{ getCategoryName(character.category) }}
-            </p>
-
-            <div class="character-tags" *ngIf="character.tags.length > 0">
-              <span
-                *ngFor="let tag of getCharacterTagsInOrder(character)"
-                class="tag"
-                [style.background-color]="tag.color"
-                [style.color]="'white'">
-                {{ tag.name }}
-              </span>
+          class="character-grid"
+          *ngIf="filteredCharacters.length > 0 && viewMode === 'grid'"
+        >
+          <div
+            *ngFor="let character of filteredCharacters; let i = index"
+            class="character-card card character-item"
+            [class.selected]="selectedCharacterIndex === i"
+            [attr.data-index]="i"
+            (click)="editCharacter(character)"
+          >
+            <div class="character-thumbnail">
+              <img
+                *ngIf="getCharacterThumbnailDataUrl(character)"
+                [src]="getCharacterThumbnailDataUrl(character)"
+                [alt]="character.name"
+                (error)="onImageError($event)"
+              />
+              <div
+                *ngIf="!getCharacterThumbnailDataUrl(character)"
+                class="thumbnail-placeholder"
+              >
+                <i class="icon-user"></i>
+              </div>
             </div>
 
-            <p class="character-description" *ngIf="character.description">
-              {{ character.description.length > 120 ? (character.description.substring(0, 120) + '...') : character.description }}
-            </p>
-          </div>
-
-          <div class="character-actions">
-            <button
-              class="icon-btn"
-              (click)="editCharacter(character); $event.stopPropagation()"
-              title="Edit character">
-              ✏️
-            </button>
-            <button
-              class="icon-btn delete-btn"
-              (click)="deleteCharacter(character, $event)"
-              title="Delete character">
-              🗑️
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- List View -->
-      <div class="character-list-view" *ngIf="filteredCharacters.length > 0 && viewMode === 'list'">
-        <div
-          *ngFor="let character of filteredCharacters; let i = index"
-          class="character-list-item character-item"
-          [class.selected]="selectedCharacterIndex === i"
-          [attr.data-index]="i"
-          (click)="editCharacter(character)">
-
-          <div class="list-item-thumbnail">
-            <img
-              *ngIf="getCharacterThumbnailDataUrl(character)"
-              [src]="getCharacterThumbnailDataUrl(character)"
-              [alt]="character.name"
-              (error)="onImageError($event)">
-            <div *ngIf="!getCharacterThumbnailDataUrl(character)" class="thumbnail-placeholder-small">
-              👤
-            </div>
-          </div>
-
-          <div class="list-item-content">
-            <div class="list-item-header">
-              <h3 class="list-item-name">{{ character.name }}</h3>
-              <span class="list-item-category" [style.color]="getCategoryColor(character.category)">
+            <div class="character-info">
+              <h3 class="character-name">{{ character.name }}</h3>
+              <p
+                class="character-category"
+                [style.color]="getCategoryColor(character.category)"
+              >
                 {{ getCategoryName(character.category) }}
-              </span>
+              </p>
+
+              <div class="character-tags" *ngIf="character.tags.length > 0">
+                <span
+                  *ngFor="let tag of getCharacterTagsInOrder(character)"
+                  class="tag"
+                  [style.background-color]="tag.color"
+                  [style.color]="'white'"
+                >
+                  {{ tag.name }}
+                </span>
+              </div>
+
+              <p class="character-description" *ngIf="character.description">
+                {{
+                  character.description.length > 120
+                    ? character.description.substring(0, 120) + "..."
+                    : character.description
+                }}
+              </p>
             </div>
 
-            <div class="list-item-tags" *ngIf="character.tags.length > 0">
-              <span
-                *ngFor="let tag of getCharacterTagsInOrder(character)"
-                class="tag tag-sm"
-                [style.background-color]="tag.color"
-                [style.color]="'white'">
-                {{ tag.name }}
-              </span>
+            <div class="character-actions">
+              <button
+                class="icon-btn"
+                (click)="editCharacter(character); $event.stopPropagation()"
+                title="Edit character"
+              >
+                ✏️
+              </button>
+              <button
+                class="icon-btn delete-btn"
+                (click)="deleteCharacter(character, $event)"
+                title="Delete character"
+              >
+                🗑️
+              </button>
             </div>
-
-            <p class="list-item-description" *ngIf="character.description">
-              {{ character.description.length > 150 ? (character.description.substring(0, 150) + '...') : character.description }}
-            </p>
-          </div>
-
-          <div class="list-item-actions">
-            <button
-              class="icon-btn"
-              (click)="editCharacter(character); $event.stopPropagation()"
-              title="Edit character">
-              ✏️
-            </button>
-            <button
-              class="icon-btn delete-btn"
-              (click)="deleteCharacter(character, $event)"
-              title="Delete character">
-              🗑️
-            </button>
           </div>
         </div>
-      </div>
 
-      <!-- Compact View -->
-      <div class="character-compact-view" *ngIf="filteredCharacters.length > 0 && viewMode === 'compact'">
+        <!-- List View -->
         <div
-          *ngFor="let character of filteredCharacters; let i = index"
-          class="character-compact-item character-item"
-          [class.selected]="selectedCharacterIndex === i"
-          [attr.data-index]="i"
-          (click)="editCharacter(character)">
-
-          <div class="compact-item-thumbnail">
-            <img
-              *ngIf="getCharacterThumbnailDataUrl(character)"
-              [src]="getCharacterThumbnailDataUrl(character)"
-              [alt]="character.name"
-              (error)="onImageError($event)">
-            <div *ngIf="!getCharacterThumbnailDataUrl(character)" class="thumbnail-placeholder-tiny">
-              👤
+          class="character-list-view"
+          *ngIf="filteredCharacters.length > 0 && viewMode === 'list'"
+        >
+          <div
+            *ngFor="let character of filteredCharacters; let i = index"
+            class="character-list-item character-item"
+            [class.selected]="selectedCharacterIndex === i"
+            [attr.data-index]="i"
+            (click)="editCharacter(character)"
+          >
+            <div class="list-item-thumbnail">
+              <img
+                *ngIf="getCharacterThumbnailDataUrl(character)"
+                [src]="getCharacterThumbnailDataUrl(character)"
+                [alt]="character.name"
+                (error)="onImageError($event)"
+              />
+              <div
+                *ngIf="!getCharacterThumbnailDataUrl(character)"
+                class="thumbnail-placeholder-small"
+              >
+                👤
+              </div>
             </div>
-          </div>
 
-          <div class="compact-item-content">
-            <div class="compact-item-main">
-              <h3 class="compact-item-name">{{ character.name }}</h3>
-              <span class="compact-item-category" [style.color]="getCategoryColor(character.category)">
-                {{ getCategoryName(character.category) }}
-              </span>
+            <div class="list-item-content">
+              <div class="list-item-header">
+                <h3 class="list-item-name">{{ character.name }}</h3>
+                <span
+                  class="list-item-category"
+                  [style.color]="getCategoryColor(character.category)"
+                >
+                  {{ getCategoryName(character.category) }}
+                </span>
+              </div>
+
+              <div class="list-item-tags" *ngIf="character.tags.length > 0">
+                <span
+                  *ngFor="let tag of getCharacterTagsInOrder(character)"
+                  class="tag tag-sm"
+                  [style.background-color]="tag.color"
+                  [style.color]="'white'"
+                >
+                  {{ tag.name }}
+                </span>
+              </div>
+
+              <p class="list-item-description" *ngIf="character.description">
+                {{
+                  character.description.length > 150
+                    ? character.description.substring(0, 150) + "..."
+                    : character.description
+                }}
+              </p>
             </div>
 
-            <div class="compact-item-tags" *ngIf="character.tags.length > 0">
-              <span
-                *ngFor="let tag of getCharacterTagsInOrder(character); let i = index"
-                class="tag tag-xs"
-                [style.background-color]="tag.color"
-                [style.color]="'white'"
-                [style.display]="i < 3 ? 'inline-block' : 'none'">
-                {{ tag.name }}
-              </span>
-              <span *ngIf="character.tags.length > 3" class="tag-overflow">+{{ character.tags.length - 3 }}</span>
+            <div class="list-item-actions">
+              <button
+                class="icon-btn"
+                (click)="editCharacter(character); $event.stopPropagation()"
+                title="Edit character"
+              >
+                ✏️
+              </button>
+              <button
+                class="icon-btn delete-btn"
+                (click)="deleteCharacter(character, $event)"
+                title="Delete character"
+              >
+                🗑️
+              </button>
             </div>
-          </div>
-
-          <div class="compact-item-actions">
-            <button
-              class="icon-btn icon-btn-sm"
-              (click)="editCharacter(character); $event.stopPropagation()"
-              title="Edit character">
-              ✏️
-            </button>
-            <button
-              class="icon-btn icon-btn-sm delete-btn"
-              (click)="deleteCharacter(character, $event)"
-              title="Delete character">
-              🗑️
-            </button>
           </div>
         </div>
-      </div>
+
+        <!-- Compact View -->
+        <div
+          class="character-compact-view"
+          *ngIf="filteredCharacters.length > 0 && viewMode === 'compact'"
+        >
+          <div
+            *ngFor="let character of filteredCharacters; let i = index"
+            class="character-compact-item character-item"
+            [class.selected]="selectedCharacterIndex === i"
+            [attr.data-index]="i"
+            (click)="editCharacter(character)"
+          >
+            <div class="compact-item-thumbnail">
+              <img
+                *ngIf="getCharacterThumbnailDataUrl(character)"
+                [src]="getCharacterThumbnailDataUrl(character)"
+                [alt]="character.name"
+                (error)="onImageError($event)"
+              />
+              <div
+                *ngIf="!getCharacterThumbnailDataUrl(character)"
+                class="thumbnail-placeholder-tiny"
+              >
+                👤
+              </div>
+            </div>
+
+            <div class="compact-item-content">
+              <div class="compact-item-main">
+                <h3 class="compact-item-name">{{ character.name }}</h3>
+                <span
+                  class="compact-item-category"
+                  [style.color]="getCategoryColor(character.category)"
+                >
+                  {{ getCategoryName(character.category) }}
+                </span>
+              </div>
+
+              <div class="compact-item-tags" *ngIf="character.tags.length > 0">
+                <span
+                  *ngFor="
+                    let tag of getCharacterTagsInOrder(character);
+                    let i = index
+                  "
+                  class="tag tag-xs"
+                  [style.background-color]="tag.color"
+                  [style.color]="'white'"
+                  [style.display]="i < 3 ? 'inline-block' : 'none'"
+                >
+                  {{ tag.name }}
+                </span>
+                <span *ngIf="character.tags.length > 3" class="tag-overflow"
+                  >+{{ character.tags.length - 3 }}</span
+                >
+              </div>
+            </div>
+
+            <div class="compact-item-actions">
+              <button
+                class="icon-btn icon-btn-sm"
+                (click)="editCharacter(character); $event.stopPropagation()"
+                title="Edit character"
+              >
+                ✏️
+              </button>
+              <button
+                class="icon-btn icon-btn-sm delete-btn"
+                (click)="deleteCharacter(character, $event)"
+                title="Delete character"
+              >
+                🗑️
+              </button>
+            </div>
+          </div>
+        </div>
 
         <div class="empty-state" *ngIf="filteredCharacters.length === 0">
           <div class="empty-icon">
@@ -326,19 +439,31 @@
           <h3 *ngIf="searchTerm || selectedCategory || selectedTags.length > 0">
             No characters match your filters
           </h3>
-          <h3 *ngIf="!searchTerm && !selectedCategory && selectedTags.length === 0">
+          <h3
+            *ngIf="
+              !searchTerm && !selectedCategory && selectedTags.length === 0
+            "
+          >
             No characters yet
           </h3>
           <p *ngIf="searchTerm || selectedCategory || selectedTags.length > 0">
-            Try adjusting your search criteria or clearing the filters to see more characters.
+            Try adjusting your search criteria or clearing the filters to see
+            more characters.
           </p>
-          <p *ngIf="!searchTerm && !selectedCategory && selectedTags.length === 0">
+          <p
+            *ngIf="
+              !searchTerm && !selectedCategory && selectedTags.length === 0
+            "
+          >
             Create your first character to get started with your project!
           </p>
           <button
-            *ngIf="!searchTerm && !selectedCategory && selectedTags.length === 0"
+            *ngIf="
+              !searchTerm && !selectedCategory && selectedTags.length === 0
+            "
             class="btn btn-primary"
-            (click)="createNewCharacter()">
+            (click)="createNewCharacter()"
+          >
             Create Your First Character
           </button>
         </div>
