@@ -5,12 +5,17 @@ const isDev = !app.isPackaged;
 let mainWindow;
 
 function createWindow() {
+  // Get app version for title
+  const version = app.getVersion();
+  const title = `Ensemble v${version}`;
+  
   // Create the browser window
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     minWidth: 800,
     minHeight: 600,
+    title: title,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,

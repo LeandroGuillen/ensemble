@@ -191,6 +191,15 @@ export class ProjectValidator {
       }
     }
 
+    // Description length validation (optional field)
+    if (category.description && category.description.length > 500) {
+      errors.push({
+        field: 'description',
+        message: 'Category description must be 500 characters or less',
+        code: 'INVALID_LENGTH'
+      });
+    }
+
     return {
       isValid: errors.length === 0,
       errors

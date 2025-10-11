@@ -107,7 +107,7 @@
                 class="toggle-option"
                 [class.active]="selectedCategory === category.id"
                 (click)="onCategoryToggle(category.id)"
-                [title]="'Filter by ' + category.name"
+                [title]="getCategoryTooltip(category.id)"
               >
                 {{ category.name }}
               </button>

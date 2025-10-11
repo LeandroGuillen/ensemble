@@ -117,6 +117,7 @@
                   [class.active]="characterForm.get('category')?.value === category.id"
                   (click)="onCategorySelect(category.id)"
                   [class.error]="getFieldError('category')"
+                  [title]="getCategoryTooltip(category.id)"
                 >
                   {{ category.name }}
                 </button>

@@ -9,6 +9,7 @@ import { Category, Tag, ProjectSettings } from '../../core/interfaces/project.in
 interface CategoryFormData {
   name: string;
   color: string;
+  description?: string;
 }
 
 interface TagFormData {
@@ -82,7 +83,8 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
   ) {
     this.categoryForm = this.fb.group({
       name: ['', [Validators.required, Validators.maxLength(100)]],
-      color: ['#3498db', [Validators.required, Validators.pattern(/^#[0-9A-Fa-f]{6}$/)]]
+      color: ['#3498db', [Validators.required, Validators.pattern(/^#[0-9A-Fa-f]{6}$/)]],
+      description: ['', [Validators.maxLength(500)]]
     });
     
     this.tagForm = this.fb.group({
@@ -154,7 +156,8 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
     this.editingCategory = null;
     this.categoryForm.reset({
       name: '',
-      color: '#3498db'
+      color: '#3498db',
+      description: ''
     });
   }
 
@@ -163,7 +166,8 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
     this.editingCategory = category;
     this.categoryForm.patchValue({
       name: category.name,
-      color: category.color
+      color: category.color,
+      description: category.description || ''
     });
   }
 

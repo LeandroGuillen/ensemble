@@ -75,7 +75,7 @@
             class="legend-color"
             [style.background-color]="category.color"
           ></div>
-          <span>{{ category.name }}</span>
+          <span [title]="category.description || category.name">{{ category.name }}</span>
         </div>
       </div>
       <div class="graph-instructions">
@@ -338,7 +338,7 @@
           </div>
           <div class="character-info">
             <span class="character-name">{{ character.name }}</span>
-            <span class="character-category">{{ character.category }}</span>
+            <span class="character-category" [title]="getCategoryTooltip(character.category)">{{ getCategoryName(character.category) }}</span>
           </div>
         </div>
       </div>

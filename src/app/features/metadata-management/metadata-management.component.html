@@ -24,15 +24,17 @@
       <!-- Main Content -->
       <div *ngIf="!loading" class="content">
     
-    <!-- Categories Section -->
-    <section class="section">
-      <div class="section-header">
-        <h2>Categories</h2>
-        <button class="btn btn-primary" (click)="showAddCategoryForm()" [disabled]="saving">
-          <span class="icon">+</span>
-          Add Category
-        </button>
-      </div>
+    <!-- Categories and Tags Container -->
+    <div class="categories-tags-container">
+      <!-- Categories Section -->
+      <section class="section categories-section">
+        <div class="section-header">
+          <h2>Categories</h2>
+          <button class="btn btn-primary" (click)="showAddCategoryForm()" [disabled]="saving">
+            <span class="icon">+</span>
+            Add Category
+          </button>
+        </div>
 
       <!-- Add Category Form (only shown when adding new) -->
       <div *ngIf="showCategoryForm && !editingCategory" class="form-card">
@@ -55,6 +57,22 @@
             <div *ngIf="getFieldError(categoryForm, 'name')" class="field-error">
               {{ getFieldError(categoryForm, 'name') }}
             </div>
+          </div>
+
+          <div class="form-group">
+            <label for="categoryDescription">Description (optional)</label>
+            <textarea 
+              id="categoryDescription"
+              formControlName="description" 
+              placeholder="Enter a brief description for this category..."
+              class="form-control"
+              rows="2"
+              [class.error]="getFieldError(categoryForm, 'description')"
+            ></textarea>
+            <div *ngIf="getFieldError(categoryForm, 'description')" class="field-error">
+              {{ getFieldError(categoryForm, 'description') }}
+            </div>
+            <small class="form-help">This description will appear as a tooltip when selecting categories.</small>
           </div>
 
           <div class="form-group">
@@ -132,8 +150,11 @@
           <div *ngIf="!editingCategory || editingCategory.id !== category.id" class="item-content" (click)="showEditCategoryForm(category)" draggable="false">
             <div class="item-color" [style.background-color]="category.color"></div>
             <div class="item-info">
-              <span class="item-name">{{ category.name }}</span>
-              <span *ngIf="isDefaultCategory(category.id)" class="default-badge">Default</span>
+              <div class="item-name-row">
+                <span class="item-name">{{ category.name }}</span>
+                <span *ngIf="isDefaultCategory(category.id)" class="default-badge">Default</span>
+                <span *ngIf="category.description" class="item-description">{{ category.description }}</span>
+              </div>
             </div>
           </div>
           <div *ngIf="!editingCategory || editingCategory.id !== category.id" class="item-actions" draggable="false">
@@ -167,15 +188,16 @@
                     [class.error]="getFieldError(categoryForm, 'name')"
                   >
                 </div>
-                <div class="inline-actions">
-                  <button type="submit" class="btn-icon btn-save" [disabled]="saving || categoryForm.invalid" title="Save">
-                    <span *ngIf="saving" class="spinner-tiny"></span>
-                    <span *ngIf="!saving">✓</span>
-                  </button>
-                  <button type="button" class="btn-icon btn-cancel" (click)="cancelCategoryForm()" title="Cancel">
-                    ✕
-                  </button>
-                </div>
+              </div>
+              
+              <div class="inline-description-row">
+                <textarea 
+                  formControlName="description" 
+                  placeholder="Description (optional)..."
+                  class="form-control-inline description-textarea"
+                  rows="2"
+                  [class.error]="getFieldError(categoryForm, 'description')"
+                ></textarea>
               </div>
               
               <!-- Inline Color Presets -->
@@ -190,8 +212,23 @@
                 ></button>
               </div>
               
+              <!-- Error Messages -->
               <div *ngIf="getFieldError(categoryForm, 'name')" class="inline-error">
                 {{ getFieldError(categoryForm, 'name') }}
+              </div>
+              <div *ngIf="getFieldError(categoryForm, 'description')" class="inline-error">
+                {{ getFieldError(categoryForm, 'description') }}
+              </div>
+              
+              <!-- Save and Cancel Links -->
+              <div class="inline-form-actions">
+                <button type="submit" class="btn-link btn-save" [disabled]="saving || categoryForm.invalid">
+                  <span *ngIf="saving" class="spinner-small"></span>
+                  <span *ngIf="!saving">Save</span>
+                </button>
+                <button type="button" class="btn-link btn-cancel" (click)="cancelCategoryForm()">
+                  Cancel
+                </button>
               </div>
             </form>
           </div>
@@ -206,17 +243,17 @@
           [class.drag-over]="dragOverIndex === categories.length">
         </div>
       </div>
-    </section>
+      </section>
 
-    <!-- Tags Section -->
-    <section class="section">
-      <div class="section-header">
-        <h2>Tags</h2>
-        <button class="btn btn-primary" (click)="showAddTagForm()" [disabled]="saving">
-          <span class="icon">+</span>
-          Add Tag
-        </button>
-      </div>
+      <!-- Tags Section -->
+      <section class="section tags-section">
+        <div class="section-header">
+          <h2>Tags</h2>
+          <button class="btn btn-primary" (click)="showAddTagForm()" [disabled]="saving">
+            <span class="icon">+</span>
+            Add Tag
+          </button>
+        </div>
 
       <!-- Add Tag Form (only shown when adding new) -->
       <div *ngIf="showTagForm && !editingTag" class="form-card">
@@ -350,15 +387,6 @@
                     [class.error]="getFieldError(tagForm, 'name')"
                   >
                 </div>
-                <div class="inline-actions">
-                  <button type="submit" class="btn-icon btn-save" [disabled]="saving || tagForm.invalid" title="Save">
-                    <span *ngIf="saving" class="spinner-tiny"></span>
-                    <span *ngIf="!saving">✓</span>
-                  </button>
-                  <button type="button" class="btn-icon btn-cancel" (click)="cancelTagForm()" title="Cancel">
-                    ✕
-                  </button>
-                </div>
               </div>
               
               <!-- Inline Color Presets -->
@@ -373,8 +401,20 @@
                 ></button>
               </div>
               
+              <!-- Error Messages -->
               <div *ngIf="getFieldError(tagForm, 'name')" class="inline-error">
                 {{ getFieldError(tagForm, 'name') }}
+              </div>
+              
+              <!-- Save and Cancel Links -->
+              <div class="inline-form-actions">
+                <button type="submit" class="btn-link btn-save" [disabled]="saving || tagForm.invalid">
+                  <span *ngIf="saving" class="spinner-small"></span>
+                  <span *ngIf="!saving">Save</span>
+                </button>
+                <button type="button" class="btn-link btn-cancel" (click)="cancelTagForm()">
+                  Cancel
+                </button>
               </div>
             </form>
           </div>
@@ -389,7 +429,8 @@
           [class.drag-over]="tagDragOverIndex === tags.length">
         </div>
       </div>
-    </section>
+      </section>
+    </div>
 
     <!-- Settings Section -->
     <section class="section">
@@ -408,8 +449,8 @@
               [class.error]="getFieldError(settingsForm, 'defaultCategory')"
             >
               <option value="">Select default category</option>
-              <option *ngFor="let category of categories" [value]="category.id">
-                {{ category.name }}
+              <option *ngFor="let category of categories" [value]="category.id" [title]="category.description || category.name">
+                {{ category.name }}{{ category.description ? ' - ' + category.description : '' }}
               </option>
             </select>
             <div *ngIf="getFieldError(settingsForm, 'defaultCategory')" class="field-error">

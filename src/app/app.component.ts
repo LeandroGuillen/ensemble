@@ -1,7 +1,8 @@
 import { Component, OnInit, HostListener } from "@angular/core";
 import { Router, RouterOutlet, NavigationEnd } from "@angular/router";
 import { CommonModule } from "@angular/common";
-import { ProjectService } from "./core/services";
+import { Title } from "@angular/platform-browser";
+import { ProjectService, ElectronService } from "./core/services";
 import { filter } from "rxjs/operators";
 import { CommandPaletteComponent } from "./shared/command-palette/command-palette.component";
 import { CommandPaletteService } from "./shared/command-palette/command-palette.service";
@@ -23,10 +24,21 @@ export class AppComponent implements OnInit {
   constructor(
     private projectService: ProjectService,
     private router: Router,
-    private commandPaletteService: CommandPaletteService
+    private commandPaletteService: CommandPaletteService,
+    private titleService: Title,
+    private electronService: ElectronService
   ) {}
 
   async ngOnInit() {
+    // Set the app title with version
+    try {
+      const version = await this.electronService.getVersion();
+      this.titleService.setTitle(`Ensemble v${version} - Character Management`);
+    } catch (error) {
+      console.warn('Failed to get app version:', error);
+      this.titleService.setTitle('Ensemble - Character Management');
+    }
+
     // Try to auto-load the most recent project
     const mostRecentProject = this.projectService.getMostRecentProject();
     if (mostRecentProject) {

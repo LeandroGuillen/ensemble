@@ -959,6 +959,29 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
     return '#95a5a6';
   }
 
+  getCategoryName(categoryId: string): string {
+    const project = this.projectService.getCurrentProject();
+    if (project) {
+      const category = project.metadata.categories.find(cat => cat.id === categoryId);
+      return category?.name || categoryId;
+    }
+    return categoryId;
+  }
+
+  getCategoryTooltip(categoryId: string): string {
+    const project = this.projectService.getCurrentProject();
+    if (project) {
+      const category = project.metadata.categories.find(cat => cat.id === categoryId);
+      if (category) {
+        if (category.description) {
+          return category.description;
+        }
+        return category.name;
+      }
+    }
+    return categoryId;
+  }
+
   getThumbnailDataUrl(character: Character): string | null {
     return this.thumbnailDataUrls.get(character.id) || null;
   }

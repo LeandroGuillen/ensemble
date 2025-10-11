@@ -100,10 +100,10 @@ export class MetadataService {
       projectName,
       version: '1.0.0',
       categories: [
-        { id: 'main-character', name: 'Main Character', color: '#3498db' },
-        { id: 'supporting', name: 'Supporting Character', color: '#2ecc71' },
-        { id: 'antagonist', name: 'Antagonist', color: '#e74c3c' },
-        { id: 'minor', name: 'Minor Character', color: '#9b59b6' },
+        { id: 'main-character', name: 'Main Character', color: '#3498db', description: 'Primary characters central to the story' },
+        { id: 'supporting', name: 'Supporting Character', color: '#2ecc71', description: 'Important characters who support the main story' },
+        { id: 'antagonist', name: 'Antagonist', color: '#e74c3c', description: 'Characters who oppose the protagonists' },
+        { id: 'minor', name: 'Minor Character', color: '#9b59b6', description: 'Characters with smaller roles in the story' },
       ],
       tags: [
         { id: 'magic-user', name: 'Magic User', color: '#9b59b6' },

@@ -463,6 +463,16 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     return category?.color || "#95a5a6";
   }
 
+  getCategoryTooltip(categoryId: string): string {
+    const category = this.categories.find((cat) => cat.id === categoryId);
+    if (!category) return categoryId;
+    
+    if (category.description) {
+      return category.description;
+    }
+    return category.name;
+  }
+
   getTagName(tagId: string): string {
     const tag = this.tags.find((t) => t.id === tagId);
     return tag?.name || tagId;
