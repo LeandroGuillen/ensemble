@@ -1,6 +1,6 @@
 {
   "name": "ensemble",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Character management application for writers and worldbuilders",
   "main": "main.js",
   "scripts": {
@@ -17,6 +17,7 @@
     "build-electron-linux": "ng build --configuration production && electron-builder --linux",
     "build-electron-linux-appimage": "ng build --configuration production && electron-builder --linux AppImage",
     "build-electron-linux-deb": "ng build --configuration production && electron-builder --linux deb",
+    "build-electron-linux-rpm": "ng build --configuration production && electron-builder --linux rpm",
     "dist": "npm run build-electron-all",
     "build-icons": "node scripts/build-icons.js",
     "prebuild-electron": "npm run build-icons",
@@ -164,6 +165,12 @@
         },
         {
           "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "rpm",
           "arch": [
             "x64"
           ]
