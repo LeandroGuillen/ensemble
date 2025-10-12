@@ -100,28 +100,13 @@
             <!-- Category -->
             <div class="form-group form-group-category">
               <label class="form-label"> Category * </label>
-              <div class="category-toggle">
-                <button
-                  type="button"
-                  class="toggle-option"
-                  [class.active]="characterForm.get('category')?.value === ''"
-                  (click)="onCategorySelect('')"
-                  [class.error]="getFieldError('category')"
-                >
-                  None
-                </button>
-                <button
-                  *ngFor="let category of categories"
-                  type="button"
-                  class="toggle-option"
-                  [class.active]="characterForm.get('category')?.value === category.id"
-                  (click)="onCategorySelect(category.id)"
-                  [class.error]="getFieldError('category')"
-                  [title]="getCategoryTooltip(category.id)"
-                >
-                  {{ category.name }}
-                </button>
-              </div>
+              <app-category-toggle
+                [options]="getCategoryToggleOptions()"
+                [selectedValue]="characterForm.get('category')?.value"
+                [emptyLabel]="'None'"
+                [error]="!!getFieldError('category')"
+                (valueChange)="onCategorySelect($event)"
+              ></app-category-toggle>
               <div class="error-text" *ngIf="getFieldError('category')">
                 {{ getFieldError('category') }}
               </div>
@@ -131,40 +116,22 @@
           <div class="form-section" *ngIf="tags.length > 0">
             <div class="form-group">
               <label class="form-label">Tags</label>
-              <div class="tag-selection">
-                <button
-                  *ngFor="let tag of tags"
-                  type="button"
-                  class="tag tag-filter"
-                  [class.active]="isTagSelected(tag.id)"
-                  [style.background-color]="isTagSelected(tag.id) ? tag.color : 'transparent'"
-                  [style.color]="isTagSelected(tag.id) ? 'white' : tag.color"
-                  [style.border-color]="tag.color"
-                  (click)="onTagToggle(tag.id)"
-                >
-                  {{ tag.name }}
-                </button>
-              </div>
+              <app-multi-select-buttons
+                [items]="getTagsAsSelectableItems()"
+                [selectedIds]="characterForm.get('tags')?.value || []"
+                (selectionChange)="onTagsSelectionChange($event)"
+              ></app-multi-select-buttons>
             </div>
           </div>
 
           <div class="form-section" *ngIf="books.length > 0">
             <div class="form-group">
               <label class="form-label">Books</label>
-              <div class="book-selection">
-                <button
-                  *ngFor="let book of books"
-                  type="button"
-                  class="book book-filter"
-                  [class.active]="isBookSelected(book.id)"
-                  [style.background-color]="isBookSelected(book.id) ? book.color : 'transparent'"
-                  [style.color]="isBookSelected(book.id) ? 'white' : book.color"
-                  [style.border-color]="book.color"
-                  (click)="onBookToggle(book.id)"
-                >
-                  {{ book.name }}
-                </button>
-              </div>
+              <app-multi-select-buttons
+                [items]="getBooksAsSelectableItems()"
+                [selectedIds]="characterForm.get('books')?.value || []"
+                (selectionChange)="onBooksSelectionChange($event)"
+              ></app-multi-select-buttons>
             </div>
           </div>
 

@@ -12,11 +12,13 @@ import {
   MetadataService,
 } from "../../core/services";
 import { CommandPaletteService } from "../../shared/command-palette/command-palette.service";
+import { CategoryToggleComponent, ToggleOption } from "../../shared/category-toggle/category-toggle.component";
+import { MultiSelectButtonsComponent, SelectableItem } from "../../shared/multi-select-buttons/multi-select-buttons.component";
 
 @Component({
   selector: "app-character-list",
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CategoryToggleComponent, MultiSelectButtonsComponent],
   templateUrl: "./character-list.component.html",
   styleUrls: ["./character-list.component.scss"],
 })
@@ -525,11 +527,34 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   getCategoryTooltip(categoryId: string): string {
     const category = this.categories.find((cat) => cat.id === categoryId);
     if (!category) return categoryId;
-    
+
     if (category.description) {
       return category.description;
     }
     return category.name;
+  }
+
+  getCategoryToggleOptions(): ToggleOption[] {
+    return this.categories.map(cat => ({
+      id: cat.id,
+      name: cat.name,
+      tooltip: cat.description || cat.name
+    }));
+  }
+
+  getTagsAsSelectableItems(): SelectableItem[] {
+    return this.tags.map(tag => ({
+      id: tag.id,
+      name: tag.name,
+      color: tag.color
+    }));
+  }
+
+  onTagsSelectionChange(selectedIds: string[]): void {
+    this.selectedTags = selectedIds;
+    // Save selected tags to localStorage
+    localStorage.setItem("characterSelectedTags", JSON.stringify(this.selectedTags));
+    this.applyFilters();
   }
 
   getTagName(tagId: string): string {

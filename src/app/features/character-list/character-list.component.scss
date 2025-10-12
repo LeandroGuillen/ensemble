@@ -180,103 +180,6 @@
   align-items: center;
 }
 
-// Category Toggle (similar to view toggle)
-.category-toggle {
-  position: relative;
-  display: flex;
-  background-color: var(--color-bg-tertiary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 2px;
-  gap: 2px;
-  flex: 1;
-  min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: none; // Firefox
-  -ms-overflow-style: none; // IE/Edge
-
-  // Hide scrollbar for webkit browsers
-  &::-webkit-scrollbar {
-    display: none;
-  }
-
-  .toggle-option {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 6px 12px;
-    background: transparent;
-    border: none;
-    border-radius: calc(var(--radius-md) - 2px);
-    color: var(--color-text-secondary);
-    cursor: pointer;
-    transition: all var(--transition-fast);
-    font-size: 0.8125rem;
-    font-weight: 500;
-    white-space: nowrap;
-    flex-shrink: 0;
-    min-width: fit-content;
-
-    &:hover:not(.active) {
-      color: var(--color-text-primary);
-      background-color: var(--color-bg-elevated);
-    }
-
-    &.active {
-      background-color: var(--color-accent-primary);
-      color: white;
-      font-weight: 600;
-    }
-
-    // Special styling for "All" button to make it stand out
-    &:first-child {
-      font-weight: 600;
-
-      &:not(.active) {
-        color: var(--color-text-primary);
-      }
-    }
-  }
-}
-
-.tag-filters {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  width: 100%;
-
-  .tag-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--spacing-xs);
-    width: 100%;
-  }
-
-  .tag-filter {
-    cursor: pointer;
-    transition: all var(--transition-fast);
-    user-select: none;
-    border: 1px solid;
-    background: transparent;
-    font-size: 0.8125rem;
-    padding: 4px 12px;
-    border-radius: var(--radius-lg);
-
-    &:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    &:active {
-      transform: translateY(0);
-    }
-
-    &.active {
-      font-weight: 500;
-    }
-  }
-}
-
 .clear-filters-link {
   font-size: 0.875rem;
   color: var(--color-text-muted);
@@ -1191,19 +1094,6 @@
     gap: var(--spacing-sm);
     align-items: stretch;
 
-    .category-toggle {
-      width: 100%;
-      flex: none;
-      flex-wrap: wrap;
-      overflow-x: visible;
-
-      .toggle-option {
-        flex: 1;
-        min-width: 0;
-        padding: 8px 12px;
-      }
-    }
-
     .cast-filter {
       width: 100%;
       max-width: none;
@@ -1214,10 +1104,6 @@
       width: 100%;
       max-width: none;
       min-width: 0;
-    }
-
-    .tag-filters {
-      width: 100%;
     }
 
     .clear-filters-link {

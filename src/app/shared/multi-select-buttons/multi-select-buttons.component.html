@@ -1,0 +1,14 @@
+<div class="multi-select-buttons">
+  <button
+    *ngFor="let item of items"
+    type="button"
+    class="select-button"
+    [class.active]="isItemSelected(item.id)"
+    [style.background-color]="isItemSelected(item.id) ? item.color : 'transparent'"
+    [style.color]="isItemSelected(item.id) ? 'white' : item.color"
+    [style.border-color]="item.color"
+    (click)="onItemToggle(item.id)"
+  >
+    {{ item.name }}
+  </button>
+</div>

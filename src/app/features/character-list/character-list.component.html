@@ -109,25 +109,12 @@
         <div class="filters" *ngIf="categories.length > 0 || tags.length > 0">
           <!-- Category Toggle Row -->
           <div class="filter-row" *ngIf="categories.length > 0">
-            <div class="category-toggle">
-              <button
-                class="toggle-option"
-                [class.active]="selectedCategory === ''"
-                (click)="onCategoryToggle('')"
-                title="Show all categories"
-              >
-                All
-              </button>
-              <button
-                *ngFor="let category of categories"
-                class="toggle-option"
-                [class.active]="selectedCategory === category.id"
-                (click)="onCategoryToggle(category.id)"
-                [title]="getCategoryTooltip(category.id)"
-              >
-                {{ category.name }}
-              </button>
-            </div>
+            <app-category-toggle
+              [options]="getCategoryToggleOptions()"
+              [selectedValue]="selectedCategory"
+              [emptyLabel]="'All'"
+              (valueChange)="onCategoryToggle($event)"
+            ></app-category-toggle>
 
             <!-- Cast Filter (to the right of category toggle) -->
             <div class="cast-filter" *ngIf="casts.length > 0">
@@ -154,21 +141,11 @@
 
           <!-- Tags Row -->
           <div class="filter-row" *ngIf="tags.length > 0">
-            <div class="tag-filters">
-              <div class="tag-list">
-                <button
-                  *ngFor="let tag of tags"
-                  class="tag tag-filter"
-                  [class.active]="selectedTags.includes(tag.id)"
-                  [style.background-color]="selectedTags.includes(tag.id) ? tag.color : 'transparent'"
-                  [style.color]="selectedTags.includes(tag.id) ? 'white' : tag.color"
-                  [style.border-color]="tag.color"
-                  (click)="onTagToggle(tag.id)"
-                >
-                  {{ tag.name }}
-                </button>
-              </div>
-            </div>
+            <app-multi-select-buttons
+              [items]="getTagsAsSelectableItems()"
+              [selectedIds]="selectedTags"
+              (selectionChange)="onTagsSelectionChange($event)"
+            ></app-multi-select-buttons>
 
             <a
               class="clear-filters-link"

@@ -1,0 +1,33 @@
+.multi-select-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-md);
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+
+  .select-button {
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    user-select: none;
+    border: 1px solid;
+    background: transparent;
+    font-size: 0.8125rem;
+    padding: 4px 12px;
+    border-radius: var(--radius-lg);
+
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+
+    &.active {
+      font-weight: 500;
+    }
+  }
+}

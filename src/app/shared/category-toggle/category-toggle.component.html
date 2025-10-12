@@ -1,0 +1,23 @@
+<div class="category-toggle">
+  <button
+    type="button"
+    class="toggle-option"
+    [class.active]="selectedValue === ''"
+    [class.error]="error"
+    (click)="onOptionClick('')"
+    [title]="emptyLabel === 'All' ? 'Show all categories' : 'No category'"
+  >
+    {{ emptyLabel }}
+  </button>
+  <button
+    *ngFor="let option of options"
+    type="button"
+    class="toggle-option"
+    [class.active]="selectedValue === option.id"
+    [class.error]="error"
+    (click)="onOptionClick(option.id)"
+    [title]="option.tooltip || option.name"
+  >
+    {{ option.name }}
+  </button>
+</div>

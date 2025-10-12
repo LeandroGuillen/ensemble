@@ -6,11 +6,13 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { Character, CharacterFormData, Category, Tag, Book, Project } from '../../core/interfaces';
 import { CharacterService, ProjectService, ElectronService, MetadataService } from '../../core/services';
+import { CategoryToggleComponent, ToggleOption } from '../../shared/category-toggle/category-toggle.component';
+import { MultiSelectButtonsComponent, SelectableItem } from '../../shared/multi-select-buttons/multi-select-buttons.component';
 
 @Component({
   selector: 'app-character-detail',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, CategoryToggleComponent, MultiSelectButtonsComponent],
   templateUrl: './character-detail.component.html',
   styleUrls: ['./character-detail.component.scss']
 })
@@ -275,11 +277,45 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
   getCategoryTooltip(categoryId: string): string {
     const category = this.categories.find(cat => cat.id === categoryId);
     if (!category) return categoryId;
-    
+
     if (category.description) {
       return category.description;
     }
     return category.name;
+  }
+
+  getCategoryToggleOptions(): ToggleOption[] {
+    return this.categories.map(cat => ({
+      id: cat.id,
+      name: cat.name,
+      tooltip: cat.description || cat.name
+    }));
+  }
+
+  getTagsAsSelectableItems(): SelectableItem[] {
+    return this.tags.map(tag => ({
+      id: tag.id,
+      name: tag.name,
+      color: tag.color
+    }));
+  }
+
+  getBooksAsSelectableItems(): SelectableItem[] {
+    return this.books.map(book => ({
+      id: book.id,
+      name: book.name,
+      color: book.color
+    }));
+  }
+
+  onTagsSelectionChange(selectedIds: string[]): void {
+    this.characterForm.patchValue({ tags: selectedIds });
+    this.characterForm.markAsDirty();
+  }
+
+  onBooksSelectionChange(selectedIds: string[]): void {
+    this.characterForm.patchValue({ books: selectedIds });
+    this.characterForm.markAsDirty();
   }
 
   getTagName(tagId: string): string {
