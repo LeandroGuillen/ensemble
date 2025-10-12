@@ -139,6 +139,17 @@
                 </option>
               </select>
             </div>
+
+            <!-- Book Filter -->
+            <div class="book-filter" *ngIf="books.length > 0">
+              <label for="bookFilter">Book:</label>
+              <select id="bookFilter" [(ngModel)]="selectedBook" (change)="onBookChange()" class="book-select">
+                <option value="">All Books</option>
+                <option *ngFor="let book of books" [value]="book.id">
+                  {{ book.name }} ({{ getBookCharacterCount(book.id) }} characters)
+                </option>
+              </select>
+            </div>
           </div>
 
           <!-- Tags Row -->
@@ -161,7 +172,7 @@
 
             <a
               class="clear-filters-link"
-              *ngIf="searchTerm || selectedCategory || selectedTags.length > 0 || selectedCast"
+              *ngIf="searchTerm || selectedCategory || selectedTags.length > 0 || selectedCast || selectedBook"
               (click)="clearFilters()"
               title="Clear all filters"
             >
@@ -213,7 +224,7 @@
         <!-- Results Count, Filter, and Sort -->
         <div
           class="results-bar"
-          *ngIf="filteredCharacters.length > 0 || searchTerm || selectedCategory || selectedTags.length > 0"
+          *ngIf="filteredCharacters.length > 0 || searchTerm || selectedCategory || selectedTags.length > 0 || selectedCast || selectedBook"
         >
           <span class="text-muted text-sm"
             >{{ filteredCharacters.length }} character{{ filteredCharacters.length !== 1 ? 's' : '' }}</span
@@ -501,16 +512,16 @@
           <div class="empty-icon">
             <i class="icon-users"></i>
           </div>
-          <h3 *ngIf="searchTerm || selectedCategory || selectedTags.length > 0">No characters match your filters</h3>
-          <h3 *ngIf="!searchTerm && !selectedCategory && selectedTags.length === 0">No characters yet</h3>
-          <p *ngIf="searchTerm || selectedCategory || selectedTags.length > 0">
+          <h3 *ngIf="searchTerm || selectedCategory || selectedTags.length > 0 || selectedCast || selectedBook">No characters match your filters</h3>
+          <h3 *ngIf="!searchTerm && !selectedCategory && selectedTags.length === 0 && !selectedCast && !selectedBook">No characters yet</h3>
+          <p *ngIf="searchTerm || selectedCategory || selectedTags.length > 0 || selectedCast || selectedBook">
             Try adjusting your search criteria or clearing the filters to see more characters.
           </p>
-          <p *ngIf="!searchTerm && !selectedCategory && selectedTags.length === 0">
+          <p *ngIf="!searchTerm && !selectedCategory && selectedTags.length === 0 && !selectedCast && !selectedBook">
             Create your first character to get started with your project!
           </p>
           <button
-            *ngIf="!searchTerm && !selectedCategory && selectedTags.length === 0"
+            *ngIf="!searchTerm && !selectedCategory && selectedTags.length === 0 && !selectedCast && !selectedBook"
             class="btn btn-primary"
             (click)="createNewCharacter()"
           >

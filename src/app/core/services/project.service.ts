@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import {
+  Book,
   Category,
   GraphNode,
   GraphViewState,
@@ -234,6 +235,7 @@ export class ProjectService {
         { id: 'scholar', name: 'Scholar', color: '#1abc9c' },
       ],
       casts: [],
+      books: [],
       settings: {
         defaultCategory: 'main-character',
         autoSave: true,
@@ -283,6 +285,11 @@ export class ProjectService {
   getTags(): Tag[] {
     const project = this.currentProjectSubject.value;
     return project?.metadata.tags || [];
+  }
+
+  getBooks(): Book[] {
+    const project = this.currentProjectSubject.value;
+    return project?.metadata.books || [];
   }
 
   /**

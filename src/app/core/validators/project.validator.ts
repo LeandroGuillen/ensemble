@@ -1,4 +1,4 @@
-import { ProjectMetadata, Category, Tag, ProjectSettings } from '../interfaces/project.interface';
+import { ProjectMetadata, Category, Tag, ProjectSettings, Book } from '../interfaces/project.interface';
 import { ValidationResult, ValidationError } from '../interfaces/validation.interface';
 
 export class ProjectValidator {
@@ -84,6 +84,40 @@ export class ProjectValidator {
         errors.push({
           field: 'tags',
           message: `Duplicate tag IDs found: ${duplicateTagIds.join(', ')}`,
+          code: 'DUPLICATE_ID'
+        });
+      }
+    }
+
+    // Books validation (optional array)
+    if (metadata.books && !Array.isArray(metadata.books)) {
+      errors.push({
+        field: 'books',
+        message: 'Books must be an array',
+        code: 'INVALID_TYPE'
+      });
+    } else if (metadata.books) {
+      // Validate each book
+      metadata.books.forEach((book, index) => {
+        const bookValidation = this.validateBook(book);
+        if (!bookValidation.isValid) {
+          bookValidation.errors.forEach(error => {
+            errors.push({
+              field: `books[${index}].${error.field}`,
+              message: error.message,
+              code: error.code
+            });
+          });
+        }
+      });
+
+      // Check for duplicate book IDs
+      const bookIds = metadata.books.map(book => book.id);
+      const duplicateBookIds = bookIds.filter((id, index) => bookIds.indexOf(id) !== index);
+      if (duplicateBookIds.length > 0) {
+        errors.push({
+          field: 'books',
+          message: `Duplicate book IDs found: ${duplicateBookIds.join(', ')}`,
           code: 'DUPLICATE_ID'
         });
       }
@@ -253,6 +287,119 @@ export class ProjectValidator {
         errors.push({
           field: 'color',
           message: 'Color must be a valid hex color (e.g., #FF0000)',
+          code: 'INVALID_FORMAT'
+        });
+      }
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  }
+
+  static validateBook(book: Book): ValidationResult {
+    const errors: ValidationError[] = [];
+
+    // Required field validations
+    if (!book.id || book.id.trim().length === 0) {
+      errors.push({
+        field: 'id',
+        message: 'Book ID is required',
+        code: 'REQUIRED_FIELD'
+      });
+    }
+
+    if (!book.name || book.name.trim().length === 0) {
+      errors.push({
+        field: 'name',
+        message: 'Book name is required',
+        code: 'REQUIRED_FIELD'
+      });
+    }
+
+    if (!book.color || book.color.trim().length === 0) {
+      errors.push({
+        field: 'color',
+        message: 'Book color is required',
+        code: 'REQUIRED_FIELD'
+      });
+    }
+
+    // ID format validation (kebab-case)
+    if (book.id) {
+      const kebabCaseRegex = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+      if (!kebabCaseRegex.test(book.id)) {
+        errors.push({
+          field: 'id',
+          message: 'Book ID must be in kebab-case format (e.g., first-chronicle)',
+          code: 'INVALID_FORMAT'
+        });
+      }
+    }
+
+    // Color format validation (hex color)
+    if (book.color) {
+      const hexColorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+      if (!hexColorRegex.test(book.color)) {
+        errors.push({
+          field: 'color',
+          message: 'Color must be a valid hex color (e.g., #FF0000)',
+          code: 'INVALID_FORMAT'
+        });
+      }
+    }
+
+    // Optional field validations
+    if (book.description && book.description.length > 1000) {
+      errors.push({
+        field: 'description',
+        message: 'Book description must be 1000 characters or less',
+        code: 'INVALID_LENGTH'
+      });
+    }
+
+    // Status validation
+    if (book.status) {
+      const validStatuses = ['draft', 'in-progress', 'published', 'archived'];
+      if (!validStatuses.includes(book.status)) {
+        errors.push({
+          field: 'status',
+          message: `Status must be one of: ${validStatuses.join(', ')}`,
+          code: 'INVALID_VALUE'
+        });
+      }
+    }
+
+    // Publication date format validation (YYYY-MM-DD)
+    if (book.publicationDate) {
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(book.publicationDate)) {
+        errors.push({
+          field: 'publicationDate',
+          message: 'Publication date must be in YYYY-MM-DD format',
+          code: 'INVALID_FORMAT'
+        });
+      } else {
+        // Validate it's a real date
+        const date = new Date(book.publicationDate);
+        if (isNaN(date.getTime())) {
+          errors.push({
+            field: 'publicationDate',
+            message: 'Publication date must be a valid date',
+            code: 'INVALID_VALUE'
+          });
+        }
+      }
+    }
+
+    // ISBN validation (basic format check)
+    if (book.isbn) {
+      const isbnRegex = /^(?:ISBN(?:-1[03])?:? )?(?=[0-9X]{10}$|(?=(?:[0-9]+[- ]){3})[- 0-9X]{13}$|97[89][0-9]{10}$|(?=(?:[0-9]+[- ]){4})[- 0-9]{17}$)(?:97[89][- ]?)?[0-9]{1,5}[- ]?[0-9]+[- ]?[0-9]+[- ]?[0-9X]$/;
+      if (!isbnRegex.test(book.isbn.replace(/[- ]/g, ''))) {
+        errors.push({
+          field: 'isbn',
+          message: 'ISBN must be a valid ISBN-10 or ISBN-13 format',
           code: 'INVALID_FORMAT'
         });
       }

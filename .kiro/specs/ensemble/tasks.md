@@ -76,6 +76,63 @@
     - Add project settings configuration
     - _Requirements: 3.1, 3.2_
 
+- [x] 7. Implement books/library management system
+
+  - [x] 7.1 Update data interfaces for books support
+
+    - Add Book interface with required fields (id, name, color) and optional fields (description, status, publicationDate, isbn, coverImage)
+    - Update ProjectMetadata interface to include books array
+    - Update Character interface to include books field as string array
+    - Update CharacterFormData interface to include books field
+    - _Requirements: 8.1, 9.2_
+
+  - [x] 7.2 Extend MetadataService for book management
+
+    - Add getBooks() method to retrieve all books from metadata
+    - Add getBookById(id) method to get specific book
+    - Add addBook(bookData) method to create new book with validation
+    - Add updateBook(id, updates) method to modify existing book
+    - Add removeBook(id) method to delete book and clean up character references
+    - Follow existing patterns used for categories and tags
+    - _Requirements: 8.1, 8.2, 8.4_
+
+  - [x] 7.3 Update CharacterService for book associations
+
+    - Update frontmatter parsing to read books field from character markdown files
+    - Update character creation/update methods to write books field to frontmatter
+    - Ensure backward compatibility by defaulting to empty array if books field not present
+    - Add validation to ensure referenced books exist in project metadata
+    - _Requirements: 9.2, 9.3, 9.6_
+
+  - [x] 7.4 Create LibraryManagementComponent
+
+    - Build form interface for creating/editing books with all metadata fields
+    - Implement list view showing all books with edit/delete actions
+    - Add color picker for book visual identification
+    - Include validation for required fields (name, color)
+    - Add confirmation dialogs for book deletion
+    - Follow UI patterns established by metadata management component
+    - _Requirements: 8.1, 8.3, 8.5, 8.6_
+
+  - [x] 7.5 Add book filtering to character list
+
+    - Add selectedBook filter state to character list component
+    - Create book dropdown in filter UI alongside category and tag filters
+    - Update filterCharacters() method to filter by selected book
+    - Save and restore book filter state in localStorage
+    - Update filter summary display to include active book filter
+    - Handle "no characters found" message when book filter yields no results
+    - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6_
+
+  - [x] 7.6 Add book selection to character detail component
+
+    - Add multi-select book picker interface similar to tag selection
+    - Update character form to handle book selection and validation
+    - Display selected books with visual indicators using book colors
+    - Save book assignments to character frontmatter on form submission
+    - Allow characters to have zero, one, or multiple book assignments
+    - _Requirements: 9.1, 9.3, 9.4, 9.5_
+
 - [x] 6. Create relationship management system
 
   - [x] 6.1 Implement RelationshipService
@@ -99,16 +156,18 @@
 
   - [ ] 8.1 Set up Angular routing
 
-    - Configure routes for project selection, character list, and graph view
+    - Configure routes for project selection, character list, graph view, and library management
     - Implement navigation guards to ensure project is selected
     - Add route resolvers for pre-loading character data
-    - _Requirements: 2.3, 4.1_
+    - Add /library route loading LibraryManagementComponent with project guard
+    - _Requirements: 2.3, 4.1, 8.3_
 
   - [ ] 8.2 Create main application shell
     - Build navigation menu with project switching
     - Add view toggle between list and graph views
+    - Add "Library" navigation link to main menu
     - Implement breadcrumb navigation
-    - _Requirements: 4.1, 5.1_
+    - _Requirements: 4.1, 5.1, 8.3_
 
 - [ ] 9. Add search and filtering functionality
 
@@ -140,21 +199,25 @@
 
   - [ ]\* 12.1 Write unit tests for core services
 
-    - Test CharacterService CRUD operations
+    - Test CharacterService CRUD operations including book associations
     - Test ProjectService folder management
     - Test RelationshipService data operations
-    - Test file parsing and generation utilities
+    - Test MetadataService book management operations
+    - Test file parsing and generation utilities with book frontmatter
     - _Requirements: All requirements_
 
   - [ ]\* 12.2 Create integration tests
 
     - Test file watcher integration with UI updates
-    - Test cross-component data flow
-    - Test external file editing scenarios
-    - _Requirements: 1.5, 7.5_
+    - Test cross-component data flow including book filtering
+    - Test external file editing scenarios with book assignments
+    - Test book deletion and character reference cleanup
+    - _Requirements: 1.5, 7.5, 8.4, 9.6_
 
   - [ ]\* 12.3 Implement end-to-end tests
-    - Test complete character creation and editing workflows
+    - Test complete character creation and editing workflows with book assignments
     - Test graph view interactions and data persistence
     - Test project management operations
+    - Test library management workflows (create, edit, delete books)
+    - Test book filtering in character list view
     - _Requirements: All requirements_

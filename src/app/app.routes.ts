@@ -32,5 +32,10 @@ export const routes: Routes = [
     loadComponent: () => import('./features/metadata-management/metadata-management.component').then(m => m.MetadataManagementComponent),
     canActivate: [projectGuard]
   },
+  {
+    path: 'library',
+    loadComponent: () => import('./features/library-management/library-management.component').then(m => m.LibraryManagementComponent),
+    canActivate: [projectGuard]
+  },
   { path: '**', redirectTo: '/project-selector' }
 ];

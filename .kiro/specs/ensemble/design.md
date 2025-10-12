@@ -102,6 +102,7 @@ Each character is stored as a markdown file with YAML frontmatter:
 name: "Character Name"
 category: "Main Character"
 tags: ["protagonist", "magic-user"]
+books: ["book-1", "book-2"]
 thumbnail: "character-name.jpg"
 created: "2024-01-15T10:30:00Z"
 modified: "2024-01-20T14:45:00Z"
@@ -141,6 +142,25 @@ Character development notes, personality traits, backstory...
       "id": "magic-user",
       "name": "Magic User",
       "color": "#9b59b6"
+    }
+  ],
+  "books": [
+    {
+      "id": "book-1",
+      "name": "The First Chronicle",
+      "color": "#e74c3c",
+      "description": "The opening book of the series",
+      "status": "published",
+      "publicationDate": "2024-01-15",
+      "isbn": "978-0123456789",
+      "coverImage": "book-1-cover.jpg"
+    },
+    {
+      "id": "book-2", 
+      "name": "The Second Chronicle",
+      "color": "#f39c12",
+      "description": "The sequel continuing the story",
+      "status": "draft"
     }
   ],
   "settings": {
@@ -196,6 +216,7 @@ Character development notes, personality traits, backstory...
 - `CharacterDetailComponent`: Character editing form with reactive forms
 - `GraphViewComponent`: vis.js-based relationship visualization
 - `ProjectSelectorComponent`: Work folder selection and management
+- `LibraryManagementComponent`: Book creation, editing, and management interface
 
 **Routing**:
 - Modern route-based lazy loading with dynamic imports
@@ -210,6 +231,7 @@ interface Character {
   name: string;
   category: string;
   tags: string[];
+  books: string[];
   thumbnail?: string;
   description: string;
   notes: string;
@@ -239,6 +261,7 @@ interface ProjectMetadata {
   version: string;
   categories: Category[];
   tags: Tag[];
+  books: Book[];
   settings: ProjectSettings;
 }
 
@@ -252,6 +275,17 @@ interface Tag {
   id: string;
   name: string;
   color: string;
+}
+
+interface Book {
+  id: string;
+  name: string;
+  color: string;
+  description?: string;
+  status?: 'draft' | 'in-progress' | 'published' | 'archived';
+  publicationDate?: string;
+  isbn?: string;
+  coverImage?: string;
 }
 ```
 
@@ -280,6 +314,12 @@ interface Tag {
 - Manages metadata.json file
 - Provides project-wide settings and configuration
 - Handles project switching
+
+### Library Manager
+- Manages book CRUD operations within project metadata
+- Validates book references in character files
+- Handles book color assignments and visual identification
+- Provides book filtering and organization capabilities
 
 ## Error Handling
 

@@ -9,6 +9,7 @@ interface CharacterFrontmatter {
   name: string;
   category: string;
   tags: string[];
+  books: string[];
   thumbnail?: string;
   created: string;
   modified: string;
@@ -218,6 +219,9 @@ export class CharacterService {
     }
 
     try {
+      // Validate book references
+      await this.validateBookReferences(data.books);
+
       // Generate unique ID and filename
       const id = this.generateId();
       const filename = await this.generateCharacterFilename(data.name, project.path);
@@ -263,6 +267,11 @@ export class CharacterService {
     }
 
     try {
+      // Validate book references if books are being updated
+      if (data.books) {
+        await this.validateBookReferences(data.books);
+      }
+
       const characters = this.charactersSubject.value;
       const index = characters.findIndex(char => char.id === id);
       
@@ -454,8 +463,8 @@ export class CharacterService {
         name: frontmatter.name,
         category: frontmatter.category || '',
         tags: frontmatter.tags || [],
+        books: frontmatter.books || [],
         thumbnail: frontmatter.thumbnail,
-        mangamaster: sections.mangamaster,
         description: sections.description,
         notes: sections.notes,
         created: frontmatter.created ? new Date(frontmatter.created) : new Date(),
@@ -479,12 +488,13 @@ export class CharacterService {
         name: character.name,
         category: character.category,
         tags: character.tags,
+        books: character.books,
         thumbnail: character.thumbnail,
         created: character.created.toISOString(),
         modified: character.modified.toISOString()
       };
 
-      const content = this.generateCharacterContent(character.mangamaster, character.description, character.notes);
+      const content = this.generateCharacterContent(character.description, character.notes);
       const markdownContent = MarkdownUtils.generateMarkdown(frontmatter, content);
 
       const writeResult = await this.electronService.writeFileAtomic(character.filePath, markdownContent);
@@ -616,11 +626,10 @@ export class CharacterService {
   }
 
   /**
-   * Parses character content into mangamaster, description and notes sections
+   * Parses character content into description and notes sections
    */
-  private parseCharacterContent(content: string): { mangamaster: string; description: string; notes: string } {
+  private parseCharacterContent(content: string): { description: string; notes: string } {
     const lines = content.split('\n');
-    let mangamaster = '';
     let description = '';
     let notes = '';
     let currentSection = '';
@@ -628,10 +637,7 @@ export class CharacterService {
     for (const line of lines) {
       const trimmedLine = line.trim();
       
-      if (trimmedLine.startsWith('## Mangamaster')) {
-        currentSection = 'mangamaster';
-        continue;
-      } else if (trimmedLine.startsWith('## Description')) {
+      if (trimmedLine.startsWith('## Description')) {
         currentSection = 'description';
         continue;
       } else if (trimmedLine.startsWith('## Notes')) {
@@ -643,9 +649,7 @@ export class CharacterService {
         continue;
       }
 
-      if (currentSection === 'mangamaster') {
-        mangamaster += line + '\n';
-      } else if (currentSection === 'description') {
+      if (currentSection === 'description') {
         description += line + '\n';
       } else if (currentSection === 'notes') {
         notes += line + '\n';
@@ -653,21 +657,40 @@ export class CharacterService {
     }
 
     return {
-      mangamaster: mangamaster.trim(),
       description: description.trim(),
       notes: notes.trim()
     };
   }
 
   /**
-   * Generates character content with mangamaster, description and notes sections
+   * Validates that all referenced books exist in project metadata
    */
-  private generateCharacterContent(mangamaster: string, description: string, notes: string): string {
-    let content = '';
-    
-    if (mangamaster) {
-      content += `## Mangamaster\n\n${mangamaster}\n\n`;
+  private async validateBookReferences(books: string[]): Promise<void> {
+    if (!books || books.length === 0) {
+      return; // No books to validate
     }
+
+    // Get current project metadata to validate book references
+    const project = this.projectService.getCurrentProject();
+    if (!project || !project.metadata) {
+      throw new Error('No project metadata available for book validation');
+    }
+
+    const availableBooks = project.metadata.books || [];
+    const availableBookIds = availableBooks.map(book => book.id);
+
+    for (const bookId of books) {
+      if (!availableBookIds.includes(bookId)) {
+        throw new Error(`Referenced book '${bookId}' does not exist in project metadata`);
+      }
+    }
+  }
+
+  /**
+   * Generates character content with description and notes sections
+   */
+  private generateCharacterContent(description: string, notes: string): string {
+    let content = '';
     
     if (description) {
       content += `## Description\n\n${description}\n\n`;

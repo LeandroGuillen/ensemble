@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { Character, CharacterFormData } from '../interfaces/character.interface';
-import { Cast, Category, ProjectMetadata, ProjectSettings, Tag } from '../interfaces/project.interface';
+import { Book, Cast, Category, ProjectMetadata, ProjectSettings, Tag } from '../interfaces/project.interface';
 import { ValidationResult } from '../interfaces/validation.interface';
 import { CharacterValidator } from '../validators/character.validator';
 import { ProjectValidator } from '../validators/project.validator';
@@ -112,6 +112,7 @@ export class MetadataService {
         { id: 'scholar', name: 'Scholar', color: '#1abc9c' },
       ],
       casts: [],
+      books: [],
       settings: {
         defaultCategory: 'main-character',
         autoSave: true,
@@ -459,6 +460,131 @@ export class MetadataService {
     await this.saveMetadata(updatedMetadata);
   }
 
+  // Book Management
+
+  /**
+   * Gets all books from current metadata
+   */
+  getBooks(): Book[] {
+    const metadata = this.metadataSubject.value;
+    return metadata?.books || [];
+  }
+
+  /**
+   * Gets a book by ID
+   */
+  getBookById(id: string): Book | undefined {
+    const books = this.getBooks();
+    return books.find((book) => book.id === id);
+  }
+
+  /**
+   * Adds a new book
+   */
+  async addBook(bookData: Omit<Book, 'id'>): Promise<Book> {
+    const metadata = this.metadataSubject.value;
+    if (!metadata) {
+      throw new Error('No metadata loaded');
+    }
+
+    // Initialize books array if it doesn't exist (for backward compatibility)
+    const books = metadata.books || [];
+
+    // Generate unique ID
+    const id = this.generateId(bookData.name);
+    const newBook: Book = { id, ...bookData };
+
+    // Validate the new book
+    const validation = ProjectValidator.validateBook(newBook);
+    if (!validation.isValid) {
+      const errorMessages = validation.errors.map((e) => `${e.field}: ${e.message}`).join(', ');
+      throw new Error(`Invalid book: ${errorMessages}`);
+    }
+
+    // Check for duplicate ID
+    const existingBook = books.find((book) => book.id === id);
+    if (existingBook) {
+      throw new Error(`Book with ID '${id}' already exists`);
+    }
+
+    // Add book and save
+    const updatedMetadata = {
+      ...metadata,
+      books: [...books, newBook],
+    };
+
+    await this.saveMetadata(updatedMetadata);
+    return newBook;
+  }
+
+  /**
+   * Updates an existing book
+   */
+  async updateBook(id: string, updates: Partial<Omit<Book, 'id'>>): Promise<Book> {
+    const metadata = this.metadataSubject.value;
+    if (!metadata) {
+      throw new Error('No metadata loaded');
+    }
+
+    // Initialize books array if it doesn't exist (for backward compatibility)
+    const books = metadata.books || [];
+
+    const bookIndex = books.findIndex((book) => book.id === id);
+    if (bookIndex === -1) {
+      throw new Error(`Book with ID '${id}' not found`);
+    }
+
+    const updatedBook = { ...books[bookIndex], ...updates };
+
+    // Validate the updated book
+    const validation = ProjectValidator.validateBook(updatedBook);
+    if (!validation.isValid) {
+      const errorMessages = validation.errors.map((e) => `${e.field}: ${e.message}`).join(', ');
+      throw new Error(`Invalid book: ${errorMessages}`);
+    }
+
+    // Update book and save
+    const updatedBooks = [...books];
+    updatedBooks[bookIndex] = updatedBook;
+
+    const updatedMetadata = {
+      ...metadata,
+      books: updatedBooks,
+    };
+
+    await this.saveMetadata(updatedMetadata);
+    return updatedBook;
+  }
+
+  /**
+   * Removes a book and cleans up character references
+   */
+  async removeBook(id: string): Promise<void> {
+    const metadata = this.metadataSubject.value;
+    if (!metadata) {
+      throw new Error('No metadata loaded');
+    }
+
+    // Initialize books array if it doesn't exist (for backward compatibility)
+    const books = metadata.books || [];
+
+    const bookExists = books.some((book) => book.id === id);
+    if (!bookExists) {
+      throw new Error(`Book with ID '${id}' not found`);
+    }
+
+    // Clean up character references to this book
+    await this.cleanupBookReferencesFromCharacters(id);
+
+    // Remove book and save
+    const updatedMetadata = {
+      ...metadata,
+      books: books.filter((book) => book.id !== id),
+    };
+
+    await this.saveMetadata(updatedMetadata);
+  }
+
   // Settings Management
 
   /**
@@ -574,6 +700,20 @@ export class MetadataService {
       });
     }
 
+    // Validate books exist in metadata
+    if (Array.isArray(formData.books)) {
+      formData.books.forEach((bookId) => {
+        const bookExists = metadata.books && metadata.books.some((book) => book.id === bookId);
+        if (!bookExists) {
+          errors.push({
+            field: 'books',
+            message: `Book '${bookId}' does not exist in project metadata`,
+            code: 'INVALID_REFERENCE',
+          });
+        }
+      });
+    }
+
     return {
       isValid: errors.length === 0,
       errors,
@@ -603,6 +743,17 @@ export class MetadataService {
   }
 
   /**
+   * Gets available book options for character forms
+   */
+  getBookOptions(): { id: string; name: string; color: string }[] {
+    return this.getBooks().map((book) => ({
+      id: book.id,
+      name: book.name,
+      color: book.color,
+    }));
+  }
+
+  /**
    * Gets the default category ID
    */
   getDefaultCategoryId(): string | null {
@@ -622,6 +773,145 @@ export class MetadataService {
       .replace(/\s+/g, '-') // Replace spaces with hyphens
       .replace(/-+/g, '-') // Replace multiple hyphens with single
       .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+  }
+
+  /**
+   * Cleans up references to a book from all character files
+   */
+  private async cleanupBookReferencesFromCharacters(bookId: string): Promise<void> {
+    if (!this.currentProjectPath) {
+      return;
+    }
+
+    try {
+      const charactersPath = await this.electronService.pathJoin(this.currentProjectPath, 'characters');
+      const listResult = await this.electronService.listDirectory(charactersPath);
+      
+      if (!listResult.success || !listResult.files) {
+        console.warn('Failed to list character files:', listResult.error);
+        return;
+      }
+      
+      for (const filename of listResult.files) {
+        if (!filename.endsWith('.md')) {
+          continue;
+        }
+
+        const filePath = await this.electronService.pathJoin(charactersPath, filename);
+        const readResult = await this.electronService.readFile(filePath);
+        
+        if (!readResult.success || !readResult.content) {
+          console.warn(`Failed to read character file ${filename}:`, readResult.error);
+          continue;
+        }
+        
+        // Parse frontmatter to check if this character references the book
+        const { frontmatter } = this.parseFrontmatter(readResult.content);
+        
+        if (frontmatter.books && Array.isArray(frontmatter.books) && frontmatter.books.includes(bookId)) {
+          // Remove the book reference
+          const updatedBooks = frontmatter.books.filter((id: string) => id !== bookId);
+          const updatedFrontmatter = { ...frontmatter, books: updatedBooks };
+          
+          // Update the file
+          const updatedContent = this.generateMarkdownWithFrontmatter(updatedFrontmatter, readResult.content);
+          const writeResult = await this.electronService.writeFile(filePath, updatedContent);
+          
+          if (!writeResult.success) {
+            console.warn(`Failed to update character file ${filename}:`, writeResult.error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to cleanup book references from characters:', error);
+      // Don't throw here as we still want to remove the book from metadata
+    }
+  }
+
+  /**
+   * Parses frontmatter from markdown content
+   */
+  private parseFrontmatter(content: string): { frontmatter: any; body: string } {
+    const lines = content.split('\n');
+    
+    if (lines[0] !== '---') {
+      return { frontmatter: {}, body: content };
+    }
+
+    let endIndex = -1;
+    for (let i = 1; i < lines.length; i++) {
+      if (lines[i] === '---') {
+        endIndex = i;
+        break;
+      }
+    }
+
+    if (endIndex === -1) {
+      return { frontmatter: {}, body: content };
+    }
+
+    const frontmatterLines = lines.slice(1, endIndex);
+    const body = lines.slice(endIndex + 1).join('\n');
+    
+    // Simple YAML parsing for our use case
+    const frontmatter: any = {};
+    for (const line of frontmatterLines) {
+      const colonIndex = line.indexOf(':');
+      if (colonIndex === -1) continue;
+      
+      const key = line.substring(0, colonIndex).trim();
+      const value = line.substring(colonIndex + 1).trim();
+      
+      // Handle arrays (simple case for books and tags)
+      if (value.startsWith('[') && value.endsWith(']')) {
+        const arrayContent = value.slice(1, -1);
+        if (arrayContent.trim()) {
+          frontmatter[key] = arrayContent.split(',').map(item => item.trim().replace(/['"]/g, ''));
+        } else {
+          frontmatter[key] = [];
+        }
+      } else {
+        // Remove quotes if present
+        frontmatter[key] = value.replace(/^["']|["']$/g, '');
+      }
+    }
+
+    return { frontmatter, body };
+  }
+
+  /**
+   * Generates markdown content with updated frontmatter
+   */
+  private generateMarkdownWithFrontmatter(frontmatter: any, originalContent: string): string {
+    const lines = originalContent.split('\n');
+    
+    // Find the end of existing frontmatter
+    let endIndex = -1;
+    if (lines[0] === '---') {
+      for (let i = 1; i < lines.length; i++) {
+        if (lines[i] === '---') {
+          endIndex = i;
+          break;
+        }
+      }
+    }
+
+    // Get the body content (everything after frontmatter)
+    const body = endIndex !== -1 ? lines.slice(endIndex + 1).join('\n') : originalContent;
+
+    // Generate new frontmatter
+    const frontmatterLines = ['---'];
+    for (const [key, value] of Object.entries(frontmatter)) {
+      if (Array.isArray(value)) {
+        const arrayStr = value.length > 0 ? `[${value.map(v => `"${v}"`).join(', ')}]` : '[]';
+        frontmatterLines.push(`${key}: ${arrayStr}`);
+      } else {
+        frontmatterLines.push(`${key}: "${value}"`);
+      }
+    }
+    frontmatterLines.push('---');
+
+    return frontmatterLines.join('\n') + '\n' + body;
   }
 
   /**

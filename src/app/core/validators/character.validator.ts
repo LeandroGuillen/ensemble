@@ -117,13 +117,7 @@ export class CharacterValidator {
       });
     }
 
-    if (formData.mangamaster && formData.mangamaster.length > 20000) {
-      errors.push({
-        field: 'mangamaster',
-        message: 'Mangamaster must be 20,000 characters or less',
-        code: 'MAX_LENGTH_EXCEEDED'
-      });
-    }
+
 
     if (formData.description && formData.description.length > 10000) {
       errors.push({

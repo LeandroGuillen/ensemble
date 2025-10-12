@@ -61,6 +61,14 @@
       </button>
       <button
         class="nav-link"
+        [class.active]="isActive('/library')"
+        (click)="navigateToLibrary()"
+        title="Library Management"
+      >
+        📚
+      </button>
+      <button
+        class="nav-link"
         [class.active]="isActive('/metadata')"
         (click)="navigateToMetadata()"
         title="Settings"

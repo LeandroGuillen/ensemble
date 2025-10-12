@@ -4,8 +4,8 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { Character, CharacterFormData, Category, Tag, Project } from '../../core/interfaces';
-import { CharacterService, ProjectService, ElectronService } from '../../core/services';
+import { Character, CharacterFormData, Category, Tag, Book, Project } from '../../core/interfaces';
+import { CharacterService, ProjectService, ElectronService, MetadataService } from '../../core/services';
 
 @Component({
   selector: 'app-character-detail',
@@ -23,6 +23,7 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
   character: Character | null = null;
   categories: Category[] = [];
   tags: Tag[] = [];
+  books: Book[] = [];
   currentProject: Project | null = null;
 
   isEditing = false;
@@ -39,7 +40,8 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
     private fb: FormBuilder,
     private characterService: CharacterService,
     private projectService: ProjectService,
-    private electronService: ElectronService
+    private electronService: ElectronService,
+    private metadataService: MetadataService
   ) {
     this.characterForm = this.createForm();
   }
@@ -52,6 +54,7 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
         this.currentProject = project;
         this.categories = this.projectService.getCategories();
         this.tags = this.projectService.getTags();
+        this.books = this.metadataService.getBooks();
         
         // Set default category if available
         if (this.categories.length > 0 && !this.isEditing) {
@@ -103,8 +106,8 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
       name: ['', [Validators.required, Validators.minLength(1), Validators.maxLength(100)]],
       category: ['', Validators.required],
       tags: [[]],
+      books: [[]],
       thumbnail: [''],
-      mangamaster: [''],
       description: [''],
       notes: ['']
     });
@@ -121,8 +124,8 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
           name: this.character.name,
           category: this.character.category,
           tags: this.character.tags,
+          books: this.character.books,
           thumbnail: this.character.thumbnail,
-          mangamaster: this.character.mangamaster,
           description: this.character.description,
           notes: this.character.notes
         });
@@ -207,6 +210,25 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
   isTagSelected(tagId: string): boolean {
     const selectedTags = this.characterForm.get('tags')?.value || [];
     return selectedTags.includes(tagId);
+  }
+
+  onBookChange(bookId: string, checked: boolean): void {
+    const currentBooks = this.characterForm.get('books')?.value || [];
+    let updatedBooks: string[];
+    
+    if (checked) {
+      updatedBooks = [...currentBooks, bookId];
+    } else {
+      updatedBooks = currentBooks.filter((id: string) => id !== bookId);
+    }
+    
+    this.characterForm.patchValue({ books: updatedBooks });
+    this.characterForm.markAsDirty();
+  }
+
+  isBookSelected(bookId: string): boolean {
+    const selectedBooks = this.characterForm.get('books')?.value || [];
+    return selectedBooks.includes(bookId);
   }
 
   async selectThumbnail(): Promise<void> {
@@ -301,6 +323,11 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
   onTagToggle(tagId: string): void {
     const isSelected = this.isTagSelected(tagId);
     this.onTagChange(tagId, !isSelected);
+  }
+
+  onBookToggle(bookId: string): void {
+    const isSelected = this.isBookSelected(bookId);
+    this.onBookChange(bookId, !isSelected);
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {

@@ -4,7 +4,7 @@ import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { Observable, Subject } from "rxjs";
 import { takeUntil } from "rxjs/operators";
-import { Character, Category, Tag, Project, Cast } from "../../core/interfaces";
+import { Character, Category, Tag, Project, Cast, Book } from "../../core/interfaces";
 import {
   CharacterService,
   ProjectService,
@@ -27,16 +27,19 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   categories: Category[] = [];
   tags: Tag[] = [];
   casts: Cast[] = [];
+  books: Book[] = [];
   currentProject: Project | null = null;
 
   searchTerm = "";
   selectedCategory = "";
   selectedTags: string[] = [];
   selectedCast = "";
+  selectedBook = "";
   selectedCharacterIds: string[] = [];
   showCastNameForm = false;
   newCastName = "";
 
+  allCharacters: Character[] = [];
   filteredCharacters: Character[] = [];
   thumbnailDataUrls: Map<string, string> = new Map();
   isLoading = false;
@@ -104,6 +107,10 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     if (savedSelectedCast) {
       this.selectedCast = savedSelectedCast;
     }
+    const savedSelectedBook = localStorage.getItem("characterSelectedBook");
+    if (savedSelectedBook) {
+      this.selectedBook = savedSelectedBook;
+    }
 
     // Register command palette commands
     this.registerCommands();
@@ -116,6 +123,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
         this.categories = this.projectService.getCategories();
         this.tags = this.projectService.getTags();
         this.casts = this.metadataService.getCasts();
+        this.books = this.metadataService.getBooks();
 
         if (project) {
           this.loadCharacters();
@@ -124,6 +132,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
 
     // Subscribe to character changes and apply filters
     this.characters$.pipe(takeUntil(this.destroy$)).subscribe((characters) => {
+      this.allCharacters = characters;
       this.filteredCharacters = this.filterAndSortCharacters(characters);
       this.loadThumbnailDataUrls(characters).then(() => {
         // Update command palette after thumbnails are loaded
@@ -251,6 +260,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
         character.name,
         this.getCategoryName(character.category),
         ...character.tags.map((tagId) => this.getTagName(tagId)),
+        ...character.books.map((bookId) => this.getBookName(bookId)),
       ],
       group: "characters",
       action: () => this.editCharacter(character),
@@ -402,16 +412,24 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     this.applyFilters();
   }
 
+  onBookChange(): void {
+    // Save selected book to localStorage
+    localStorage.setItem("characterSelectedBook", this.selectedBook);
+    this.applyFilters();
+  }
+
   clearFilters(): void {
     this.searchTerm = "";
     this.selectedCategory = "";
     this.selectedTags = [];
     this.selectedCast = "";
+    this.selectedBook = "";
     // Clear saved filter state
     localStorage.removeItem("characterSearchTerm");
     localStorage.removeItem("characterSelectedCategory");
     localStorage.removeItem("characterSelectedTags");
     localStorage.removeItem("characterSelectedCast");
+    localStorage.removeItem("characterSelectedBook");
     this.applyFilters();
   }
 
@@ -423,6 +441,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
 
   private applyFilters(): void {
     this.characters$.pipe(takeUntil(this.destroy$)).subscribe((characters) => {
+      this.allCharacters = characters;
       this.filteredCharacters = this.filterAndSortCharacters(characters);
       // Reset selection when filters change
       this.selectedCharacterIndex = -1;
@@ -436,7 +455,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
 
   private filterCharacters(characters: Character[]): Character[] {
     return characters.filter((character) => {
-      // Search term filter - search names, categories, and tags
+      // Search term filter - search names, categories, tags, and books
       if (this.searchTerm) {
         const searchLower = this.searchTerm.toLowerCase();
         const categoryName = this.getCategoryName(
@@ -445,11 +464,15 @@ export class CharacterListComponent implements OnInit, OnDestroy {
         const tagNames = character.tags.map((tagId) =>
           this.getTagName(tagId).toLowerCase()
         );
+        const bookNames = character.books.map((bookId) =>
+          this.getBookName(bookId).toLowerCase()
+        );
 
         const matchesSearch =
           character.name.toLowerCase().includes(searchLower) ||
           categoryName.includes(searchLower) ||
-          tagNames.some((tagName) => tagName.includes(searchLower));
+          tagNames.some((tagName) => tagName.includes(searchLower)) ||
+          bookNames.some((bookName) => bookName.includes(searchLower));
 
         if (!matchesSearch) return false;
       }
@@ -474,6 +497,13 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       if (this.selectedCast) {
         const cast = this.casts.find((c) => c.id === this.selectedCast);
         if (cast && !cast.characterIds.includes(character.id)) {
+          return false;
+        }
+      }
+
+      // Book filter - character must be assigned to the selected book
+      if (this.selectedBook) {
+        if (!character.books || !character.books.includes(this.selectedBook)) {
           return false;
         }
       }
@@ -510,6 +540,23 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   getTagColor(tagId: string): string {
     const tag = this.tags.find((t) => t.id === tagId);
     return tag?.color || "#95a5a6";
+  }
+
+  getBookName(bookId: string): string {
+    const book = this.books.find((b) => b.id === bookId);
+    return book?.name || bookId;
+  }
+
+  getBookColor(bookId: string): string {
+    const book = this.books.find((b) => b.id === bookId);
+    return book?.color || "#95a5a6";
+  }
+
+  getBookCharacterCount(bookId: string): number {
+    // Get all characters (not just filtered ones) to show total count
+    return this.allCharacters.filter(character => 
+      character.books && character.books.includes(bookId)
+    ).length;
   }
 
   getCharacterTagsInOrder(character: Character): Tag[] {
@@ -584,6 +631,11 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       if (cast) {
         filters.push(`cast: ${cast.name}`);
       }
+    }
+
+    if (this.selectedBook) {
+      const bookName = this.getBookName(this.selectedBook);
+      filters.push(`book: ${bookName}`);
     }
 
     return filters.length > 0 ? `Filtered by ${filters.join(", ")}` : "";

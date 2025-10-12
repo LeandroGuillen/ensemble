@@ -4,6 +4,7 @@ export interface ProjectMetadata {
   categories: Category[];
   tags: Tag[];
   casts: Cast[];
+  books: Book[];
   settings: ProjectSettings;
   relationships?: {
     nodes: GraphNode[];
@@ -46,6 +47,17 @@ export interface Cast {
   id: string;
   name: string;
   characterIds: string[];
+}
+
+export interface Book {
+  id: string;
+  name: string;
+  color: string;
+  description?: string;
+  status?: 'draft' | 'in-progress' | 'published' | 'archived';
+  publicationDate?: string;
+  isbn?: string;
+  coverImage?: string;
 }
 
 export interface ProjectSettings {

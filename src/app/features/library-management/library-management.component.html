@@ -1,0 +1,332 @@
+<div class="library-management">
+  <div class="library-content">
+    <div class="library-inner">
+      <div class="header">
+        <h1>Library Management</h1>
+        <p>Manage books/novels in your project. Characters can belong to one or many books.</p>
+      </div>
+
+      <!-- Loading State -->
+      <div *ngIf="loading" class="loading">
+        <div class="spinner"></div>
+        <p>Loading library...</p>
+      </div>
+
+      <!-- Error Display -->
+      <div *ngIf="error" class="error-banner">
+        <div class="error-content">
+          <span class="error-icon">⚠️</span>
+          <span class="error-message">{{ error }}</span>
+          <button class="error-close" (click)="error = null">×</button>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <div *ngIf="!loading" class="content">
+        <!-- Books Section -->
+        <section class="section books-section">
+          <div class="section-header">
+            <h2>Books</h2>
+            <button class="btn btn-primary" (click)="showAddBookForm()" [disabled]="saving">
+              <span class="icon">+</span>
+              Add Book
+            </button>
+          </div>
+
+          <!-- Add Book Form (only shown when adding new) -->
+          <div *ngIf="showBookForm && !editingBook" class="form-card">
+            <div class="form-header">
+              <h3>Add New Book</h3>
+              <button class="btn-close" (click)="cancelBookForm()">×</button>
+            </div>
+
+            <form [formGroup]="bookForm" (ngSubmit)="saveBook()">
+              <div class="form-group">
+                <label for="bookName">Title *</label>
+                <input
+                  id="bookName"
+                  type="text"
+                  formControlName="name"
+                  placeholder="Enter book title"
+                  class="form-control"
+                  [class.error]="getFieldError(bookForm, 'name')"
+                >
+                <div *ngIf="getFieldError(bookForm, 'name')" class="field-error">
+                  {{ getFieldError(bookForm, 'name') }}
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="bookColor">Color *</label>
+                <div class="color-input-group">
+                  <input
+                    id="bookColor"
+                    type="color"
+                    formControlName="color"
+                    class="color-input"
+                  >
+                  <input
+                    type="text"
+                    formControlName="color"
+                    placeholder="#3498db"
+                    class="form-control color-text"
+                    [class.error]="getFieldError(bookForm, 'color')"
+                  >
+                </div>
+                <div *ngIf="getFieldError(bookForm, 'color')" class="field-error">
+                  {{ getFieldError(bookForm, 'color') }}
+                </div>
+
+                <!-- Color Presets -->
+                <div class="color-presets">
+                  <span class="preset-label">Quick colors:</span>
+                  <button
+                    *ngFor="let color of colorPresets"
+                    type="button"
+                    class="color-preset"
+                    [style.background-color]="color"
+                    (click)="selectColor(color)"
+                    [title]="color"
+                  ></button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="bookDescription">Description</label>
+                <textarea
+                  id="bookDescription"
+                  formControlName="description"
+                  placeholder="Enter a description or synopsis..."
+                  class="form-control"
+                  rows="3"
+                  [class.error]="getFieldError(bookForm, 'description')"
+                ></textarea>
+                <div *ngIf="getFieldError(bookForm, 'description')" class="field-error">
+                  {{ getFieldError(bookForm, 'description') }}
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="bookStatus">Status</label>
+                  <select
+                    id="bookStatus"
+                    formControlName="status"
+                    class="form-control"
+                  >
+                    <option value="">Select status</option>
+                    <option *ngFor="let option of statusOptions" [value]="option.value">
+                      {{ option.label }}
+                    </option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="bookPublicationDate">Publication Date</label>
+                  <input
+                    id="bookPublicationDate"
+                    type="date"
+                    formControlName="publicationDate"
+                    class="form-control"
+                  >
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="bookIsbn">ISBN</label>
+                <input
+                  id="bookIsbn"
+                  type="text"
+                  formControlName="isbn"
+                  placeholder="Enter ISBN (optional)"
+                  class="form-control"
+                  [class.error]="getFieldError(bookForm, 'isbn')"
+                >
+                <div *ngIf="getFieldError(bookForm, 'isbn')" class="field-error">
+                  {{ getFieldError(bookForm, 'isbn') }}
+                </div>
+              </div>
+
+              <div class="form-actions">
+                <button type="button" class="btn btn-secondary" (click)="cancelBookForm()">
+                  Cancel
+                </button>
+                <button type="submit" class="btn btn-primary" [disabled]="saving || bookForm.invalid">
+                  <span *ngIf="saving" class="spinner-small"></span>
+                  Add Book
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Books List -->
+          <div class="items-list">
+            <div
+              *ngFor="let book of books; let i = index"
+              class="item-row book-item"
+              draggable="true"
+              (dragstart)="onDragStart($event, i)"
+              (dragover)="onDragOver($event, i)"
+              (drop)="onDrop($event, i)"
+              (dragend)="onDragEnd()"
+              [class.dragging]="draggedIndex === i"
+              [class.drag-over]="dragOverIndex === i">
+              <!-- Drag Handle -->
+              <div class="drag-handle" *ngIf="!editingBook || editingBook.id !== book.id" draggable="false">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" draggable="false">
+                  <circle cx="6" cy="3" r="1.5"/>
+                  <circle cx="10" cy="3" r="1.5"/>
+                  <circle cx="6" cy="8" r="1.5"/>
+                  <circle cx="10" cy="8" r="1.5"/>
+                  <circle cx="6" cy="13" r="1.5"/>
+                  <circle cx="10" cy="13" r="1.5"/>
+                </svg>
+              </div>
+
+              <!-- Regular item display -->
+              <div *ngIf="!editingBook || editingBook.id !== book.id" class="item-content" (click)="showEditBookForm(book)" draggable="false">
+                <div class="item-color" [style.background-color]="book.color"></div>
+                <div class="item-info">
+                  <div class="item-name-row">
+                    <span class="item-name">{{ book.name }}</span>
+                    <span *ngIf="book.status" class="book-status-badge">{{ getStatusLabel(book.status) }}</span>
+                  </div>
+                  <div *ngIf="book.description" class="item-description">{{ book.description }}</div>
+                  <div *ngIf="book.publicationDate || book.isbn" class="item-meta">
+                    <span *ngIf="book.publicationDate">📅 {{ book.publicationDate }}</span>
+                    <span *ngIf="book.isbn">ISBN: {{ book.isbn }}</span>
+                  </div>
+                </div>
+              </div>
+              <div *ngIf="!editingBook || editingBook.id !== book.id" class="item-actions" draggable="false">
+                <button
+                  class="btn-icon btn-danger"
+                  (click)="deleteBook(book); $event.stopPropagation()"
+                  [disabled]="saving"
+                  title="Delete book"
+                >
+                  🗑️
+                </button>
+              </div>
+
+              <!-- Inline edit form -->
+              <div *ngIf="editingBook && editingBook.id === book.id" class="inline-edit-form">
+                <form [formGroup]="bookForm" (ngSubmit)="saveBook()">
+                  <div class="inline-form-row">
+                    <div class="inline-color-input">
+                      <input
+                        type="color"
+                        formControlName="color"
+                        class="color-input-small"
+                      >
+                    </div>
+                    <div class="inline-name-input">
+                      <input
+                        type="text"
+                        formControlName="name"
+                        placeholder="Book title"
+                        class="form-control-inline"
+                        [class.error]="getFieldError(bookForm, 'name')"
+                      >
+                    </div>
+                  </div>
+
+                  <div class="inline-description-row">
+                    <textarea
+                      formControlName="description"
+                      placeholder="Description (optional)..."
+                      class="form-control-inline description-textarea"
+                      rows="2"
+                      [class.error]="getFieldError(bookForm, 'description')"
+                    ></textarea>
+                  </div>
+
+                  <div class="inline-form-row">
+                    <div class="inline-field">
+                      <label class="inline-label">Status:</label>
+                      <select
+                        formControlName="status"
+                        class="form-control-inline-small"
+                      >
+                        <option value="">None</option>
+                        <option *ngFor="let option of statusOptions" [value]="option.value">
+                          {{ option.label }}
+                        </option>
+                      </select>
+                    </div>
+                    <div class="inline-field">
+                      <label class="inline-label">Date:</label>
+                      <input
+                        type="date"
+                        formControlName="publicationDate"
+                        class="form-control-inline-small"
+                      >
+                    </div>
+                  </div>
+
+                  <div class="inline-form-row">
+                    <div class="inline-field full-width">
+                      <label class="inline-label">ISBN:</label>
+                      <input
+                        type="text"
+                        formControlName="isbn"
+                        placeholder="ISBN (optional)"
+                        class="form-control-inline-small"
+                        [class.error]="getFieldError(bookForm, 'isbn')"
+                      >
+                    </div>
+                  </div>
+
+                  <!-- Inline Color Presets -->
+                  <div class="inline-color-presets">
+                    <button
+                      *ngFor="let color of colorPresets"
+                      type="button"
+                      class="color-preset-small"
+                      [style.background-color]="color"
+                      (click)="selectColor(color)"
+                      [title]="color"
+                    ></button>
+                  </div>
+
+                  <!-- Error Messages -->
+                  <div *ngIf="getFieldError(bookForm, 'name')" class="inline-error">
+                    {{ getFieldError(bookForm, 'name') }}
+                  </div>
+                  <div *ngIf="getFieldError(bookForm, 'description')" class="inline-error">
+                    {{ getFieldError(bookForm, 'description') }}
+                  </div>
+
+                  <!-- Save and Cancel Links -->
+                  <div class="inline-form-actions">
+                    <button type="submit" class="btn-link btn-save" [disabled]="saving || bookForm.invalid">
+                      <span *ngIf="saving" class="spinner-small"></span>
+                      <span *ngIf="!saving">Save</span>
+                    </button>
+                    <button type="button" class="btn-link btn-cancel" (click)="cancelBookForm()">
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            <!-- Drop zone for last position -->
+            <div
+              *ngIf="draggedIndex !== null"
+              class="drop-zone-last"
+              (dragover)="onDragOver($event, books.length)"
+              (drop)="onDrop($event, books.length)"
+              [class.drag-over]="dragOverIndex === books.length">
+            </div>
+
+            <!-- Empty state -->
+            <div *ngIf="books.length === 0 && !showBookForm" class="empty-state">
+              <p>No books yet. Click "Add Book" to create your first book.</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</div>

@@ -82,6 +82,10 @@ export class AppComponent implements OnInit {
     this.router.navigate(["/metadata"]);
   }
 
+  navigateToLibrary() {
+    this.router.navigate(["/library"]);
+  }
+
   selectProject() {
     this.router.navigate(["/project-selector"]);
   }

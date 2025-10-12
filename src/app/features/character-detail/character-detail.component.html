@@ -130,6 +130,7 @@
 
           <div class="form-section" *ngIf="tags.length > 0">
             <div class="form-group">
+              <label class="form-label">Tags</label>
               <div class="tag-selection">
                 <button
                   *ngFor="let tag of tags"
@@ -147,27 +148,27 @@
             </div>
           </div>
 
-          <div class="form-section">
+          <div class="form-section" *ngIf="books.length > 0">
             <div class="form-group">
-              <label class="form-label" for="mangamaster">
-                Mangamaster prompt
-                <span class="field-hint"
-                  >AI description to be used by Mangamaster image generator (max 20000 characters)</span
+              <label class="form-label">Books</label>
+              <div class="book-selection">
+                <button
+                  *ngFor="let book of books"
+                  type="button"
+                  class="book book-filter"
+                  [class.active]="isBookSelected(book.id)"
+                  [style.background-color]="isBookSelected(book.id) ? book.color : 'transparent'"
+                  [style.color]="isBookSelected(book.id) ? 'white' : book.color"
+                  [style.border-color]="book.color"
+                  (click)="onBookToggle(book.id)"
                 >
-              </label>
-              <textarea
-                id="mangamaster"
-                class="form-control"
-                formControlName="mangamaster"
-                rows="6"
-                placeholder="E.g. 1girl, child, poga, pointy ears, light brown hair, ..."
-                [class.error]="getFieldError('mangamaster')"
-              ></textarea>
-              <div class="char-count">{{ characterForm.get('mangamaster')?.value?.length || 0 }}/20000</div>
-              <div class="error-text" *ngIf="getFieldError('mangamaster')">
-                {{ getFieldError('mangamaster') }}
+                  {{ book.name }}
+                </button>
               </div>
             </div>
+          </div>
+
+          <div class="form-section">
 
             <div class="form-group">
               <label class="form-label" for="description">

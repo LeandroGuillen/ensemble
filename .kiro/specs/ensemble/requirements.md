@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Ensemble is a character management application designed to help writers and worldbuilders organize, develop, and track their fictional characters. The application operates within a work folder/project structure and stores all data as plain text files (markdown and JSON) that can be easily edited in any text editor. It provides both a list view for character management and an interactive graph view for visualizing and managing character relationships.
+Ensemble is a character management application designed to help writers and worldbuilders organize, develop, and track their fictional characters across multiple books and projects. The application operates within a work folder/project structure and stores all data as plain text files (markdown and JSON) that can be easily edited in any text editor. It provides both a list view for character management, an interactive graph view for visualizing character relationships, and a library management system for organizing books within a project. Characters can be assigned to zero, one, or multiple books, allowing writers to track character appearances across different stories in their fictional universe.
 
 ## Requirements
 
@@ -87,3 +87,42 @@ Ensemble is a character management application designed to help writers and worl
 4. WHEN a user adds thumbnails THEN the system SHALL store images in a thumbnails subfolder and reference them by filename
 5. WHEN a user edits files externally THEN the system SHALL detect changes and refresh the display
 6. IF a user wants to backup their project THEN they SHALL be able to copy the entire work folder
+
+### Requirement 8
+
+**User Story:** As a writer, I want to manage books/novels within my project, so that I can organize characters by the specific books they appear in.
+
+#### Acceptance Criteria
+
+1. WHEN a user creates a book THEN the system SHALL require a name and color, and allow optional description, status, publication date, ISBN, and cover image
+2. WHEN a user saves book information THEN the system SHALL store it in the project metadata JSON file
+3. WHEN a user views the library management page THEN the system SHALL display all books with their metadata and provide options to create, edit, or delete books
+4. WHEN a user deletes a book THEN the system SHALL remove all references to that book from character files
+5. WHEN a user edits book metadata THEN the system SHALL update the metadata file and refresh the UI
+6. WHEN a user assigns a color to a book THEN the system SHALL use that color for visual identification throughout the application
+
+### Requirement 9
+
+**User Story:** As a writer, I want to assign characters to one or more books, so that I can track which characters appear in which stories.
+
+#### Acceptance Criteria
+
+1. WHEN a user edits a character THEN the system SHALL provide a multi-select interface for choosing books
+2. WHEN a user assigns books to a character THEN the system SHALL store the book IDs in the character's markdown frontmatter
+3. WHEN a user views a character THEN the system SHALL display the books they belong to with visual indicators using book colors
+4. WHEN a user removes a character from a book THEN the system SHALL update the character's frontmatter to remove the book reference
+5. WHEN a character has no books assigned THEN the system SHALL treat it as a general project character not specific to any book
+6. WHEN a user saves character book assignments THEN the system SHALL validate that all referenced books exist in the project metadata
+
+### Requirement 10
+
+**User Story:** As a writer, I want to filter characters by book in the character list view, so that I can focus on characters from specific stories.
+
+#### Acceptance Criteria
+
+1. WHEN a user opens the character list THEN the system SHALL provide a book filter dropdown alongside existing category and tag filters
+2. WHEN a user selects a book filter THEN the system SHALL display only characters assigned to that book
+3. WHEN a user applies multiple filters THEN the system SHALL show characters that match all selected criteria (book AND category AND tags)
+4. WHEN a user clears the book filter THEN the system SHALL show all characters regardless of book assignment
+5. WHEN a user applies a book filter THEN the system SHALL save the filter state and restore it on next visit
+6. WHEN no characters match the selected book filter THEN the system SHALL display an appropriate "no characters found" message
