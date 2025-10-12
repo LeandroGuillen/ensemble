@@ -1,0 +1,326 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="1024"
+   height="1024"
+   viewBox="0 0 1024 1024"
+   role="img"
+   aria-label="Ensemble emblem"
+   version="1.1"
+   id="svg26"
+   sodipodi:docname="ensemble.svg"
+   inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview26"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="0.46826172"
+     inkscape:cx="265.87695"
+     inkscape:cy="391.87487"
+     inkscape:window-width="2194"
+     inkscape:window-height="1164"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg26"
+     inkscape:clip-to-page="false" />
+  <!-- Colors -->
+  <defs
+     id="defs1">
+    <style
+       type="text/css"
+       id="style1"><![CDATA[
+      .bg { fill: #071b2e; }
+      .gold-fill { fill: #D4AF37; }
+      .gold-stroke { fill: none; stroke: #D4AF37; stroke-linecap:round; stroke-linejoin:round; }
+      .ring-thick { stroke-width: 20; }
+      .ring-thin { stroke-width: 6; opacity: 0.95; }
+      .tick-long { stroke-width: 8; }
+      .tick-short { stroke-width: 5; opacity: 0.9; }
+      .letter { font-family: "Georgia", "Times New Roman", serif; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
+    ]]></style>
+  </defs>
+  <!-- Background -->
+  <rect
+     class="bg"
+     x="-8.5422316"
+     y="-8.5422316"
+     width="1041.0845"
+     height="1041.0845"
+     id="rect1"
+     style="stroke-width:1.01668;stroke:#ffe680" />
+  <!-- Outer rings -->
+  <!-- Radiant ticks (24 ticks around the circle; longer at every 30° step) -->
+  <!-- Decorative inner dot ring -->
+  <!-- Main letter 'E' centered in emblem -->
+  <g
+     id="g2"
+     transform="matrix(1.4795144,0,0,1.4795144,-245.51138,-56.133535)"
+     style="stroke:#ffe680">
+    <!-- Outer thick ring -->
+    <circle
+       class="gold-stroke ring-thick"
+       cx="512"
+       cy="384"
+       r="288"
+       id="circle1"
+       style="stroke:#ffe680" />
+    <!-- Inner thin ring -->
+    <circle
+       class="gold-stroke ring-thin"
+       cx="512"
+       cy="384"
+       r="238"
+       id="circle2"
+       style="stroke:#ffe680" />
+  </g>
+  <g
+     id="g25"
+     transform="matrix(1.0367477,0,0,1.0367477,-18.814835,113.88887)"
+     style="stroke:#ffe680">
+    <!-- Using lines rotated around center (512,384). Long ticks at multiples of 30° -->
+    <!-- We'll place ticks starting from -90° (top) and go clockwise -->
+    <!-- Helper pattern: each tick is a vertical line placed above center, rotated -->
+    <!-- Long ticks -->
+    <line
+       class="gold-stroke tick-long"
+       x1="512"
+       y1="64"
+       x2="512"
+       y2="120"
+       transform="rotate(30,512,384)"
+       id="line3"
+       style="stroke:#ffe680" />
+    <line
+       class="gold-stroke tick-long"
+       x1="512"
+       y1="64"
+       x2="512"
+       y2="120"
+       transform="rotate(60,512,384)"
+       id="line4"
+       style="stroke:#ffe680" />
+    <line
+       class="gold-stroke tick-long"
+       x1="512"
+       y1="64"
+       x2="512"
+       y2="120"
+       transform="rotate(120,512,384)"
+       id="line6"
+       style="stroke:#ffe680" />
+    <line
+       class="gold-stroke tick-long"
+       x1="512"
+       y1="64"
+       x2="512"
+       y2="120"
+       transform="rotate(150,512,384)"
+       id="line7"
+       style="stroke:#ffe680" />
+    <line
+       class="gold-stroke tick-long"
+       x1="512"
+       y1="64"
+       x2="512"
+       y2="120"
+       transform="rotate(-150,512,384)"
+       id="line9"
+       style="stroke:#ffe680" />
+    <line
+       class="gold-stroke tick-long"
+       x1="512"
+       y1="64"
+       x2="512"
+       y2="120"
+       transform="rotate(-120,512,384)"
+       id="line10"
+       style="stroke:#ffe680" />
+    <line
+       class="gold-stroke tick-long"
+       x1="512"
+       y1="64"
+       x2="512"
+       y2="120"
+       transform="rotate(-60,512,384)"
+       id="line12"
+       style="stroke:#ffe680" />
+    <line
+       class="gold-stroke tick-long"
+       x1="512"
+       y1="64"
+       x2="512"
+       y2="120"
+       transform="rotate(-30,512,384)"
+       id="line13"
+       style="stroke:#ffe680" />
+    <!-- Short ticks (in-between every 15° not covered above) -->
+    <line
+       class="gold-stroke tick-short"
+       x1="512"
+       y1="84"
+       x2="512"
+       y2="120"
+       transform="rotate(15,512,384)"
+       id="line14"
+       style="stroke:#ffe680" />
+    <line
+       class="gold-stroke tick-short"
+       x1="512"
+       y1="84"
+       x2="512"
+       y2="120"
+       transform="rotate(45,512,384)"
+       id="line15"
+       style="stroke:#ffe680" />
+    <line
+       class="gold-stroke tick-short"
+       x1="512"
+       y1="84"
+       x2="512"
+       y2="120"
+       transform="rotate(75,512,384)"
+       id="line16"
+       style="stroke:#ffe680" />
+    <line
+       class="gold-stroke tick-short"
+       x1="512"
+       y1="84"
+       x2="512"
+       y2="120"
+       transform="rotate(105,512,384)"
+       id="line17"
+       style="stroke:#ffe680" />
+    <line
+       class="gold-stroke tick-short"
+       x1="512"
+       y1="84"
+       x2="512"
+       y2="120"
+       transform="rotate(135,512,384)"
+       id="line18"
+       style="stroke:#ffe680" />
+    <line
+       class="gold-stroke tick-short"
+       x1="512"
+       y1="84"
+       x2="512"
+       y2="120"
+       transform="rotate(165,512,384)"
+       id="line19"
+       style="stroke:#ffe680" />
+    <line
+       class="gold-stroke tick-short"
+       x1="512"
+       y1="84"
+       x2="512"
+       y2="120"
+       transform="rotate(-165,512,384)"
+       id="line20"
+       style="stroke:#ffe680" />
+    <line
+       class="gold-stroke tick-short"
+       x1="512"
+       y1="84"
+       x2="512"
+       y2="120"
+       transform="rotate(-135,512,384)"
+       id="line21"
+       style="stroke:#ffe680" />
+    <line
+       class="gold-stroke tick-short"
+       x1="512"
+       y1="84"
+       x2="512"
+       y2="120"
+       transform="rotate(-105,512,384)"
+       id="line22"
+       style="stroke:#ffe680" />
+    <line
+       class="gold-stroke tick-short"
+       x1="512"
+       y1="84"
+       x2="512"
+       y2="120"
+       transform="rotate(-75,512,384)"
+       id="line23"
+       style="stroke:#ffe680" />
+    <line
+       class="gold-stroke tick-short"
+       x1="512"
+       y1="84"
+       x2="512"
+       y2="120"
+       transform="rotate(-45,512,384)"
+       id="line24"
+       style="stroke:#ffe680" />
+    <line
+       class="gold-stroke tick-short"
+       x1="512"
+       y1="84"
+       x2="512"
+       y2="120"
+       transform="rotate(-15,512,384)"
+       id="line25"
+       style="stroke:#ffe680" />
+    <line
+       class="gold-stroke tick-long"
+       x1="714.86261"
+       y1="384"
+       x2="813.539"
+       y2="384"
+       id="line1"
+       style="stroke:#ffe680" />
+    <line
+       class="gold-stroke tick-long"
+       x1="199.40091"
+       y1="384"
+       x2="295.33279"
+       y2="384"
+       id="line1-7"
+       style="fill:none;stroke:#ffe680;stroke-width:6.86598;stroke-linecap:round;stroke-linejoin:round" />
+    <line
+       class="gold-stroke tick-long"
+       x1="509.66736"
+       y1="700.10889"
+       x2="509.66736"
+       y2="593.19897"
+       id="line5"
+       style="fill:none;stroke:#ffe680;stroke-width:7.24819;stroke-linecap:round;stroke-linejoin:round" />
+    <line
+       class="gold-stroke tick-long"
+       x1="509.66736"
+       y1="179.99356"
+       x2="509.66736"
+       y2="73.083656"
+       id="line8"
+       style="fill:none;stroke:#ffe680;stroke-width:7.24819;stroke-linecap:round;stroke-linejoin:round" />
+  </g>
+  <g
+     id="g26"
+     transform="matrix(2.2621972,0,0,2.2621972,-646.245,-356.68375)"
+     style="stroke:#ffe680">
+    <circle
+       cx="512"
+       cy="384"
+       r="176"
+       class="gold-stroke"
+       style="opacity:0.95;stroke-width:3;stroke:#ffe680"
+       id="circle25" />
+  </g>
+  <path
+     d="m 354.53258,666.94738 44.73219,-7.02193 V 362.92451 l -44.73219,-6.76186 v -18.98517 h 297.00095 v 88.68418 h -23.66645 l -8.32227,-56.43538 q -29.12794,-3.641 -84.26296,-3.641 h -54.09474 v 127.95489 h 91.28487 l 8.0622,-38.4905 h 23.1463 v 107.14921 h -23.1463 l -8.0622,-39.53077 h -91.28487 v 134.45664 h 65.79792 q 67.09829,0 87.90396,-4.16114 l 14.82406,-64.49758 h 23.66644 l -4.94134,97.26652 H 354.53258 Z"
+     id="text26"
+     class="gold-fill letter"
+     style="font-weight:700;font-size:360px;font-family:Georgia, 'Times New Roman', serif;dominant-baseline:central;text-anchor:middle;fill:#ffe680;stroke-width:1.47951;stroke:#ffe680"
+     aria-label="E" />
+  <!-- Subtle inner flourish (optional small crescent) -->
+</svg>
