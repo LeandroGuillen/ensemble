@@ -138,11 +138,6 @@ Character development notes, personality traits, backstory...
   ],
   "tags": [
     {
-      "id": "protagonist",
-      "name": "Protagonist",
-      "color": "#e74c3c"
-    },
-    {
       "id": "magic-user",
       "name": "Magic User",
       "color": "#9b59b6"

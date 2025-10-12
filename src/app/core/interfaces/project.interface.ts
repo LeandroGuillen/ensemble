@@ -3,6 +3,7 @@ export interface ProjectMetadata {
   version: string;
   categories: Category[];
   tags: Tag[];
+  casts: Cast[];
   settings: ProjectSettings;
   relationships?: {
     nodes: GraphNode[];
@@ -39,6 +40,12 @@ export interface Tag {
   id: string;
   name: string;
   color: string;
+}
+
+export interface Cast {
+  id: string;
+  name: string;
+  characterIds: string[];
 }
 
 export interface ProjectSettings {

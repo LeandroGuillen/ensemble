@@ -4,11 +4,12 @@ import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { Observable, Subject } from "rxjs";
 import { takeUntil } from "rxjs/operators";
-import { Character, Category, Tag, Project } from "../../core/interfaces";
+import { Character, Category, Tag, Project, Cast } from "../../core/interfaces";
 import {
   CharacterService,
   ProjectService,
   ElectronService,
+  MetadataService,
 } from "../../core/services";
 import { CommandPaletteService } from "../../shared/command-palette/command-palette.service";
 
@@ -25,17 +26,22 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   characters$: Observable<Character[]>;
   categories: Category[] = [];
   tags: Tag[] = [];
+  casts: Cast[] = [];
   currentProject: Project | null = null;
 
   searchTerm = "";
   selectedCategory = "";
   selectedTags: string[] = [];
+  selectedCast = "";
+  selectedCharacterIds: string[] = [];
+  showCastNameForm = false;
+  newCastName = "";
 
   filteredCharacters: Character[] = [];
   thumbnailDataUrls: Map<string, string> = new Map();
   isLoading = false;
   error: string | null = null;
-  viewMode: "grid" | "list" | "compact" = "grid"; // Toggle between grid (cards), list, and compact view
+  viewMode: "grid" | "list" | "compact" | "gallery" = "grid"; // Toggle between grid (cards), list, compact, and gallery view
   sortBy: "name" | "category" = "name";
   sortDirection: "asc" | "desc" = "asc";
   selectedCharacterIndex = -1; // Track selected character for keyboard navigation
@@ -44,6 +50,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     private characterService: CharacterService,
     private projectService: ProjectService,
     private electronService: ElectronService,
+    private metadataService: MetadataService,
     private router: Router,
     private commandPaletteService: CommandPaletteService
   ) {
@@ -55,7 +62,8 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     const savedViewMode = localStorage.getItem("characterViewMode") as
       | "grid"
       | "list"
-      | "compact";
+      | "compact"
+      | "gallery";
     if (savedViewMode) {
       this.viewMode = savedViewMode;
     }
@@ -92,6 +100,10 @@ export class CharacterListComponent implements OnInit, OnDestroy {
         this.selectedTags = [];
       }
     }
+    const savedSelectedCast = localStorage.getItem("characterSelectedCast");
+    if (savedSelectedCast) {
+      this.selectedCast = savedSelectedCast;
+    }
 
     // Register command palette commands
     this.registerCommands();
@@ -103,6 +115,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
         this.currentProject = project;
         this.categories = this.projectService.getCategories();
         this.tags = this.projectService.getTags();
+        this.casts = this.metadataService.getCasts();
 
         if (project) {
           this.loadCharacters();
@@ -383,14 +396,22 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     this.applyFilters();
   }
 
+  onCastChange(): void {
+    // Save selected cast to localStorage
+    localStorage.setItem("characterSelectedCast", this.selectedCast);
+    this.applyFilters();
+  }
+
   clearFilters(): void {
     this.searchTerm = "";
     this.selectedCategory = "";
     this.selectedTags = [];
+    this.selectedCast = "";
     // Clear saved filter state
     localStorage.removeItem("characterSearchTerm");
     localStorage.removeItem("characterSelectedCategory");
     localStorage.removeItem("characterSelectedTags");
+    localStorage.removeItem("characterSelectedCast");
     this.applyFilters();
   }
 
@@ -447,6 +468,14 @@ export class CharacterListComponent implements OnInit, OnDestroy {
           character.tags.includes(tagId)
         );
         if (!hasAllSelectedTags) return false;
+      }
+
+      // Cast filter - character must be in the selected cast
+      if (this.selectedCast) {
+        const cast = this.casts.find((c) => c.id === this.selectedCast);
+        if (cast && !cast.characterIds.includes(character.id)) {
+          return false;
+        }
       }
 
       return true;
@@ -550,6 +579,13 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       filters.push(`tags: ${tagNames.join(", ")}`);
     }
 
+    if (this.selectedCast) {
+      const cast = this.casts.find((c) => c.id === this.selectedCast);
+      if (cast) {
+        filters.push(`cast: ${cast.name}`);
+      }
+    }
+
     return filters.length > 0 ? `Filtered by ${filters.join(", ")}` : "";
   }
 
@@ -565,15 +601,72 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       this.viewMode = "list";
     } else if (this.viewMode === "list") {
       this.viewMode = "compact";
+    } else if (this.viewMode === "compact") {
+      this.viewMode = "gallery";
     } else {
       this.viewMode = "grid";
     }
     localStorage.setItem("characterViewMode", this.viewMode);
   }
 
-  setViewMode(mode: "grid" | "list" | "compact"): void {
+  setViewMode(mode: "grid" | "list" | "compact" | "gallery"): void {
     this.viewMode = mode;
     localStorage.setItem("characterViewMode", this.viewMode);
+  }
+
+  // Multi-select functionality
+  toggleCharacterSelection(characterId: string): void {
+    const index = this.selectedCharacterIds.indexOf(characterId);
+    if (index > -1) {
+      this.selectedCharacterIds.splice(index, 1);
+    } else {
+      this.selectedCharacterIds.push(characterId);
+    }
+  }
+
+  isCharacterSelected(characterId: string): boolean {
+    return this.selectedCharacterIds.includes(characterId);
+  }
+
+  showCastNameFormDialog(): void {
+    if (this.selectedCharacterIds.length === 0) {
+      this.error = "Please select at least one character to create a cast.";
+      return;
+    }
+    this.showCastNameForm = true;
+    this.newCastName = "";
+    this.error = null;
+  }
+
+  cancelCastForm(): void {
+    this.showCastNameForm = false;
+    this.newCastName = "";
+  }
+
+  async saveSelectionAsCast(): Promise<void> {
+    if (!this.newCastName || this.newCastName.trim() === "") {
+      this.error = "Please enter a name for the cast.";
+      return;
+    }
+
+    try {
+      await this.metadataService.addCast({
+        name: this.newCastName.trim(),
+        characterIds: [...this.selectedCharacterIds],
+      });
+
+      // Clear selection and form after saving
+      this.selectedCharacterIds = [];
+      this.showCastNameForm = false;
+      this.newCastName = "";
+      this.error = null;
+
+      // Reload casts
+      this.casts = this.metadataService.getCasts();
+    } catch (error) {
+      this.error = `Failed to create cast: ${error}`;
+      console.error("Failed to create cast:", error);
+    }
   }
 
   setSortBy(sortBy: "name" | "category"): void {

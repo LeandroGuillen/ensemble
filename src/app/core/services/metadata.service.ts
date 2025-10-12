@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { Character, CharacterFormData } from '../interfaces/character.interface';
-import { Category, ProjectMetadata, ProjectSettings, Tag } from '../interfaces/project.interface';
+import { Cast, Category, ProjectMetadata, ProjectSettings, Tag } from '../interfaces/project.interface';
 import { ValidationResult } from '../interfaces/validation.interface';
 import { CharacterValidator } from '../validators/character.validator';
 import { ProjectValidator } from '../validators/project.validator';
@@ -111,6 +111,7 @@ export class MetadataService {
         { id: 'warrior', name: 'Warrior', color: '#ff5722' },
         { id: 'scholar', name: 'Scholar', color: '#1abc9c' },
       ],
+      casts: [],
       settings: {
         defaultCategory: 'main-character',
         autoSave: true,
@@ -345,6 +346,114 @@ export class MetadataService {
     const updatedMetadata = {
       ...metadata,
       tags: metadata.tags.filter((tag) => tag.id !== id),
+    };
+
+    await this.saveMetadata(updatedMetadata);
+  }
+
+  // Cast Management
+
+  /**
+   * Gets all casts from current metadata
+   */
+  getCasts(): Cast[] {
+    const metadata = this.metadataSubject.value;
+    return metadata?.casts || [];
+  }
+
+  /**
+   * Gets a cast by ID
+   */
+  getCastById(id: string): Cast | undefined {
+    const casts = this.getCasts();
+    return casts.find((cast) => cast.id === id);
+  }
+
+  /**
+   * Adds a new cast
+   */
+  async addCast(castData: Omit<Cast, 'id'>): Promise<Cast> {
+    const metadata = this.metadataSubject.value;
+    if (!metadata) {
+      throw new Error('No metadata loaded');
+    }
+
+    // Initialize casts array if it doesn't exist (for backward compatibility)
+    const casts = metadata.casts || [];
+
+    // Generate unique ID
+    const id = this.generateId(castData.name);
+    const newCast: Cast = { id, ...castData };
+
+    // Check for duplicate ID
+    const existingCast = casts.find((cast) => cast.id === id);
+    if (existingCast) {
+      throw new Error(`Cast with ID '${id}' already exists`);
+    }
+
+    // Add cast and save
+    const updatedMetadata = {
+      ...metadata,
+      casts: [...casts, newCast],
+    };
+
+    await this.saveMetadata(updatedMetadata);
+    return newCast;
+  }
+
+  /**
+   * Updates an existing cast
+   */
+  async updateCast(id: string, updates: Partial<Omit<Cast, 'id'>>): Promise<Cast> {
+    const metadata = this.metadataSubject.value;
+    if (!metadata) {
+      throw new Error('No metadata loaded');
+    }
+
+    // Initialize casts array if it doesn't exist (for backward compatibility)
+    const casts = metadata.casts || [];
+
+    const castIndex = casts.findIndex((cast) => cast.id === id);
+    if (castIndex === -1) {
+      throw new Error(`Cast with ID '${id}' not found`);
+    }
+
+    const updatedCast = { ...casts[castIndex], ...updates };
+
+    // Update cast and save
+    const updatedCasts = [...casts];
+    updatedCasts[castIndex] = updatedCast;
+
+    const updatedMetadata = {
+      ...metadata,
+      casts: updatedCasts,
+    };
+
+    await this.saveMetadata(updatedMetadata);
+    return updatedCast;
+  }
+
+  /**
+   * Removes a cast
+   */
+  async removeCast(id: string): Promise<void> {
+    const metadata = this.metadataSubject.value;
+    if (!metadata) {
+      throw new Error('No metadata loaded');
+    }
+
+    // Initialize casts array if it doesn't exist (for backward compatibility)
+    const casts = metadata.casts || [];
+
+    const castExists = casts.some((cast) => cast.id === id);
+    if (!castExists) {
+      throw new Error(`Cast with ID '${id}' not found`);
+    }
+
+    // Remove cast and save
+    const updatedMetadata = {
+      ...metadata,
+      casts: casts.filter((cast) => cast.id !== id),
     };
 
     await this.saveMetadata(updatedMetadata);

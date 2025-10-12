@@ -1,10 +1,18 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
-import { Project, ProjectMetadata, Category, Tag, GraphViewState, GraphNode, Relationship } from '../interfaces/project.interface';
+import { BehaviorSubject } from 'rxjs';
+import {
+  Category,
+  GraphNode,
+  GraphViewState,
+  Project,
+  ProjectMetadata,
+  Relationship,
+  Tag,
+} from '../interfaces/project.interface';
 import { ElectronService } from './electron.service';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ProjectService {
   private currentProjectSubject = new BehaviorSubject<Project | null>(null);
@@ -121,12 +129,12 @@ export class ProjectService {
 
       const project: Project = {
         path: projectPath,
-        metadata
+        metadata,
       };
 
       this.currentProjectSubject.next(project);
       this.addToRecentProjects(projectPath);
-      
+
       return project;
     } catch (error) {
       console.error('Failed to load project:', error);
@@ -146,7 +154,7 @@ export class ProjectService {
         if (!isDir) {
           throw new Error(`Path exists but is not a directory: ${projectPath}`);
         }
-        
+
         // Check if it's already a project (has metadata.json)
         const metadataPath = await this.electronService.pathJoin(projectPath, 'metadata.json');
         const hasMetadata = await this.electronService.fileExists(metadataPath);
@@ -164,12 +172,12 @@ export class ProjectService {
 
       const project: Project = {
         path: projectPath,
-        metadata
+        metadata,
       };
 
       this.currentProjectSubject.next(project);
       this.addToRecentProjects(projectPath);
-      
+
       return project;
     } catch (error) {
       console.error('Failed to create project:', error);
@@ -187,14 +195,14 @@ export class ProjectService {
       if (!mainResult.success) {
         throw new Error(`Failed to create main directory: ${mainResult.error}`);
       }
-      
+
       // Create characters subdirectory
       const charactersPath = await this.electronService.pathJoin(projectPath, 'characters');
       const charactersResult = await this.electronService.createDirectory(charactersPath);
       if (!charactersResult.success) {
         throw new Error(`Failed to create characters directory: ${charactersResult.error}`);
       }
-      
+
       // Create thumbnails subdirectory
       const thumbnailsPath = await this.electronService.pathJoin(projectPath, 'thumbnails');
       const thumbnailsResult = await this.electronService.createDirectory(thumbnailsPath);
@@ -217,24 +225,24 @@ export class ProjectService {
         { id: 'main-character', name: 'Main Character', color: '#3498db' },
         { id: 'supporting', name: 'Supporting Character', color: '#2ecc71' },
         { id: 'antagonist', name: 'Antagonist', color: '#e74c3c' },
-        { id: 'minor', name: 'Minor Character', color: '#9b59b6' }
+        { id: 'minor', name: 'Minor Character', color: '#9b59b6' },
       ],
       tags: [
-        { id: 'protagonist', name: 'Protagonist', color: '#e91e63' },
         { id: 'magic-user', name: 'Magic User', color: '#9b59b6' },
         { id: 'noble', name: 'Noble', color: '#f39c12' },
         { id: 'warrior', name: 'Warrior', color: '#ff5722' },
-        { id: 'scholar', name: 'Scholar', color: '#1abc9c' }
+        { id: 'scholar', name: 'Scholar', color: '#1abc9c' },
       ],
+      casts: [],
       settings: {
         defaultCategory: 'main-character',
         autoSave: true,
-        fileWatchEnabled: true
+        fileWatchEnabled: true,
       },
       relationships: {
         nodes: [],
-        edges: []
-      }
+        edges: [],
+      },
     };
   }
 
@@ -285,16 +293,16 @@ export class ProjectService {
     if (!project) {
       throw new Error('No project loaded');
     }
-    
+
     const newCategory: Category = {
       id: this.generateId(),
-      ...category
+      ...category,
     };
-    
+
     project.metadata.categories.push(newCategory);
     await this.saveMetadata(project.path, project.metadata);
     this.currentProjectSubject.next({ ...project });
-    
+
     return newCategory;
   }
 
@@ -306,16 +314,16 @@ export class ProjectService {
     if (!project) {
       throw new Error('No project loaded');
     }
-    
+
     const newTag: Tag = {
       id: this.generateId(),
-      ...tag
+      ...tag,
     };
-    
+
     project.metadata.tags.push(newTag);
     await this.saveMetadata(project.path, project.metadata);
     this.currentProjectSubject.next({ ...project });
-    
+
     return newTag;
   }
 
@@ -342,7 +350,7 @@ export class ProjectService {
       throw new Error('No project loaded');
     }
 
-    project.metadata.categories = project.metadata.categories.filter(cat => cat.id !== categoryId);
+    project.metadata.categories = project.metadata.categories.filter((cat) => cat.id !== categoryId);
     await this.saveMetadata(project.path, project.metadata);
     this.currentProjectSubject.next({ ...project });
   }
@@ -356,7 +364,7 @@ export class ProjectService {
       throw new Error('No project loaded');
     }
 
-    project.metadata.tags = project.metadata.tags.filter(tag => tag.id !== tagId);
+    project.metadata.tags = project.metadata.tags.filter((tag) => tag.id !== tagId);
     await this.saveMetadata(project.path, project.metadata);
     this.currentProjectSubject.next({ ...project });
   }
@@ -366,14 +374,14 @@ export class ProjectService {
    */
   private addToRecentProjects(projectPath: string): void {
     // Remove if already exists
-    this.recentProjects = this.recentProjects.filter(p => p !== projectPath);
-    
+    this.recentProjects = this.recentProjects.filter((p) => p !== projectPath);
+
     // Add to beginning
     this.recentProjects.unshift(projectPath);
-    
+
     // Keep only last 10
     this.recentProjects = this.recentProjects.slice(0, 10);
-    
+
     this.saveRecentProjects();
   }
 
@@ -407,7 +415,7 @@ export class ProjectService {
    * Removes a project from recent projects list
    */
   removeFromRecentProjects(projectPath: string): void {
-    this.recentProjects = this.recentProjects.filter(p => p !== projectPath);
+    this.recentProjects = this.recentProjects.filter((p) => p !== projectPath);
     this.saveRecentProjects();
   }
 
