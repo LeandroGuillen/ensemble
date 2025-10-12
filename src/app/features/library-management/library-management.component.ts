@@ -5,6 +5,7 @@ import { Subject, takeUntil } from 'rxjs';
 import { MetadataService } from '../../core/services/metadata.service';
 import { ProjectService } from '../../core/services/project.service';
 import { Book } from '../../core/interfaces/project.interface';
+import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 
 interface BookFormData {
   name: string;
@@ -19,7 +20,7 @@ interface BookFormData {
 @Component({
   selector: 'app-library-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, PageHeaderComponent],
   templateUrl: './library-management.component.html',
   styleUrls: ['./library-management.component.scss']
 })

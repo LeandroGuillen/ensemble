@@ -1,10 +1,9 @@
 <div class="metadata-management">
+  <app-page-header [title]="'Settings'" [showSearch]="false"></app-page-header>
+
   <div class="metadata-content">
     <div class="metadata-inner">
-      <div class="header">
-        <h1>Project Metadata Management</h1>
-        <p>Manage categories, tags, and project settings for your character database.</p>
-      </div>
+      <p class="page-subtitle">Manage categories, tags, and project settings for your character database.</p>
 
       <!-- Loading State -->
       <div *ngIf="loading" class="loading">

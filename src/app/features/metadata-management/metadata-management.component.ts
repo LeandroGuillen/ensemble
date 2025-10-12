@@ -8,6 +8,7 @@ import { CharacterService } from '../../core/services/character.service';
 import { ElectronService } from '../../core/services/electron.service';
 import { Cast, Category, Tag, ProjectSettings } from '../../core/interfaces/project.interface';
 import { Character } from '../../core/interfaces/character.interface';
+import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 
 interface CategoryFormData {
   name: string;
@@ -28,7 +29,7 @@ interface CastFormData {
 @Component({
   selector: 'app-metadata-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, PageHeaderComponent],
   templateUrl: './metadata-management.component.html',
   styleUrls: ['./metadata-management.component.scss']
 })

@@ -6,19 +6,18 @@ import { ProjectService, ElectronService } from "./core/services";
 import { filter } from "rxjs/operators";
 import { CommandPaletteComponent } from "./shared/command-palette/command-palette.component";
 import { CommandPaletteService } from "./shared/command-palette/command-palette.service";
+import { SidebarComponent } from "./shared/sidebar/sidebar.component";
 
 @Component({
   selector: "app-root",
   standalone: true,
-  imports: [CommonModule, RouterOutlet, CommandPaletteComponent],
+  imports: [CommonModule, RouterOutlet, CommandPaletteComponent, SidebarComponent],
   templateUrl: "./app.component.html",
   styleUrls: ["./app.component.scss"],
 })
 export class AppComponent implements OnInit {
   title = "Ensemble";
   hasProject = false;
-  currentProjectName = "";
-  currentRoute = "";
   isWelcomeScreen = false;
 
   constructor(
@@ -52,7 +51,6 @@ export class AppComponent implements OnInit {
 
     this.projectService.currentProject$.subscribe((project: any) => {
       this.hasProject = !!project;
-      this.currentProjectName = project?.name || "";
       if (!project) {
         this.router.navigate(["/project-selector"]);
       }
@@ -61,37 +59,8 @@ export class AppComponent implements OnInit {
     this.router.events
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
       .subscribe((event: NavigationEnd) => {
-        this.currentRoute = event.url;
         this.isWelcomeScreen = event.url === '/project-selector' || event.url === '/';
       });
-  }
-
-  isActive(route: string): boolean {
-    return this.currentRoute.startsWith(route);
-  }
-
-  navigateToList() {
-    this.router.navigate(["/characters"]);
-  }
-
-  navigateToGraph() {
-    this.router.navigate(["/graph"]);
-  }
-
-  navigateToMetadata() {
-    this.router.navigate(["/metadata"]);
-  }
-
-  navigateToLibrary() {
-    this.router.navigate(["/library"]);
-  }
-
-  selectProject() {
-    this.router.navigate(["/project-selector"]);
-  }
-
-  openCommandPalette() {
-    this.commandPaletteService.open();
   }
 
   @HostListener('document:keydown', ['$event'])

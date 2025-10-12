@@ -23,6 +23,7 @@ function createWindow() {
     },
     // icon: path.join(__dirname, "assets/icon.png"), // TODO: Add app icon
     show: false,
+    autoHideMenuBar: true,
   });
 
   // Load the app

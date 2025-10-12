@@ -1,10 +1,9 @@
 <div class="library-management">
+  <app-page-header [title]="'Library'" [showSearch]="false"></app-page-header>
+
   <div class="library-content">
     <div class="library-inner">
-      <div class="header">
-        <h1>Library Management</h1>
-        <p>Manage books/novels in your project. Characters can belong to one or many books.</p>
-      </div>
+      <p class="page-subtitle">Manage books/novels in your project. Characters can belong to one or many books.</p>
 
       <!-- Loading State -->
       <div *ngIf="loading" class="loading">

@@ -14,11 +14,12 @@ import {
 import { CommandPaletteService } from "../../shared/command-palette/command-palette.service";
 import { CategoryToggleComponent, ToggleOption } from "../../shared/category-toggle/category-toggle.component";
 import { MultiSelectButtonsComponent, SelectableItem } from "../../shared/multi-select-buttons/multi-select-buttons.component";
+import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
 
 @Component({
   selector: "app-character-list",
   standalone: true,
-  imports: [CommonModule, FormsModule, CategoryToggleComponent, MultiSelectButtonsComponent],
+  imports: [CommonModule, FormsModule, CategoryToggleComponent, MultiSelectButtonsComponent, PageHeaderComponent],
   templateUrl: "./character-list.component.html",
   styleUrls: ["./character-list.component.scss"],
 })

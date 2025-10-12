@@ -5,6 +5,7 @@ import { Observable, Subscription } from 'rxjs';
 import { DataSet, Edge, Network, Node, Options } from 'vis-network/standalone';
 import { Character, GraphData, Relationship } from '../../core/interfaces';
 import { CharacterService, ProjectService, RelationshipService, ElectronService } from '../../core/services';
+import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 
 interface RelationshipFormData {
   source: string;
@@ -18,7 +19,7 @@ interface RelationshipFormData {
 @Component({
   selector: 'app-graph-view',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PageHeaderComponent],
   templateUrl: './graph-view.component.html',
   styleUrls: ['./graph-view.component.scss'],
 })

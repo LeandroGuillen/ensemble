@@ -1,61 +1,100 @@
+<app-page-header [title]="'Relationships'" [showSearch]="false">
+  <div class="page-actions">
+    <button class="btn btn-secondary" (click)="openAddNodeDialog()">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="2" fill="none" />
+        <path d="M8 5V11M5 8H11" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+      </svg>
+      Add Character
+    </button>
+
+    <button class="btn btn-primary" (click)="onCreateRelationship()">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+      </svg>
+      Add Relationship
+    </button>
+  </div>
+</app-page-header>
+
 <div class="container">
   <div class="graph-view">
     <div class="graph-header">
-      <h2>Character Relationships</h2>
       <div class="graph-controls">
-        <button class="link-btn" (click)="openAddNodeDialog()">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="2" fill="none"/>
-            <path d="M8 5V11M5 8H11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-          Add Character
-        </button>
-
-        <button class="link-btn" (click)="onCreateRelationship()">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-          Add Relationship
-        </button>
-
-        <div class="control-divider"></div>
-
         <div class="zoom-controls">
           <button class="zoom-btn" (click)="zoomOut()" [disabled]="currentZoomIndex === 0" title="Zoom out">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
             </svg>
           </button>
           <span class="zoom-level">{{ getCurrentZoomLevel() }}</span>
-          <button class="zoom-btn" (click)="zoomIn()" [disabled]="currentZoomIndex === zoomLevels.length - 1" title="Zoom in">
+          <button
+            class="zoom-btn"
+            (click)="zoomIn()"
+            [disabled]="currentZoomIndex === zoomLevels.length - 1"
+            title="Zoom in"
+          >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
             </svg>
           </button>
         </div>
 
         <button class="control-btn" (click)="onResetView()" title="Fit to view">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <circle cx="10" cy="10" r="3" stroke="currentColor" stroke-width="2"/>
+            <path
+              d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
+            <circle cx="10" cy="10" r="3" stroke="currentColor" stroke-width="2" />
           </svg>
         </button>
 
-        <button class="control-btn" [class.active]="showGrid" (click)="onToggleGrid()" [title]="showGrid ? 'Hide Grid' : 'Show Grid'">
+        <button
+          class="control-btn"
+          [class.active]="showGrid"
+          (click)="onToggleGrid()"
+          [title]="showGrid ? 'Hide Grid' : 'Show Grid'"
+        >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3 9H21M3 15H21M9 3V21M15 3V21M3 3H21V21H3V3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path
+              d="M3 9H21M3 15H21M9 3V21M15 3V21M3 3H21V21H3V3Z"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
           </svg>
         </button>
 
-        <button class="control-btn" [class.active]="snapToGrid" (click)="onToggleSnapToGrid()" [title]="snapToGrid ? 'Disable Snap' : 'Enable Snap'">
+        <button
+          class="control-btn"
+          [class.active]="snapToGrid"
+          (click)="onToggleSnapToGrid()"
+          [title]="snapToGrid ? 'Disable Snap' : 'Enable Snap'"
+        >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <!-- Magnet body -->
-            <path d="M6 2C4.89543 2 4 2.89543 4 4V12C4 17.5228 8.47715 22 14 22C19.5228 22 24 17.5228 24 12V4C24 2.89543 23.1046 2 22 2H18C16.8954 2 16 2.89543 16 4V12C16 14.2091 14.2091 16 12 16C9.79086 16 8 14.2091 8 12V4C8 2.89543 7.10457 2 6 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path
+              d="M6 2C4.89543 2 4 2.89543 4 4V12C4 17.5228 8.47715 22 14 22C19.5228 22 24 17.5228 24 12V4C24 2.89543 23.1046 2 22 2H18C16.8954 2 16 2.89543 16 4V12C16 14.2091 14.2091 16 12 16C9.79086 16 8 14.2091 8 12V4C8 2.89543 7.10457 2 6 2Z"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
             <!-- Magnet poles -->
-            <path d="M4 4H8V8H4V4Z" fill="currentColor" opacity="0.3"/>
-            <path d="M16 4H20V8H16V4Z" fill="currentColor" opacity="0.3"/>
+            <path d="M4 4H8V8H4V4Z" fill="currentColor" opacity="0.3" />
+            <path d="M16 4H20V8H16V4Z" fill="currentColor" opacity="0.3" />
             <!-- Magnetic field lines -->
-            <path d="M12 18C12 18 10 19 8 20M12 18C12 18 14 19 16 20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+            <path
+              d="M12 18C12 18 10 19 8 20M12 18C12 18 14 19 16 20"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              opacity="0.6"
+            />
           </svg>
         </button>
       </div>
@@ -71,30 +110,17 @@
       <h4>Legend</h4>
       <div class="legend-items">
         <div class="legend-item" *ngFor="let category of getLegendItems()">
-          <div
-            class="legend-color"
-            [style.background-color]="category.color"
-          ></div>
+          <div class="legend-color" [style.background-color]="category.color"></div>
           <span [title]="category.description || category.name">{{ category.name }}</span>
         </div>
       </div>
       <div class="graph-instructions">
         <h5>Instructions:</h5>
         <ul>
-          <li>
-            Select two characters and click "Add Relationship" to create a
-            connection
-          </li>
-          <li>
-            Double-click on two selected characters to quickly create a
-            relationship
-          </li>
+          <li>Select two characters and click "Add Relationship" to create a connection</li>
+          <li>Double-click on two selected characters to quickly create a relationship</li>
           <li>Click on a relationship line to edit or delete it</li>
-          <li>
-            Drag characters to reposition them{{
-              snapToGrid ? " (snaps to grid)" : ""
-            }}
-          </li>
+          <li>Drag characters to reposition them{{ snapToGrid ? ' (snaps to grid)' : '' }}</li>
           <li>Use mouse wheel to zoom, drag to pan</li>
         </ul>
       </div>
@@ -103,11 +129,7 @@
 </div>
 
 <!-- Relationship Creation Dialog -->
-<div
-  class="modal-overlay"
-  *ngIf="showRelationshipDialog"
-  (click)="closeDialogs()"
->
+<div class="modal-overlay" *ngIf="showRelationshipDialog" (click)="closeDialogs()">
   <div class="modal-dialog" (click)="$event.stopPropagation()">
     <div class="modal-header">
       <h3>Create Relationship</h3>
@@ -117,16 +139,12 @@
       <form (ngSubmit)="saveRelationship()">
         <div class="form-group">
           <label>From:</label>
-          <span class="character-name">{{
-            getCharacterName(relationshipForm.source)
-          }}</span>
+          <span class="character-name">{{ getCharacterName(relationshipForm.source) }}</span>
         </div>
 
         <div class="form-group">
           <label>To:</label>
-          <span class="character-name">{{
-            getCharacterName(relationshipForm.target)
-          }}</span>
+          <span class="character-name">{{ getCharacterName(relationshipForm.target) }}</span>
         </div>
 
         <div class="form-group">
@@ -158,36 +176,19 @@
 
         <div class="form-group">
           <label for="relationshipColor">Color:</label>
-          <input
-            type="color"
-            id="relationshipColor"
-            [(ngModel)]="relationshipForm.color"
-            name="color"
-          />
+          <input type="color" id="relationshipColor" [(ngModel)]="relationshipForm.color" name="color" />
         </div>
 
         <div class="form-group checkbox-group">
           <label>
-            <input
-              type="checkbox"
-              [(ngModel)]="relationshipForm.bidirectional"
-              name="bidirectional"
-            />
+            <input type="checkbox" [(ngModel)]="relationshipForm.bidirectional" name="bidirectional" />
             Bidirectional (arrows on both ends)
           </label>
         </div>
 
         <div class="modal-actions">
-          <button
-            type="button"
-            class="btn btn-secondary"
-            (click)="closeDialogs()"
-          >
-            Cancel
-          </button>
-          <button type="submit" class="btn btn-primary">
-            Create Relationship
-          </button>
+          <button type="button" class="btn btn-secondary" (click)="closeDialogs()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Relationship</button>
         </div>
       </form>
     </div>
@@ -205,16 +206,12 @@
       <form (ngSubmit)="saveRelationship()">
         <div class="form-group">
           <label>From:</label>
-          <span class="character-name">{{
-            getCharacterName(relationshipForm.source)
-          }}</span>
+          <span class="character-name">{{ getCharacterName(relationshipForm.source) }}</span>
         </div>
 
         <div class="form-group">
           <label>To:</label>
-          <span class="character-name">{{
-            getCharacterName(relationshipForm.target)
-          }}</span>
+          <span class="character-name">{{ getCharacterName(relationshipForm.target) }}</span>
         </div>
 
         <div class="form-group">
@@ -246,40 +243,19 @@
 
         <div class="form-group">
           <label for="editRelationshipColor">Color:</label>
-          <input
-            type="color"
-            id="editRelationshipColor"
-            [(ngModel)]="relationshipForm.color"
-            name="color"
-          />
+          <input type="color" id="editRelationshipColor" [(ngModel)]="relationshipForm.color" name="color" />
         </div>
 
         <div class="form-group checkbox-group">
           <label>
-            <input
-              type="checkbox"
-              [(ngModel)]="relationshipForm.bidirectional"
-              name="bidirectional"
-            />
+            <input type="checkbox" [(ngModel)]="relationshipForm.bidirectional" name="bidirectional" />
             Bidirectional (arrows on both ends)
           </label>
         </div>
 
         <div class="modal-actions">
-          <button
-            type="button"
-            class="btn btn-danger"
-            (click)="deleteRelationship()"
-          >
-            Delete
-          </button>
-          <button
-            type="button"
-            class="btn btn-secondary"
-            (click)="closeDialogs()"
-          >
-            Cancel
-          </button>
+          <button type="button" class="btn btn-danger" (click)="deleteRelationship()">Delete</button>
+          <button type="button" class="btn btn-secondary" (click)="closeDialogs()">Cancel</button>
           <button type="submit" class="btn btn-primary">Save Changes</button>
         </div>
       </form>
@@ -308,10 +284,7 @@
       </div>
 
       <div class="character-list">
-        <div
-          *ngIf="filteredCharacters.length === 0"
-          class="no-characters"
-        >
+        <div *ngIf="filteredCharacters.length === 0" class="no-characters">
           <p *ngIf="characters.length === 0">No characters available.</p>
           <p *ngIf="characters.length > 0 && characterFilter === ''">All characters are already in the graph.</p>
           <p *ngIf="characters.length > 0 && characterFilter !== ''">No characters match your filter.</p>
@@ -323,11 +296,7 @@
           (click)="addCharacterToGraph(character)"
         >
           <div class="character-thumbnail">
-            <img
-              *ngIf="getThumbnailDataUrl(character)"
-              [src]="getThumbnailDataUrl(character)"
-              [alt]="character.name"
-            />
+            <img *ngIf="getThumbnailDataUrl(character)" [src]="getThumbnailDataUrl(character)" [alt]="character.name" />
             <div
               *ngIf="!getThumbnailDataUrl(character)"
               class="thumbnail-placeholder"
@@ -338,7 +307,9 @@
           </div>
           <div class="character-info">
             <span class="character-name">{{ character.name }}</span>
-            <span class="character-category" [title]="getCategoryTooltip(character.category)">{{ getCategoryName(character.category) }}</span>
+            <span class="character-category" [title]="getCategoryTooltip(character.category)">{{
+              getCategoryName(character.category)
+            }}</span>
           </div>
         </div>
       </div>

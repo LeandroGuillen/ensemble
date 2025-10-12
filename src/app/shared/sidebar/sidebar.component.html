@@ -1,0 +1,51 @@
+<aside class="sidebar">
+  <div class="sidebar-brand" (click)="selectProject()" title="Change Project">
+    <img
+      src="assets/icon.svg"
+      alt="Ensemble"
+      class="brand-icon"
+      width="40"
+      height="40"
+    />
+  </div>
+
+  <nav class="sidebar-nav">
+    <button
+      class="nav-item"
+      [class.active]="isActive('/characters')"
+      (click)="navigateTo('/characters')"
+      title="Characters"
+    >
+      <span class="nav-icon">👥</span>
+    </button>
+
+    <button
+      class="nav-item"
+      [class.active]="isActive('/graph')"
+      (click)="navigateTo('/graph')"
+      title="Relationships"
+    >
+      <span class="nav-icon">🌐</span>
+    </button>
+
+    <button
+      class="nav-item"
+      [class.active]="isActive('/library')"
+      (click)="navigateTo('/library')"
+      title="Library"
+    >
+      <span class="nav-icon">📚</span>
+    </button>
+  </nav>
+
+  <nav class="sidebar-nav-bottom">
+    <button
+      class="nav-item"
+      [class.active]="isActive('/metadata')"
+      (click)="navigateTo('/metadata')"
+      title="Settings"
+    >
+      <span class="nav-icon">⚙️</span>
+    </button>
+  </nav>
+</aside>

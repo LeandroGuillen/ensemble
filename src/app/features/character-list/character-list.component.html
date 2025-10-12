@@ -1,92 +1,89 @@
+<app-page-header [title]="'Characters'" [showSearch]="true">
+  <div class="page-actions">
+    <a
+      class="refresh-link"
+      (click)="refreshCharacters()"
+      [class.disabled]="!currentProject || isLoading"
+      title="Refresh characters"
+    >
+      Refresh
+    </a>
+    <div class="view-toggle" [class.disabled]="!currentProject">
+      <button
+        class="toggle-option"
+        [class.active]="viewMode === 'gallery'"
+        (click)="setViewMode('gallery')"
+        [disabled]="!currentProject"
+        title="Gallery view"
+      >
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <rect x="1" y="1" width="6" height="6" rx="1" />
+          <rect x="9" y="1" width="6" height="6" rx="1" />
+          <rect x="1" y="9" width="6" height="6" rx="1" />
+          <rect x="9" y="9" width="6" height="6" rx="1" />
+          <circle cx="4" cy="4" r="1.5" fill="white" />
+          <circle cx="12" cy="4" r="1.5" fill="white" />
+          <circle cx="4" cy="12" r="1.5" fill="white" />
+          <circle cx="12" cy="12" r="1.5" fill="white" />
+        </svg>
+      </button>
+      <button
+        class="toggle-option"
+        [class.active]="viewMode === 'grid'"
+        (click)="setViewMode('grid')"
+        [disabled]="!currentProject"
+        title="Grid view"
+      >
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <rect x="1" y="1" width="6" height="6" rx="1" />
+          <rect x="9" y="1" width="6" height="6" rx="1" />
+          <rect x="1" y="9" width="6" height="6" rx="1" />
+          <rect x="9" y="9" width="6" height="6" rx="1" />
+        </svg>
+      </button>
+      <button
+        class="toggle-option"
+        [class.active]="viewMode === 'list'"
+        (click)="setViewMode('list')"
+        [disabled]="!currentProject"
+        title="List view"
+      >
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <rect x="1" y="2" width="14" height="2" rx="1" />
+          <rect x="1" y="7" width="14" height="2" rx="1" />
+          <rect x="1" y="12" width="14" height="2" rx="1" />
+        </svg>
+      </button>
+      <button
+        class="toggle-option"
+        [class.active]="viewMode === 'compact'"
+        (click)="setViewMode('compact')"
+        [disabled]="!currentProject"
+        title="Compact view"
+      >
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <rect x="1" y="1" width="14" height="1" rx="0.5" />
+          <rect x="1" y="4" width="14" height="1" rx="0.5" />
+          <rect x="1" y="7" width="14" height="1" rx="0.5" />
+          <rect x="1" y="10" width="14" height="1" rx="0.5" />
+          <rect x="1" y="13" width="14" height="1" rx="0.5" />
+        </svg>
+      </button>
+    </div>
+    <button
+      class="btn btn-primary"
+      (click)="createNewCharacter()"
+      [disabled]="!currentProject"
+      title="New Character (N)"
+    >
+      New Character
+      <kbd class="shortcut-hint">N</kbd>
+    </button>
+  </div>
+</app-page-header>
+
 <div class="container">
   <div class="character-list">
-    <div class="page-header">
-      <div class="header-left">
-        <h1 class="page-title">Characters</h1>
-        <a
-          class="refresh-link"
-          (click)="refreshCharacters()"
-          [class.disabled]="!currentProject || isLoading"
-          title="Refresh characters"
-        >
-          Refresh
-        </a>
-      </div>
-      <div class="page-actions">
-        <div class="view-toggle" [class.disabled]="!currentProject">
-          <button
-            class="toggle-option"
-            [class.active]="viewMode === 'gallery'"
-            (click)="setViewMode('gallery')"
-            [disabled]="!currentProject"
-            title="Gallery view"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="1" y="1" width="6" height="6" rx="1" />
-              <rect x="9" y="1" width="6" height="6" rx="1" />
-              <rect x="1" y="9" width="6" height="6" rx="1" />
-              <rect x="9" y="9" width="6" height="6" rx="1" />
-              <circle cx="4" cy="4" r="1.5" fill="white" />
-              <circle cx="12" cy="4" r="1.5" fill="white" />
-              <circle cx="4" cy="12" r="1.5" fill="white" />
-              <circle cx="12" cy="12" r="1.5" fill="white" />
-            </svg>
-          </button>
-          <button
-            class="toggle-option"
-            [class.active]="viewMode === 'grid'"
-            (click)="setViewMode('grid')"
-            [disabled]="!currentProject"
-            title="Grid view"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="1" y="1" width="6" height="6" rx="1" />
-              <rect x="9" y="1" width="6" height="6" rx="1" />
-              <rect x="1" y="9" width="6" height="6" rx="1" />
-              <rect x="9" y="9" width="6" height="6" rx="1" />
-            </svg>
-          </button>
-          <button
-            class="toggle-option"
-            [class.active]="viewMode === 'list'"
-            (click)="setViewMode('list')"
-            [disabled]="!currentProject"
-            title="List view"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="1" y="2" width="14" height="2" rx="1" />
-              <rect x="1" y="7" width="14" height="2" rx="1" />
-              <rect x="1" y="12" width="14" height="2" rx="1" />
-            </svg>
-          </button>
-          <button
-            class="toggle-option"
-            [class.active]="viewMode === 'compact'"
-            (click)="setViewMode('compact')"
-            [disabled]="!currentProject"
-            title="Compact view"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="1" y="1" width="14" height="1" rx="0.5" />
-              <rect x="1" y="4" width="14" height="1" rx="0.5" />
-              <rect x="1" y="7" width="14" height="1" rx="0.5" />
-              <rect x="1" y="10" width="14" height="1" rx="0.5" />
-              <rect x="1" y="13" width="14" height="1" rx="0.5" />
-            </svg>
-          </button>
-        </div>
-        <button
-          class="btn btn-primary"
-          (click)="createNewCharacter()"
-          [disabled]="!currentProject"
-          title="New Character (N)"
-        >
-          New Character
-          <kbd class="shortcut-hint">N</kbd>
-        </button>
-      </div>
-    </div>
-
     <!-- Loading State -->
     <div class="loading-state" *ngIf="isLoading">
       <p>Loading characters...</p>
@@ -177,7 +174,9 @@
                 <button class="btn-close" (click)="cancelCastForm()">×</button>
               </div>
               <div class="form-body">
-                <p class="form-help">Enter a name for this cast ({{ selectedCharacterIds.length }} characters selected)</p>
+                <p class="form-help">
+                  Enter a name for this cast ({{ selectedCharacterIds.length }} characters selected)
+                </p>
                 <input
                   type="text"
                   [(ngModel)]="newCastName"
@@ -190,7 +189,11 @@
               </div>
               <div class="form-actions">
                 <button class="btn btn-secondary" (click)="cancelCastForm()">Cancel</button>
-                <button class="btn btn-primary" (click)="saveSelectionAsCast()" [disabled]="!newCastName || newCastName.trim() === ''">
+                <button
+                  class="btn btn-primary"
+                  (click)="saveSelectionAsCast()"
+                  [disabled]="!newCastName || newCastName.trim() === ''"
+                >
                   Create Cast
                 </button>
               </div>
@@ -201,7 +204,14 @@
         <!-- Results Count, Filter, and Sort -->
         <div
           class="results-bar"
-          *ngIf="filteredCharacters.length > 0 || searchTerm || selectedCategory || selectedTags.length > 0 || selectedCast || selectedBook"
+          *ngIf="
+            filteredCharacters.length > 0 ||
+            searchTerm ||
+            selectedCategory ||
+            selectedTags.length > 0 ||
+            selectedCast ||
+            selectedBook
+          "
         >
           <span class="text-muted text-sm"
             >{{ filteredCharacters.length }} character{{ filteredCharacters.length !== 1 ? 's' : '' }}</span
@@ -489,8 +499,12 @@
           <div class="empty-icon">
             <i class="icon-users"></i>
           </div>
-          <h3 *ngIf="searchTerm || selectedCategory || selectedTags.length > 0 || selectedCast || selectedBook">No characters match your filters</h3>
-          <h3 *ngIf="!searchTerm && !selectedCategory && selectedTags.length === 0 && !selectedCast && !selectedBook">No characters yet</h3>
+          <h3 *ngIf="searchTerm || selectedCategory || selectedTags.length > 0 || selectedCast || selectedBook">
+            No characters match your filters
+          </h3>
+          <h3 *ngIf="!searchTerm && !selectedCategory && selectedTags.length === 0 && !selectedCast && !selectedBook">
+            No characters yet
+          </h3>
           <p *ngIf="searchTerm || selectedCategory || selectedTags.length > 0 || selectedCast || selectedBook">
             Try adjusting your search criteria or clearing the filters to see more characters.
           </p>
