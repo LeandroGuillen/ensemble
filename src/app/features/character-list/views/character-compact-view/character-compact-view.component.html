@@ -1,0 +1,66 @@
+<div class="character-compact-view">
+  <div
+    *ngFor="let character of characters; let i = index"
+    class="character-compact-item character-item"
+    [class.selected]="selectedCharacterIndex === i"
+    [class.multi-selected]="isCharacterSelected(character.id)"
+    [attr.data-index]="i"
+    (click)="onCharacterClick(character)"
+  >
+    <input
+      type="checkbox"
+      class="character-checkbox"
+      [checked]="isCharacterSelected(character.id)"
+      (click)="$event.stopPropagation()"
+      (change)="onCharacterSelectionToggle(character.id)"
+    />
+    <div class="compact-item-thumbnail">
+      <img
+        *ngIf="getCharacterThumbnailDataUrl(character)"
+        [src]="getCharacterThumbnailDataUrl(character)"
+        [alt]="character.name"
+        (error)="onImageError($event)"
+      />
+      <div *ngIf="!getCharacterThumbnailDataUrl(character)" class="thumbnail-placeholder-tiny">👤</div>
+    </div>
+
+    <div class="compact-item-content">
+      <div class="compact-item-main">
+        <h3 class="compact-item-name">{{ character.name }}</h3>
+        <span class="compact-item-category" [style.color]="getCategoryColor(character.category)">
+          {{ getCategoryName(character.category) }}
+        </span>
+      </div>
+
+      <div class="compact-item-tags" *ngIf="character.tags.length > 0">
+        <span
+          *ngFor="let tag of getCharacterTagsInOrder(character); let i = index"
+          class="tag tag-xs"
+          [style.background-color]="tag.color"
+          [style.color]="'white'"
+          [style.display]="i < 3 ? 'inline-block' : 'none'"
+        >
+          {{ tag.name }}
+        </span>
+        <span *ngIf="character.tags.length > 3" class="tag-overflow">+{{ character.tags.length - 3 }}</span>
+      </div>
+    </div>
+
+    <div class="compact-item-actions">
+      <button
+        class="icon-btn icon-btn-sm"
+        (click)="onCharacterClick(character); $event.stopPropagation()"
+        title="Edit character"
+      >
+        ✏️
+      </button>
+      <button
+        class="icon-btn icon-btn-sm delete-btn"
+        (click)="onCharacterDelete(character, $event)"
+        title="Delete character"
+      >
+        🗑️
+      </button>
+    </div>
+  </div>
+</div>

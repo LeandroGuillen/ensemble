@@ -1,0 +1,64 @@
+<div class="character-grid">
+  <div
+    *ngFor="let character of characters; let i = index"
+    class="character-card card character-item"
+    [class.selected]="selectedCharacterIndex === i"
+    [class.multi-selected]="isCharacterSelected(character.id)"
+    [attr.data-index]="i"
+    (click)="onCharacterClick(character)"
+  >
+    <input
+      type="checkbox"
+      class="character-checkbox"
+      [checked]="isCharacterSelected(character.id)"
+      (click)="$event.stopPropagation()"
+      (change)="onCharacterSelectionToggle(character.id)"
+    />
+    <div class="character-thumbnail">
+      <img
+        *ngIf="getCharacterThumbnailDataUrl(character)"
+        [src]="getCharacterThumbnailDataUrl(character)"
+        [alt]="character.name"
+        (error)="onImageError($event)"
+      />
+      <div *ngIf="!getCharacterThumbnailDataUrl(character)" class="thumbnail-placeholder">
+        <i class="icon-user"></i>
+      </div>
+    </div>
+
+    <div class="character-info">
+      <h3 class="character-name">{{ character.name }}</h3>
+      <p class="character-category" [style.color]="getCategoryColor(character.category)">
+        {{ getCategoryName(character.category) }}
+      </p>
+
+      <div class="character-tags" *ngIf="character.tags.length > 0">
+        <span
+          *ngFor="let tag of getCharacterTagsInOrder(character)"
+          class="tag"
+          [style.background-color]="tag.color"
+          [style.color]="'white'"
+        >
+          {{ tag.name }}
+        </span>
+      </div>
+
+      <p class="character-description" *ngIf="character.description">
+        {{
+          character.description.length > 120
+            ? character.description.substring(0, 120) + '...'
+            : character.description
+        }}
+      </p>
+    </div>
+
+    <div class="character-actions">
+      <button class="icon-btn" (click)="onCharacterClick(character); $event.stopPropagation()" title="Edit character">
+        ✏️
+      </button>
+      <button class="icon-btn delete-btn" (click)="onCharacterDelete(character, $event)" title="Delete character">
+        🗑️
+      </button>
+    </div>
+  </div>
+</div>

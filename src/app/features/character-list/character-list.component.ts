@@ -15,11 +15,27 @@ import { CommandPaletteService } from "../../shared/command-palette/command-pale
 import { CategoryToggleComponent, ToggleOption } from "../../shared/category-toggle/category-toggle.component";
 import { MultiSelectButtonsComponent, SelectableItem } from "../../shared/multi-select-buttons/multi-select-buttons.component";
 import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
+import { 
+  CharacterGridViewComponent,
+  CharacterListViewComponent,
+  CharacterCompactViewComponent,
+  CharacterGalleryViewComponent
+} from "./views";
 
 @Component({
   selector: "app-character-list",
   standalone: true,
-  imports: [CommonModule, FormsModule, CategoryToggleComponent, MultiSelectButtonsComponent, PageHeaderComponent],
+  imports: [
+    CommonModule, 
+    FormsModule, 
+    CategoryToggleComponent, 
+    MultiSelectButtonsComponent, 
+    PageHeaderComponent,
+    CharacterGridViewComponent,
+    CharacterListViewComponent,
+    CharacterCompactViewComponent,
+    CharacterGalleryViewComponent
+  ],
   templateUrl: "./character-list.component.html",
   styleUrls: ["./character-list.component.scss"],
 })
@@ -799,5 +815,18 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     }
 
     return sorted;
+  }
+
+  // Methods for view components
+  onViewCharacterClick(character: Character): void {
+    this.editCharacter(character);
+  }
+
+  onViewCharacterDelete(event: { character: Character; event: Event }): void {
+    this.deleteCharacter(event.character, event.event);
+  }
+
+  onViewCharacterSelectionToggle(characterId: string): void {
+    this.toggleCharacterSelection(characterId);
   }
 }

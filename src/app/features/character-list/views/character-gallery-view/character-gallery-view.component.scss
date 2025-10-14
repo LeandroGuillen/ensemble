@@ -1,0 +1,101 @@
+// Gallery View
+.character-gallery-view {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--spacing-lg);
+  padding: var(--spacing-sm);
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
+
+  @media (min-width: 1024px) {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+}
+
+.gallery-item {
+  position: relative;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+
+  &:hover {
+    transform: translateY(-4px) scale(1.02);
+    border-color: var(--color-accent-primary);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+
+    .gallery-name {
+      background-color: var(--color-accent-primary);
+      color: white;
+    }
+  }
+}
+
+.gallery-thumbnail {
+  position: relative;
+  width: 100%;
+  padding-bottom: 133%; // 3:4 aspect ratio (portrait)
+  background: linear-gradient(135deg, var(--color-bg-tertiary), var(--color-bg-elevated));
+  overflow: hidden;
+
+  img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .thumbnail-placeholder-gallery {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 4rem;
+    color: var(--color-text-muted);
+    opacity: 0.2;
+  }
+}
+
+.gallery-name {
+  padding: var(--spacing-sm);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  text-align: center;
+  background-color: var(--color-bg-tertiary);
+  transition: all var(--transition-fast);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Character Checkbox
+.gallery-item {
+  .character-checkbox {
+    position: absolute;
+    top: var(--spacing-sm);
+    left: var(--spacing-sm);
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    z-index: 10;
+    accent-color: var(--color-accent-primary);
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    border-radius: var(--radius-xs);
+
+    &:hover {
+      transform: scale(1.1);
+    }
+  }
+}

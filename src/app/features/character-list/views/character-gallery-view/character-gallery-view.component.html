@@ -1,0 +1,27 @@
+<div class="character-gallery-view">
+  <div
+    *ngFor="let character of characters; let i = index"
+    class="gallery-item"
+    (click)="onCharacterClick(character)"
+  >
+    <input
+      type="checkbox"
+      class="character-checkbox"
+      [checked]="isCharacterSelected(character.id)"
+      (click)="$event.stopPropagation()"
+      (change)="onCharacterSelectionToggle(character.id)"
+    />
+    <div class="gallery-thumbnail">
+      <img
+        *ngIf="getCharacterThumbnailDataUrl(character)"
+        [src]="getCharacterThumbnailDataUrl(character)"
+        [alt]="character.name"
+        (error)="onImageError($event)"
+      />
+      <div *ngIf="!getCharacterThumbnailDataUrl(character)" class="thumbnail-placeholder-gallery">
+        <i class="icon-user"></i>
+      </div>
+    </div>
+    <div class="gallery-name">{{ character.name }}</div>
+  </div>
+</div>
