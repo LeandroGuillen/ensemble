@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 export interface SelectableItem {
@@ -12,7 +12,8 @@ export interface SelectableItem {
   standalone: true,
   imports: [CommonModule],
   templateUrl: './multi-select-buttons.component.html',
-  styleUrls: ['./multi-select-buttons.component.scss']
+  styleUrls: ['./multi-select-buttons.component.scss'],
+  changeDetection: ChangeDetectionStrategy.Default
 })
 export class MultiSelectButtonsComponent {
   @Input() items: SelectableItem[] = [];
@@ -22,19 +23,21 @@ export class MultiSelectButtonsComponent {
   @Output() selectionChange = new EventEmitter<string[]>();
 
   onItemToggle(itemId: string): void {
-    const isSelected = this.selectedIds.includes(itemId);
+    // Create a local copy to ensure we're working with current state
+    const currentSelection = this.selectedIds || [];
+    const isSelected = currentSelection.includes(itemId);
     let newSelection: string[];
 
     if (isSelected) {
-      newSelection = this.selectedIds.filter(id => id !== itemId);
+      newSelection = currentSelection.filter(id => id !== itemId);
     } else {
-      newSelection = [...this.selectedIds, itemId];
+      newSelection = [...currentSelection, itemId];
     }
 
     this.selectionChange.emit(newSelection);
   }
 
   isItemSelected(itemId: string): boolean {
-    return this.selectedIds.includes(itemId);
+    return (this.selectedIds || []).includes(itemId);
   }
 }

@@ -2,7 +2,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--spacing-xs);
-  padding: var(--spacing-md);
+  padding: var(--spacing-xs) var(--spacing-sm);
   background: var(--color-bg-tertiary);
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
@@ -14,7 +14,7 @@
     border: 1px solid;
     background: transparent;
     font-size: 0.8125rem;
-    padding: 4px 12px;
+    padding: 3px 10px;
     border-radius: var(--radius-lg);
 
     &:hover {

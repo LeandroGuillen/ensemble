@@ -1,4 +1,4 @@
-<div class="character-compact-view">
+<div class="character-compact-view" [class.single-column]="columns === 1" [class.two-columns]="columns === 2">
   <div
     *ngFor="let character of characters; let i = index"
     class="character-compact-item character-item"

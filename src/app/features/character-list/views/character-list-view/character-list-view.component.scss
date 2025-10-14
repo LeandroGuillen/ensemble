@@ -8,6 +8,19 @@
     grid-template-columns: 1fr 1fr;
     gap: var(--spacing-md);
   }
+
+  &.single-column {
+    grid-template-columns: 1fr !important;
+  }
+
+  &.two-columns {
+    grid-template-columns: 1fr 1fr !important;
+    gap: var(--spacing-md);
+
+    @media (max-width: 1023px) {
+      grid-template-columns: 1fr;
+    }
+  }
 }
 
 .character-list-item {

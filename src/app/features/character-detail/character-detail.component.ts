@@ -28,6 +28,10 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
   books: Book[] = [];
   currentProject: Project | null = null;
 
+  // Cache selectable items to avoid recreating arrays on every change detection
+  private tagsSelectableItems: SelectableItem[] = [];
+  private booksSelectableItems: SelectableItem[] = [];
+
   isEditing = false;
   isLoading = false;
   isSaving = false;
@@ -57,10 +61,22 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
         this.categories = this.projectService.getCategories();
         this.tags = this.projectService.getTags();
         this.books = this.metadataService.getBooks();
-        
+
+        // Update cached selectable items
+        this.tagsSelectableItems = this.tags.map(tag => ({
+          id: tag.id,
+          name: tag.name,
+          color: tag.color
+        }));
+        this.booksSelectableItems = this.books.map(book => ({
+          id: book.id,
+          name: book.name,
+          color: book.color
+        }));
+
         // Set default category if available
         if (this.categories.length > 0 && !this.isEditing) {
-          const defaultCategory = this.categories.find(cat => 
+          const defaultCategory = this.categories.find(cat =>
             cat.id === project?.metadata.settings.defaultCategory
           ) || this.categories[0];
           this.characterForm.patchValue({ category: defaultCategory.id });
@@ -293,19 +309,11 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
   }
 
   getTagsAsSelectableItems(): SelectableItem[] {
-    return this.tags.map(tag => ({
-      id: tag.id,
-      name: tag.name,
-      color: tag.color
-    }));
+    return this.tagsSelectableItems;
   }
 
   getBooksAsSelectableItems(): SelectableItem[] {
-    return this.books.map(book => ({
-      id: book.id,
-      name: book.name,
-      color: book.color
-    }));
+    return this.booksSelectableItems;
   }
 
   onTagsSelectionChange(selectedIds: string[]): void {

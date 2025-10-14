@@ -1,331 +1,369 @@
 <div class="character-list-container">
-<app-page-header [title]="'Characters'" [showSearch]="true">
-  <div class="page-actions">
-    <a
-      class="refresh-link"
-      (click)="refreshCharacters()"
-      [class.disabled]="!currentProject || isLoading"
-      title="Refresh characters"
-    >
-      Refresh
-    </a>
-    <div class="view-toggle" [class.disabled]="!currentProject">
-      <button
-        class="toggle-option"
-        [class.active]="viewMode === 'gallery'"
-        (click)="setViewMode('gallery')"
-        [disabled]="!currentProject"
-        title="Gallery view"
+  <app-page-header [title]="'Characters'" [showSearch]="true">
+    <div class="page-actions">
+      <div
+        class="column-toggle"
+        [class.disabled]="!currentProject"
+        *ngIf="viewMode === 'list' || viewMode === 'compact'"
       >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-          <rect x="1" y="1" width="6" height="6" rx="1" />
-          <rect x="9" y="1" width="6" height="6" rx="1" />
-          <rect x="1" y="9" width="6" height="6" rx="1" />
-          <rect x="9" y="9" width="6" height="6" rx="1" />
-          <circle cx="4" cy="4" r="1.5" fill="white" />
-          <circle cx="12" cy="4" r="1.5" fill="white" />
-          <circle cx="4" cy="12" r="1.5" fill="white" />
-          <circle cx="12" cy="12" r="1.5" fill="white" />
-        </svg>
-      </button>
+        <button
+          class="toggle-option"
+          [class.active]="columns === 1"
+          (click)="setColumns(1)"
+          [disabled]="!currentProject"
+          title="Single column"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <rect x="2" y="1" width="12" height="14" rx="1" />
+          </svg>
+        </button>
+        <button
+          class="toggle-option"
+          [class.active]="columns === 2"
+          (click)="setColumns(2)"
+          [disabled]="!currentProject"
+          title="Two columns"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <rect x="1" y="1" width="6.5" height="14" rx="1" />
+            <rect x="8.5" y="1" width="6.5" height="14" rx="1" />
+          </svg>
+        </button>
+      </div>
+      <div class="view-toggle" [class.disabled]="!currentProject">
+        <button
+          class="toggle-option"
+          [class.active]="viewMode === 'gallery'"
+          (click)="setViewMode('gallery')"
+          [disabled]="!currentProject"
+          title="Gallery view"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <rect x="1" y="1" width="6" height="6" rx="1" />
+            <rect x="9" y="1" width="6" height="6" rx="1" />
+            <rect x="1" y="9" width="6" height="6" rx="1" />
+            <rect x="9" y="9" width="6" height="6" rx="1" />
+            <circle cx="4" cy="4" r="1.5" fill="white" />
+            <circle cx="12" cy="4" r="1.5" fill="white" />
+            <circle cx="4" cy="12" r="1.5" fill="white" />
+            <circle cx="12" cy="12" r="1.5" fill="white" />
+          </svg>
+        </button>
+        <button
+          class="toggle-option"
+          [class.active]="viewMode === 'grid'"
+          (click)="setViewMode('grid')"
+          [disabled]="!currentProject"
+          title="Grid view"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <rect x="1" y="1" width="6" height="6" rx="1" />
+            <rect x="9" y="1" width="6" height="6" rx="1" />
+            <rect x="1" y="9" width="6" height="6" rx="1" />
+            <rect x="9" y="9" width="6" height="6" rx="1" />
+          </svg>
+        </button>
+        <button
+          class="toggle-option"
+          [class.active]="viewMode === 'list'"
+          (click)="setViewMode('list')"
+          [disabled]="!currentProject"
+          title="List view"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <rect x="1" y="2" width="14" height="2" rx="1" />
+            <rect x="1" y="7" width="14" height="2" rx="1" />
+            <rect x="1" y="12" width="14" height="2" rx="1" />
+          </svg>
+        </button>
+        <button
+          class="toggle-option"
+          [class.active]="viewMode === 'compact'"
+          (click)="setViewMode('compact')"
+          [disabled]="!currentProject"
+          title="Compact view"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <rect x="1" y="1" width="14" height="1" rx="0.5" />
+            <rect x="1" y="4" width="14" height="1" rx="0.5" />
+            <rect x="1" y="7" width="14" height="1" rx="0.5" />
+            <rect x="1" y="10" width="14" height="1" rx="0.5" />
+            <rect x="1" y="13" width="14" height="1" rx="0.5" />
+          </svg>
+        </button>
+      </div>
       <button
-        class="toggle-option"
-        [class.active]="viewMode === 'grid'"
-        (click)="setViewMode('grid')"
+        class="btn btn-primary"
+        (click)="createNewCharacter()"
         [disabled]="!currentProject"
-        title="Grid view"
+        title="New Character (N)"
       >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-          <rect x="1" y="1" width="6" height="6" rx="1" />
-          <rect x="9" y="1" width="6" height="6" rx="1" />
-          <rect x="1" y="9" width="6" height="6" rx="1" />
-          <rect x="9" y="9" width="6" height="6" rx="1" />
-        </svg>
-      </button>
-      <button
-        class="toggle-option"
-        [class.active]="viewMode === 'list'"
-        (click)="setViewMode('list')"
-        [disabled]="!currentProject"
-        title="List view"
-      >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-          <rect x="1" y="2" width="14" height="2" rx="1" />
-          <rect x="1" y="7" width="14" height="2" rx="1" />
-          <rect x="1" y="12" width="14" height="2" rx="1" />
-        </svg>
-      </button>
-      <button
-        class="toggle-option"
-        [class.active]="viewMode === 'compact'"
-        (click)="setViewMode('compact')"
-        [disabled]="!currentProject"
-        title="Compact view"
-      >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-          <rect x="1" y="1" width="14" height="1" rx="0.5" />
-          <rect x="1" y="4" width="14" height="1" rx="0.5" />
-          <rect x="1" y="7" width="14" height="1" rx="0.5" />
-          <rect x="1" y="10" width="14" height="1" rx="0.5" />
-          <rect x="1" y="13" width="14" height="1" rx="0.5" />
-        </svg>
+        New Character
+        <kbd class="shortcut-hint">N</kbd>
       </button>
     </div>
-    <button
-      class="btn btn-primary"
-      (click)="createNewCharacter()"
-      [disabled]="!currentProject"
-      title="New Character (N)"
-    >
-      New Character
-      <kbd class="shortcut-hint">N</kbd>
-    </button>
+  </app-page-header>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="isLoading">
+    <p>Loading characters...</p>
   </div>
-</app-page-header>
 
-<!-- Loading State -->
-<div class="loading-state" *ngIf="isLoading">
-  <p>Loading characters...</p>
-</div>
+  <!-- Error State -->
+  <div class="error-state" *ngIf="error">
+    <p class="error-message">{{ error }}</p>
+    <button class="btn btn-secondary" (click)="loadCharacters()">Retry</button>
+  </div>
 
-<!-- Error State -->
-<div class="error-state" *ngIf="error">
-  <p class="error-message">{{ error }}</p>
-  <button class="btn btn-secondary" (click)="loadCharacters()">Retry</button>
-</div>
+  <!-- No Project State -->
+  <div class="no-project-state" *ngIf="!currentProject && !isLoading">
+    <p>Please select or create a project to manage characters.</p>
+  </div>
 
-<!-- No Project State -->
-<div class="no-project-state" *ngIf="!currentProject && !isLoading">
-  <p>Please select or create a project to manage characters.</p>
-</div>
+  <!-- Main Content -->
+  <div class="content-wrapper">
+    <div class="controls-section" *ngIf="currentProject && !isLoading && !error">
+      <div class="filters" *ngIf="categories.length > 0 || tags.length > 0">
+        <!-- Category Toggle Row -->
+        <div class="filter-row" *ngIf="categories.length > 0">
+          <app-category-toggle
+            [options]="getCategoryToggleOptions()"
+            [selectedValue]="selectedCategory"
+            [emptyLabel]="'All'"
+            (valueChange)="onCategoryToggle($event)"
+          ></app-category-toggle>
 
-<!-- Main Content -->
-<div class="content-wrapper">
-  <div class="controls-section" *ngIf="currentProject && !isLoading && !error">
-    <div class="filters" *ngIf="categories.length > 0 || tags.length > 0">
-      <!-- Category Toggle Row -->
-      <div class="filter-row" *ngIf="categories.length > 0">
-        <app-category-toggle
-          [options]="getCategoryToggleOptions()"
-          [selectedValue]="selectedCategory"
-          [emptyLabel]="'All'"
-          (valueChange)="onCategoryToggle($event)"
-        ></app-category-toggle>
+          <!-- Cast Filter (to the right of category toggle) -->
+          <div class="cast-filter" *ngIf="casts.length > 0">
+            <label for="castFilter">Cast:</label>
+            <select id="castFilter" [(ngModel)]="selectedCast" (change)="onCastChange()" class="cast-select">
+              <option value="">All Characters</option>
+              <option *ngFor="let cast of casts" [value]="cast.id">
+                {{ cast.name }} ({{ cast.characterIds.length }} characters)
+              </option>
+            </select>
+          </div>
 
-        <!-- Cast Filter (to the right of category toggle) -->
-        <div class="cast-filter" *ngIf="casts.length > 0">
-          <label for="castFilter">Cast:</label>
-          <select id="castFilter" [(ngModel)]="selectedCast" (change)="onCastChange()" class="cast-select">
-            <option value="">All Characters</option>
-            <option *ngFor="let cast of casts" [value]="cast.id">
-              {{ cast.name }} ({{ cast.characterIds.length }} characters)
-            </option>
-          </select>
+          <!-- Book Filter -->
+          <app-book-selector
+            *ngIf="books.length > 0"
+            [books]="books"
+            [selectedBook]="selectedBook"
+            [characterCounts]="getBookCharacterCounts()"
+            (bookChange)="selectedBook = $event; onBookChange()"
+          ></app-book-selector>
         </div>
 
-        <!-- Book Filter -->
-        <app-book-selector
-          *ngIf="books.length > 0"
-          [books]="books"
-          [selectedBook]="selectedBook"
-          [characterCounts]="getBookCharacterCounts()"
-          (bookChange)="selectedBook = $event; onBookChange()"
-        ></app-book-selector>
-      </div>
+        <!-- Tags Row -->
+        <div class="filter-row" *ngIf="tags.length > 0">
+          <app-multi-select-buttons
+            [items]="getTagsAsSelectableItems()"
+            [selectedIds]="selectedTags"
+            (selectionChange)="onTagsSelectionChange($event)"
+          ></app-multi-select-buttons>
+        </div>
 
-      <!-- Tags Row -->
-      <div class="filter-row" *ngIf="tags.length > 0">
-        <app-multi-select-buttons
-          [items]="getTagsAsSelectableItems()"
-          [selectedIds]="selectedTags"
-          (selectionChange)="onTagsSelectionChange($event)"
-        ></app-multi-select-buttons>
+        <!-- Multi-select Actions -->
+        <div class="multi-select-actions" *ngIf="selectedCharacterIds.length > 0">
+          <span class="selection-count"
+            >{{ selectedCharacterIds.length }} character{{
+              selectedCharacterIds.length !== 1 ? 's' : ''
+            }}
+            selected</span
+          >
+          <button class="btn btn-secondary btn-sm" (click)="showCastNameFormDialog()">Save Selection as Cast</button>
+          <button class="btn btn-link btn-sm" (click)="selectedCharacterIds = []">Clear Selection</button>
+        </div>
 
-        <a
-          class="clear-filters-link"
-          *ngIf="searchTerm || selectedCategory || selectedTags.length > 0 || selectedCast || selectedBook"
-          (click)="clearFilters()"
-          title="Clear all filters"
-        >
-          Clear
-        </a>
-      </div>
-
-      <!-- Multi-select Actions -->
-      <div class="multi-select-actions" *ngIf="selectedCharacterIds.length > 0">
-        <span class="selection-count"
-          >{{ selectedCharacterIds.length }} character{{ selectedCharacterIds.length !== 1 ? 's' : '' }} selected</span
-        >
-        <button class="btn btn-secondary btn-sm" (click)="showCastNameFormDialog()">Save Selection as Cast</button>
-        <button class="btn btn-link btn-sm" (click)="selectedCharacterIds = []">Clear Selection</button>
-      </div>
-
-      <!-- Cast Name Form Dialog -->
-      <div class="cast-name-form-overlay" *ngIf="showCastNameForm" (click)="cancelCastForm()">
-        <div class="cast-name-form" (click)="$event.stopPropagation()">
-          <div class="form-header">
-            <h3>Create New Cast</h3>
-            <button class="btn-close" (click)="cancelCastForm()">×</button>
+        <!-- Cast Name Form Dialog -->
+        <div class="cast-name-form-overlay" *ngIf="showCastNameForm" (click)="cancelCastForm()">
+          <div class="cast-name-form" (click)="$event.stopPropagation()">
+            <div class="form-header">
+              <h3>Create New Cast</h3>
+              <button class="btn-close" (click)="cancelCastForm()">×</button>
+            </div>
+            <div class="form-body">
+              <p class="form-help">
+                Enter a name for this cast ({{ selectedCharacterIds.length }} characters selected)
+              </p>
+              <input
+                type="text"
+                [(ngModel)]="newCastName"
+                placeholder="e.g., Chapter 1 Cast, Battle Scene"
+                class="form-control"
+                (keyup.enter)="saveSelectionAsCast()"
+                (keyup.escape)="cancelCastForm()"
+                autofocus
+              />
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-secondary" (click)="cancelCastForm()">Cancel</button>
+              <button
+                class="btn btn-primary"
+                (click)="saveSelectionAsCast()"
+                [disabled]="!newCastName || newCastName.trim() === ''"
+              >
+                Create Cast
+              </button>
+            </div>
           </div>
-          <div class="form-body">
-            <p class="form-help">Enter a name for this cast ({{ selectedCharacterIds.length }} characters selected)</p>
+        </div>
+      </div>
+
+      <!-- Results Count, Filter, and Sort -->
+      <div
+        class="results-bar"
+        *ngIf="
+          filteredCharacters.length > 0 ||
+          searchTerm ||
+          selectedCategory ||
+          selectedTags.length > 0 ||
+          selectedCast ||
+          selectedBook
+        "
+      >
+        <span class="text-muted text-sm"
+          >{{ filteredCharacters.length }} character{{ filteredCharacters.length !== 1 ? 's' : '' }}</span
+        >
+
+        <div class="name-filter">
+          <div class="filter-input-wrapper">
             <input
               type="text"
-              [(ngModel)]="newCastName"
-              placeholder="e.g., Chapter 1 Cast, Battle Scene"
-              class="form-control"
-              (keyup.enter)="saveSelectionAsCast()"
-              (keyup.escape)="cancelCastForm()"
-              autofocus
+              class="filter-input"
+              placeholder="Filter by name..."
+              [(ngModel)]="searchTerm"
+              (input)="onSearchChange()"
+              title="Filter characters by name"
             />
-          </div>
-          <div class="form-actions">
-            <button class="btn btn-secondary" (click)="cancelCastForm()">Cancel</button>
             <button
-              class="btn btn-primary"
-              (click)="saveSelectionAsCast()"
-              [disabled]="!newCastName || newCastName.trim() === ''"
+              *ngIf="searchTerm"
+              class="clear-search-btn"
+              (click)="clearSearchTerm()"
+              title="Clear search"
+              type="button"
             >
-              Create Cast
+              ×
             </button>
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- Results Count, Filter, and Sort -->
-    <div
-      class="results-bar"
-      *ngIf="
-        filteredCharacters.length > 0 ||
-        searchTerm ||
-        selectedCategory ||
-        selectedTags.length > 0 ||
-        selectedCast ||
-        selectedBook
-      "
-    >
-      <span class="text-muted text-sm"
-        >{{ filteredCharacters.length }} character{{ filteredCharacters.length !== 1 ? 's' : '' }}</span
-      >
-
-      <div class="name-filter">
-        <div class="filter-input-wrapper">
-          <input
-            type="text"
-            class="filter-input"
-            placeholder="Filter by name..."
-            [(ngModel)]="searchTerm"
-            (input)="onSearchChange()"
-            title="Filter characters by name"
-          />
-          <button
-            *ngIf="searchTerm"
-            class="clear-search-btn"
-            (click)="clearSearchTerm()"
-            title="Clear search"
-            type="button"
-          >
-            ×
+        <div class="sort-controls">
+          <span class="sort-label">Sort by:</span>
+          <button class="sort-button" [class.active]="sortBy === 'name'" (click)="setSortBy('name')">
+            Name
+            <span class="sort-indicator" *ngIf="sortBy === 'name'">
+              {{ sortDirection === 'asc' ? '↑' : '↓' }}
+            </span>
+          </button>
+          <button class="sort-button" [class.active]="sortBy === 'category'" (click)="setSortBy('category')">
+            Category
+            <span class="sort-indicator" *ngIf="sortBy === 'category'">
+              {{ sortDirection === 'asc' ? '↑' : '↓' }}
+            </span>
           </button>
         </div>
-      </div>
 
-      <div class="sort-controls">
-        <span class="sort-label">Sort by:</span>
-        <button class="sort-button" [class.active]="sortBy === 'name'" (click)="setSortBy('name')">
-          Name
-          <span class="sort-indicator" *ngIf="sortBy === 'name'">
-            {{ sortDirection === 'asc' ? '↑' : '↓' }}
-          </span>
-        </button>
-        <button class="sort-button" [class.active]="sortBy === 'category'" (click)="setSortBy('category')">
-          Category
-          <span class="sort-indicator" *ngIf="sortBy === 'category'">
-            {{ sortDirection === 'asc' ? '↑' : '↓' }}
-          </span>
+        <div class="results-actions">
+          <a
+            class="refresh-link"
+            (click)="refreshCharacters()"
+            [class.disabled]="!currentProject || isLoading"
+            title="Refresh characters"
+          >
+            Refresh
+          </a>
+          <a
+            class="clear-filters-link"
+            *ngIf="searchTerm || selectedCategory || selectedTags.length > 0 || selectedCast || selectedBook"
+            (click)="clearFilters()"
+            title="Clear all filters"
+          >
+            Clear
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="scrollable-content" *ngIf="currentProject && !isLoading && !error">
+      <!-- Grid View (Cards) -->
+      <app-character-grid-view
+        *ngIf="filteredCharacters.length > 0 && viewMode === 'grid'"
+        [characters]="filteredCharacters"
+        [categories]="categories"
+        [tags]="tags"
+        [selectedCharacterIndex]="selectedCharacterIndex"
+        [selectedCharacterIds]="selectedCharacterIds"
+        [thumbnailDataUrls]="thumbnailDataUrls"
+        (characterClick)="onViewCharacterClick($event)"
+        (characterDelete)="onViewCharacterDelete($event)"
+        (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
+      ></app-character-grid-view>
+
+      <!-- List View -->
+      <app-character-list-view
+        *ngIf="filteredCharacters.length > 0 && viewMode === 'list'"
+        [characters]="filteredCharacters"
+        [categories]="categories"
+        [tags]="tags"
+        [columns]="columns"
+        [selectedCharacterIndex]="selectedCharacterIndex"
+        [selectedCharacterIds]="selectedCharacterIds"
+        [thumbnailDataUrls]="thumbnailDataUrls"
+        (characterClick)="onViewCharacterClick($event)"
+        (characterDelete)="onViewCharacterDelete($event)"
+        (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
+      ></app-character-list-view>
+
+      <!-- Compact View -->
+      <app-character-compact-view
+        *ngIf="filteredCharacters.length > 0 && viewMode === 'compact'"
+        [characters]="filteredCharacters"
+        [categories]="categories"
+        [tags]="tags"
+        [columns]="columns"
+        [selectedCharacterIndex]="selectedCharacterIndex"
+        [selectedCharacterIds]="selectedCharacterIds"
+        [thumbnailDataUrls]="thumbnailDataUrls"
+        (characterClick)="onViewCharacterClick($event)"
+        (characterDelete)="onViewCharacterDelete($event)"
+        (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
+      ></app-character-compact-view>
+
+      <!-- Gallery View -->
+      <app-character-gallery-view
+        *ngIf="filteredCharacters.length > 0 && viewMode === 'gallery'"
+        [characters]="filteredCharacters"
+        [selectedCharacterIds]="selectedCharacterIds"
+        [thumbnailDataUrls]="thumbnailDataUrls"
+        (characterClick)="onViewCharacterClick($event)"
+        (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
+      ></app-character-gallery-view>
+
+      <div class="empty-state" *ngIf="filteredCharacters.length === 0">
+        <div class="empty-icon">
+          <i class="icon-users"></i>
+        </div>
+        <h3 *ngIf="searchTerm || selectedCategory || selectedTags.length > 0 || selectedCast || selectedBook">
+          No characters match your filters
+        </h3>
+        <h3 *ngIf="!searchTerm && !selectedCategory && selectedTags.length === 0 && !selectedCast && !selectedBook">
+          No characters yet
+        </h3>
+        <p *ngIf="searchTerm || selectedCategory || selectedTags.length > 0 || selectedCast || selectedBook">
+          Try adjusting your search criteria or clearing the filters to see more characters.
+        </p>
+        <p *ngIf="!searchTerm && !selectedCategory && selectedTags.length === 0 && !selectedCast && !selectedBook">
+          Create your first character to get started with your project!
+        </p>
+        <button
+          *ngIf="!searchTerm && !selectedCategory && selectedTags.length === 0 && !selectedCast && !selectedBook"
+          class="btn btn-primary"
+          (click)="createNewCharacter()"
+        >
+          Create Your First Character
         </button>
       </div>
     </div>
   </div>
-
-  <div class="scrollable-content" *ngIf="currentProject && !isLoading && !error">
-    <!-- Grid View (Cards) -->
-    <app-character-grid-view
-      *ngIf="filteredCharacters.length > 0 && viewMode === 'grid'"
-      [characters]="filteredCharacters"
-      [categories]="categories"
-      [tags]="tags"
-      [selectedCharacterIndex]="selectedCharacterIndex"
-      [selectedCharacterIds]="selectedCharacterIds"
-      [thumbnailDataUrls]="thumbnailDataUrls"
-      (characterClick)="onViewCharacterClick($event)"
-      (characterDelete)="onViewCharacterDelete($event)"
-      (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
-    ></app-character-grid-view>
-
-    <!-- List View -->
-    <app-character-list-view
-      *ngIf="filteredCharacters.length > 0 && viewMode === 'list'"
-      [characters]="filteredCharacters"
-      [categories]="categories"
-      [tags]="tags"
-      [selectedCharacterIndex]="selectedCharacterIndex"
-      [selectedCharacterIds]="selectedCharacterIds"
-      [thumbnailDataUrls]="thumbnailDataUrls"
-      (characterClick)="onViewCharacterClick($event)"
-      (characterDelete)="onViewCharacterDelete($event)"
-      (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
-    ></app-character-list-view>
-
-    <!-- Compact View -->
-    <app-character-compact-view
-      *ngIf="filteredCharacters.length > 0 && viewMode === 'compact'"
-      [characters]="filteredCharacters"
-      [categories]="categories"
-      [tags]="tags"
-      [selectedCharacterIndex]="selectedCharacterIndex"
-      [selectedCharacterIds]="selectedCharacterIds"
-      [thumbnailDataUrls]="thumbnailDataUrls"
-      (characterClick)="onViewCharacterClick($event)"
-      (characterDelete)="onViewCharacterDelete($event)"
-      (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
-    ></app-character-compact-view>
-
-    <!-- Gallery View -->
-    <app-character-gallery-view
-      *ngIf="filteredCharacters.length > 0 && viewMode === 'gallery'"
-      [characters]="filteredCharacters"
-      [selectedCharacterIds]="selectedCharacterIds"
-      [thumbnailDataUrls]="thumbnailDataUrls"
-      (characterClick)="onViewCharacterClick($event)"
-      (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
-    ></app-character-gallery-view>
-
-    <div class="empty-state" *ngIf="filteredCharacters.length === 0">
-      <div class="empty-icon">
-        <i class="icon-users"></i>
-      </div>
-      <h3 *ngIf="searchTerm || selectedCategory || selectedTags.length > 0 || selectedCast || selectedBook">
-        No characters match your filters
-      </h3>
-      <h3 *ngIf="!searchTerm && !selectedCategory && selectedTags.length === 0 && !selectedCast && !selectedBook">
-        No characters yet
-      </h3>
-      <p *ngIf="searchTerm || selectedCategory || selectedTags.length > 0 || selectedCast || selectedBook">
-        Try adjusting your search criteria or clearing the filters to see more characters.
-      </p>
-      <p *ngIf="!searchTerm && !selectedCategory && selectedTags.length === 0 && !selectedCast && !selectedBook">
-        Create your first character to get started with your project!
-      </p>
-      <button
-        *ngIf="!searchTerm && !selectedCategory && selectedTags.length === 0 && !selectedCast && !selectedBook"
-        class="btn btn-primary"
-        (click)="createNewCharacter()"
-      >
-        Create Your First Character
-      </button>
-    </div>
-  </div>
-</div>
 </div>

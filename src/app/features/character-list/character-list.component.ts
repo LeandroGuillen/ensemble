@@ -66,6 +66,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   isLoading = false;
   error: string | null = null;
   viewMode: "grid" | "list" | "compact" | "gallery" = "grid"; // Toggle between grid (cards), list, compact, and gallery view
+  columns: 1 | 2 = 2; // Column count for views
   sortBy: "name" | "category" = "name";
   sortDirection: "asc" | "desc" = "asc";
   selectedCharacterIndex = -1; // Track selected character for keyboard navigation
@@ -90,6 +91,12 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       | "gallery";
     if (savedViewMode) {
       this.viewMode = savedViewMode;
+    }
+
+    // Load saved columns preference
+    const savedColumns = localStorage.getItem("characterColumns");
+    if (savedColumns) {
+      this.columns = parseInt(savedColumns) as 1 | 2;
     }
 
     // Load saved sort preferences
@@ -716,6 +723,11 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   setViewMode(mode: "grid" | "list" | "compact" | "gallery"): void {
     this.viewMode = mode;
     localStorage.setItem("characterViewMode", this.viewMode);
+  }
+
+  setColumns(count: 1 | 2): void {
+    this.columns = count;
+    localStorage.setItem("characterColumns", count.toString());
   }
 
   // Multi-select functionality

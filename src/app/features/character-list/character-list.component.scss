@@ -12,7 +12,7 @@
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  padding: var(--spacing-lg);
+  padding: var(--spacing-sm) var(--spacing-lg);
   overflow: hidden;
 }
 
@@ -36,6 +36,7 @@
   transition: color var(--transition-fast);
   text-decoration: none;
   user-select: none;
+  flex-shrink: 0;
 
   &:hover:not(.disabled) {
     color: var(--color-accent-primary);
@@ -71,7 +72,8 @@
 }
 
 // View Toggle Switch
-.view-toggle {
+.view-toggle,
+.column-toggle {
   display: flex;
   background-color: var(--color-bg-tertiary);
   border: 1px solid var(--color-border);
@@ -137,17 +139,22 @@
 
 // Filters Section
 .filters {
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
   padding: var(--spacing-sm) 0;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
 }
 
 .filter-row {
   display: flex;
   gap: var(--spacing-md);
   align-items: center;
+
+  app-multi-select-buttons {
+    flex: 1;
+    min-width: 0;
+  }
 }
 
 .clear-filters-link {
@@ -158,7 +165,6 @@
   text-decoration: none;
   user-select: none;
   flex-shrink: 0;
-  margin-left: auto;
 
   &:hover {
     color: var(--color-accent-primary);
@@ -170,7 +176,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
   padding: 0 var(--spacing-xs);
   gap: var(--spacing-md);
 }
@@ -292,6 +298,13 @@
 .sort-indicator {
   font-size: 0.875rem;
   margin-left: 2px;
+}
+
+.results-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  flex-shrink: 0;
 }
 
 // View components are now handled in their own SCSS files

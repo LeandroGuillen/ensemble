@@ -20,40 +20,42 @@
         <form [formGroup]="characterForm" (ngSubmit)="onSubmit()">
           <!-- Form Actions at Top -->
           <div class="form-actions-top">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              (click)="onCancel()"
-              [disabled]="isSaving"
-              title="Cancel (ESC)"
-            >
-              <i class="icon-x"></i>
-              Cancel
-              <kbd class="shortcut-hint">ESC</kbd>
-            </button>
-            <button
-              type="submit"
-              class="btn btn-primary"
-              [disabled]="characterForm.invalid || isSaving"
-              title="Save (Ctrl+Enter)"
-            >
-              <i class="icon-save" *ngIf="!isSaving"></i>
-              <i class="icon-loader" *ngIf="isSaving"></i>
-              {{ isSaving ? 'Saving...' : isEditing ? 'Update Character' : 'Create Character' }}
-              <kbd class="shortcut-hint" *ngIf="!isSaving">Ctrl+Enter</kbd>
-            </button>
+            <!-- Form Status in Button Row -->
+            <div class="form-status-inline" *ngIf="characterForm.dirty && !error">
+              <i class="icon-info"></i>
+              You have unsaved changes
+            </div>
+
+            <div class="action-buttons">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                (click)="onCancel()"
+                [disabled]="isSaving"
+                title="Cancel (ESC)"
+              >
+                <i class="icon-x"></i>
+                Cancel
+                <kbd class="shortcut-hint">ESC</kbd>
+              </button>
+              <button
+                type="submit"
+                class="btn btn-primary"
+                [disabled]="characterForm.invalid || isSaving"
+                title="Save (Ctrl+Enter)"
+              >
+                <i class="icon-save" *ngIf="!isSaving"></i>
+                <i class="icon-loader" *ngIf="isSaving"></i>
+                {{ isSaving ? 'Saving...' : isEditing ? 'Update Character' : 'Create Character' }}
+                <kbd class="shortcut-hint" *ngIf="!isSaving">Ctrl+Enter</kbd>
+              </button>
+            </div>
           </div>
 
           <!-- Error Message at Top -->
           <div class="error-message" *ngIf="error">
             <i class="icon-alert-circle"></i>
             {{ error }}
-          </div>
-
-          <!-- Form Status at Top -->
-          <div class="form-status" *ngIf="characterForm.dirty && !error">
-            <i class="icon-info"></i>
-            You have unsaved changes
           </div>
 
           <div class="form-section">
@@ -136,6 +138,26 @@
           </div>
 
           <div class="form-section">
+            <div class="form-group">
+              <label class="form-label" for="mangamaster">
+                Mangamaster prompt
+                <span class="field-hint">
+                  AI description to be used by Mangamaster image generator (max 20000 characters)
+                </span>
+              </label>
+              <textarea
+                id="mangamaster"
+                class="form-control"
+                formControlName="mangamaster"
+                rows="6"
+                placeholder="E.g. 1girl, child, poga, pointy ears, light brown hair, ..."
+                [class.error]="getFieldError('mangamaster')"
+              ></textarea>
+              <div class="char-count">{{ characterForm.get('mangamaster')?.value?.length || 0 }}/20000</div>
+              <div class="error-text" *ngIf="getFieldError('mangamaster')">
+                {{ getFieldError('mangamaster') }}
+              </div>
+            </div>
 
             <div class="form-group">
               <label class="form-label" for="description">
