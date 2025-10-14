@@ -124,15 +124,13 @@
         </div>
 
         <!-- Book Filter -->
-        <div class="book-filter" *ngIf="books.length > 0">
-          <label for="bookFilter">Book:</label>
-          <select id="bookFilter" [(ngModel)]="selectedBook" (change)="onBookChange()" class="book-select">
-            <option value="">All Books</option>
-            <option *ngFor="let book of books" [value]="book.id">
-              {{ book.name }} ({{ getBookCharacterCount(book.id) }} characters)
-            </option>
-          </select>
-        </div>
+        <app-book-selector
+          *ngIf="books.length > 0"
+          [books]="books"
+          [selectedBook]="selectedBook"
+          [characterCounts]="getBookCharacterCounts()"
+          (bookChange)="selectedBook = $event; onBookChange()"
+        ></app-book-selector>
       </div>
 
       <!-- Tags Row -->

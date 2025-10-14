@@ -1,0 +1,189 @@
+<div
+  class="book-editor-overlay"
+  [class.visible]="isVisible"
+  (mousedown)="onOverlayMouseDown()"
+  (click)="onOverlayClick()"
+>
+  <div
+    class="book-editor-page"
+    [class.visible]="isVisible"
+    [style.border-left-color]="getCurrentColor()"
+    (mousedown)="onModalClick(); $event.stopPropagation()"
+    (click)="$event.stopPropagation()"
+  >
+    <!-- Page Header -->
+    <div class="page-header">
+      <div class="page-title">
+        <h2>{{ isEditMode ? "Edit Book" : "New Book" }}</h2>
+        <div
+          class="page-binding"
+          [style.background-color]="getCurrentColor()"
+        ></div>
+      </div>
+      <button class="close-btn" (click)="onCancel()" type="button">×</button>
+    </div>
+
+    <!-- Page Content -->
+    <div class="page-content">
+      <form [formGroup]="bookForm" (ngSubmit)="onSave()">
+        <!-- Title and Color Row -->
+        <div class="form-row">
+          <div class="form-group title-group">
+            <label for="bookName">Title *</label>
+            <input
+              id="bookName"
+              type="text"
+              formControlName="name"
+              placeholder="Enter book title"
+              class="form-control"
+              [class.error]="getFieldError('name')"
+            />
+            <div *ngIf="getFieldError('name')" class="field-error">
+              {{ getFieldError("name") }}
+            </div>
+          </div>
+
+          <div class="form-group color-group">
+            <label for="bookColor">Color *</label>
+            <div class="color-input-wrapper">
+              <input
+                id="bookColor"
+                type="color"
+                formControlName="color"
+                class="color-picker"
+              />
+              <input
+                type="text"
+                formControlName="color"
+                placeholder="#3498db"
+                class="color-text"
+                [class.error]="getFieldError('color')"
+              />
+            </div>
+            <div *ngIf="getFieldError('color')" class="field-error">
+              {{ getFieldError("color") }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Color Presets -->
+        <div class="color-presets">
+          <span class="preset-label">Quick colors:</span>
+          <button
+            *ngFor="let color of colorPresets"
+            type="button"
+            class="color-preset"
+            [style.background-color]="color"
+            (click)="selectColor(color)"
+            [title]="color"
+            [class.selected]="getCurrentColor() === color"
+          ></button>
+        </div>
+
+        <!-- Description -->
+        <div class="form-group">
+          <label for="bookDescription">Description</label>
+          <textarea
+            id="bookDescription"
+            formControlName="description"
+            placeholder="Enter a description or synopsis..."
+            class="form-control description-textarea"
+            rows="4"
+            [class.error]="getFieldError('description')"
+          ></textarea>
+          <div *ngIf="getFieldError('description')" class="field-error">
+            {{ getFieldError("description") }}
+          </div>
+        </div>
+
+        <!-- Status and Date Row -->
+        <div class="form-row">
+          <div class="form-group">
+            <label for="bookStatus">Status</label>
+            <select
+              id="bookStatus"
+              formControlName="status"
+              class="form-control"
+            >
+              <option value="">Select status</option>
+              <option
+                *ngFor="let option of statusOptions"
+                [value]="option.value"
+              >
+                {{ option.label }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="bookPublicationDate">Publication Date</label>
+            <input
+              id="bookPublicationDate"
+              type="date"
+              formControlName="publicationDate"
+              class="form-control"
+            />
+          </div>
+        </div>
+
+        <!-- ISBN -->
+        <div class="form-group">
+          <label for="bookIsbn">ISBN</label>
+          <input
+            id="bookIsbn"
+            type="text"
+            formControlName="isbn"
+            placeholder="Enter ISBN (optional)"
+            class="form-control"
+            [class.error]="getFieldError('isbn')"
+          />
+          <div *ngIf="getFieldError('isbn')" class="field-error">
+            {{ getFieldError("isbn") }}
+          </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+          <div class="action-group">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              (click)="onCancel()"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="btn btn-primary"
+              [disabled]="saving || bookForm.invalid"
+            >
+              <span *ngIf="saving" class="spinner"></span>
+              <span *ngIf="!saving"
+                >{{ isEditMode ? "Update" : "Create" }} Book</span
+              >
+            </button>
+          </div>
+
+          <div *ngIf="isEditMode" class="delete-action">
+            <button
+              type="button"
+              class="btn btn-danger"
+              (click)="onDelete()"
+              [disabled]="saving"
+            >
+              Delete Book
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Page Lines Decoration -->
+    <div class="page-lines">
+      <div
+        class="line"
+        *ngFor="let line of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]"
+      ></div>
+    </div>
+  </div>
+</div>

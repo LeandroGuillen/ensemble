@@ -1,0 +1,66 @@
+<div class="book-selector-container">
+  <!-- Selected Book Display (or "All Books" placeholder) -->
+  <div class="selected-book-display" (click)="toggleDropdown()">
+    <div *ngIf="!selectedBook" class="all-books-text">
+      <span class="all-books-label">All Books</span>
+      <span class="dropdown-arrow" [class.open]="isOpen">▼</span>
+    </div>
+
+    <div *ngIf="selectedBook && getSelectedBookObject() as book" class="book-container-compact">
+      <div class="book">
+        <div class="book-cover" [style.background]="getBookGradient(book)">
+          <div class="book-title">{{ book.name }}</div>
+          <div class="ornament"></div>
+          <div class="book-author">{{ book.description }}</div>
+        </div>
+        <div class="book-spine" [style.background]="getSpineGradient(book)">
+          <div class="spine-text">{{ book.name.toUpperCase() }}</div>
+        </div>
+        <div class="book-back" [style.background]="getBackGradient(book)"></div>
+        <div class="book-pages">
+          <div class="page-layer"></div>
+          <div class="page-layer"></div>
+          <div class="page-layer"></div>
+          <div class="page-layer"></div>
+        </div>
+      </div>
+      <span class="dropdown-arrow" [class.open]="isOpen">▼</span>
+    </div>
+  </div>
+
+  <!-- Dropdown List -->
+  <div class="book-dropdown" *ngIf="isOpen" @dropdownAnimation>
+    <!-- All Books Option -->
+    <div class="book-option all-books-option" [class.selected]="!selectedBook" (click)="selectBook('')">
+      <span class="book-option-text all-books-option-text">
+        All Books
+        <span class="character-count">({{ books.length }} {{ books.length === 1 ? 'book' : 'books' }})</span>
+      </span>
+    </div>
+
+    <!-- Individual Books -->
+    <div
+      *ngFor="let book of books"
+      class="book-option"
+      [class.selected]="selectedBook === book.id"
+      (click)="selectBook(book.id)"
+    >
+      <div class="book-container-option">
+        <div class="book-mini">
+          <div class="book-cover-mini" [style.background]="getBookGradient(book)">
+            <div class="book-title-mini">{{ book.name }}</div>
+          </div>
+          <div class="book-spine-mini" [style.background]="getSpineGradient(book)"></div>
+          <div class="book-back-mini" [style.background]="getBackGradient(book)"></div>
+          <div class="book-pages-mini">
+            <div class="page-layer-mini"></div>
+          </div>
+        </div>
+      </div>
+      <span class="book-option-text">
+        {{ book.name }}
+        <!-- <span class="character-count">({{ getCharacterCount(book.id) }} {{ getCharacterCount(book.id) === 1 ? 'character' : 'characters' }})</span> -->
+      </span>
+    </div>
+  </div>
+</div>

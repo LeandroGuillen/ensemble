@@ -1,0 +1,46 @@
+<div
+  class="book-container"
+  [class.dragging]="isDragging"
+  draggable="true"
+  (click)="onBookClick()"
+  (dragstart)="onDragStart($event)"
+  (dragend)="onDragEnd()"
+>
+  <div class="book">
+    <div class="book-cover" [style.background]="getBookGradient()">
+      <div class="book-title">{{ book.name }}</div>
+      <div class="ornament"></div>
+      <div class="book-author">{{ book.description }}</div>
+    </div>
+    <div class="book-spine" [style.background]="getSpineGradient()">
+      <div class="spine-text">{{ book.name.toUpperCase() }}</div>
+    </div>
+
+    <div class="book-back" [style.background]="getBackGradient()"></div>
+
+    <div class="book-pages">
+      <div class="page-layer"></div>
+      <div class="page-layer"></div>
+      <div class="page-layer"></div>
+      <div class="page-layer"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Book Actions (appear on hover) -->
+<div class="book-actions">
+  <button
+    class="action-btn edit-btn"
+    (click)="onEditClick($event)"
+    title="Edit book"
+  >
+    ✏️
+  </button>
+  <button
+    class="action-btn delete-btn"
+    (click)="onDeleteClick($event)"
+    title="Delete book"
+  >
+    🗑️
+  </button>
+</div>

@@ -320,55 +320,6 @@
   border-top: 1px solid var(--color-border);
 }
 
-// Info Section
-.info-section {
-  background-color: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-xl);
-
-  h3 {
-    font-size: 1.25rem;
-    font-weight: 600;
-    margin-bottom: var(--spacing-lg);
-    color: var(--color-text-primary);
-    text-align: center;
-  }
-}
-
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--spacing-lg);
-}
-
-.info-item {
-  display: flex;
-  gap: var(--spacing-md);
-
-  .info-icon {
-    font-size: 1.5rem;
-    flex-shrink: 0;
-  }
-
-  .info-text {
-    strong {
-      display: block;
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: var(--color-text-primary);
-      margin-bottom: 4px;
-    }
-
-    p {
-      font-size: 0.8125rem;
-      color: var(--color-text-muted);
-      margin: 0;
-      line-height: 1.4;
-    }
-  }
-}
-
 // Button variants
 .btn-link {
   background: transparent;

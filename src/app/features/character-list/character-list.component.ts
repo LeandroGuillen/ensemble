@@ -15,7 +15,8 @@ import { CommandPaletteService } from "../../shared/command-palette/command-pale
 import { CategoryToggleComponent, ToggleOption } from "../../shared/category-toggle/category-toggle.component";
 import { MultiSelectButtonsComponent, SelectableItem } from "../../shared/multi-select-buttons/multi-select-buttons.component";
 import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
-import { 
+import { BookSelectorComponent } from "../../shared/book-selector/book-selector.component";
+import {
   CharacterGridViewComponent,
   CharacterListViewComponent,
   CharacterCompactViewComponent,
@@ -26,11 +27,12 @@ import {
   selector: "app-character-list",
   standalone: true,
   imports: [
-    CommonModule, 
-    FormsModule, 
-    CategoryToggleComponent, 
-    MultiSelectButtonsComponent, 
+    CommonModule,
+    FormsModule,
+    CategoryToggleComponent,
+    MultiSelectButtonsComponent,
     PageHeaderComponent,
+    BookSelectorComponent,
     CharacterGridViewComponent,
     CharacterListViewComponent,
     CharacterCompactViewComponent,
@@ -596,9 +598,17 @@ export class CharacterListComponent implements OnInit, OnDestroy {
 
   getBookCharacterCount(bookId: string): number {
     // Get all characters (not just filtered ones) to show total count
-    return this.allCharacters.filter(character => 
+    return this.allCharacters.filter(character =>
       character.books && character.books.includes(bookId)
     ).length;
+  }
+
+  getBookCharacterCounts(): Map<string, number> {
+    const counts = new Map<string, number>();
+    for (const book of this.books) {
+      counts.set(book.id, this.getBookCharacterCount(book.id));
+    }
+    return counts;
   }
 
   getCharacterTagsInOrder(character: Character): Tag[] {
