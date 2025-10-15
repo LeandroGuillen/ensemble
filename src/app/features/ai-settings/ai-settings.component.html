@@ -1,0 +1,231 @@
+<div class="ai-settings">
+  <app-page-header title="AI Settings" subtitle="Configure AI features for character generation"></app-page-header>
+
+  <div class="settings-content">
+    <div class="settings-inner">
+      <!-- Top Action Bar -->
+      <div class="top-action-bar">
+        <button
+          type="button"
+          class="btn btn-primary"
+          (click)="saveSettings()"
+          [disabled]="aiForm.invalid || saving"
+        >
+          <i class="icon-save" *ngIf="!saving"></i>
+          <i class="icon-loader" *ngIf="saving"></i>
+          {{ saving ? 'Saving...' : 'Save Settings' }}
+        </button>
+
+        <!-- Notification Container (always present to prevent layout shift) -->
+        <div class="notification-container">
+          <!-- Success Message -->
+          <div class="success-message" [class.visible]="successMessage">
+            <i class="icon-check"></i>
+            {{ successMessage || 'Success' }}
+          </div>
+
+          <!-- Error Message -->
+          <div class="error-message" [class.visible]="error">
+            <i class="icon-alert-circle"></i>
+            {{ error || 'Error' }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings Form -->
+      <form [formGroup]="aiForm" class="ai-form">
+        <!-- Enable AI -->
+        <div class="form-section">
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" formControlName="enabled" />
+              <span>Enable AI Features</span>
+            </label>
+            <p class="field-hint">Turn on AI-powered character name generation and other features</p>
+          </div>
+        </div>
+
+        <!-- Provider Selection -->
+        <div class="form-section" *ngIf="aiForm.get('enabled')?.value">
+          <div class="form-group">
+            <label class="form-label">AI Provider</label>
+            <select formControlName="provider" class="form-control" (change)="onProviderChange()">
+              <option *ngFor="let provider of providers" [value]="provider.id" [disabled]="provider.disabled">
+                {{ provider.name }} - {{ provider.description }}
+              </option>
+            </select>
+            <p class="field-hint">{{ getProviderHelp() }}</p>
+          </div>
+        </div>
+
+        <!-- Local Server Settings (Ollama/LM Studio) -->
+        <div class="form-section" *ngIf="aiForm.get('enabled')?.value && isLocalProvider()">
+          <div class="form-group">
+            <label class="form-label" for="localServerUrl">Server URL</label>
+            <input
+              type="text"
+              id="localServerUrl"
+              class="form-control"
+              formControlName="localServerUrl"
+              placeholder="http://localhost:11434"
+              [class.error]="getFieldError('localServerUrl')"
+            />
+            <div class="error-text" *ngIf="getFieldError('localServerUrl')">
+              {{ getFieldError('localServerUrl') }}
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="modelName">Model Name</label>
+            <input
+              type="text"
+              id="modelName"
+              class="form-control"
+              formControlName="modelName"
+              placeholder="llama3.2"
+              [class.error]="getFieldError('modelName')"
+            />
+            <p class="field-hint">
+              For Ollama: Run <code>ollama list</code> to see available models, or <code>ollama pull llama3.2</code> to download one.
+            </p>
+            <div class="error-text" *ngIf="getFieldError('modelName')">
+              {{ getFieldError('modelName') }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Cloud API Settings (OpenAI/Anthropic) -->
+        <div class="form-section" *ngIf="aiForm.get('enabled')?.value && isCloudProvider()">
+          <div class="form-group">
+            <label class="form-label" for="apiKey">API Key</label>
+            <input
+              type="password"
+              id="apiKey"
+              class="form-control"
+              formControlName="apiKey"
+              placeholder="sk-..."
+              [class.error]="getFieldError('apiKey')"
+            />
+            <p class="field-hint">Your API key will be stored in the project's ensemble.json file</p>
+            <div class="error-text" *ngIf="getFieldError('apiKey')">
+              {{ getFieldError('apiKey') }}
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="modelName">Model Name</label>
+            <input
+              type="text"
+              id="modelName"
+              class="form-control"
+              formControlName="modelName"
+              placeholder="gpt-3.5-turbo"
+              [class.error]="getFieldError('modelName')"
+            />
+            <div class="error-text" *ngIf="getFieldError('modelName')">
+              {{ getFieldError('modelName') }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Generation Parameters -->
+        <div class="form-section" *ngIf="aiForm.get('enabled')?.value">
+          <h3 class="section-title">Generation Parameters</h3>
+
+          <div class="form-group">
+            <label class="form-label" for="temperature">
+              Temperature: {{ aiForm.get('temperature')?.value }}
+            </label>
+            <input
+              type="range"
+              id="temperature"
+              class="form-range"
+              formControlName="temperature"
+              min="0"
+              max="1"
+              step="0.1"
+            />
+            <p class="field-hint">
+              Lower values (0.3) = more predictable, Higher values (0.9) = more creative
+            </p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="maxTokens">Max Tokens</label>
+            <input
+              type="number"
+              id="maxTokens"
+              class="form-control"
+              formControlName="maxTokens"
+              min="1"
+              max="2000"
+              [class.error]="getFieldError('maxTokens')"
+            />
+            <p class="field-hint">Maximum length of generated text (50-100 recommended for names)</p>
+            <div class="error-text" *ngIf="getFieldError('maxTokens')">
+              {{ getFieldError('maxTokens') }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Connection Test -->
+        <div class="form-section" *ngIf="aiForm.get('enabled')?.value && isLocalProvider()">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            (click)="testConnection()"
+            [disabled]="testing"
+          >
+            <i class="icon-activity" *ngIf="!testing"></i>
+            <i class="icon-loader" *ngIf="testing"></i>
+            {{ testing ? 'Testing Connection...' : 'Test Connection' }}
+          </button>
+
+          <!-- Test Result -->
+          <div class="test-result success" *ngIf="testResult?.success">
+            <i class="icon-check-circle"></i>
+            <div>
+              <strong>Connection successful!</strong>
+              <div *ngIf="hasAvailableModels()" class="models-list">
+                Available models: {{ getAvailableModels() }}
+              </div>
+            </div>
+          </div>
+
+          <div class="test-result error" *ngIf="testResult && !testResult.success">
+            <i class="icon-x-circle"></i>
+            <div>
+              <strong>Connection failed</strong>
+              <div *ngIf="testResult?.error">{{ testResult.error }}</div>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <!-- Installation Guide -->
+      <div class="installation-guide" *ngIf="!aiForm.get('enabled')?.value">
+        <h3>Getting Started with Local AI</h3>
+        <p>
+          Ensemble supports local AI for privacy and offline use. We recommend Ollama for the best experience.
+        </p>
+
+        <div class="guide-step">
+          <h4>1. Install Ollama</h4>
+          <p>Visit <a href="https://ollama.com" target="_blank">ollama.com</a> and download Ollama for your platform.</p>
+        </div>
+
+        <div class="guide-step">
+          <h4>2. Download a Model</h4>
+          <p>Open a terminal and run:</p>
+          <pre><code>ollama pull llama3.2</code></pre>
+          <p>This will download a small, fast model perfect for character name generation.</p>
+        </div>
+
+        <div class="guide-step">
+          <h4>3. Enable AI in Ensemble</h4>
+          <p>Toggle "Enable AI Features" above and test the connection.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

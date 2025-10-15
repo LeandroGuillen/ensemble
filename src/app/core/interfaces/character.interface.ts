@@ -5,6 +5,7 @@ export interface Character {
   tags: string[];
   books: string[];
   thumbnail?: string;
+  mangamaster: string;
   description: string;
   notes: string;
   created: Date;
@@ -18,6 +19,7 @@ export interface CharacterFormData {
   tags: string[];
   books: string[];
   thumbnail?: string;
+  mangamaster: string;
   description: string;
   notes: string;
 }

@@ -60,11 +60,25 @@ export interface Book {
   coverImage?: string;
 }
 
+export interface AiSettings {
+  enabled: boolean;
+  provider: 'ollama' | 'lm-studio' | 'openai' | 'anthropic';
+  // Ollama/LM Studio settings
+  localServerUrl: string;
+  modelName: string;
+  // Cloud API settings (optional)
+  apiKey?: string;
+  // Generation parameters
+  temperature: number;
+  maxTokens: number;
+}
+
 export interface ProjectSettings {
   defaultCategory: string;
   autoSave: boolean;
   fileWatchEnabled: boolean;
   graphView?: GraphViewState;
+  ai?: AiSettings;
 }
 
 export interface GraphViewState {

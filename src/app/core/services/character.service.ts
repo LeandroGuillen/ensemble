@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { Character, CharacterFormData } from '../interfaces/character.interface';
+import { MarkdownUtils } from '../utils/markdown.utils';
 import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
-import { MarkdownUtils } from '../utils/markdown.utils';
 
 interface CharacterFrontmatter {
   name: string;
@@ -11,12 +11,13 @@ interface CharacterFrontmatter {
   tags: string[];
   books: string[];
   thumbnail?: string;
+  mangamaster: string;
   created: string;
   modified: string;
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class CharacterService {
   private charactersSubject = new BehaviorSubject<Character[]>([]);
@@ -24,17 +25,14 @@ export class CharacterService {
   private hasLoadedForCurrentProject = false;
   private currentProjectPath: string | null = null;
 
-  constructor(
-    private electronService: ElectronService,
-    private projectService: ProjectService
-  ) {}
+  constructor(private electronService: ElectronService, private projectService: ProjectService) {}
 
   getCharacters(): Observable<Character[]> {
     return this.characters$;
   }
 
   getCharacterById(id: string): Character | undefined {
-    return this.charactersSubject.value.find(char => char.id === id);
+    return this.charactersSubject.value.find((char) => char.id === id);
   }
 
   /**
@@ -60,7 +58,7 @@ export class CharacterService {
     try {
       const charactersPath = await this.electronService.pathJoin(this.currentProjectPath, 'characters');
       const filePath = await this.electronService.pathJoin(charactersPath, filename);
-      
+
       const exists = await this.electronService.fileExists(filePath);
       if (!exists) {
         return null;
@@ -70,14 +68,14 @@ export class CharacterService {
       if (character) {
         // Add to the character list if not already there
         const currentCharacters = this.charactersSubject.value;
-        const exists = currentCharacters.find(c => c.id === character.id || c.filePath === character.filePath);
-        
+        const exists = currentCharacters.find((c) => c.id === character.id || c.filePath === character.filePath);
+
         if (!exists) {
           const updatedCharacters = [...currentCharacters, character].sort((a, b) => a.name.localeCompare(b.name));
           this.charactersSubject.next(updatedCharacters);
         }
       }
-      
+
       return character;
     } catch (error) {
       console.error(`Failed to load specific character file ${filename}:`, error);
@@ -95,10 +93,10 @@ export class CharacterService {
     }
 
     const charactersPath = await this.electronService.pathJoin(this.currentProjectPath, 'characters');
-    
+
     // First check if the directory exists
     const dirExists = await this.electronService.fileExists(charactersPath);
-    
+
     if (!dirExists) {
       const createResult = await this.electronService.createDirectory(charactersPath);
       if (!createResult.success) {
@@ -108,7 +106,7 @@ export class CharacterService {
     }
 
     const files = await this.getCharacterFiles(charactersPath);
-    
+
     let loadedCount = 0;
     const characters: Character[] = [];
 
@@ -130,7 +128,9 @@ export class CharacterService {
     const allCharacters = [...existingCharacters];
 
     for (const newChar of characters) {
-      const exists = allCharacters.find(existing => existing.id === newChar.id || existing.filePath === newChar.filePath);
+      const exists = allCharacters.find(
+        (existing) => existing.id === newChar.id || existing.filePath === newChar.filePath
+      );
       if (!exists) {
         allCharacters.push(newChar);
       }
@@ -139,7 +139,7 @@ export class CharacterService {
     // Sort and update
     allCharacters.sort((a, b) => a.name.localeCompare(b.name));
     this.charactersSubject.next(allCharacters);
-    
+
     return loadedCount;
   }
 
@@ -161,7 +161,7 @@ export class CharacterService {
 
     try {
       const charactersPath = await this.electronService.pathJoin(projectPath, 'characters');
-      
+
       // Check if characters directory exists
       const dirExists = await this.electronService.fileExists(charactersPath);
       if (!dirExists) {
@@ -176,7 +176,7 @@ export class CharacterService {
 
       // Get list of markdown files in characters directory
       const files = await this.getCharacterFiles(charactersPath);
-      
+
       // If no files found, just mark as loaded
       if (files.length === 0) {
         this.hasLoadedForCurrentProject = true;
@@ -234,7 +234,7 @@ export class CharacterService {
         ...data,
         created: now,
         modified: now,
-        filePath
+        filePath,
       };
 
       // Handle thumbnail if provided
@@ -273,14 +273,14 @@ export class CharacterService {
       }
 
       const characters = this.charactersSubject.value;
-      const index = characters.findIndex(char => char.id === id);
-      
+      const index = characters.findIndex((char) => char.id === id);
+
       if (index === -1) {
         return null;
       }
 
       const existingCharacter = characters[index];
-      
+
       // Handle thumbnail update
       let thumbnailPath = existingCharacter.thumbnail;
       if (data.thumbnail && data.thumbnail !== existingCharacter.thumbnail) {
@@ -297,14 +297,14 @@ export class CharacterService {
         ...existingCharacter,
         ...data,
         thumbnail: thumbnailPath,
-        modified: new Date()
+        modified: new Date(),
       };
 
       // Handle filename change if name changed
       if (data.name && data.name !== existingCharacter.name) {
         const newFilename = await this.generateCharacterFilename(data.name, project.path);
         const newFilePath = await this.electronService.pathJoin(project.path, 'characters', newFilename);
-        
+
         // Only rename if the new filename would be different
         const currentFilename = await this.electronService.pathBasename(existingCharacter.filePath);
         if (currentFilename !== newFilename) {
@@ -359,8 +359,8 @@ export class CharacterService {
 
     try {
       const characters = this.charactersSubject.value;
-      const character = characters.find(char => char.id === id);
-      
+      const character = characters.find((char) => char.id === id);
+
       if (!character) {
         return false;
       }
@@ -377,7 +377,7 @@ export class CharacterService {
       }
 
       // Update in-memory list
-      const filteredCharacters = characters.filter(char => char.id !== id);
+      const filteredCharacters = characters.filter((char) => char.id !== id);
       this.charactersSubject.next(filteredCharacters);
 
       return true;
@@ -393,8 +393,8 @@ export class CharacterService {
   async refreshCharacter(id: string): Promise<Character | null> {
     try {
       const characters = this.charactersSubject.value;
-      const existingCharacter = characters.find(char => char.id === id);
-      
+      const existingCharacter = characters.find((char) => char.id === id);
+
       if (!existingCharacter) {
         return null;
       }
@@ -403,7 +403,7 @@ export class CharacterService {
       const fileExists = await this.electronService.fileExists(existingCharacter.filePath);
       if (!fileExists) {
         // File was deleted externally, remove from memory
-        const filteredCharacters = characters.filter(char => char.id !== id);
+        const filteredCharacters = characters.filter((char) => char.id !== id);
         this.charactersSubject.next(filteredCharacters);
         return null;
       }
@@ -415,7 +415,7 @@ export class CharacterService {
       }
 
       // Update in-memory list
-      const index = characters.findIndex(char => char.id === id);
+      const index = characters.findIndex((char) => char.id === id);
       if (index !== -1) {
         characters[index] = refreshedCharacter;
         const sortedCharacters = [...characters].sort((a, b) => a.name.localeCompare(b.name));
@@ -465,11 +465,12 @@ export class CharacterService {
         tags: frontmatter.tags || [],
         books: frontmatter.books || [],
         thumbnail: frontmatter.thumbnail,
+        mangamaster: frontmatter.mangamaster,
         description: sections.description,
         notes: sections.notes,
         created: frontmatter.created ? new Date(frontmatter.created) : new Date(),
         modified: frontmatter.modified ? new Date(frontmatter.modified) : new Date(),
-        filePath
+        filePath,
       };
 
       return character;
@@ -490,8 +491,9 @@ export class CharacterService {
         tags: character.tags,
         books: character.books,
         thumbnail: character.thumbnail,
+        mangamaster: character.mangamaster,
         created: character.created.toISOString(),
-        modified: character.modified.toISOString()
+        modified: character.modified.toISOString(),
       };
 
       const content = this.generateCharacterContent(character.description, character.notes);
@@ -516,7 +518,9 @@ export class CharacterService {
         throw new Error(deleteResult.error);
       }
     } catch (error) {
-      console.warn(`File deletion not available - this requires Electron main process handlers to be implemented: ${error}`);
+      console.warn(
+        `File deletion not available - this requires Electron main process handlers to be implemented: ${error}`
+      );
       // Don't throw error - file will remain on disk but character will be removed from memory
     }
   }
@@ -527,20 +531,18 @@ export class CharacterService {
   private async getCharacterFiles(charactersPath: string): Promise<string[]> {
     try {
       const listResult = await this.electronService.listDirectory(charactersPath);
-      
+
       if (!listResult.success) {
         return [];
       }
-      
+
       // Filter for markdown files only
-      return (listResult.files || []).filter(file => file.endsWith('.md'));
+      return (listResult.files || []).filter((file) => file.endsWith('.md'));
     } catch (error) {
       console.error('Error getting character files:', error);
       return [];
     }
   }
-
-
 
   /**
    * Generates a safe filename for a character
@@ -548,11 +550,11 @@ export class CharacterService {
   private async generateCharacterFilename(characterName: string, projectPath: string): Promise<string> {
     const sanitized = await this.electronService.sanitizeFilename(characterName);
     const baseFilename = `${sanitized}.md`;
-    
+
     // Check if file already exists and generate unique name if needed
     const charactersPath = await this.electronService.pathJoin(projectPath, 'characters');
     const fullPath = await this.electronService.pathJoin(charactersPath, baseFilename);
-    
+
     const exists = await this.electronService.fileExists(fullPath);
     if (!exists) {
       return baseFilename;
@@ -561,13 +563,13 @@ export class CharacterService {
     // Generate unique filename
     let counter = 1;
     let uniqueFilename = baseFilename;
-    
+
     while (true) {
       const nameWithoutExt = sanitized;
       uniqueFilename = `${nameWithoutExt}-${counter}.md`;
       const uniquePath = await this.electronService.pathJoin(charactersPath, uniqueFilename);
       const uniqueExists = await this.electronService.fileExists(uniquePath);
-      
+
       if (!uniqueExists) {
         break;
       }
@@ -580,26 +582,32 @@ export class CharacterService {
   /**
    * Handles thumbnail upload and returns the filename
    */
-  private async handleThumbnailUpload(thumbnailPath: string, projectPath: string, characterId: string): Promise<string> {
+  private async handleThumbnailUpload(
+    thumbnailPath: string,
+    projectPath: string,
+    characterId: string
+  ): Promise<string> {
     try {
       // Generate unique filename for thumbnail
       const originalFilename = await this.electronService.pathBasename(thumbnailPath);
       const extension = originalFilename.split('.').pop() || 'jpg';
       const thumbnailFilename = `${characterId}.${extension}`;
-      
+
       // Create destination path
       const thumbnailsDir = await this.electronService.pathJoin(projectPath, 'thumbnails');
       const destPath = await this.electronService.pathJoin(thumbnailsDir, thumbnailFilename);
-      
+
       // Copy file to thumbnails directory
       const copyResult = await this.electronService.copyFile(thumbnailPath, destPath);
       if (!copyResult.success) {
         throw new Error(copyResult.error);
       }
-      
+
       return thumbnailFilename;
     } catch (error) {
-      console.warn(`Thumbnail copying not available - this requires Electron main process handlers to be implemented: ${error}`);
+      console.warn(
+        `Thumbnail copying not available - this requires Electron main process handlers to be implemented: ${error}`
+      );
       // Return original path as fallback
       return thumbnailPath;
     }
@@ -612,7 +620,7 @@ export class CharacterService {
     try {
       const thumbnailPath = await this.electronService.pathJoin(projectPath, 'thumbnails', thumbnailFilename);
       const exists = await this.electronService.fileExists(thumbnailPath);
-      
+
       if (exists) {
         const deleteResult = await this.electronService.deleteFile(thumbnailPath);
         if (!deleteResult.success) {
@@ -636,7 +644,7 @@ export class CharacterService {
 
     for (const line of lines) {
       const trimmedLine = line.trim();
-      
+
       if (trimmedLine.startsWith('## Description')) {
         currentSection = 'description';
         continue;
@@ -658,7 +666,7 @@ export class CharacterService {
 
     return {
       description: description.trim(),
-      notes: notes.trim()
+      notes: notes.trim(),
     };
   }
 
@@ -677,7 +685,7 @@ export class CharacterService {
     }
 
     const availableBooks = project.metadata.books || [];
-    const availableBookIds = availableBooks.map(book => book.id);
+    const availableBookIds = availableBooks.map((book) => book.id);
 
     for (const bookId of books) {
       if (!availableBookIds.includes(bookId)) {
@@ -691,11 +699,11 @@ export class CharacterService {
    */
   private generateCharacterContent(description: string, notes: string): string {
     let content = '';
-    
+
     if (description) {
       content += `## Description\n\n${description}\n\n`;
     }
-    
+
     if (notes) {
       content += `## Notes\n\n${notes}\n`;
     }
@@ -707,7 +715,7 @@ export class CharacterService {
    * Extracts ID from filename (removes extension and sanitization)
    */
   private extractIdFromFilename(filename: string): string {
-    // For now, use filename as ID. In a real implementation, 
+    // For now, use filename as ID. In a real implementation,
     // we might want to store the ID in the frontmatter
     return filename.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
   }

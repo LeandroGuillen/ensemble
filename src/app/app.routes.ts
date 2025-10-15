@@ -33,6 +33,11 @@ export const routes: Routes = [
     canActivate: [projectGuard]
   },
   {
+    path: 'ai-settings',
+    loadComponent: () => import('./features/ai-settings/ai-settings.component').then(m => m.AiSettingsComponent),
+    canActivate: [projectGuard]
+  },
+  {
     path: 'library',
     loadComponent: () => import('./features/library-management/library-management.component').then(m => m.LibraryManagementComponent),
     canActivate: [projectGuard]

@@ -1,0 +1,25 @@
+meta {
+  name: Generate
+  type: http
+  seq: 1
+}
+
+post {
+  url: http://localhost:11434/api/generate
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "model": "deepseek-r1:7b",
+    "prompt": "Generate a unique character name suitable for a story or novel. Context: Project: N23. Category: WIP. . Respond with ONLY the name, nothing else. No explanations, no quotes, just the name. Example of response: {\"name\": \"John\"}",
+    "stream": false,
+    "format": "json"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

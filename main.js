@@ -1,5 +1,7 @@
-const { app, BrowserWindow, dialog, ipcMain } = require("electron");
-const path = require("path");
+const { app, BrowserWindow, dialog, ipcMain } = require('electron');
+const path = require('path');
+const https = require('https');
+const http = require('http');
 const isDev = !app.isPackaged;
 
 let mainWindow;
@@ -8,7 +10,7 @@ function createWindow() {
   // Get app version for title
   const version = app.getVersion();
   const title = `Ensemble v${version}`;
-  
+
   // Create the browser window
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -19,28 +21,31 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-      enableRemoteModule: true
+      enableRemoteModule: true,
     },
     // icon: path.join(__dirname, "assets/icon.png"), // TODO: Add app icon
     show: false,
     autoHideMenuBar: true,
   });
 
+  // Remove menu completely to prevent Alt key from showing it
+  // mainWindow.setMenu(null);
+
   // Load the app
   if (isDev) {
-    mainWindow.loadURL("http://localhost:4200");
+    mainWindow.loadURL('http://localhost:4200');
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, "dist/index.html"));
+    mainWindow.loadFile(path.join(__dirname, 'dist/index.html'));
   }
 
   // Show window when ready to prevent visual flash
-  mainWindow.once("ready-to-show", () => {
+  mainWindow.once('ready-to-show', () => {
     mainWindow.show();
   });
 
   // Handle window closed
-  mainWindow.on("closed", () => {
+  mainWindow.on('closed', () => {
     mainWindow = null;
   });
 }
@@ -49,43 +54,41 @@ function createWindow() {
 app.whenReady().then(createWindow);
 
 // Quit when all windows are closed
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
     app.quit();
   }
 });
 
-app.on("activate", () => {
+app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
   }
 });
 
 // Handle folder selection dialog
-ipcMain.handle("select-folder", async () => {
+ipcMain.handle('select-folder', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
-    properties: ["openDirectory"],
-    title: "Select Work Folder",
+    properties: ['openDirectory'],
+    title: 'Select Work Folder',
   });
 
   return result.canceled ? null : result.filePaths[0];
 });
 
 // Handle file dialog for thumbnails
-ipcMain.handle("select-image", async () => {
+ipcMain.handle('select-image', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
-    properties: ["openFile"],
-    filters: [
-      { name: "Images", extensions: ["jpg", "jpeg", "png", "gif", "webp"] },
-    ],
-    title: "Select Character Thumbnail",
+    properties: ['openFile'],
+    filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp'] }],
+    title: 'Select Character Thumbnail',
   });
 
   return result.canceled ? null : result.filePaths[0];
 });
 
 // Handle version request
-ipcMain.handle("get-version", () => {
+ipcMain.handle('get-version', () => {
   return app.getVersion();
 });
 
@@ -94,7 +97,7 @@ const fs = require('fs').promises;
 const pathModule = require('path');
 
 // Handle directory creation
-ipcMain.handle("create-directory", async (event, dirPath) => {
+ipcMain.handle('create-directory', async (event, dirPath) => {
   try {
     await fs.mkdir(dirPath, { recursive: true });
     return { success: true };
@@ -104,7 +107,7 @@ ipcMain.handle("create-directory", async (event, dirPath) => {
 });
 
 // Handle file existence check
-ipcMain.handle("file-exists", async (event, filePath) => {
+ipcMain.handle('file-exists', async (event, filePath) => {
   try {
     await fs.access(filePath);
     return true;
@@ -114,7 +117,7 @@ ipcMain.handle("file-exists", async (event, filePath) => {
 });
 
 // Handle directory check
-ipcMain.handle("is-directory", async (event, dirPath) => {
+ipcMain.handle('is-directory', async (event, dirPath) => {
   try {
     const stats = await fs.stat(dirPath);
     return stats.isDirectory();
@@ -124,7 +127,7 @@ ipcMain.handle("is-directory", async (event, dirPath) => {
 });
 
 // Handle file reading
-ipcMain.handle("read-file", async (event, filePath) => {
+ipcMain.handle('read-file', async (event, filePath) => {
   try {
     const content = await fs.readFile(filePath, 'utf8');
     return { success: true, content };
@@ -134,12 +137,12 @@ ipcMain.handle("read-file", async (event, filePath) => {
 });
 
 // Handle file writing
-ipcMain.handle("write-file", async (event, filePath, content) => {
+ipcMain.handle('write-file', async (event, filePath, content) => {
   try {
     // Ensure directory exists
     const dirPath = pathModule.dirname(filePath);
     await fs.mkdir(dirPath, { recursive: true });
-    
+
     await fs.writeFile(filePath, content, 'utf8');
     return { success: true };
   } catch (error) {
@@ -148,20 +151,20 @@ ipcMain.handle("write-file", async (event, filePath, content) => {
 });
 
 // Handle atomic file writing (write to temp file first)
-ipcMain.handle("write-file-atomic", async (event, filePath, content) => {
+ipcMain.handle('write-file-atomic', async (event, filePath, content) => {
   const tempFilePath = `${filePath}.tmp.${Date.now()}`;
-  
+
   try {
     // Ensure directory exists
     const dirPath = pathModule.dirname(filePath);
     await fs.mkdir(dirPath, { recursive: true });
-    
+
     // Write to temporary file first
     await fs.writeFile(tempFilePath, content, 'utf8');
-    
+
     // Move temp file to target location (atomic on most filesystems)
     await fs.rename(tempFilePath, filePath);
-    
+
     return { success: true };
   } catch (error) {
     // Clean up temp file if it exists
@@ -170,26 +173,26 @@ ipcMain.handle("write-file-atomic", async (event, filePath, content) => {
     } catch {
       // Ignore cleanup errors
     }
-    
+
     return { success: false, error: error.message };
   }
 });
 
 // Handle path operations
-ipcMain.handle("path-join", (event, ...paths) => {
+ipcMain.handle('path-join', (event, ...paths) => {
   return pathModule.join(...paths);
 });
 
-ipcMain.handle("path-basename", (event, filePath, ext) => {
+ipcMain.handle('path-basename', (event, filePath, ext) => {
   return pathModule.basename(filePath, ext);
 });
 
-ipcMain.handle("path-dirname", (event, filePath) => {
+ipcMain.handle('path-dirname', (event, filePath) => {
   return pathModule.dirname(filePath);
 });
 
 // Handle filename sanitization
-ipcMain.handle("sanitize-filename", (event, filename) => {
+ipcMain.handle('sanitize-filename', (event, filename) => {
   return filename
     .replace(/[<>:"|?*]/g, '') // Remove invalid characters
     .replace(/\s+/g, '-') // Replace spaces with hyphens
@@ -199,7 +202,7 @@ ipcMain.handle("sanitize-filename", (event, filename) => {
 });
 
 // Handle file deletion
-ipcMain.handle("delete-file", async (event, filePath) => {
+ipcMain.handle('delete-file', async (event, filePath) => {
   try {
     await fs.unlink(filePath);
     return { success: true };
@@ -209,7 +212,7 @@ ipcMain.handle("delete-file", async (event, filePath) => {
 });
 
 // Handle directory listing
-ipcMain.handle("list-directory", async (event, dirPath) => {
+ipcMain.handle('list-directory', async (event, dirPath) => {
   try {
     const files = await fs.readdir(dirPath);
     return { success: true, files };
@@ -219,12 +222,12 @@ ipcMain.handle("list-directory", async (event, dirPath) => {
 });
 
 // Handle file copying
-ipcMain.handle("copy-file", async (event, sourcePath, destPath) => {
+ipcMain.handle('copy-file', async (event, sourcePath, destPath) => {
   try {
     // Ensure destination directory exists
     const destDir = pathModule.dirname(destPath);
     await fs.mkdir(destDir, { recursive: true });
-    
+
     // Copy file
     await fs.copyFile(sourcePath, destPath);
     return { success: true };
@@ -234,18 +237,18 @@ ipcMain.handle("copy-file", async (event, sourcePath, destPath) => {
 });
 
 // Handle file stats
-ipcMain.handle("get-file-stats", async (event, filePath) => {
+ipcMain.handle('get-file-stats', async (event, filePath) => {
   try {
     const stats = await fs.stat(filePath);
-    return { 
-      success: true, 
+    return {
+      success: true,
       stats: {
         size: stats.size,
         isFile: stats.isFile(),
         isDirectory: stats.isDirectory(),
         mtime: stats.mtime,
-        ctime: stats.ctime
-      }
+        ctime: stats.ctime,
+      },
     };
   } catch (error) {
     return { success: false, error: error.message };
@@ -253,11 +256,11 @@ ipcMain.handle("get-file-stats", async (event, filePath) => {
 });
 
 // Handle converting image to data URL
-ipcMain.handle("get-image-data-url", async (event, filePath) => {
+ipcMain.handle('get-image-data-url', async (event, filePath) => {
   try {
     const imageBuffer = await fs.readFile(filePath);
     const ext = pathModule.extname(filePath).toLowerCase();
-    
+
     let mimeType = 'image/jpeg'; // default
     switch (ext) {
       case '.png':
@@ -274,11 +277,81 @@ ipcMain.handle("get-image-data-url", async (event, filePath) => {
         mimeType = 'image/jpeg';
         break;
     }
-    
+
     const base64 = imageBuffer.toString('base64');
     return `data:${mimeType};base64,${base64}`;
   } catch (error) {
     console.error('Failed to convert image to data URL:', error);
     return null;
   }
+});
+
+// Handle AI HTTP requests
+ipcMain.handle('ai-request', async (event, url, options) => {
+  return new Promise((resolve, reject) => {
+    const urlObj = new URL(url);
+    const protocol = urlObj.protocol === 'https:' ? https : http;
+
+    // Force IPv4 for localhost to avoid IPv6 connection issues
+    let hostname = urlObj.hostname;
+    if (hostname === 'localhost') {
+      hostname = '127.0.0.1';
+    }
+
+    const requestOptions = {
+      hostname: hostname,
+      port: urlObj.port || (urlObj.protocol === 'https:' ? 443 : 80),
+      path: urlObj.pathname + urlObj.search,
+      method: options.method || 'GET',
+      headers: options.headers || {},
+      timeout: options.timeout || 30000,
+    };
+
+    const req = protocol.request(requestOptions, (res) => {
+      let data = '';
+
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+
+      res.on('end', () => {
+        try {
+          const response = {
+            status: res.statusCode,
+            headers: res.headers,
+            data: data,
+          };
+
+          // Try to parse JSON if content-type is application/json
+          if (res.headers['content-type']?.includes('application/json')) {
+            try {
+              response.data = JSON.parse(data);
+            } catch (e) {
+              // Keep as string if JSON parse fails
+            }
+          }
+
+          resolve(response);
+        } catch (error) {
+          reject(error);
+        }
+      });
+    });
+
+    req.on('error', (error) => {
+      reject(error);
+    });
+
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('Request timeout'));
+    });
+
+    // Write request body if provided
+    if (options.body) {
+      req.write(typeof options.body === 'string' ? options.body : JSON.stringify(options.body));
+    }
+
+    req.end();
+  });
 });

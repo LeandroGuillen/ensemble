@@ -10,7 +10,7 @@ declare global {
   providedIn: 'root'
 })
 export class ElectronService {
-  private ipcRenderer: any;
+  public ipcRenderer: any;
 
   constructor() {
     if (this.isElectron()) {

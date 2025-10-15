@@ -4,3 +4,4 @@ export { RelationshipService } from './relationship.service';
 export { FileWatcherService } from './file-watcher.service';
 export { ElectronService } from './electron.service';
 export { MetadataService } from './metadata.service';
+export { AiService } from './ai.service';

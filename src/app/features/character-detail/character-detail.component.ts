@@ -1,20 +1,23 @@
-import { Component, OnInit, OnDestroy, HostListener, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { AfterViewInit, Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { Character, CharacterFormData, Category, Tag, Book, Project } from '../../core/interfaces';
-import { CharacterService, ProjectService, ElectronService, MetadataService } from '../../core/services';
+import { Book, Category, Character, CharacterFormData, Project, Tag } from '../../core/interfaces';
+import { AiService, CharacterService, ElectronService, MetadataService, ProjectService } from '../../core/services';
 import { CategoryToggleComponent, ToggleOption } from '../../shared/category-toggle/category-toggle.component';
-import { MultiSelectButtonsComponent, SelectableItem } from '../../shared/multi-select-buttons/multi-select-buttons.component';
+import {
+  MultiSelectButtonsComponent,
+  SelectableItem,
+} from '../../shared/multi-select-buttons/multi-select-buttons.component';
 
 @Component({
   selector: 'app-character-detail',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, CategoryToggleComponent, MultiSelectButtonsComponent],
   templateUrl: './character-detail.component.html',
-  styleUrls: ['./character-detail.component.scss']
+  styleUrls: ['./character-detail.component.scss'],
 })
 export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('nameInput') nameInput?: ElementRef<HTMLInputElement>;
@@ -40,6 +43,10 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
   selectedThumbnailPath: string | null = null;
   thumbnailPreview: string | null = null;
 
+  // AI features
+  isGeneratingName = false;
+  aiEnabled = false;
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -47,42 +54,48 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
     private characterService: CharacterService,
     private projectService: ProjectService,
     private electronService: ElectronService,
-    private metadataService: MetadataService
+    private metadataService: MetadataService,
+    private aiService: AiService
   ) {
     this.characterForm = this.createForm();
   }
 
   ngOnInit(): void {
     // Subscribe to project changes
-    this.projectService.currentProject$
+    this.projectService.currentProject$.pipe(takeUntil(this.destroy$)).subscribe((project) => {
+      this.currentProject = project;
+      this.categories = this.projectService.getCategories();
+      this.tags = this.projectService.getTags();
+      this.books = this.metadataService.getBooks();
+
+      // Update cached selectable items
+      this.tagsSelectableItems = this.tags.map((tag) => ({
+        id: tag.id,
+        name: tag.name,
+        color: tag.color,
+      }));
+      this.booksSelectableItems = this.books.map((book) => ({
+        id: book.id,
+        name: book.name,
+        color: book.color,
+      }));
+
+      // Set default category if available
+      if (this.categories.length > 0 && !this.isEditing) {
+        const defaultCategory =
+          this.categories.find((cat) => cat.id === project?.metadata.settings.defaultCategory) || this.categories[0];
+        this.characterForm.patchValue({ category: defaultCategory.id });
+      }
+    });
+
+    // Subscribe to AI settings
+    this.aiService
+      .getAiSettings()
       .pipe(takeUntil(this.destroy$))
-      .subscribe(project => {
-        this.currentProject = project;
-        this.categories = this.projectService.getCategories();
-        this.tags = this.projectService.getTags();
-        this.books = this.metadataService.getBooks();
-
-        // Update cached selectable items
-        this.tagsSelectableItems = this.tags.map(tag => ({
-          id: tag.id,
-          name: tag.name,
-          color: tag.color
-        }));
-        this.booksSelectableItems = this.books.map(book => ({
-          id: book.id,
-          name: book.name,
-          color: book.color
-        }));
-
-        // Set default category if available
-        if (this.categories.length > 0 && !this.isEditing) {
-          const defaultCategory = this.categories.find(cat =>
-            cat.id === project?.metadata.settings.defaultCategory
-          ) || this.categories[0];
-          this.characterForm.patchValue({ category: defaultCategory.id });
-        }
+      .subscribe((settings) => {
+        this.aiEnabled = settings?.enabled || false;
       });
-    
+
     const characterId = this.route.snapshot.paramMap.get('id');
     if (characterId && characterId !== 'new') {
       this.isEditing = true;
@@ -123,18 +136,19 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
     return this.fb.group({
       name: ['', [Validators.required, Validators.minLength(1), Validators.maxLength(100)]],
       category: ['', Validators.required],
+      mangamaster: [''],
       tags: [[]],
       books: [[]],
       thumbnail: [''],
       description: [''],
-      notes: ['']
+      notes: [''],
     });
   }
 
   private loadCharacter(id: string): void {
     this.isLoading = true;
     this.error = null;
-    
+
     try {
       this.character = this.characterService.getCharacterById(id) || null;
       if (this.character) {
@@ -145,9 +159,9 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
           books: this.character.books,
           thumbnail: this.character.thumbnail,
           description: this.character.description,
-          notes: this.character.notes
+          notes: this.character.notes,
         });
-        
+
         // Set thumbnail preview
         if (this.character.thumbnail && this.currentProject) {
           this.loadThumbnailPreview(`${this.currentProject.path}/thumbnails/${this.character.thumbnail}`);
@@ -180,9 +194,9 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
     try {
       const formData: CharacterFormData = {
         ...this.characterForm.value,
-        thumbnail: this.selectedThumbnailPath || this.characterForm.value.thumbnail
+        thumbnail: this.selectedThumbnailPath || this.characterForm.value.thumbnail,
       };
-      
+
       if (this.isEditing && this.character) {
         const updatedCharacter = await this.characterService.updateCharacter(this.character.id, formData);
         if (!updatedCharacter) {
@@ -191,7 +205,7 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
       } else {
         await this.characterService.createCharacter(formData);
       }
-      
+
       this.router.navigate(['/characters']);
     } catch (error) {
       this.error = `Failed to save character: ${error}`;
@@ -214,13 +228,13 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
   onTagChange(tagId: string, checked: boolean): void {
     const currentTags = this.characterForm.get('tags')?.value || [];
     let updatedTags: string[];
-    
+
     if (checked) {
       updatedTags = [...currentTags, tagId];
     } else {
       updatedTags = currentTags.filter((id: string) => id !== tagId);
     }
-    
+
     this.characterForm.patchValue({ tags: updatedTags });
     this.characterForm.markAsDirty();
   }
@@ -233,13 +247,13 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
   onBookChange(bookId: string, checked: boolean): void {
     const currentBooks = this.characterForm.get('books')?.value || [];
     let updatedBooks: string[];
-    
+
     if (checked) {
       updatedBooks = [...currentBooks, bookId];
     } else {
       updatedBooks = currentBooks.filter((id: string) => id !== bookId);
     }
-    
+
     this.characterForm.patchValue({ books: updatedBooks });
     this.characterForm.markAsDirty();
   }
@@ -281,17 +295,17 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
   }
 
   getCategoryName(categoryId: string): string {
-    const category = this.categories.find(cat => cat.id === categoryId);
+    const category = this.categories.find((cat) => cat.id === categoryId);
     return category?.name || categoryId;
   }
 
   getCategoryColor(categoryId: string): string {
-    const category = this.categories.find(cat => cat.id === categoryId);
+    const category = this.categories.find((cat) => cat.id === categoryId);
     return category?.color || '#95a5a6';
   }
 
   getCategoryTooltip(categoryId: string): string {
-    const category = this.categories.find(cat => cat.id === categoryId);
+    const category = this.categories.find((cat) => cat.id === categoryId);
     if (!category) return categoryId;
 
     if (category.description) {
@@ -301,10 +315,10 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
   }
 
   getCategoryToggleOptions(): ToggleOption[] {
-    return this.categories.map(cat => ({
+    return this.categories.map((cat) => ({
       id: cat.id,
       name: cat.name,
-      tooltip: cat.description || cat.name
+      tooltip: cat.description || cat.name,
     }));
   }
 
@@ -327,12 +341,12 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
   }
 
   getTagName(tagId: string): string {
-    const tag = this.tags.find(t => t.id === tagId);
+    const tag = this.tags.find((t) => t.id === tagId);
     return tag?.name || tagId;
   }
 
   getTagColor(tagId: string): string {
-    const tag = this.tags.find(t => t.id === tagId);
+    const tag = this.tags.find((t) => t.id === tagId);
     return tag?.color || '#95a5a6';
   }
 
@@ -343,10 +357,14 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
         return `${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)} is required`;
       }
       if (field.errors?.['minlength']) {
-        return `${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)} must be at least ${field.errors['minlength'].requiredLength} characters`;
+        return `${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)} must be at least ${
+          field.errors['minlength'].requiredLength
+        } characters`;
       }
       if (field.errors?.['maxlength']) {
-        return `${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)} must be no more than ${field.errors['maxlength'].requiredLength} characters`;
+        return `${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)} must be no more than ${
+          field.errors['maxlength'].requiredLength
+        } characters`;
       }
     }
     return null;
@@ -375,9 +393,50 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {
-    Object.keys(formGroup.controls).forEach(key => {
+    Object.keys(formGroup.controls).forEach((key) => {
       const control = formGroup.get(key);
       control?.markAsTouched();
     });
+  }
+
+  async generateName(): Promise<void> {
+    if (!this.aiEnabled) {
+      this.error = 'AI is not enabled. Please configure AI settings first.';
+      return;
+    }
+
+    this.isGeneratingName = true;
+    this.error = null;
+
+    try {
+      // Build context for name generation
+      const categoryId = this.characterForm.get('category')?.value;
+      const category = this.categories.find((cat) => cat.id === categoryId);
+      const selectedTags = this.characterForm.get('tags')?.value || [];
+      const tags = this.tags.filter((tag) => selectedTags.includes(tag.id));
+
+      let context = '';
+      if (this.currentProject) {
+        context += `Project: ${this.currentProject.metadata.projectName}. `;
+      }
+      if (category) {
+        context += `Category: ${category.name}. `;
+      }
+      if (tags.length > 0) {
+        context += `Tags: ${tags.map((t) => t.name).join(', ')}.`;
+      }
+
+      const generatedName = await this.aiService.generateCharacterName({ context });
+
+      if (generatedName) {
+        this.characterForm.patchValue({ name: generatedName });
+        this.characterForm.markAsDirty();
+      }
+    } catch (error) {
+      console.error('Failed to generate name:', error);
+      this.error = error instanceof Error ? error.message : 'Failed to generate name';
+    } finally {
+      this.isGeneratingName = false;
+    }
   }
 }

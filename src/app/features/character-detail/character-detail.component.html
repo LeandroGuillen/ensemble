@@ -82,15 +82,27 @@
               <!-- Name -->
               <div class="form-group form-group-flex">
                 <label class="form-label" for="name"> Name * </label>
-                <input
-                  #nameInput
-                  type="text"
-                  id="name"
-                  class="form-control"
-                  formControlName="name"
-                  placeholder="Enter character name"
-                  [class.error]="getFieldError('name')"
-                />
+                <div class="name-input-group">
+                  <input
+                    #nameInput
+                    type="text"
+                    id="name"
+                    class="form-control"
+                    formControlName="name"
+                    placeholder="Enter character name"
+                    [class.error]="getFieldError('name')"
+                  />
+                  <button
+                    type="button"
+                    class="generate-name-btn"
+                    (click)="generateName()"
+                    [disabled]="!aiEnabled || isGeneratingName"
+                    [title]="aiEnabled ? 'Generate name with AI' : 'Enable AI in settings to generate names'"
+                  >
+                    <span *ngIf="!isGeneratingName">🎲</span>
+                    <span *ngIf="isGeneratingName" class="spinner">⏳</span>
+                  </button>
+                </div>
                 <div class="error-text" *ngIf="getFieldError('name')">
                   {{ getFieldError('name') }}
                 </div>
