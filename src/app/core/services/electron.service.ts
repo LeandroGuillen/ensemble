@@ -249,12 +249,60 @@ export class ElectronService {
     if (!this.isElectron()) {
       return null;
     }
-    
+
     try {
       return await this.ipcRenderer.invoke('get-image-data-url', filePath);
     } catch (error) {
       console.error('Failed to get image as data URL:', error);
       return null;
+    }
+  }
+
+  async moveDirectory(sourcePath: string, destPath: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.isElectron()) {
+      return { success: false, error: 'Not running in Electron' };
+    }
+    return await this.ipcRenderer.invoke('move-directory', sourcePath, destPath);
+  }
+
+  async deleteDirectoryRecursive(dirPath: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.isElectron()) {
+      return { success: false, error: 'Not running in Electron' };
+    }
+    return await this.ipcRenderer.invoke('delete-directory-recursive', dirPath);
+  }
+
+  async readDirectoryFiles(dirPath: string): Promise<{ success: boolean; files?: string[]; directories?: string[]; error?: string }> {
+    if (!this.isElectron()) {
+      return { success: false, error: 'Not running in Electron' };
+    }
+    return await this.ipcRenderer.invoke('read-directory-files', dirPath);
+  }
+
+  // File watching
+  async startFileWatcher(projectPath: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.isElectron()) {
+      return { success: false, error: 'Not running in Electron' };
+    }
+    return await this.ipcRenderer.invoke('start-file-watcher', projectPath);
+  }
+
+  async stopFileWatcher(): Promise<{ success: boolean; error?: string }> {
+    if (!this.isElectron()) {
+      return { success: false, error: 'Not running in Electron' };
+    }
+    return await this.ipcRenderer.invoke('stop-file-watcher');
+  }
+
+  onFileChanged(callback: (event: any, data: { type: string; path: string; filename: string }) => void): void {
+    if (this.isElectron()) {
+      this.ipcRenderer.on('file-changed', callback);
+    }
+  }
+
+  removeFileChangedListener(callback: (event: any, data: any) => void): void {
+    if (this.isElectron()) {
+      this.ipcRenderer.removeListener('file-changed', callback);
     }
   }
 }

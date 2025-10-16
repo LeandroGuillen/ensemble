@@ -628,8 +628,10 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       return null;
     }
 
-    // Return the full path to the thumbnail
-    return `${this.currentProject.path}/thumbnails/${character.thumbnail}`;
+    // New structure: thumbnail is in character's folder
+    // character.folderPath is the full path to character folder
+    // character.thumbnail is just the filename
+    return `${character.folderPath}/${character.thumbnail}`;
   }
 
   async getThumbnailDataUrl(character: Character): Promise<string | null> {
@@ -850,5 +852,54 @@ export class CharacterListComponent implements OnInit, OnDestroy {
 
   onViewCharacterSelectionToggle(characterId: string): void {
     this.toggleCharacterSelection(characterId);
+  }
+
+  // Trash management methods
+  async viewTrash(): Promise<void> {
+    try {
+      const deletedCharacters = await this.characterService.getDeletedCharacters();
+      console.log('Deleted characters:', deletedCharacters);
+      // TODO: Show trash UI/modal with deletedCharacters
+      // Each item has: folderName, name, deletedAt
+    } catch (error) {
+      this.error = `Failed to load trash: ${error}`;
+      console.error('Failed to load trash:', error);
+    }
+  }
+
+  async restoreCharacter(folderName: string): Promise<void> {
+    try {
+      await this.characterService.restoreCharacter(folderName);
+      // Characters are automatically reloaded after restore
+    } catch (error) {
+      this.error = `Failed to restore character: ${error}`;
+      console.error('Failed to restore character:', error);
+    }
+  }
+
+  async emptyTrash(): Promise<void> {
+    if (!confirm('Are you sure you want to permanently delete all characters in trash?\n\nThis action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await this.characterService.emptyTrash();
+    } catch (error) {
+      this.error = `Failed to empty trash: ${error}`;
+      console.error('Failed to empty trash:', error);
+    }
+  }
+
+  async permanentlyDeleteCharacter(folderName: string): Promise<void> {
+    if (!confirm('Are you sure you want to permanently delete this character?\n\nThis action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await this.characterService.permanentlyDeleteCharacter(folderName);
+    } catch (error) {
+      this.error = `Failed to permanently delete character: ${error}`;
+      console.error('Failed to permanently delete character:', error);
+    }
   }
 }

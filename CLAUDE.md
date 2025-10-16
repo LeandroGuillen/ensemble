@@ -26,12 +26,19 @@ Ensemble is an Electron + Angular 17 desktop application for character managemen
 
 Located in `src/app/core/services/`:
 
-- **ElectronService**: IPC bridge to Electron main process for all file system operations
+- **ElectronService**: IPC bridge to Electron main process for all file system operations (including directory operations)
 - **ProjectService**: Manages work folder selection and `ensemble.json` (categories, tags, settings, relationships)
-- **CharacterService**: CRUD operations for character markdown files with frontmatter parsing
+- **CharacterService**: CRUD operations for character folders, handles folder-based structure, trash management, and additional fields
 - **RelationshipService**: Manages relationship data (nodes/edges) and provides data for vis.js graph
 - **MetadataService**: Validates characters against project metadata (categories/tags)
 - **FileWatcherService**: Monitors work folder for external file changes (using chokidar)
+
+### Core Utilities
+
+Located in `src/app/core/utils/`:
+
+- **slug.utils.ts**: Slug generation for folder names, filename-to-field-name conversion, timestamp utilities
+- **markdown.utils.ts**: Markdown parsing and frontmatter handling
 
 ### Data Flow
 
@@ -95,26 +102,40 @@ Each project has this structure:
 ```
 project-folder/
 ├── ensemble.json           # Project metadata: categories, tags, settings, relationships
-├── character-name.md       # Character files (YAML frontmatter + markdown)
-├── another-character.md
-└── thumbnails/            # Character images
-    ├── character-name.jpg
-    └── another-character.png
+└── characters/             # Character folders organized by category
+    ├── <category-slug>/    # Category folder (e.g., "main-character")
+    │   └── <character-slug>/  # Character folder (e.g., "john-doe")
+    │       ├── <character-slug>.md    # Main character file
+    │       ├── thumbnail.png          # Character thumbnail (any filename)
+    │       ├── additional-field.md    # Additional markdown files become fields
+    │       └── img/                   # Folder for other images
+    └── _deleted/           # Trash folder for deleted characters
+        └── <character-slug>-<timestamp>/  # Deleted character (timestamped)
 ```
 
+### Trash Management
+
+Deleted characters are moved to `characters/_deleted/` instead of being permanently deleted:
+- Each deleted character folder is timestamped: `<slug>-<timestamp>`
+- Characters can be restored from trash
+- Trash can be emptied to permanently delete all characters
+- Individual characters can be permanently deleted from trash
+
 ### Character File Format
+
+Main character file (`<character-slug>.md`):
 
 ```markdown
 ---
 name: "Character Name"
-category: "Main Character"
+category: "main-character"
 tags: ["protagonist", "magic-user"]
-thumbnail: "character-name.jpg"
+books: ["book-id-1"]
+thumbnail: "thumbnail.png"  # Filename in character folder
+mangamaster: "url-to-image"
 created: "2024-01-15T10:30:00Z"
 modified: "2024-01-20T14:45:00Z"
 ---
-
-# Character Name
 
 ## Description
 Physical description...
@@ -122,6 +143,13 @@ Physical description...
 ## Notes
 Personality, backstory...
 ```
+
+### Additional Fields
+
+Any `.md` file in the character folder (except the main file) becomes an additional field:
+- `backstory.md` → "Backstory" field
+- `character-arc.md` → "Character Arc" field
+- Field names are auto-generated from filenames
 
 ## Key Implementation Details
 

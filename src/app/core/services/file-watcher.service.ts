@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
+import { ElectronService } from './electron.service';
 
 export interface FileChangeEvent {
   type: 'add' | 'change' | 'unlink';
@@ -13,11 +14,11 @@ export interface FileChangeEvent {
 export class FileWatcherService {
   private fileChangesSubject = new Subject<FileChangeEvent>();
   public fileChanges$ = this.fileChangesSubject.asObservable();
-  
-  private watcher: any = null;
-  private isWatching = false;
 
-  constructor() {}
+  private isWatching = false;
+  private fileChangedCallback: ((event: any, data: { type: string; path: string; filename: string }) => void) | null = null;
+
+  constructor(private electronService: ElectronService) {}
 
   async startWatching(projectPath: string): Promise<void> {
     if (this.isWatching) {
@@ -25,12 +26,25 @@ export class FileWatcherService {
     }
 
     try {
-      // TODO: Implement chokidar file watching
       console.log('Starting file watcher for:', projectPath);
+
+      // Create callback to handle file change events from main process
+      this.fileChangedCallback = (_event: any, data: { type: string; path: string; filename: string }) => {
+        this.handleFileChange(data.type, data.path);
+      };
+
+      // Register listener for file change events
+      this.electronService.onFileChanged(this.fileChangedCallback);
+
+      // Start the file watcher in the main process
+      const result = await this.electronService.startFileWatcher(projectPath);
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to start file watcher');
+      }
+
       this.isWatching = true;
-      
-      // Mock file change events for development
-      // In real implementation, this would use chokidar to watch the file system
+      console.log('File watcher started successfully');
     } catch (error) {
       console.error('Failed to start file watcher:', error);
       throw error;
@@ -38,12 +52,28 @@ export class FileWatcherService {
   }
 
   async stopWatching(): Promise<void> {
-    if (this.watcher) {
-      // TODO: Implement watcher cleanup
-      console.log('Stopping file watcher');
-      this.watcher = null;
+    if (!this.isWatching) {
+      return;
     }
-    this.isWatching = false;
+
+    try {
+      console.log('Stopping file watcher');
+
+      // Remove event listener
+      if (this.fileChangedCallback) {
+        this.electronService.removeFileChangedListener(this.fileChangedCallback);
+        this.fileChangedCallback = null;
+      }
+
+      // Stop the file watcher in the main process
+      await this.electronService.stopFileWatcher();
+
+      this.isWatching = false;
+      console.log('File watcher stopped successfully');
+    } catch (error) {
+      console.error('Failed to stop file watcher:', error);
+      this.isWatching = false;
+    }
   }
 
   isCurrentlyWatching(): boolean {

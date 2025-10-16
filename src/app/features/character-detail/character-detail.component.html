@@ -209,6 +209,30 @@
               </div>
             </div>
           </div>
+
+          <!-- Additional Fields Section -->
+          <div class="form-section" *ngIf="character && getAdditionalFieldNames().length > 0">
+            <div class="section-header">
+              <h3>Additional Fields</h3>
+              <span class="field-hint">Extra markdown files in character folder</span>
+            </div>
+
+            <div class="form-group" *ngFor="let fieldName of getAdditionalFieldNames()">
+              <label class="form-label" [for]="'field-' + fieldName">
+                {{ fieldName }}
+                <span class="field-hint">{{ getFieldFileName(fieldName) }}</span>
+              </label>
+              <textarea
+                [id]="'field-' + fieldName"
+                class="form-control"
+                [value]="getAdditionalFieldValue(fieldName)"
+                (input)="onAdditionalFieldChange(fieldName, $event)"
+                rows="6"
+                placeholder="Content for {{ fieldName }}..."
+              ></textarea>
+              <div class="char-count">{{ getAdditionalFieldValue(fieldName).length }} characters</div>
+            </div>
+          </div>
         </form>
       </div>
     </div>

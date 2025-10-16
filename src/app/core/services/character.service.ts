@@ -2,8 +2,10 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { Character, CharacterFormData } from '../interfaces/character.interface';
 import { MarkdownUtils } from '../utils/markdown.utils';
+import { slugify, slugifyWithTimestamp, filenameToFieldName } from '../utils/slug.utils';
 import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
+import { FileWatcherService } from './file-watcher.service';
 
 interface CharacterFrontmatter {
   name: string;
@@ -25,7 +27,16 @@ export class CharacterService {
   private hasLoadedForCurrentProject = false;
   private currentProjectPath: string | null = null;
 
-  constructor(private electronService: ElectronService, private projectService: ProjectService) {}
+  constructor(
+    private electronService: ElectronService,
+    private projectService: ProjectService,
+    private fileWatcherService: FileWatcherService
+  ) {
+    // Subscribe to file changes to auto-reload characters
+    this.fileWatcherService.fileChanges$.subscribe((event) => {
+      this.handleFileChange(event);
+    });
+  }
 
   getCharacters(): Observable<Character[]> {
     return this.characters$;
@@ -49,102 +60,27 @@ export class CharacterService {
 
   /**
    * Attempts to load a specific character file by filename (for testing)
+   * @deprecated Legacy method - use forceReloadCharacters instead
    */
   async loadSpecificCharacterFile(filename: string): Promise<Character | null> {
-    if (!this.currentProjectPath) {
-      throw new Error('No project loaded');
-    }
-
-    try {
-      const charactersPath = await this.electronService.pathJoin(this.currentProjectPath, 'characters');
-      const filePath = await this.electronService.pathJoin(charactersPath, filename);
-
-      const exists = await this.electronService.fileExists(filePath);
-      if (!exists) {
-        return null;
-      }
-
-      const character = await this.loadCharacterFromFile(filePath);
-      if (character) {
-        // Add to the character list if not already there
-        const currentCharacters = this.charactersSubject.value;
-        const exists = currentCharacters.find((c) => c.id === character.id || c.filePath === character.filePath);
-
-        if (!exists) {
-          const updatedCharacters = [...currentCharacters, character].sort((a, b) => a.name.localeCompare(b.name));
-          this.charactersSubject.next(updatedCharacters);
-        }
-      }
-
-      return character;
-    } catch (error) {
-      console.error(`Failed to load specific character file ${filename}:`, error);
-      return null;
-    }
+    console.warn('loadSpecificCharacterFile is deprecated - use forceReloadCharacters instead');
+    await this.forceReloadCharacters();
+    return null;
   }
 
   /**
    * Scans for existing character files more aggressively
-   * This is useful when you know there are character files but they're not being detected
+   * @deprecated Legacy method - use forceReloadCharacters instead
    */
   async scanForExistingCharacters(): Promise<number> {
-    if (!this.currentProjectPath) {
-      throw new Error('No project loaded');
-    }
-
-    const charactersPath = await this.electronService.pathJoin(this.currentProjectPath, 'characters');
-
-    // First check if the directory exists
-    const dirExists = await this.electronService.fileExists(charactersPath);
-
-    if (!dirExists) {
-      const createResult = await this.electronService.createDirectory(charactersPath);
-      if (!createResult.success) {
-        throw new Error(`Failed to create characters directory: ${createResult.error}`);
-      }
-      return 0;
-    }
-
-    const files = await this.getCharacterFiles(charactersPath);
-
-    let loadedCount = 0;
-    const characters: Character[] = [];
-
-    for (const filename of files) {
-      try {
-        const filePath = await this.electronService.pathJoin(charactersPath, filename);
-        const character = await this.loadCharacterFromFile(filePath);
-        if (character) {
-          characters.push(character);
-          loadedCount++;
-        }
-      } catch (error) {
-        console.warn(`Failed to load character file ${filename}:`, error);
-      }
-    }
-
-    // Merge with existing characters (avoid duplicates)
-    const existingCharacters = this.charactersSubject.value;
-    const allCharacters = [...existingCharacters];
-
-    for (const newChar of characters) {
-      const exists = allCharacters.find(
-        (existing) => existing.id === newChar.id || existing.filePath === newChar.filePath
-      );
-      if (!exists) {
-        allCharacters.push(newChar);
-      }
-    }
-
-    // Sort and update
-    allCharacters.sort((a, b) => a.name.localeCompare(b.name));
-    this.charactersSubject.next(allCharacters);
-
-    return loadedCount;
+    console.warn('scanForExistingCharacters is deprecated - use forceReloadCharacters instead');
+    await this.forceReloadCharacters();
+    return this.charactersSubject.value.length;
   }
 
   /**
    * Loads all characters from the current project's characters directory
+   * New structure: characters/<category>/<character-slug>/
    */
   async loadCharacters(projectPath: string): Promise<void> {
     // If this is the same project and we've already loaded, don't reload
@@ -174,28 +110,42 @@ export class CharacterService {
         return;
       }
 
-      // Get list of markdown files in characters directory
-      const files = await this.getCharacterFiles(charactersPath);
-
-      // If no files found, just mark as loaded
-      if (files.length === 0) {
+      // Read all category folders under characters/
+      const dirContents = await this.electronService.readDirectoryFiles(charactersPath);
+      if (!dirContents.success || !dirContents.directories) {
         this.hasLoadedForCurrentProject = true;
         return;
       }
 
       const characters: Character[] = [];
 
-      // Load each character file
-      for (const filename of files) {
-        try {
-          const filePath = await this.electronService.pathJoin(charactersPath, filename);
-          const character = await this.loadCharacterFromFile(filePath);
-          if (character) {
-            characters.push(character);
+      // Iterate through category folders (skip _deleted and other special folders)
+      for (const categoryFolder of dirContents.directories) {
+        // Skip trash folder
+        if (categoryFolder === '_deleted') {
+          continue;
+        }
+
+        const categoryPath = await this.electronService.pathJoin(charactersPath, categoryFolder);
+
+        // Read character folders within category
+        const categoryContents = await this.electronService.readDirectoryFiles(categoryPath);
+        if (!categoryContents.success || !categoryContents.directories) {
+          continue;
+        }
+
+        // Load each character folder
+        for (const characterSlug of categoryContents.directories) {
+          try {
+            const characterFolderPath = await this.electronService.pathJoin(categoryPath, characterSlug);
+            const character = await this.loadCharacterFromFolder(characterFolderPath, categoryFolder, characterSlug);
+            if (character) {
+              characters.push(character);
+            }
+          } catch (error) {
+            console.warn(`Failed to load character from ${categoryFolder}/${characterSlug}:`, error);
+            // Continue loading other characters even if one fails
           }
-        } catch (error) {
-          console.warn(`Failed to load character file ${filename}:`, error);
-          // Continue loading other characters even if one fails
         }
       }
 
@@ -211,6 +161,7 @@ export class CharacterService {
 
   /**
    * Creates a new character and saves it to disk
+   * New structure: characters/<category>/<character-slug>/
    */
   async createCharacter(data: CharacterFormData): Promise<Character> {
     const project = this.projectService.getCurrentProject();
@@ -222,24 +173,47 @@ export class CharacterService {
       // Validate book references
       await this.validateBookReferences(data.books);
 
-      // Generate unique ID and filename
+      // Generate unique ID and slug
       const id = this.generateId();
-      const filename = await this.generateCharacterFilename(data.name, project.path);
-      const filePath = await this.electronService.pathJoin(project.path, 'characters', filename);
+      const slug = slugify(data.name);
+
+      // Create folder structure: characters/<category>/<slug>/
+      const categorySlug = slugify(data.category);
+      const categoryPath = await this.electronService.pathJoin(project.path, 'characters', categorySlug);
+      const characterFolderPath = await this.electronService.pathJoin(categoryPath, slug);
+
+      // Ensure category folder exists
+      const categoryCreateResult = await this.electronService.createDirectory(categoryPath);
+      if (!categoryCreateResult.success) {
+        throw new Error(`Failed to create category directory: ${categoryCreateResult.error}`);
+      }
+
+      // Create character folder
+      const folderCreateResult = await this.electronService.createDirectory(characterFolderPath);
+      if (!folderCreateResult.success) {
+        throw new Error(`Failed to create character directory: ${folderCreateResult.error}`);
+      }
+
+      // Main character file path
+      const filePath = await this.electronService.pathJoin(characterFolderPath, `${slug}.md`);
 
       // Create character object
       const now = new Date();
       const character: Character = {
         id,
         ...data,
+        mangamaster: data.mangamaster || '',
         created: now,
         modified: now,
         filePath,
+        folderPath: characterFolderPath,
+        additionalFields: {},
+        additionalFieldsFilenames: {},
       };
 
-      // Handle thumbnail if provided
+      // Handle thumbnail if provided - copy to character folder
       if (data.thumbnail) {
-        character.thumbnail = await this.handleThumbnailUpload(data.thumbnail, project.path, id);
+        character.thumbnail = await this.handleThumbnailUploadToFolder(data.thumbnail, characterFolderPath);
       }
 
       // Save character to file
@@ -258,9 +232,38 @@ export class CharacterService {
   }
 
   /**
-   * Updates an existing character and saves changes to disk
+   * Saves additional fields to the character folder
+   * Uses original filenames from additionalFieldsFilenames mapping
    */
-  async updateCharacter(id: string, data: Partial<CharacterFormData>): Promise<Character | null> {
+  async saveAdditionalFields(characterId: string, additionalFields: Record<string, string>): Promise<void> {
+    const characters = this.charactersSubject.value;
+    const character = characters.find((char) => char.id === characterId);
+
+    if (!character) {
+      throw new Error('Character not found');
+    }
+
+    for (const [fieldName, content] of Object.entries(additionalFields)) {
+      // Use the original filename if available, otherwise create a new one
+      const filename = character.additionalFieldsFilenames[fieldName] || fieldName.toLowerCase().replace(/\s+/g, '-') + '.md';
+      const filePath = await this.electronService.pathJoin(character.folderPath, filename);
+
+      // Write the file
+      const writeResult = await this.electronService.writeFileAtomic(filePath, content);
+      if (!writeResult.success) {
+        throw new Error(`Failed to save ${filename}: ${writeResult.error}`);
+      }
+    }
+
+    // Reload the character to update additionalFields in memory
+    await this.refreshCharacter(characterId);
+  }
+
+  /**
+   * Updates an existing character and saves changes to disk
+   * Handles folder moves when category or name changes
+   */
+  async updateCharacter(id: string, data: Partial<CharacterFormData>, additionalFieldsChanges?: Record<string, string>): Promise<Character | null> {
     const project = this.projectService.getCurrentProject();
     if (!project) {
       throw new Error('No project loaded');
@@ -280,61 +283,83 @@ export class CharacterService {
       }
 
       const existingCharacter = characters[index];
+      let newFolderPath = existingCharacter.folderPath;
+      let newFilePath = existingCharacter.filePath;
+
+      // Check if we need to move the folder (category or name changed)
+      const categoryChanged = data.category && data.category !== existingCharacter.category;
+      const nameChanged = data.name && data.name !== existingCharacter.name;
+
+      if (categoryChanged || nameChanged) {
+        const newName = data.name || existingCharacter.name;
+        const newCategory = data.category || existingCharacter.category;
+        const newSlug = slugify(newName);
+        const newCategorySlug = slugify(newCategory);
+
+        const newCategoryPath = await this.electronService.pathJoin(project.path, 'characters', newCategorySlug);
+        const newCharacterFolderPath = await this.electronService.pathJoin(newCategoryPath, newSlug);
+
+        // Create new category folder if it doesn't exist
+        await this.electronService.createDirectory(newCategoryPath);
+
+        // Move the entire character folder
+        const moveResult = await this.electronService.moveDirectory(existingCharacter.folderPath, newCharacterFolderPath);
+        if (!moveResult.success) {
+          throw new Error(`Failed to move character folder: ${moveResult.error}`);
+        }
+
+        // Update paths
+        newFolderPath = newCharacterFolderPath;
+        newFilePath = await this.electronService.pathJoin(newCharacterFolderPath, `${newSlug}.md`);
+
+        // If the slug changed, rename the main .md file
+        if (nameChanged) {
+          const oldSlug = slugify(existingCharacter.name);
+          const oldMdPath = await this.electronService.pathJoin(newCharacterFolderPath, `${oldSlug}.md`);
+          const oldMdExists = await this.electronService.fileExists(oldMdPath);
+
+          if (oldMdExists && oldSlug !== newSlug) {
+            const copyResult = await this.electronService.copyFile(oldMdPath, newFilePath);
+            if (copyResult.success) {
+              await this.electronService.deleteFile(oldMdPath);
+            }
+          }
+        }
+      }
 
       // Handle thumbnail update
-      let thumbnailPath = existingCharacter.thumbnail;
+      let thumbnailFilename = existingCharacter.thumbnail;
       if (data.thumbnail && data.thumbnail !== existingCharacter.thumbnail) {
         // Remove old thumbnail if it exists
         if (existingCharacter.thumbnail) {
-          await this.removeThumbnail(existingCharacter.thumbnail, project.path);
+          const oldThumbnailPath = await this.electronService.pathJoin(newFolderPath, existingCharacter.thumbnail);
+          const thumbnailExists = await this.electronService.fileExists(oldThumbnailPath);
+          if (thumbnailExists) {
+            await this.electronService.deleteFile(oldThumbnailPath);
+          }
         }
-        // Upload new thumbnail
-        thumbnailPath = await this.handleThumbnailUpload(data.thumbnail, project.path, id);
+        // Upload new thumbnail to character folder
+        thumbnailFilename = await this.handleThumbnailUploadToFolder(data.thumbnail, newFolderPath);
       }
 
       // Create updated character
       const updatedCharacter: Character = {
         ...existingCharacter,
         ...data,
-        thumbnail: thumbnailPath,
+        mangamaster: data.mangamaster !== undefined ? data.mangamaster : existingCharacter.mangamaster,
+        thumbnail: thumbnailFilename,
         modified: new Date(),
+        filePath: newFilePath,
+        folderPath: newFolderPath,
       };
-
-      // Handle filename change if name changed
-      if (data.name && data.name !== existingCharacter.name) {
-        const newFilename = await this.generateCharacterFilename(data.name, project.path);
-        const newFilePath = await this.electronService.pathJoin(project.path, 'characters', newFilename);
-
-        // Only rename if the new filename would be different
-        const currentFilename = await this.electronService.pathBasename(existingCharacter.filePath);
-        if (currentFilename !== newFilename) {
-          // Try to rename/move the file instead of deleting and creating new
-          const oldFileExists = await this.electronService.fileExists(existingCharacter.filePath);
-          if (oldFileExists) {
-            try {
-              // Try to copy to new location first
-              const copyResult = await this.electronService.copyFile(existingCharacter.filePath, newFilePath);
-              if (copyResult.success) {
-                // If copy succeeded, delete the old file
-                await this.deleteCharacterFile(existingCharacter.filePath);
-                updatedCharacter.filePath = newFilePath;
-              } else {
-                console.warn('Failed to rename character file, keeping original filename:', copyResult.error);
-                // Keep the original file path if rename fails
-              }
-            } catch (error) {
-              console.warn('Failed to rename character file, keeping original filename:', error);
-              // Keep the original file path if rename fails
-            }
-          } else {
-            // File doesn't exist, use new path
-            updatedCharacter.filePath = newFilePath;
-          }
-        }
-      }
 
       // Save updated character to file
       await this.saveCharacterToFile(updatedCharacter);
+
+      // Save additional fields if any changes were provided
+      if (additionalFieldsChanges && Object.keys(additionalFieldsChanges).length > 0) {
+        await this.saveAdditionalFields(id, additionalFieldsChanges);
+      }
 
       // Update in-memory list
       characters[index] = updatedCharacter;
@@ -349,7 +374,8 @@ export class CharacterService {
   }
 
   /**
-   * Deletes a character and removes its file from disk
+   * Deletes a character by moving it to the trash folder
+   * Trash folder: characters/_deleted/<character-slug>-<timestamp>/
    */
   async deleteCharacter(id: string): Promise<boolean> {
     const project = this.projectService.getCurrentProject();
@@ -365,15 +391,19 @@ export class CharacterService {
         return false;
       }
 
-      // Delete character file
-      const fileExists = await this.electronService.fileExists(character.filePath);
-      if (fileExists) {
-        await this.deleteCharacterFile(character.filePath);
-      }
+      // Create trash folder if it doesn't exist
+      const trashPath = await this.electronService.pathJoin(project.path, 'characters', '_deleted');
+      await this.electronService.createDirectory(trashPath);
 
-      // Delete thumbnail if it exists
-      if (character.thumbnail) {
-        await this.removeThumbnail(character.thumbnail, project.path);
+      // Generate unique trash folder name with timestamp
+      const characterSlug = slugify(character.name);
+      const trashFolderName = slugifyWithTimestamp(characterSlug);
+      const trashDestPath = await this.electronService.pathJoin(trashPath, trashFolderName);
+
+      // Move character folder to trash
+      const moveResult = await this.electronService.moveDirectory(character.folderPath, trashDestPath);
+      if (!moveResult.success) {
+        throw new Error(`Failed to move character to trash: ${moveResult.error}`);
       }
 
       // Update in-memory list
@@ -384,6 +414,225 @@ export class CharacterService {
     } catch (error) {
       console.error('Failed to delete character:', error);
       throw new Error(`Failed to delete character: ${error}`);
+    }
+  }
+
+  /**
+   * Restores a character from the trash
+   * Moves it back to its original category folder
+   */
+  async restoreCharacter(trashFolderName: string): Promise<boolean> {
+    const project = this.projectService.getCurrentProject();
+    if (!project) {
+      throw new Error('No project loaded');
+    }
+
+    try {
+      const trashPath = await this.electronService.pathJoin(project.path, 'characters', '_deleted');
+      const characterTrashPath = await this.electronService.pathJoin(trashPath, trashFolderName);
+
+      // Check if trash folder exists
+      const folderExists = await this.electronService.fileExists(characterTrashPath);
+      if (!folderExists) {
+        throw new Error('Character not found in trash');
+      }
+
+      // Load character metadata to get category
+      const dirContents = await this.electronService.readDirectoryFiles(characterTrashPath);
+      if (!dirContents.success || !dirContents.files || dirContents.files.length === 0) {
+        throw new Error('No character file found in trash folder');
+      }
+
+      // Find the main .md file (should be the only one or named after the slug)
+      const mdFiles = dirContents.files.filter((f) => f.endsWith('.md'));
+      if (mdFiles.length === 0) {
+        throw new Error('No markdown file found in trash folder');
+      }
+
+      const mainMdFile = mdFiles[0];
+      const mainFilePath = await this.electronService.pathJoin(characterTrashPath, mainMdFile);
+
+      // Read character data to get category
+      const readResult = await this.electronService.readFile(mainFilePath);
+      if (!readResult.success) {
+        throw new Error('Failed to read character file');
+      }
+
+      const parseResult = MarkdownUtils.parseMarkdown<CharacterFrontmatter>(readResult.content!);
+      if (!parseResult.success) {
+        throw new Error('Failed to parse character file');
+      }
+
+      const { frontmatter } = parseResult.data!;
+      const categorySlug = slugify(frontmatter.category || 'uncategorized');
+      const characterSlug = await this.electronService.pathBasename(mainMdFile, '.md');
+
+      // Determine restore destination
+      const categoryPath = await this.electronService.pathJoin(project.path, 'characters', categorySlug);
+      const restorePath = await this.electronService.pathJoin(categoryPath, characterSlug);
+
+      // Create category folder if it doesn't exist
+      await this.electronService.createDirectory(categoryPath);
+
+      // Move from trash back to category folder
+      const moveResult = await this.electronService.moveDirectory(characterTrashPath, restorePath);
+      if (!moveResult.success) {
+        throw new Error(`Failed to restore character: ${moveResult.error}`);
+      }
+
+      // Reload characters to include the restored one
+      await this.forceReloadCharacters();
+
+      return true;
+    } catch (error) {
+      console.error('Failed to restore character:', error);
+      throw new Error(`Failed to restore character: ${error}`);
+    }
+  }
+
+  /**
+   * Gets list of deleted characters from trash
+   */
+  async getDeletedCharacters(): Promise<Array<{ folderName: string; name: string; deletedAt: Date }>> {
+    const project = this.projectService.getCurrentProject();
+    if (!project) {
+      throw new Error('No project loaded');
+    }
+
+    try {
+      const trashPath = await this.electronService.pathJoin(project.path, 'characters', '_deleted');
+
+      // Check if trash folder exists
+      const folderExists = await this.electronService.fileExists(trashPath);
+      if (!folderExists) {
+        return [];
+      }
+
+      const dirContents = await this.electronService.readDirectoryFiles(trashPath);
+      if (!dirContents.success || !dirContents.directories) {
+        return [];
+      }
+
+      const deletedCharacters: Array<{ folderName: string; name: string; deletedAt: Date }> = [];
+
+      for (const folderName of dirContents.directories) {
+        try {
+          const characterFolderPath = await this.electronService.pathJoin(trashPath, folderName);
+
+          // Extract timestamp from folder name (format: slug-timestamp)
+          const parts = folderName.split('-');
+          const timestamp = parseInt(parts[parts.length - 1], 10);
+          const deletedAt = !isNaN(timestamp) ? new Date(timestamp) : new Date();
+
+          // Try to read character name from file
+          const characterDirContents = await this.electronService.readDirectoryFiles(characterFolderPath);
+          if (characterDirContents.success && characterDirContents.files) {
+            const mdFiles = characterDirContents.files.filter((f) => f.endsWith('.md'));
+            if (mdFiles.length > 0) {
+              const mainMdFile = mdFiles[0];
+              const mainFilePath = await this.electronService.pathJoin(characterFolderPath, mainMdFile);
+              const readResult = await this.electronService.readFile(mainFilePath);
+
+              if (readResult.success) {
+                const parseResult = MarkdownUtils.parseMarkdown<CharacterFrontmatter>(readResult.content!);
+                if (parseResult.success) {
+                  const { frontmatter } = parseResult.data!;
+                  deletedCharacters.push({
+                    folderName,
+                    name: frontmatter.name,
+                    deletedAt,
+                  });
+                  continue;
+                }
+              }
+            }
+          }
+
+          // Fallback: use folder name if we couldn't read the character name
+          const nameFromFolder = folderName.replace(/-\d+$/, '').replace(/-/g, ' ');
+          deletedCharacters.push({
+            folderName,
+            name: nameFromFolder,
+            deletedAt,
+          });
+        } catch (error) {
+          console.warn(`Failed to process deleted character ${folderName}:`, error);
+        }
+      }
+
+      // Sort by deletion date (newest first)
+      deletedCharacters.sort((a, b) => b.deletedAt.getTime() - a.deletedAt.getTime());
+
+      return deletedCharacters;
+    } catch (error) {
+      console.error('Failed to get deleted characters:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Permanently deletes all characters in trash
+   */
+  async emptyTrash(): Promise<boolean> {
+    const project = this.projectService.getCurrentProject();
+    if (!project) {
+      throw new Error('No project loaded');
+    }
+
+    try {
+      const trashPath = await this.electronService.pathJoin(project.path, 'characters', '_deleted');
+
+      // Check if trash folder exists
+      const folderExists = await this.electronService.fileExists(trashPath);
+      if (!folderExists) {
+        return true; // Already empty
+      }
+
+      // Delete the entire trash folder recursively
+      const deleteResult = await this.electronService.deleteDirectoryRecursive(trashPath);
+      if (!deleteResult.success) {
+        throw new Error(`Failed to empty trash: ${deleteResult.error}`);
+      }
+
+      // Recreate empty trash folder
+      await this.electronService.createDirectory(trashPath);
+
+      return true;
+    } catch (error) {
+      console.error('Failed to empty trash:', error);
+      throw new Error(`Failed to empty trash: ${error}`);
+    }
+  }
+
+  /**
+   * Permanently deletes a single character from trash
+   */
+  async permanentlyDeleteCharacter(trashFolderName: string): Promise<boolean> {
+    const project = this.projectService.getCurrentProject();
+    if (!project) {
+      throw new Error('No project loaded');
+    }
+
+    try {
+      const trashPath = await this.electronService.pathJoin(project.path, 'characters', '_deleted');
+      const characterTrashPath = await this.electronService.pathJoin(trashPath, trashFolderName);
+
+      // Check if folder exists
+      const folderExists = await this.electronService.fileExists(characterTrashPath);
+      if (!folderExists) {
+        return false;
+      }
+
+      // Delete the character folder permanently
+      const deleteResult = await this.electronService.deleteDirectoryRecursive(characterTrashPath);
+      if (!deleteResult.success) {
+        throw new Error(`Failed to permanently delete character: ${deleteResult.error}`);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Failed to permanently delete character:', error);
+      throw new Error(`Failed to permanently delete character: ${error}`);
     }
   }
 
@@ -399,17 +648,27 @@ export class CharacterService {
         return null;
       }
 
-      // Check if file still exists
-      const fileExists = await this.electronService.fileExists(existingCharacter.filePath);
-      if (!fileExists) {
-        // File was deleted externally, remove from memory
+      // Check if folder still exists
+      const folderExists = await this.electronService.fileExists(existingCharacter.folderPath);
+      if (!folderExists) {
+        // Folder was deleted externally, remove from memory
         const filteredCharacters = characters.filter((char) => char.id !== id);
         this.charactersSubject.next(filteredCharacters);
         return null;
       }
 
-      // Reload character from file
-      const refreshedCharacter = await this.loadCharacterFromFile(existingCharacter.filePath);
+      // Extract category slug and character slug from folder path
+      const categorySlug = await this.electronService.pathBasename(
+        await this.electronService.pathDirname(existingCharacter.folderPath)
+      );
+      const characterSlug = await this.electronService.pathBasename(existingCharacter.folderPath);
+
+      // Reload character from folder
+      const refreshedCharacter = await this.loadCharacterFromFolder(
+        existingCharacter.folderPath,
+        categorySlug,
+        characterSlug
+      );
       if (!refreshedCharacter) {
         return null;
       }
@@ -430,11 +689,15 @@ export class CharacterService {
   }
 
   /**
-   * Loads a character from a markdown file
+   * Loads a character from a folder
+   * New structure: characters/<category>/<character-slug>/
    */
-  private async loadCharacterFromFile(filePath: string): Promise<Character | null> {
+  private async loadCharacterFromFolder(folderPath: string, categorySlug: string, characterSlug: string): Promise<Character | null> {
     try {
-      const readResult = await this.electronService.readFile(filePath);
+      // Main character file is <slug>.md
+      const mainFilePath = await this.electronService.pathJoin(folderPath, `${characterSlug}.md`);
+
+      const readResult = await this.electronService.readFile(mainFilePath);
       if (!readResult.success) {
         throw new Error(readResult.error);
       }
@@ -454,30 +717,91 @@ export class CharacterService {
       // Extract description and notes from content
       const sections = this.parseCharacterContent(content);
 
-      // Generate ID from filename if not present in frontmatter
-      const filename = await this.electronService.pathBasename(filePath, '.md');
-      const id = this.extractIdFromFilename(filename);
+      // Load additional markdown files in the folder
+      const { fields: additionalFields, filenames: additionalFieldsFilenames } = await this.loadAdditionalFields(
+        folderPath,
+        characterSlug
+      );
+
+      // Generate ID from character slug
+      const id = this.extractIdFromFilename(characterSlug);
 
       const character: Character = {
         id,
         name: frontmatter.name,
-        category: frontmatter.category || '',
+        category: frontmatter.category || categorySlug,
         tags: frontmatter.tags || [],
         books: frontmatter.books || [],
         thumbnail: frontmatter.thumbnail,
-        mangamaster: frontmatter.mangamaster,
+        mangamaster: frontmatter.mangamaster || '',
         description: sections.description,
         notes: sections.notes,
         created: frontmatter.created ? new Date(frontmatter.created) : new Date(),
         modified: frontmatter.modified ? new Date(frontmatter.modified) : new Date(),
-        filePath,
+        filePath: mainFilePath,
+        folderPath: folderPath,
+        additionalFields: additionalFields,
+        additionalFieldsFilenames: additionalFieldsFilenames,
       };
 
       return character;
     } catch (error) {
-      console.error(`Failed to load character from ${filePath}:`, error);
+      console.error(`Failed to load character from ${folderPath}:`, error);
       return null;
     }
+  }
+
+  /**
+   * Loads additional markdown files from a character folder
+   * Any .md file other than the main character file becomes an additional field
+   * Returns both the field content and a mapping of field names to original filenames
+   */
+  private async loadAdditionalFields(
+    folderPath: string,
+    characterSlug: string
+  ): Promise<{ fields: Record<string, string>; filenames: Record<string, string> }> {
+    const fields: Record<string, string> = {};
+    const filenames: Record<string, string> = {};
+
+    try {
+      const dirContents = await this.electronService.readDirectoryFiles(folderPath);
+      if (!dirContents.success || !dirContents.files) {
+        return { fields, filenames };
+      }
+
+      const mainFileName = `${characterSlug}.md`;
+
+      for (const filename of dirContents.files) {
+        // Skip the main character file
+        if (filename === mainFileName) {
+          continue;
+        }
+
+        // Only process .md files
+        if (!filename.endsWith('.md')) {
+          continue;
+        }
+
+        try {
+          const filePath = await this.electronService.pathJoin(folderPath, filename);
+          const readResult = await this.electronService.readFile(filePath);
+
+          if (readResult.success && readResult.content) {
+            // Convert filename to field name (e.g., "another-file.md" -> "Another File")
+            const fieldName = filenameToFieldName(filename);
+            fields[fieldName] = readResult.content;
+            filenames[fieldName] = filename; // Store original filename
+          }
+        } catch (error) {
+          console.warn(`Failed to load additional field ${filename}:`, error);
+          // Continue loading other fields even if one fails
+        }
+      }
+    } catch (error) {
+      console.warn(`Failed to load additional fields from ${folderPath}:`, error);
+    }
+
+    return { fields, filenames };
   }
 
   /**
@@ -580,7 +904,39 @@ export class CharacterService {
   }
 
   /**
+   * Handles thumbnail upload to character folder and returns the filename
+   * New approach: stores thumbnail in character's own folder
+   */
+  private async handleThumbnailUploadToFolder(
+    thumbnailPath: string,
+    characterFolderPath: string
+  ): Promise<string> {
+    try {
+      // Get original filename and extension
+      const originalFilename = await this.electronService.pathBasename(thumbnailPath);
+      const extension = originalFilename.split('.').pop() || 'jpg';
+      const thumbnailFilename = `thumbnail.${extension}`;
+
+      // Create destination path in character folder
+      const destPath = await this.electronService.pathJoin(characterFolderPath, thumbnailFilename);
+
+      // Copy file to character folder
+      const copyResult = await this.electronService.copyFile(thumbnailPath, destPath);
+      if (!copyResult.success) {
+        throw new Error(copyResult.error);
+      }
+
+      return thumbnailFilename;
+    } catch (error) {
+      console.warn(`Thumbnail copying failed: ${error}`);
+      // Return original path as fallback
+      return thumbnailPath;
+    }
+  }
+
+  /**
    * Handles thumbnail upload and returns the filename
+   * @deprecated Use handleThumbnailUploadToFolder for new folder structure
    */
   private async handleThumbnailUpload(
     thumbnailPath: string,
@@ -722,5 +1078,72 @@ export class CharacterService {
 
   private generateId(): string {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
+  }
+
+  /**
+   * Handles file change events from the file watcher
+   */
+  private async handleFileChange(event: { type: string; path: string; filename: string }): Promise<void> {
+    console.log('File change detected:', event);
+
+    // Only process .md files in character folders
+    if (!event.filename.endsWith('.md')) {
+      return;
+    }
+
+    // If we haven't loaded characters yet, don't try to handle changes
+    if (!this.currentProjectPath) {
+      return;
+    }
+
+    try {
+      // Check if the file is within a character folder
+      const charactersPath = await this.electronService.pathJoin(this.currentProjectPath, 'characters');
+
+      // Make sure the changed file is under the characters directory
+      if (!event.path.includes(charactersPath)) {
+        return;
+      }
+
+      // Extract the character folder path from the file path
+      const folderPath = await this.electronService.pathDirname(event.path);
+
+      // Find the character by folder path
+      const characters = this.charactersSubject.value;
+      const character = characters.find((char) => char.folderPath === folderPath);
+
+      if (event.type === 'unlink') {
+        // File was deleted
+        if (character) {
+          // Check if the character folder still exists
+          const folderExists = await this.electronService.fileExists(folderPath);
+          if (!folderExists) {
+            // Entire folder was deleted, remove character
+            const filteredCharacters = characters.filter((char) => char.folderPath !== folderPath);
+            this.charactersSubject.next(filteredCharacters);
+            console.log(`Character removed due to folder deletion: ${character.name}`);
+          } else {
+            // Just a file was deleted, reload the character
+            await this.refreshCharacter(character.id);
+            console.log(`Character reloaded after file deletion: ${character.name}`);
+          }
+        }
+      } else if (event.type === 'change' || event.type === 'add') {
+        // File was changed or added
+        if (character) {
+          // Existing character, reload it
+          await this.refreshCharacter(character.id);
+          console.log(`Character reloaded: ${character.name}`);
+        } else {
+          // New character or file added to existing character
+          // Force a full reload to detect new characters
+          await this.forceReloadCharacters();
+          console.log('Characters reloaded due to new file');
+        }
+      }
+    } catch (error) {
+      console.error('Error handling file change:', error);
+      // Don't throw - we don't want file watching errors to break the app
+    }
   }
 }

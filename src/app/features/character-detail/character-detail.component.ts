@@ -43,6 +43,9 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
   selectedThumbnailPath: string | null = null;
   thumbnailPreview: string | null = null;
 
+  // Additional fields tracking
+  additionalFieldsChanges: Record<string, string> = {};
+
   // AI features
   isGeneratingName = false;
   aiEnabled = false;
@@ -145,13 +148,17 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
     });
   }
 
-  private loadCharacter(id: string): void {
+  private async loadCharacter(id: string): Promise<void> {
     this.isLoading = true;
     this.error = null;
 
     try {
-      this.character = this.characterService.getCharacterById(id) || null;
-      if (this.character) {
+      // Refresh character from disk to get latest changes
+      const refreshedCharacter = await this.characterService.refreshCharacter(id);
+
+      if (refreshedCharacter) {
+        this.character = refreshedCharacter;
+
         this.characterForm.patchValue({
           name: this.character.name,
           category: this.character.category,
@@ -163,9 +170,12 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
         });
 
         // Set thumbnail preview
-        if (this.character.thumbnail && this.currentProject) {
-          this.loadThumbnailPreview(`${this.currentProject.path}/thumbnails/${this.character.thumbnail}`);
+        if (this.character.thumbnail && this.character.folderPath) {
+          this.loadThumbnailPreview(`${this.character.folderPath}/${this.character.thumbnail}`);
         }
+
+        // Initialize additional fields tracking
+        this.additionalFieldsChanges = {};
       } else {
         this.error = 'Character not found';
       }
@@ -198,7 +208,12 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
       };
 
       if (this.isEditing && this.character) {
-        const updatedCharacter = await this.characterService.updateCharacter(this.character.id, formData);
+        // Pass additional fields changes if any
+        const updatedCharacter = await this.characterService.updateCharacter(
+          this.character.id,
+          formData,
+          Object.keys(this.additionalFieldsChanges).length > 0 ? this.additionalFieldsChanges : undefined
+        );
         if (!updatedCharacter) {
           throw new Error('Character not found');
         }
@@ -438,5 +453,37 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
     } finally {
       this.isGeneratingName = false;
     }
+  }
+
+  // Additional fields methods
+  getAdditionalFieldNames(): string[] {
+    if (!this.character || !this.character.additionalFields) {
+      return [];
+    }
+    return Object.keys(this.character.additionalFields).sort();
+  }
+
+  getAdditionalFieldValue(fieldName: string): string {
+    // Check if there are pending changes first
+    if (this.additionalFieldsChanges[fieldName] !== undefined) {
+      return this.additionalFieldsChanges[fieldName];
+    }
+    // Otherwise return the original value
+    return this.character?.additionalFields[fieldName] || '';
+  }
+
+  getFieldFileName(fieldName: string): string {
+    // Return the original filename if available
+    if (this.character?.additionalFieldsFilenames[fieldName]) {
+      return this.character.additionalFieldsFilenames[fieldName];
+    }
+    // Fallback to converting field name to filename
+    return fieldName.toLowerCase().replace(/\s+/g, '-') + '.md';
+  }
+
+  onAdditionalFieldChange(fieldName: string, event: Event): void {
+    const textarea = event.target as HTMLTextAreaElement;
+    this.additionalFieldsChanges[fieldName] = textarea.value;
+    this.characterForm.markAsDirty();
   }
 }

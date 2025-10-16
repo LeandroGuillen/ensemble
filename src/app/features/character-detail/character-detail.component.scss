@@ -67,6 +67,21 @@
     font-weight: 600;
     padding-bottom: var(--spacing-sm);
   }
+
+  .section-header {
+    margin-bottom: var(--spacing-lg);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 1px solid var(--color-border);
+
+    h3 {
+      margin: 0;
+      padding: 0;
+    }
+
+    .field-hint {
+      margin-top: var(--spacing-xs);
+    }
+  }
 }
 
 .form-row {

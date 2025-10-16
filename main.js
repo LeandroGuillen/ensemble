@@ -2,9 +2,11 @@ const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('path');
 const https = require('https');
 const http = require('http');
+const chokidar = require('chokidar');
 const isDev = !app.isPackaged;
 
 let mainWindow;
+let fileWatcher = null;
 
 function createWindow() {
   // Get app version for title
@@ -286,6 +288,121 @@ ipcMain.handle('get-image-data-url', async (event, filePath) => {
   }
 });
 
+// Handle moving/renaming directories
+ipcMain.handle('move-directory', async (event, sourcePath, destPath) => {
+  try {
+    // Ensure destination parent directory exists
+    const destDir = pathModule.dirname(destPath);
+    await fs.mkdir(destDir, { recursive: true });
+
+    // Move the directory
+    await fs.rename(sourcePath, destPath);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Handle recursive directory deletion
+ipcMain.handle('delete-directory-recursive', async (event, dirPath) => {
+  try {
+    await fs.rm(dirPath, { recursive: true, force: true });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Handle reading all files in a directory (non-recursive)
+ipcMain.handle('read-directory-files', async (event, dirPath) => {
+  try {
+    const entries = await fs.readdir(dirPath, { withFileTypes: true });
+    const files = [];
+    const directories = [];
+
+    for (const entry of entries) {
+      if (entry.isFile()) {
+        files.push(entry.name);
+      } else if (entry.isDirectory()) {
+        directories.push(entry.name);
+      }
+    }
+
+    return { success: true, files, directories };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// File watching
+ipcMain.handle('start-file-watcher', async (event, projectPath) => {
+  try {
+    // Stop existing watcher if any
+    if (fileWatcher) {
+      await fileWatcher.close();
+      fileWatcher = null;
+    }
+
+    // Watch the characters directory recursively
+    const charactersPath = pathModule.join(projectPath, 'characters');
+
+    fileWatcher = chokidar.watch(charactersPath, {
+      ignored: /(^|[\/\\])\../, // Ignore dotfiles
+      persistent: true,
+      ignoreInitial: true, // Don't emit events for existing files on startup
+      awaitWriteFinish: {
+        stabilityThreshold: 300,
+        pollInterval: 100
+      }
+    });
+
+    fileWatcher
+      .on('add', filePath => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('file-changed', {
+            type: 'add',
+            path: filePath,
+            filename: pathModule.basename(filePath)
+          });
+        }
+      })
+      .on('change', filePath => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('file-changed', {
+            type: 'change',
+            path: filePath,
+            filename: pathModule.basename(filePath)
+          });
+        }
+      })
+      .on('unlink', filePath => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('file-changed', {
+            type: 'unlink',
+            path: filePath,
+            filename: pathModule.basename(filePath)
+          });
+        }
+      });
+
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('stop-file-watcher', async (event) => {
+  try {
+    if (fileWatcher) {
+      await fileWatcher.close();
+      fileWatcher = null;
+    }
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 // Handle AI HTTP requests
 ipcMain.handle('ai-request', async (event, url, options) => {
   return new Promise((resolve, reject) => {
@@ -354,4 +471,12 @@ ipcMain.handle('ai-request', async (event, url, options) => {
 
     req.end();
   });
+});
+
+// Cleanup watcher on app quit
+app.on('before-quit', async () => {
+  if (fileWatcher) {
+    await fileWatcher.close();
+    fileWatcher = null;
+  }
 });
