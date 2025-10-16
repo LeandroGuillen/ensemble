@@ -69,6 +69,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   columns: 1 | 2 = 2; // Column count for views
   sortBy: "name" | "category" = "name";
   sortDirection: "asc" | "desc" = "asc";
+  groupBy: "none" | "category" | "tag" = "none"; // Group characters by category or tag
   selectedCharacterIndex = -1; // Track selected character for keyboard navigation
 
   constructor(
@@ -111,6 +112,15 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     ) as "asc" | "desc";
     if (savedSortDirection) {
       this.sortDirection = savedSortDirection;
+    }
+
+    // Load saved groupBy preference
+    const savedGroupBy = localStorage.getItem("characterGroupBy") as
+      | "none"
+      | "category"
+      | "tag";
+    if (savedGroupBy) {
+      this.groupBy = savedGroupBy;
     }
 
     // Load saved filter preferences
@@ -802,6 +812,11 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     this.applyFilters();
   }
 
+  setGroupBy(groupBy: "none" | "category" | "tag"): void {
+    this.groupBy = groupBy;
+    localStorage.setItem("characterGroupBy", this.groupBy);
+  }
+
   private sortCharacters(characters: Character[]): Character[] {
     const sorted = [...characters];
 
@@ -901,5 +916,125 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       this.error = `Failed to permanently delete character: ${error}`;
       console.error('Failed to permanently delete character:', error);
     }
+  }
+
+  getGroupedCharacters(): Array<{ categoryId: string; characters: Character[] }> {
+    const grouped = new Map<string, Character[]>();
+
+    // Group characters by category
+    for (const character of this.filteredCharacters) {
+      const categoryId = character.category || 'uncategorized';
+      if (!grouped.has(categoryId)) {
+        grouped.set(categoryId, []);
+      }
+      grouped.get(categoryId)!.push(character);
+    }
+
+    // Sort groups by category order in metadata and convert to array
+    const result: Array<{ categoryId: string; characters: Character[] }> = [];
+
+    // First add categories in the order they appear in metadata
+    for (const category of this.categories) {
+      if (grouped.has(category.id)) {
+        result.push({
+          categoryId: category.id,
+          characters: grouped.get(category.id)!
+        });
+      }
+    }
+
+    // Then add any uncategorized characters
+    if (grouped.has('uncategorized')) {
+      result.push({
+        categoryId: 'uncategorized',
+        characters: grouped.get('uncategorized')!
+      });
+    }
+
+    return result;
+  }
+
+  getGroupedByTag(): Array<{ tagId: string; characters: Character[] }> {
+    const grouped = new Map<string, Character[]>();
+
+    // Group characters by tag (characters can appear in multiple groups)
+    for (const character of this.filteredCharacters) {
+      if (character.tags && character.tags.length > 0) {
+        for (const tagId of character.tags) {
+          if (!grouped.has(tagId)) {
+            grouped.set(tagId, []);
+          }
+          grouped.get(tagId)!.push(character);
+        }
+      } else {
+        // Characters with no tags
+        if (!grouped.has('untagged')) {
+          grouped.set('untagged', []);
+        }
+        grouped.get('untagged')!.push(character);
+      }
+    }
+
+    // Sort groups by tag order in metadata and convert to array
+    const result: Array<{ tagId: string; characters: Character[] }> = [];
+
+    // First add tags in the order they appear in metadata
+    for (const tag of this.tags) {
+      if (grouped.has(tag.id)) {
+        result.push({
+          tagId: tag.id,
+          characters: grouped.get(tag.id)!
+        });
+      }
+    }
+
+    // Then add any untagged characters
+    if (grouped.has('untagged')) {
+      result.push({
+        tagId: 'untagged',
+        characters: grouped.get('untagged')!
+      });
+    }
+
+    return result;
+  }
+
+  /**
+   * Calculate the relative luminance of a color to determine if we should use
+   * white or black text for contrast.
+   * Based on WCAG guidelines: https://www.w3.org/TR/WCAG20/#relativeluminancedef
+   */
+  getContrastTextColor(backgroundColor: string): string {
+    // Convert hex to RGB
+    let r = 0, g = 0, b = 0;
+
+    // Handle hex colors (#RGB or #RRGGBB)
+    if (backgroundColor.startsWith('#')) {
+      const hex = backgroundColor.substring(1);
+      if (hex.length === 3) {
+        r = parseInt(hex[0] + hex[0], 16);
+        g = parseInt(hex[1] + hex[1], 16);
+        b = parseInt(hex[2] + hex[2], 16);
+      } else if (hex.length === 6) {
+        r = parseInt(hex.substring(0, 2), 16);
+        g = parseInt(hex.substring(2, 4), 16);
+        b = parseInt(hex.substring(4, 6), 16);
+      }
+    }
+
+    // Calculate relative luminance
+    const rsRGB = r / 255;
+    const gsRGB = g / 255;
+    const bsRGB = b / 255;
+
+    const rLinear = rsRGB <= 0.03928 ? rsRGB / 12.92 : Math.pow((rsRGB + 0.055) / 1.055, 2.4);
+    const gLinear = gsRGB <= 0.03928 ? gsRGB / 12.92 : Math.pow((gsRGB + 0.055) / 1.055, 2.4);
+    const bLinear = bsRGB <= 0.03928 ? bsRGB / 12.92 : Math.pow((bsRGB + 0.055) / 1.055, 2.4);
+
+    const luminance = 0.2126 * rLinear + 0.7152 * gLinear + 0.0722 * bLinear;
+
+    // Use white text on dark backgrounds, black text on light backgrounds
+    // Threshold of 0.5 works well for most cases
+    return luminance > 0.5 ? '#000000' : '#ffffff';
   }
 }

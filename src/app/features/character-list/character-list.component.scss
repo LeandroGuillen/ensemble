@@ -492,6 +492,98 @@
 
 // Gallery view styles moved to character-gallery-view component
 
+// Group Controls (matching sort controls)
+.group-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-shrink: 0;
+}
+
+.group-label {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.group-button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    border-color: var(--color-accent-primary);
+    color: var(--color-text-primary);
+    background-color: var(--color-bg-tertiary);
+  }
+
+  &.active {
+    border-color: var(--color-accent-primary);
+    color: var(--color-accent-primary);
+    background-color: rgba(59, 130, 246, 0.1);
+  }
+}
+
+// Grouped View
+.grouped-view {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.category-group {
+  display: flex;
+  align-items: stretch;
+  min-height: 0;
+  margin-bottom: var(--spacing-md);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.category-tab {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-md) var(--spacing-sm);
+  min-width: 50px;
+  width: 50px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+  font-weight: 600;
+  position: relative;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+  writing-mode: vertical-lr;
+  text-orientation: mixed;
+
+  .category-label-content {
+    transform: rotate(180deg);
+  }
+
+  .category-name {
+    font-size: 0.9375rem;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+}
+
+.category-content {
+  flex: 1;
+  min-width: 0;
+  padding-left: var(--spacing-md);
+}
+
 @media (max-width: 768px) {
   .page-actions {
     flex-wrap: wrap;
@@ -546,6 +638,28 @@
 
   .sort-button {
     flex: 1;
+  }
+
+  .group-controls {
+    width: 100%;
+  }
+
+  .group-label {
+    display: none; // Hide "Group:" label on mobile to save space
+  }
+
+  .group-button {
+    flex: 1;
+  }
+
+  .category-tab {
+    min-width: 40px;
+    width: 40px;
+    padding: var(--spacing-sm) var(--spacing-xs);
+
+    .category-name {
+      font-size: 0.8125rem;
+    }
   }
 }
 

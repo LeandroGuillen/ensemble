@@ -264,6 +264,19 @@
           </button>
         </div>
 
+        <div class="group-controls">
+          <span class="group-label">Group:</span>
+          <button class="group-button" [class.active]="groupBy === 'none'" (click)="setGroupBy('none')">
+            None
+          </button>
+          <button class="group-button" [class.active]="groupBy === 'category'" (click)="setGroupBy('category')">
+            Category
+          </button>
+          <button class="group-button" [class.active]="groupBy === 'tag'" (click)="setGroupBy('tag')">
+            Tag
+          </button>
+        </div>
+
         <div class="results-actions">
           <a
             class="refresh-link"
@@ -286,59 +299,202 @@
     </div>
 
     <div class="scrollable-content" *ngIf="currentProject && !isLoading && !error">
-      <!-- Grid View (Cards) -->
-      <app-character-grid-view
-        *ngIf="filteredCharacters.length > 0 && viewMode === 'grid'"
-        [characters]="filteredCharacters"
-        [categories]="categories"
-        [tags]="tags"
-        [selectedCharacterIndex]="selectedCharacterIndex"
-        [selectedCharacterIds]="selectedCharacterIds"
-        [thumbnailDataUrls]="thumbnailDataUrls"
-        (characterClick)="onViewCharacterClick($event)"
-        (characterDelete)="onViewCharacterDelete($event)"
-        (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
-      ></app-character-grid-view>
+      <!-- Grouped View by Category -->
+      <div class="grouped-view" *ngIf="filteredCharacters.length > 0 && groupBy === 'category'">
+        <div class="category-group" *ngFor="let group of getGroupedCharacters()">
+          <div
+            class="category-tab"
+            [style.background-color]="getCategoryColor(group.categoryId)"
+            [style.color]="getContrastTextColor(getCategoryColor(group.categoryId))"
+          >
+            <div class="category-label-content">
+              <span class="category-name">{{ getCategoryName(group.categoryId) }}</span>
+            </div>
+          </div>
+          <div class="category-content">
+            <!-- Grid View (Cards) -->
+            <app-character-grid-view
+              *ngIf="viewMode === 'grid'"
+              [characters]="group.characters"
+              [categories]="categories"
+              [tags]="tags"
+              [selectedCharacterIndex]="selectedCharacterIndex"
+              [selectedCharacterIds]="selectedCharacterIds"
+              [thumbnailDataUrls]="thumbnailDataUrls"
+              (characterClick)="onViewCharacterClick($event)"
+              (characterDelete)="onViewCharacterDelete($event)"
+              (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
+            ></app-character-grid-view>
 
-      <!-- List View -->
-      <app-character-list-view
-        *ngIf="filteredCharacters.length > 0 && viewMode === 'list'"
-        [characters]="filteredCharacters"
-        [categories]="categories"
-        [tags]="tags"
-        [columns]="columns"
-        [selectedCharacterIndex]="selectedCharacterIndex"
-        [selectedCharacterIds]="selectedCharacterIds"
-        [thumbnailDataUrls]="thumbnailDataUrls"
-        (characterClick)="onViewCharacterClick($event)"
-        (characterDelete)="onViewCharacterDelete($event)"
-        (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
-      ></app-character-list-view>
+            <!-- List View -->
+            <app-character-list-view
+              *ngIf="viewMode === 'list'"
+              [characters]="group.characters"
+              [categories]="categories"
+              [tags]="tags"
+              [columns]="columns"
+              [selectedCharacterIndex]="selectedCharacterIndex"
+              [selectedCharacterIds]="selectedCharacterIds"
+              [thumbnailDataUrls]="thumbnailDataUrls"
+              (characterClick)="onViewCharacterClick($event)"
+              (characterDelete)="onViewCharacterDelete($event)"
+              (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
+            ></app-character-list-view>
 
-      <!-- Compact View -->
-      <app-character-compact-view
-        *ngIf="filteredCharacters.length > 0 && viewMode === 'compact'"
-        [characters]="filteredCharacters"
-        [categories]="categories"
-        [tags]="tags"
-        [columns]="columns"
-        [selectedCharacterIndex]="selectedCharacterIndex"
-        [selectedCharacterIds]="selectedCharacterIds"
-        [thumbnailDataUrls]="thumbnailDataUrls"
-        (characterClick)="onViewCharacterClick($event)"
-        (characterDelete)="onViewCharacterDelete($event)"
-        (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
-      ></app-character-compact-view>
+            <!-- Compact View -->
+            <app-character-compact-view
+              *ngIf="viewMode === 'compact'"
+              [characters]="group.characters"
+              [categories]="categories"
+              [tags]="tags"
+              [columns]="columns"
+              [selectedCharacterIndex]="selectedCharacterIndex"
+              [selectedCharacterIds]="selectedCharacterIds"
+              [thumbnailDataUrls]="thumbnailDataUrls"
+              (characterClick)="onViewCharacterClick($event)"
+              (characterDelete)="onViewCharacterDelete($event)"
+              (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
+            ></app-character-compact-view>
 
-      <!-- Gallery View -->
-      <app-character-gallery-view
-        *ngIf="filteredCharacters.length > 0 && viewMode === 'gallery'"
-        [characters]="filteredCharacters"
-        [selectedCharacterIds]="selectedCharacterIds"
-        [thumbnailDataUrls]="thumbnailDataUrls"
-        (characterClick)="onViewCharacterClick($event)"
-        (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
-      ></app-character-gallery-view>
+            <!-- Gallery View -->
+            <app-character-gallery-view
+              *ngIf="viewMode === 'gallery'"
+              [characters]="group.characters"
+              [selectedCharacterIds]="selectedCharacterIds"
+              [thumbnailDataUrls]="thumbnailDataUrls"
+              (characterClick)="onViewCharacterClick($event)"
+              (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
+            ></app-character-gallery-view>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grouped View by Tag -->
+      <div class="grouped-view" *ngIf="filteredCharacters.length > 0 && groupBy === 'tag'">
+        <div class="category-group" *ngFor="let group of getGroupedByTag()">
+          <div
+            class="category-tab"
+            [style.background-color]="getTagColor(group.tagId)"
+            [style.color]="getContrastTextColor(getTagColor(group.tagId))"
+          >
+            <div class="category-label-content">
+              <span class="category-name">{{ getTagName(group.tagId) }}</span>
+            </div>
+          </div>
+          <div class="category-content">
+            <!-- Grid View (Cards) -->
+            <app-character-grid-view
+              *ngIf="viewMode === 'grid'"
+              [characters]="group.characters"
+              [categories]="categories"
+              [tags]="tags"
+              [selectedCharacterIndex]="selectedCharacterIndex"
+              [selectedCharacterIds]="selectedCharacterIds"
+              [thumbnailDataUrls]="thumbnailDataUrls"
+              (characterClick)="onViewCharacterClick($event)"
+              (characterDelete)="onViewCharacterDelete($event)"
+              (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
+            ></app-character-grid-view>
+
+            <!-- List View -->
+            <app-character-list-view
+              *ngIf="viewMode === 'list'"
+              [characters]="group.characters"
+              [categories]="categories"
+              [tags]="tags"
+              [columns]="columns"
+              [selectedCharacterIndex]="selectedCharacterIndex"
+              [selectedCharacterIds]="selectedCharacterIds"
+              [thumbnailDataUrls]="thumbnailDataUrls"
+              (characterClick)="onViewCharacterClick($event)"
+              (characterDelete)="onViewCharacterDelete($event)"
+              (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
+            ></app-character-list-view>
+
+            <!-- Compact View -->
+            <app-character-compact-view
+              *ngIf="viewMode === 'compact'"
+              [characters]="group.characters"
+              [categories]="categories"
+              [tags]="tags"
+              [columns]="columns"
+              [selectedCharacterIndex]="selectedCharacterIndex"
+              [selectedCharacterIds]="selectedCharacterIds"
+              [thumbnailDataUrls]="thumbnailDataUrls"
+              (characterClick)="onViewCharacterClick($event)"
+              (characterDelete)="onViewCharacterDelete($event)"
+              (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
+            ></app-character-compact-view>
+
+            <!-- Gallery View -->
+            <app-character-gallery-view
+              *ngIf="viewMode === 'gallery'"
+              [characters]="group.characters"
+              [selectedCharacterIds]="selectedCharacterIds"
+              [thumbnailDataUrls]="thumbnailDataUrls"
+              (characterClick)="onViewCharacterClick($event)"
+              (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
+            ></app-character-gallery-view>
+          </div>
+        </div>
+      </div>
+
+      <!-- Non-Grouped View (Original) -->
+      <div *ngIf="groupBy === 'none'">
+        <!-- Grid View (Cards) -->
+        <app-character-grid-view
+          *ngIf="filteredCharacters.length > 0 && viewMode === 'grid'"
+          [characters]="filteredCharacters"
+          [categories]="categories"
+          [tags]="tags"
+          [selectedCharacterIndex]="selectedCharacterIndex"
+          [selectedCharacterIds]="selectedCharacterIds"
+          [thumbnailDataUrls]="thumbnailDataUrls"
+          (characterClick)="onViewCharacterClick($event)"
+          (characterDelete)="onViewCharacterDelete($event)"
+          (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
+        ></app-character-grid-view>
+
+        <!-- List View -->
+        <app-character-list-view
+          *ngIf="filteredCharacters.length > 0 && viewMode === 'list'"
+          [characters]="filteredCharacters"
+          [categories]="categories"
+          [tags]="tags"
+          [columns]="columns"
+          [selectedCharacterIndex]="selectedCharacterIndex"
+          [selectedCharacterIds]="selectedCharacterIds"
+          [thumbnailDataUrls]="thumbnailDataUrls"
+          (characterClick)="onViewCharacterClick($event)"
+          (characterDelete)="onViewCharacterDelete($event)"
+          (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
+        ></app-character-list-view>
+
+        <!-- Compact View -->
+        <app-character-compact-view
+          *ngIf="filteredCharacters.length > 0 && viewMode === 'compact'"
+          [characters]="filteredCharacters"
+          [categories]="categories"
+          [tags]="tags"
+          [columns]="columns"
+          [selectedCharacterIndex]="selectedCharacterIndex"
+          [selectedCharacterIds]="selectedCharacterIds"
+          [thumbnailDataUrls]="thumbnailDataUrls"
+          (characterClick)="onViewCharacterClick($event)"
+          (characterDelete)="onViewCharacterDelete($event)"
+          (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
+        ></app-character-compact-view>
+
+        <!-- Gallery View -->
+        <app-character-gallery-view
+          *ngIf="filteredCharacters.length > 0 && viewMode === 'gallery'"
+          [characters]="filteredCharacters"
+          [selectedCharacterIds]="selectedCharacterIds"
+          [thumbnailDataUrls]="thumbnailDataUrls"
+          (characterClick)="onViewCharacterClick($event)"
+          (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
+        ></app-character-gallery-view>
+      </div>
 
       <div class="empty-state" *ngIf="filteredCharacters.length === 0">
         <div class="empty-icon">
