@@ -305,4 +305,19 @@ export class ElectronService {
       this.ipcRenderer.removeListener('file-changed', callback);
     }
   }
+
+  // Recent projects storage (file-based, persists across restarts)
+  async getRecentProjects(): Promise<string[]> {
+    if (!this.isElectron()) {
+      return [];
+    }
+    return await this.ipcRenderer.invoke('get-recent-projects');
+  }
+
+  async saveRecentProjects(projects: string[]): Promise<{ success: boolean; error?: string }> {
+    if (!this.isElectron()) {
+      return { success: false, error: 'Not running in Electron' };
+    }
+    return await this.ipcRenderer.invoke('save-recent-projects', projects);
+  }
 }

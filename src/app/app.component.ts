@@ -41,6 +41,7 @@ export class AppComponent implements OnInit {
 
     // Try to auto-load the most recent project
     const mostRecentProject = this.projectService.getMostRecentProject();
+
     if (mostRecentProject) {
       try {
         await this.projectService.loadProject(mostRecentProject);
@@ -48,26 +49,29 @@ export class AppComponent implements OnInit {
 
         // Restore the last visited route if it exists
         const lastRoute = this.projectService.getLastRoute();
+
         if (lastRoute && lastRoute !== '/project-selector') {
-          // Use setTimeout to ensure routing happens after Angular is ready
-          setTimeout(() => {
-            this.router.navigate([lastRoute]);
-          }, 0);
+          // Navigate to last route
+          this.router.navigate([lastRoute]);
         } else {
           // Default to characters page if no last route
-          setTimeout(() => {
-            this.router.navigate(['/characters']);
-          }, 0);
+          this.router.navigate(['/characters']);
         }
       } catch (error) {
         console.warn('Failed to auto-load most recent project:', error);
-        // If loading fails, user will be redirected to project selector by subscription below
+        // If loading fails, navigate to project selector
+        this.router.navigate(["/project-selector"]);
       }
+    } else {
+      // No recent project, go to project selector
+      this.router.navigate(["/project-selector"]);
     }
 
     this.projectService.currentProject$.subscribe((project: any) => {
       this.hasProject = !!project;
-      if (!project) {
+      // Only redirect to project selector if we're already past initial load
+      // and the project becomes null (e.g., user closes project)
+      if (!project && this.projectLoadedAndReady) {
         this.router.navigate(["/project-selector"]);
       }
     });

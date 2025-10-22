@@ -1,5 +1,6 @@
 const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('path');
+const fs = require('fs').promises;
 const https = require('https');
 const http = require('http');
 const chokidar = require('chokidar');
@@ -94,8 +95,30 @@ ipcMain.handle('get-version', () => {
   return app.getVersion();
 });
 
+// Handle recent projects storage (persistent across app restarts)
+const recentProjectsPath = path.join(app.getPath('userData'), 'recent-projects.json');
+
+ipcMain.handle('get-recent-projects', async () => {
+  try {
+    const data = await fs.readFile(recentProjectsPath, 'utf-8');
+    return JSON.parse(data);
+  } catch (error) {
+    // File doesn't exist or is invalid, return empty array
+    return [];
+  }
+});
+
+ipcMain.handle('save-recent-projects', async (event, projects) => {
+  try {
+    await fs.writeFile(recentProjectsPath, JSON.stringify(projects, null, 2), 'utf-8');
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to save recent projects:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // File system operations for project management
-const fs = require('fs').promises;
 const pathModule = require('path');
 
 // Handle directory creation

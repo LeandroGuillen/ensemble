@@ -2,7 +2,8 @@ import { Routes } from '@angular/router';
 import { projectGuard } from './core/guards/project.guard';
 
 export const routes: Routes = [
-  { path: '', redirectTo: '/project-selector', pathMatch: 'full' },
+  // Don't redirect '' immediately - let app.component handle initial navigation
+  { path: '', pathMatch: 'full', children: [] },
   {
     path: 'project-selector',
     loadComponent: () => import('./features/project-selector/project-selector.component').then(m => m.ProjectSelectorComponent)
