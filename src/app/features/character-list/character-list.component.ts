@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, HostListener } from "@angular/core";
+import { Component, OnInit, OnDestroy, HostListener, NgZone, ChangeDetectorRef } from "@angular/core";
 import { Router } from "@angular/router";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
@@ -78,7 +78,9 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     private electronService: ElectronService,
     private metadataService: MetadataService,
     private router: Router,
-    private commandPaletteService: CommandPaletteService
+    private commandPaletteService: CommandPaletteService,
+    private ngZone: NgZone,
+    private cdr: ChangeDetectorRef
   ) {
     this.characters$ = this.characterService.getCharacters();
   }
@@ -478,12 +480,11 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   }
 
   private applyFilters(): void {
-    this.characters$.pipe(takeUntil(this.destroy$)).subscribe((characters) => {
-      this.allCharacters = characters;
-      this.filteredCharacters = this.filterAndSortCharacters(characters);
-      // Reset selection when filters change
-      this.selectedCharacterIndex = -1;
-    });
+    // Simply re-filter and sort the current character list
+    // No need to subscribe again - the subscription in ngOnInit handles updates
+    this.filteredCharacters = this.filterAndSortCharacters(this.allCharacters);
+    // Reset selection when filters change
+    this.selectedCharacterIndex = -1;
   }
 
   private filterAndSortCharacters(characters: Character[]): Character[] {
@@ -663,21 +664,29 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   }
 
   private async loadThumbnailDataUrls(characters: Character[]): Promise<void> {
-    for (const character of characters) {
-      if (character.thumbnail && !this.thumbnailDataUrls.has(character.id)) {
-        try {
-          const dataUrl = await this.getThumbnailDataUrl(character);
-          if (dataUrl) {
-            this.thumbnailDataUrls.set(character.id, dataUrl);
+    // Load all thumbnails outside Angular's zone
+    await this.ngZone.runOutsideAngular(async () => {
+      const thumbnailPromises = characters
+        .filter(char => char.thumbnail && !this.thumbnailDataUrls.has(char.id))
+        .map(async (character) => {
+          try {
+            const dataUrl = await this.getThumbnailDataUrl(character);
+            if (dataUrl) {
+              this.thumbnailDataUrls.set(character.id, dataUrl);
+            }
+          } catch (error) {
+            console.error(
+              `Failed to load thumbnail for character ${character.name}:`,
+              error
+            );
           }
-        } catch (error) {
-          console.error(
-            `Failed to load thumbnail for character ${character.name}:`,
-            error
-          );
-        }
-      }
-    }
+        });
+
+      await Promise.all(thumbnailPromises);
+    });
+
+    // Trigger a single change detection after all thumbnails are loaded
+    this.cdr.detectChanges();
   }
 
   getFilterSummary(): string {

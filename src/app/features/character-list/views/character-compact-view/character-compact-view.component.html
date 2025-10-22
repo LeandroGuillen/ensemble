@@ -49,7 +49,7 @@
     <div class="compact-item-actions">
       <button
         class="icon-btn icon-btn-sm"
-        (click)="onCharacterClick(character); $event.stopPropagation()"
+        (click)="onCharacterClickWithStop(character, $event)"
         title="Edit character"
       >
         ✏️

@@ -48,6 +48,11 @@ export class CharacterListViewComponent {
     this.characterClick.emit(character);
   }
 
+  onCharacterClickWithStop(character: Character, event: Event): void {
+    event.stopPropagation();
+    this.characterClick.emit(character);
+  }
+
   onCharacterDelete(character: Character, event: Event): void {
     this.characterDelete.emit({ character, event });
   }

@@ -53,7 +53,7 @@
     </div>
 
     <div class="list-item-actions">
-      <button class="icon-btn" (click)="onCharacterClick(character); $event.stopPropagation()" title="Edit character">
+      <button class="icon-btn" (click)="onCharacterClickWithStop(character, $event)" title="Edit character">
         ✏️
       </button>
       <button class="icon-btn delete-btn" (click)="onCharacterDelete(character, $event)" title="Delete character">
