@@ -36,7 +36,7 @@ function createWindow() {
   // Load the app
   if (isDev) {
     mainWindow.loadURL('http://localhost:4200');
-    mainWindow.webContents.openDevTools();
+    // mainWindow.webContents.openDevTools();
   } else {
     mainWindow.loadFile(path.join(__dirname, 'dist/index.html'));
   }
@@ -352,35 +352,35 @@ ipcMain.handle('start-file-watcher', async (event, projectPath) => {
       ignoreInitial: true, // Don't emit events for existing files on startup
       awaitWriteFinish: {
         stabilityThreshold: 300,
-        pollInterval: 100
-      }
+        pollInterval: 100,
+      },
     });
 
     fileWatcher
-      .on('add', filePath => {
+      .on('add', (filePath) => {
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send('file-changed', {
             type: 'add',
             path: filePath,
-            filename: pathModule.basename(filePath)
+            filename: pathModule.basename(filePath),
           });
         }
       })
-      .on('change', filePath => {
+      .on('change', (filePath) => {
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send('file-changed', {
             type: 'change',
             path: filePath,
-            filename: pathModule.basename(filePath)
+            filename: pathModule.basename(filePath),
           });
         }
       })
-      .on('unlink', filePath => {
+      .on('unlink', (filePath) => {
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send('file-changed', {
             type: 'unlink',
             path: filePath,
-            filename: pathModule.basename(filePath)
+            filename: pathModule.basename(filePath),
           });
         }
       });
