@@ -66,6 +66,8 @@ npm run electron-dev
 npm run electron-prod
 ```
 
+When testing your code, do not try to bring up the app. Do only the build to check for compilation errors. App may be already running and may error out on port conflicts.
+
 ### Building for Distribution
 
 ```bash
@@ -254,3 +256,4 @@ This project was built using **Kiro** (see `.kiro/specs/ensemble/`):
 - `tasks.md` - Implementation task breakdown
 
 Reference these files for understanding original requirements and design rationale.
+

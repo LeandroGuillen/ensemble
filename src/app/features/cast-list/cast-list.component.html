@@ -1,0 +1,201 @@
+<div class="cast-list">
+  <app-page-header [title]="'Casts'" [showSearch]="false">
+    <div class="page-actions">
+      <!-- View Mode Toggle -->
+      <div class="view-toggle">
+        <button
+          class="toggle-option"
+          [class.active]="viewMode === 'grid'"
+          (click)="setViewMode('grid')"
+          title="Grid view"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <rect x="1" y="1" width="6" height="6" rx="1"/>
+            <rect x="9" y="1" width="6" height="6" rx="1"/>
+            <rect x="1" y="9" width="6" height="6" rx="1"/>
+            <rect x="9" y="9" width="6" height="6" rx="1"/>
+          </svg>
+        </button>
+        <button
+          class="toggle-option"
+          [class.active]="viewMode === 'list'"
+          (click)="setViewMode('list')"
+          title="List view"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <rect x="1" y="2" width="14" height="2" rx="1"/>
+            <rect x="1" y="7" width="14" height="2" rx="1"/>
+            <rect x="1" y="12" width="14" height="2" rx="1"/>
+          </svg>
+        </button>
+      </div>
+
+      <button class="btn btn-primary" (click)="createNewCast()">
+        New Cast
+      </button>
+    </div>
+  </app-page-header>
+
+  <div class="cast-content">
+    <div class="cast-inner">
+      <!-- Search Bar -->
+      <div class="toolbar">
+        <div class="search-box">
+          <input
+            type="text"
+            [(ngModel)]="searchTerm"
+            (ngModelChange)="onSearchChange()"
+            placeholder="Search casts or characters..."
+            class="search-input"
+          />
+          <button
+            *ngIf="searchTerm"
+            class="search-clear"
+            (click)="clearSearchTerm()"
+            title="Clear search"
+          >
+            ×
+          </button>
+        </div>
+      </div>
+
+      <!-- Error Display -->
+      <div *ngIf="error" class="error-banner">
+        <div class="error-content">
+          <span class="error-icon">⚠️</span>
+          <span class="error-message">{{ error }}</span>
+          <button class="error-close" (click)="error = null">×</button>
+        </div>
+      </div>
+
+      <!-- Results Summary -->
+      <div class="results-summary" *ngIf="searchTerm">
+        <span>{{ filteredCasts.length }} cast{{ filteredCasts.length !== 1 ? 's' : '' }} found</span>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="filteredCasts.length === 0 && !isLoading" class="empty-state">
+        <div class="empty-icon">🎭</div>
+        <h3 *ngIf="!searchTerm">No Casts Yet</h3>
+        <h3 *ngIf="searchTerm">No Casts Found</h3>
+        <p *ngIf="!searchTerm">Create your first cast to organize groups of characters.</p>
+        <p *ngIf="searchTerm">Try a different search term.</p>
+        <button *ngIf="!searchTerm" class="btn btn-primary" (click)="createNewCast()">
+          Create First Cast
+        </button>
+      </div>
+
+      <!-- Grid View -->
+      <div *ngIf="viewMode === 'grid' && filteredCasts.length > 0" class="cast-grid">
+        <div
+          *ngFor="let cast of filteredCasts"
+          class="cast-card"
+          (click)="editCast(cast)"
+        >
+          <!-- Thumbnail (Custom or Collage) -->
+          <div class="cast-thumbnail-collage">
+            <!-- Custom Cast Thumbnail -->
+            <div *ngIf="getCastThumbnail(cast)" class="cast-custom-thumbnail">
+              <img [src]="getCastThumbnail(cast)!" [alt]="cast.name + ' thumbnail'" />
+            </div>
+            <!-- Character Collage (if no custom thumbnail) -->
+            <div
+              *ngIf="!getCastThumbnail(cast) && getCastThumbnailCollage(cast).length > 0"
+              class="collage-grid"
+              [class.collage-1]="getCastThumbnailCollage(cast).length === 1"
+              [class.collage-2]="getCastThumbnailCollage(cast).length === 2"
+              [class.collage-3]="getCastThumbnailCollage(cast).length === 3"
+              [class.collage-4]="getCastThumbnailCollage(cast).length === 4"
+            >
+              <div
+                *ngFor="let thumbnail of getCastThumbnailCollage(cast)"
+                class="collage-item"
+              >
+                <img [src]="thumbnail" [alt]="'Character thumbnail'" />
+              </div>
+            </div>
+            <!-- Placeholder (if no custom thumbnail and no character thumbnails) -->
+            <div *ngIf="!getCastThumbnail(cast) && getCastThumbnailCollage(cast).length === 0" class="collage-placeholder">
+              <span class="placeholder-icon">🎭</span>
+            </div>
+          </div>
+
+          <!-- Card Content -->
+          <div class="cast-card-content">
+            <h3 class="cast-name">{{ cast.name }}</h3>
+            <p class="cast-meta">
+              {{ getCastCharacterCount(cast) }} character{{ getCastCharacterCount(cast) !== 1 ? 's' : '' }}
+            </p>
+          </div>
+
+          <!-- Card Actions -->
+          <div class="cast-card-actions">
+            <button
+              class="btn-icon btn-danger"
+              (click)="deleteCast(cast, $event)"
+              title="Delete cast"
+            >
+              🗑️
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- List View -->
+      <div *ngIf="viewMode === 'list' && filteredCasts.length > 0" class="cast-list-view">
+        <div
+          *ngFor="let cast of filteredCasts"
+          class="cast-list-item"
+          (click)="editCast(cast)"
+        >
+          <!-- Thumbnail (Custom or Collage, smaller) -->
+          <div class="cast-thumbnail-collage-small">
+            <!-- Custom Cast Thumbnail -->
+            <div *ngIf="getCastThumbnail(cast)" class="cast-custom-thumbnail-small">
+              <img [src]="getCastThumbnail(cast)!" [alt]="cast.name + ' thumbnail'" />
+            </div>
+            <!-- Character Collage (if no custom thumbnail) -->
+            <div
+              *ngIf="!getCastThumbnail(cast) && getCastThumbnailCollage(cast).length > 0"
+              class="collage-grid-small"
+              [class.collage-1]="getCastThumbnailCollage(cast).length === 1"
+              [class.collage-2]="getCastThumbnailCollage(cast).length === 2"
+              [class.collage-3]="getCastThumbnailCollage(cast).length === 3"
+              [class.collage-4]="getCastThumbnailCollage(cast).length === 4"
+            >
+              <div
+                *ngFor="let thumbnail of getCastThumbnailCollage(cast)"
+                class="collage-item-small"
+              >
+                <img [src]="thumbnail" [alt]="'Character thumbnail'" />
+              </div>
+            </div>
+            <!-- Placeholder (if no custom thumbnail and no character thumbnails) -->
+            <div *ngIf="!getCastThumbnail(cast) && getCastThumbnailCollage(cast).length === 0" class="collage-placeholder-small">
+              <span class="placeholder-icon-small">🎭</span>
+            </div>
+          </div>
+
+          <!-- List Item Content -->
+          <div class="cast-list-item-content">
+            <h3 class="cast-name">{{ cast.name }}</h3>
+            <p class="cast-meta">
+              {{ getCastCharacterCount(cast) }} character{{ getCastCharacterCount(cast) !== 1 ? 's' : '' }}
+            </p>
+          </div>
+
+          <!-- List Item Actions -->
+          <div class="cast-list-item-actions">
+            <button
+              class="btn-icon btn-danger"
+              (click)="deleteCast(cast, $event)"
+              title="Delete cast"
+            >
+              🗑️
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

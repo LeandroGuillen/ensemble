@@ -47,6 +47,9 @@ export interface Cast {
   id: string;
   name: string;
   characterIds: string[];
+  description?: string;      // Loaded from description.md in cast folder
+  thumbnail?: string;         // Filename of thumbnail in cast folder
+  folderPath?: string;        // Absolute path to cast folder
 }
 
 export interface Book {
@@ -77,6 +80,7 @@ export interface ProjectSettings {
   defaultCategory: string;
   autoSave: boolean;
   fileWatchEnabled: boolean;
+  lastRoute?: string;
   graphView?: GraphViewState;
   ai?: AiSettings;
 }

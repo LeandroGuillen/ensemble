@@ -44,14 +44,25 @@ npm run build-electron
 
 ```
 project-folder/
-├── metadata.json           # Project settings, categories, tags
-├── relationships.json      # Character relationship data
-├── character-1.md          # Character markdown files
-├── character-2.md
-└── thumbnails/            # Character thumbnail images
-    ├── character-1.jpg
-    └── character-2.png
+├── ensemble.json           # Project metadata: categories, tags, settings, relationships
+└── characters/             # Character folders organized by category
+    ├── <category-slug>/    # Category folder (e.g., "main-characters")
+    │   └── <character-slug>/  # Character folder (e.g., "john-doe")
+    │       ├── <character-slug>.md    # Main character file
+    │       ├── thumbnail.png          # Character thumbnail (any image format)
+    │       └── additional-field.md    # Additional markdown files become fields
+    └── _deleted/           # Trash folder for deleted characters
 ```
+
+### Migrating from Old Structure
+
+If you have an existing project with a global `thumbnails/` directory, use the migration script:
+
+```bash
+node scripts/migrate-to-folder-structure.js /path/to/your/project
+```
+
+See [THUMBNAILS_MIGRATION.md](THUMBNAILS_MIGRATION.md) for detailed migration instructions.
 
 ## Technology Stack
 

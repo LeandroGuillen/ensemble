@@ -1,0 +1,294 @@
+<div class="cast-detail">
+  <app-page-header
+    [title]="isNewCast ? 'New Cast' : 'Edit Cast'"
+    [showSearch]="false"
+  ></app-page-header>
+
+  <div class="cast-detail-content">
+    <div class="cast-detail-inner">
+      <!-- Form -->
+      <form [formGroup]="castForm" (ngSubmit)="saveCast()" class="cast-form">
+        <!-- Sticky Form Actions at Top -->
+        <div class="form-actions-top">
+          <div class="form-actions-buttons">
+            <button type="button" class="btn btn-secondary" (click)="cancel()">
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="btn btn-primary"
+              [disabled]="isSaving || castForm.invalid"
+            >
+              <span *ngIf="isSaving" class="spinner-small"></span>
+              <span *ngIf="!isSaving">{{
+                isNewCast ? "Create Cast" : "Save Changes"
+              }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Error Display -->
+        <div *ngIf="error" class="error-banner">
+          <div class="error-content">
+            <span class="error-icon">⚠️</span>
+            <span class="error-message">{{ error }}</span>
+            <button class="error-close" (click)="error = null">×</button>
+          </div>
+        </div>
+        <!-- Cast Name and Description -->
+        <div class="form-section">
+          <h2 class="section-title">Cast Details</h2>
+
+          <div class="form-group">
+            <label for="castName" class="form-label">Cast Name *</label>
+            <input
+              id="castName"
+              type="text"
+              formControlName="name"
+              placeholder="e.g., Chapter 1 Cast, Main Characters, Villain Group"
+              class="form-control"
+              [class.error]="getFieldError('name')"
+            />
+            <div *ngIf="getFieldError('name')" class="field-error">
+              {{ getFieldError("name") }}
+            </div>
+          </div>
+
+          <!-- Delete Cast Link -->
+          <div *ngIf="!isNewCast" class="delete-cast-container">
+            <button
+              type="button"
+              class="delete-cast-link"
+              (click)="deleteCast()"
+            >
+              Delete this cast
+            </button>
+          </div>
+
+          <!-- Thumbnail Section -->
+          <div class="form-group thumbnail-section">
+            <label class="form-label">Thumbnail</label>
+            <div class="thumbnail-container">
+              <div
+                class="thumbnail-clickable-area"
+                (click)="selectThumbnail()"
+                [class.uploading]="isUploadingThumbnail"
+                [class.has-thumbnail]="castThumbnail"
+              >
+                <div *ngIf="castThumbnail" class="thumbnail-preview">
+                  <img [src]="castThumbnail" alt="Cast thumbnail" />
+                  <div class="thumbnail-overlay">
+                    <span class="overlay-text">Click to change</span>
+                  </div>
+                </div>
+                <div *ngIf="!castThumbnail" class="thumbnail-placeholder">
+                  <span *ngIf="!isUploadingThumbnail" class="placeholder-icon"
+                    >🎬</span
+                  >
+                  <span
+                    *ngIf="isUploadingThumbnail"
+                    class="spinner-small"
+                  ></span>
+                  <span class="placeholder-text">
+                    {{
+                      isUploadingThumbnail
+                        ? "Uploading..."
+                        : "Click to add thumbnail"
+                    }}
+                  </span>
+                </div>
+              </div>
+              <div *ngIf="castThumbnail" class="thumbnail-actions">
+                <button
+                  type="button"
+                  class="btn btn-secondary btn-small"
+                  (click)="removeThumbnail(); $event.stopPropagation()"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+            <div class="field-hint">
+              Recommended: 400x400px or larger. Supports JPG, PNG, WEBP, GIF
+            </div>
+          </div>
+
+          <!-- Description -->
+          <div class="form-group">
+            <label for="castDescription" class="form-label">Description</label>
+            <textarea
+              id="castDescription"
+              formControlName="description"
+              placeholder="Add notes about this cast/scene... (supports Markdown)"
+              class="form-control textarea-large"
+              rows="8"
+            ></textarea>
+            <div class="field-hint">
+              You can use Markdown formatting. This will be saved to
+              description.md in the cast folder.
+            </div>
+          </div>
+        </div>
+
+        <!-- Character Selection - Two Column Layout -->
+        <div class="character-selection-container">
+          <!-- Selected Characters (Left) -->
+          <div class="character-column">
+            <div class="column-header">
+              <h2 class="column-title">
+                In Cast ({{ getSelectedCharacters().length }})
+              </h2>
+              <div class="form-group search-group">
+                <input
+                  type="text"
+                  [(ngModel)]="selectedFilter"
+                  [ngModelOptions]="{ standalone: true }"
+                  placeholder="Filter selected..."
+                  class="form-control"
+                />
+              </div>
+            </div>
+
+            <div
+              class="character-drop-zone"
+              [class.drag-over]="dragOverZone === 'selected'"
+              (drop)="onDrop($event, 'selected')"
+              (dragover)="onDragOver($event, 'selected')"
+              (dragleave)="onDragLeave($event)"
+            >
+              <div
+                *ngIf="getFilteredSelectedCharacters().length === 0"
+                class="empty-drop-zone"
+              >
+                <div class="empty-icon">👥</div>
+                <p>Drag characters here to add them to the cast</p>
+              </div>
+
+              <div
+                *ngFor="let character of getFilteredSelectedCharacters()"
+                class="character-card"
+                draggable="true"
+                (dragstart)="onDragStart($event, character.id)"
+                (dragend)="onDragEnd($event)"
+              >
+                <div class="character-card-thumbnail">
+                  <img
+                    *ngIf="getCharacterThumbnail(character.id)"
+                    [src]="getCharacterThumbnail(character.id)"
+                    [alt]="character.name"
+                  />
+                  <div
+                    *ngIf="!getCharacterThumbnail(character.id)"
+                    class="thumbnail-placeholder-small"
+                  >
+                    👤
+                  </div>
+                </div>
+
+                <div class="character-card-info">
+                  <div class="character-card-name">{{ character.name }}</div>
+                  <div
+                    class="character-card-category"
+                    [style.background-color]="
+                      getCategoryColor(character.category)
+                    "
+                    [style.color]="getCategoryTextColor(character.category)"
+                  >
+                    {{ getCategoryName(character.category) }}
+                  </div>
+                </div>
+
+                <div class="drag-handle" title="Drag to move">⋮⋮</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Available Characters (Right) -->
+          <div class="character-column">
+            <div class="column-header">
+              <h2 class="column-title">
+                Available Characters ({{ getAvailableCharacters().length }})
+              </h2>
+              <div class="form-group search-group">
+                <input
+                  type="text"
+                  [(ngModel)]="availableFilter"
+                  [ngModelOptions]="{ standalone: true }"
+                  placeholder="Filter available..."
+                  class="form-control"
+                />
+              </div>
+            </div>
+
+            <div
+              class="character-drop-zone"
+              [class.drag-over]="dragOverZone === 'available'"
+              (drop)="onDrop($event, 'available')"
+              (dragover)="onDragOver($event, 'available')"
+              (dragleave)="onDragLeave($event)"
+            >
+              <div
+                *ngIf="
+                  getFilteredAvailableCharacters().length === 0 &&
+                  characters.length === 0
+                "
+                class="empty-drop-zone"
+              >
+                <div class="empty-icon">📝</div>
+                <p>No characters available. Create some characters first.</p>
+              </div>
+
+              <div
+                *ngIf="
+                  getFilteredAvailableCharacters().length === 0 &&
+                  characters.length > 0
+                "
+                class="empty-drop-zone"
+              >
+                <div class="empty-icon">🔍</div>
+                <p>No characters match your filter</p>
+              </div>
+
+              <div
+                *ngFor="let character of getFilteredAvailableCharacters()"
+                class="character-card"
+                draggable="true"
+                (dragstart)="onDragStart($event, character.id)"
+                (dragend)="onDragEnd($event)"
+              >
+                <div class="character-card-thumbnail">
+                  <img
+                    *ngIf="getCharacterThumbnail(character.id)"
+                    [src]="getCharacterThumbnail(character.id)"
+                    [alt]="character.name"
+                  />
+                  <div
+                    *ngIf="!getCharacterThumbnail(character.id)"
+                    class="thumbnail-placeholder-small"
+                  >
+                    👤
+                  </div>
+                </div>
+
+                <div class="character-card-info">
+                  <div class="character-card-name">{{ character.name }}</div>
+                  <div
+                    class="character-card-category"
+                    [style.background-color]="
+                      getCategoryColor(character.category)
+                    "
+                    [style.color]="getCategoryTextColor(character.category)"
+                  >
+                    {{ getCategoryName(character.category) }}
+                  </div>
+                </div>
+
+                <div class="drag-handle" title="Drag to move">⋮⋮</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

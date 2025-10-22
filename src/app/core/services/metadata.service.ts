@@ -7,6 +7,7 @@ import { CharacterValidator } from '../validators/character.validator';
 import { ProjectValidator } from '../validators/project.validator';
 import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
+import { CastService } from './cast.service';
 
 @Injectable({
   providedIn: 'root',
@@ -16,7 +17,11 @@ export class MetadataService {
   public metadata$ = this.metadataSubject.asObservable();
   private currentProjectPath: string | null = null;
 
-  constructor(private electronService: ElectronService, private projectService: ProjectService) {
+  constructor(
+    private electronService: ElectronService,
+    private projectService: ProjectService,
+    private castService: CastService
+  ) {
     // Subscribe to project changes to keep metadata in sync
     this.projectService.currentProject$.subscribe((project) => {
       if (project) {
@@ -372,6 +377,7 @@ export class MetadataService {
 
   /**
    * Adds a new cast
+   * Creates folder structure via CastService and saves metadata
    */
   async addCast(castData: Omit<Cast, 'id'>): Promise<Cast> {
     const metadata = this.metadataSubject.value;
@@ -382,28 +388,32 @@ export class MetadataService {
     // Initialize casts array if it doesn't exist (for backward compatibility)
     const casts = metadata.casts || [];
 
-    // Generate unique ID
-    const id = this.generateId(castData.name);
-    const newCast: Cast = { id, ...castData };
+    // Create cast folder structure via CastService
+    const newCast = await this.castService.createCast({
+      name: castData.name,
+      characterIds: castData.characterIds,
+      description: castData.description,
+    });
 
-    // Check for duplicate ID
-    const existingCast = casts.find((cast) => cast.id === id);
-    if (existingCast) {
-      throw new Error(`Cast with ID '${id}' already exists`);
-    }
+    // Save minimal cast metadata to ensemble.json (id, name, characterIds only)
+    const castMetadata: Cast = {
+      id: newCast.id,
+      name: newCast.name,
+      characterIds: newCast.characterIds,
+    };
 
-    // Add cast and save
     const updatedMetadata = {
       ...metadata,
-      casts: [...casts, newCast],
+      casts: [...casts, castMetadata],
     };
 
     await this.saveMetadata(updatedMetadata);
-    return newCast;
+    return newCast; // Return full cast with folder info
   }
 
   /**
    * Updates an existing cast
+   * Updates folder via CastService and ensemble.json metadata
    */
   async updateCast(id: string, updates: Partial<Omit<Cast, 'id'>>): Promise<Cast> {
     const metadata = this.metadataSubject.value;
@@ -419,11 +429,21 @@ export class MetadataService {
       throw new Error(`Cast with ID '${id}' not found`);
     }
 
-    const updatedCast = { ...casts[castIndex], ...updates };
+    // Update cast folder via CastService
+    const updatedCast = await this.castService.updateCast(id, updates);
+    if (!updatedCast) {
+      throw new Error('Failed to update cast folder');
+    }
 
-    // Update cast and save
+    // Update ensemble.json with minimal metadata (id, name, characterIds only)
+    const castMetadata: Cast = {
+      id: updatedCast.id,
+      name: updatedCast.name,
+      characterIds: updatedCast.characterIds,
+    };
+
     const updatedCasts = [...casts];
-    updatedCasts[castIndex] = updatedCast;
+    updatedCasts[castIndex] = castMetadata;
 
     const updatedMetadata = {
       ...metadata,
@@ -431,11 +451,12 @@ export class MetadataService {
     };
 
     await this.saveMetadata(updatedMetadata);
-    return updatedCast;
+    return updatedCast; // Return full cast with folder info
   }
 
   /**
    * Removes a cast
+   * Moves folder to trash via CastService and updates ensemble.json
    */
   async removeCast(id: string): Promise<void> {
     const metadata = this.metadataSubject.value;
@@ -451,7 +472,10 @@ export class MetadataService {
       throw new Error(`Cast with ID '${id}' not found`);
     }
 
-    // Remove cast and save
+    // Move cast folder to trash via CastService
+    await this.castService.deleteCast(id);
+
+    // Remove cast from ensemble.json
     const updatedMetadata = {
       ...metadata,
       casts: casts.filter((cast) => cast.id !== id),

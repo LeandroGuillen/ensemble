@@ -2,12 +2,13 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { Character, CharacterFormData } from '../interfaces/character.interface';
 import { MarkdownUtils } from '../utils/markdown.utils';
-import { slugify, slugifyWithTimestamp, filenameToFieldName } from '../utils/slug.utils';
+import { filenameToFieldName, slugify, slugifyWithTimestamp } from '../utils/slug.utils';
 import { ElectronService } from './electron.service';
-import { ProjectService } from './project.service';
 import { FileWatcherService } from './file-watcher.service';
+import { ProjectService } from './project.service';
 
 interface CharacterFrontmatter {
+  id?: string; // Character ID for consistent identification
   name: string;
   category: string;
   tags: string[];
@@ -245,7 +246,8 @@ export class CharacterService {
 
     for (const [fieldName, content] of Object.entries(additionalFields)) {
       // Use the original filename if available, otherwise create a new one
-      const filename = character.additionalFieldsFilenames[fieldName] || fieldName.toLowerCase().replace(/\s+/g, '-') + '.md';
+      const filename =
+        character.additionalFieldsFilenames[fieldName] || fieldName.toLowerCase().replace(/\s+/g, '-') + '.md';
       const filePath = await this.electronService.pathJoin(character.folderPath, filename);
 
       // Write the file
@@ -263,7 +265,11 @@ export class CharacterService {
    * Updates an existing character and saves changes to disk
    * Handles folder moves when category or name changes
    */
-  async updateCharacter(id: string, data: Partial<CharacterFormData>, additionalFieldsChanges?: Record<string, string>): Promise<Character | null> {
+  async updateCharacter(
+    id: string,
+    data: Partial<CharacterFormData>,
+    additionalFieldsChanges?: Record<string, string>
+  ): Promise<Character | null> {
     const project = this.projectService.getCurrentProject();
     if (!project) {
       throw new Error('No project loaded');
@@ -303,7 +309,10 @@ export class CharacterService {
         await this.electronService.createDirectory(newCategoryPath);
 
         // Move the entire character folder
-        const moveResult = await this.electronService.moveDirectory(existingCharacter.folderPath, newCharacterFolderPath);
+        const moveResult = await this.electronService.moveDirectory(
+          existingCharacter.folderPath,
+          newCharacterFolderPath
+        );
         if (!moveResult.success) {
           throw new Error(`Failed to move character folder: ${moveResult.error}`);
         }
@@ -513,7 +522,11 @@ export class CharacterService {
         return [];
       }
 
-      const deletedCharacters: Array<{ folderName: string; name: string; deletedAt: Date }> = [];
+      const deletedCharacters: Array<{
+        folderName: string;
+        name: string;
+        deletedAt: Date;
+      }> = [];
 
       for (const folderName of dirContents.directories) {
         try {
@@ -692,7 +705,11 @@ export class CharacterService {
    * Loads a character from a folder
    * New structure: characters/<category>/<character-slug>/
    */
-  private async loadCharacterFromFolder(folderPath: string, categorySlug: string, characterSlug: string): Promise<Character | null> {
+  private async loadCharacterFromFolder(
+    folderPath: string,
+    categorySlug: string,
+    characterSlug: string
+  ): Promise<Character | null> {
     try {
       // Main character file is <slug>.md
       const mainFilePath = await this.electronService.pathJoin(folderPath, `${characterSlug}.md`);
@@ -723,8 +740,8 @@ export class CharacterService {
         characterSlug
       );
 
-      // Generate ID from character slug
-      const id = this.extractIdFromFilename(characterSlug);
+      // Use ID from frontmatter if available, otherwise generate from slug for backward compatibility
+      const id = frontmatter.id || this.extractIdFromFilename(characterSlug);
 
       const character: Character = {
         id,
@@ -759,7 +776,10 @@ export class CharacterService {
   private async loadAdditionalFields(
     folderPath: string,
     characterSlug: string
-  ): Promise<{ fields: Record<string, string>; filenames: Record<string, string> }> {
+  ): Promise<{
+    fields: Record<string, string>;
+    filenames: Record<string, string>;
+  }> {
     const fields: Record<string, string> = {};
     const filenames: Record<string, string> = {};
 
@@ -810,6 +830,7 @@ export class CharacterService {
   private async saveCharacterToFile(character: Character): Promise<void> {
     try {
       const frontmatter: CharacterFrontmatter = {
+        id: character.id,
         name: character.name,
         category: character.category,
         tags: character.tags,
@@ -907,10 +928,7 @@ export class CharacterService {
    * Handles thumbnail upload to character folder and returns the filename
    * New approach: stores thumbnail in character's own folder
    */
-  private async handleThumbnailUploadToFolder(
-    thumbnailPath: string,
-    characterFolderPath: string
-  ): Promise<string> {
+  private async handleThumbnailUploadToFolder(thumbnailPath: string, characterFolderPath: string): Promise<string> {
     try {
       // Get original filename and extension
       const originalFilename = await this.electronService.pathBasename(thumbnailPath);
@@ -937,6 +955,8 @@ export class CharacterService {
   /**
    * Handles thumbnail upload and returns the filename
    * @deprecated Use handleThumbnailUploadToFolder for new folder structure
+   * This method is kept for backward compatibility but should not be used for new characters.
+   * It stores thumbnails in the global thumbnails/ directory which is no longer recommended.
    */
   private async handleThumbnailUpload(
     thumbnailPath: string,
@@ -970,7 +990,9 @@ export class CharacterService {
   }
 
   /**
-   * Removes a thumbnail file
+   * Removes a thumbnail file from the global thumbnails directory
+   * @deprecated This method is for the old global thumbnails structure.
+   * New character thumbnails are stored in character folders and removed when the folder is deleted.
    */
   private async removeThumbnail(thumbnailFilename: string, projectPath: string): Promise<void> {
     try {
@@ -992,7 +1014,10 @@ export class CharacterService {
   /**
    * Parses character content into description and notes sections
    */
-  private parseCharacterContent(content: string): { description: string; notes: string } {
+  private parseCharacterContent(content: string): {
+    description: string;
+    notes: string;
+  } {
     const lines = content.split('\n');
     let description = '';
     let notes = '';

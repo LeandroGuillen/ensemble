@@ -1,10 +1,24 @@
-import { Component, OnInit, OnDestroy, HostListener, NgZone, ChangeDetectorRef } from "@angular/core";
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  HostListener,
+  NgZone,
+  ChangeDetectorRef,
+} from "@angular/core";
 import { Router } from "@angular/router";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { Observable, Subject } from "rxjs";
 import { takeUntil } from "rxjs/operators";
-import { Character, Category, Tag, Project, Cast, Book } from "../../core/interfaces";
+import {
+  Character,
+  Category,
+  Tag,
+  Project,
+  Cast,
+  Book,
+} from "../../core/interfaces";
 import {
   CharacterService,
   ProjectService,
@@ -12,15 +26,22 @@ import {
   MetadataService,
 } from "../../core/services";
 import { CommandPaletteService } from "../../shared/command-palette/command-palette.service";
-import { CategoryToggleComponent, ToggleOption } from "../../shared/category-toggle/category-toggle.component";
-import { MultiSelectButtonsComponent, SelectableItem } from "../../shared/multi-select-buttons/multi-select-buttons.component";
+import {
+  CategoryToggleComponent,
+  ToggleOption,
+} from "../../shared/category-toggle/category-toggle.component";
+import {
+  MultiSelectButtonsComponent,
+  SelectableItem,
+} from "../../shared/multi-select-buttons/multi-select-buttons.component";
 import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
 import { BookSelectorComponent } from "../../shared/book-selector/book-selector.component";
+import { CastDropdownComponent } from "../../shared/cast-dropdown/cast-dropdown.component";
 import {
   CharacterGridViewComponent,
   CharacterListViewComponent,
   CharacterCompactViewComponent,
-  CharacterGalleryViewComponent
+  CharacterGalleryViewComponent,
 } from "./views";
 
 @Component({
@@ -33,10 +54,11 @@ import {
     MultiSelectButtonsComponent,
     PageHeaderComponent,
     BookSelectorComponent,
+    CastDropdownComponent,
     CharacterGridViewComponent,
     CharacterListViewComponent,
     CharacterCompactViewComponent,
-    CharacterGalleryViewComponent
+    CharacterGalleryViewComponent,
   ],
   templateUrl: "./character-list.component.html",
   styleUrls: ["./character-list.component.scss"],
@@ -130,7 +152,9 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     if (savedSearchTerm) {
       this.searchTerm = savedSearchTerm;
     }
-    const savedSelectedCategory = localStorage.getItem("characterSelectedCategory");
+    const savedSelectedCategory = localStorage.getItem(
+      "characterSelectedCategory"
+    );
     if (savedSelectedCategory) {
       this.selectedCategory = savedSelectedCategory;
     }
@@ -198,12 +222,11 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       return;
     }
 
-
-
     // Enter to open selected character
     if (event.key === "Enter" && this.selectedCharacterIndex >= 0) {
       event.preventDefault();
-      const selectedCharacter = this.filteredCharacters[this.selectedCharacterIndex];
+      const selectedCharacter =
+        this.filteredCharacters[this.selectedCharacterIndex];
       if (selectedCharacter) {
         this.editCharacter(selectedCharacter);
       }
@@ -225,8 +248,6 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     }
   }
 
-
-
   private scrollToSelectedCharacter(): void {
     if (this.selectedCharacterIndex < 0) return;
 
@@ -235,18 +256,18 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       const selectedElement = document.querySelector(
         `.character-item[data-index="${this.selectedCharacterIndex}"]`
       ) as HTMLElement;
-      
+
       if (selectedElement) {
         selectedElement.scrollIntoView({
-          behavior: 'smooth',
-          block: 'nearest'
+          behavior: "smooth",
+          block: "nearest",
         });
       }
     }, 0);
   }
 
   getCharacterClass(index: number): string {
-    return this.selectedCharacterIndex === index ? 'selected' : '';
+    return this.selectedCharacterIndex === index ? "selected" : "";
   }
 
   private registerCommands(): void {
@@ -442,7 +463,10 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       this.selectedTags.push(tagId);
     }
     // Save selected tags to localStorage
-    localStorage.setItem("characterSelectedTags", JSON.stringify(this.selectedTags));
+    localStorage.setItem(
+      "characterSelectedTags",
+      JSON.stringify(this.selectedTags)
+    );
     this.applyFilters();
   }
 
@@ -450,6 +474,12 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     // Save selected cast to localStorage
     localStorage.setItem("characterSelectedCast", this.selectedCast);
     this.applyFilters();
+  }
+
+  // Cast dropdown event handler
+  onCastDropdownChange(castId: string): void {
+    this.selectedCast = castId;
+    this.onCastChange();
   }
 
   onBookChange(): void {
@@ -572,25 +602,28 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   }
 
   getCategoryToggleOptions(): ToggleOption[] {
-    return this.categories.map(cat => ({
+    return this.categories.map((cat) => ({
       id: cat.id,
       name: cat.name,
-      tooltip: cat.description || cat.name
+      tooltip: cat.description || cat.name,
     }));
   }
 
   getTagsAsSelectableItems(): SelectableItem[] {
-    return this.tags.map(tag => ({
+    return this.tags.map((tag) => ({
       id: tag.id,
       name: tag.name,
-      color: tag.color
+      color: tag.color,
     }));
   }
 
   onTagsSelectionChange(selectedIds: string[]): void {
     this.selectedTags = selectedIds;
     // Save selected tags to localStorage
-    localStorage.setItem("characterSelectedTags", JSON.stringify(this.selectedTags));
+    localStorage.setItem(
+      "characterSelectedTags",
+      JSON.stringify(this.selectedTags)
+    );
     this.applyFilters();
   }
 
@@ -616,8 +649,8 @@ export class CharacterListComponent implements OnInit, OnDestroy {
 
   getBookCharacterCount(bookId: string): number {
     // Get all characters (not just filtered ones) to show total count
-    return this.allCharacters.filter(character =>
-      character.books && character.books.includes(bookId)
+    return this.allCharacters.filter(
+      (character) => character.books && character.books.includes(bookId)
     ).length;
   }
 
@@ -667,7 +700,9 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     // Load all thumbnails outside Angular's zone
     await this.ngZone.runOutsideAngular(async () => {
       const thumbnailPromises = characters
-        .filter(char => char.thumbnail && !this.thumbnailDataUrls.has(char.id))
+        .filter(
+          (char) => char.thumbnail && !this.thumbnailDataUrls.has(char.id)
+        )
         .map(async (character) => {
           try {
             const dataUrl = await this.getThumbnailDataUrl(character);
@@ -881,13 +916,14 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   // Trash management methods
   async viewTrash(): Promise<void> {
     try {
-      const deletedCharacters = await this.characterService.getDeletedCharacters();
-      console.log('Deleted characters:', deletedCharacters);
+      const deletedCharacters =
+        await this.characterService.getDeletedCharacters();
+      console.log("Deleted characters:", deletedCharacters);
       // TODO: Show trash UI/modal with deletedCharacters
       // Each item has: folderName, name, deletedAt
     } catch (error) {
       this.error = `Failed to load trash: ${error}`;
-      console.error('Failed to load trash:', error);
+      console.error("Failed to load trash:", error);
     }
   }
 
@@ -897,12 +933,16 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       // Characters are automatically reloaded after restore
     } catch (error) {
       this.error = `Failed to restore character: ${error}`;
-      console.error('Failed to restore character:', error);
+      console.error("Failed to restore character:", error);
     }
   }
 
   async emptyTrash(): Promise<void> {
-    if (!confirm('Are you sure you want to permanently delete all characters in trash?\n\nThis action cannot be undone.')) {
+    if (
+      !confirm(
+        "Are you sure you want to permanently delete all characters in trash?\n\nThis action cannot be undone."
+      )
+    ) {
       return;
     }
 
@@ -910,12 +950,16 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       await this.characterService.emptyTrash();
     } catch (error) {
       this.error = `Failed to empty trash: ${error}`;
-      console.error('Failed to empty trash:', error);
+      console.error("Failed to empty trash:", error);
     }
   }
 
   async permanentlyDeleteCharacter(folderName: string): Promise<void> {
-    if (!confirm('Are you sure you want to permanently delete this character?\n\nThis action cannot be undone.')) {
+    if (
+      !confirm(
+        "Are you sure you want to permanently delete this character?\n\nThis action cannot be undone."
+      )
+    ) {
       return;
     }
 
@@ -923,16 +967,19 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       await this.characterService.permanentlyDeleteCharacter(folderName);
     } catch (error) {
       this.error = `Failed to permanently delete character: ${error}`;
-      console.error('Failed to permanently delete character:', error);
+      console.error("Failed to permanently delete character:", error);
     }
   }
 
-  getGroupedCharacters(): Array<{ categoryId: string; characters: Character[] }> {
+  getGroupedCharacters(): Array<{
+    categoryId: string;
+    characters: Character[];
+  }> {
     const grouped = new Map<string, Character[]>();
 
     // Group characters by category
     for (const character of this.filteredCharacters) {
-      const categoryId = character.category || 'uncategorized';
+      const categoryId = character.category || "uncategorized";
       if (!grouped.has(categoryId)) {
         grouped.set(categoryId, []);
       }
@@ -947,16 +994,16 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       if (grouped.has(category.id)) {
         result.push({
           categoryId: category.id,
-          characters: grouped.get(category.id)!
+          characters: grouped.get(category.id)!,
         });
       }
     }
 
     // Then add any uncategorized characters
-    if (grouped.has('uncategorized')) {
+    if (grouped.has("uncategorized")) {
       result.push({
-        categoryId: 'uncategorized',
-        characters: grouped.get('uncategorized')!
+        categoryId: "uncategorized",
+        characters: grouped.get("uncategorized")!,
       });
     }
 
@@ -977,10 +1024,10 @@ export class CharacterListComponent implements OnInit, OnDestroy {
         }
       } else {
         // Characters with no tags
-        if (!grouped.has('untagged')) {
-          grouped.set('untagged', []);
+        if (!grouped.has("untagged")) {
+          grouped.set("untagged", []);
         }
-        grouped.get('untagged')!.push(character);
+        grouped.get("untagged")!.push(character);
       }
     }
 
@@ -992,16 +1039,16 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       if (grouped.has(tag.id)) {
         result.push({
           tagId: tag.id,
-          characters: grouped.get(tag.id)!
+          characters: grouped.get(tag.id)!,
         });
       }
     }
 
     // Then add any untagged characters
-    if (grouped.has('untagged')) {
+    if (grouped.has("untagged")) {
       result.push({
-        tagId: 'untagged',
-        characters: grouped.get('untagged')!
+        tagId: "untagged",
+        characters: grouped.get("untagged")!,
       });
     }
 
@@ -1015,10 +1062,12 @@ export class CharacterListComponent implements OnInit, OnDestroy {
    */
   getContrastTextColor(backgroundColor: string): string {
     // Convert hex to RGB
-    let r = 0, g = 0, b = 0;
+    let r = 0,
+      g = 0,
+      b = 0;
 
     // Handle hex colors (#RGB or #RRGGBB)
-    if (backgroundColor.startsWith('#')) {
+    if (backgroundColor.startsWith("#")) {
       const hex = backgroundColor.substring(1);
       if (hex.length === 3) {
         r = parseInt(hex[0] + hex[0], 16);
@@ -1036,14 +1085,17 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     const gsRGB = g / 255;
     const bsRGB = b / 255;
 
-    const rLinear = rsRGB <= 0.03928 ? rsRGB / 12.92 : Math.pow((rsRGB + 0.055) / 1.055, 2.4);
-    const gLinear = gsRGB <= 0.03928 ? gsRGB / 12.92 : Math.pow((gsRGB + 0.055) / 1.055, 2.4);
-    const bLinear = bsRGB <= 0.03928 ? bsRGB / 12.92 : Math.pow((bsRGB + 0.055) / 1.055, 2.4);
+    const rLinear =
+      rsRGB <= 0.03928 ? rsRGB / 12.92 : Math.pow((rsRGB + 0.055) / 1.055, 2.4);
+    const gLinear =
+      gsRGB <= 0.03928 ? gsRGB / 12.92 : Math.pow((gsRGB + 0.055) / 1.055, 2.4);
+    const bLinear =
+      bsRGB <= 0.03928 ? bsRGB / 12.92 : Math.pow((bsRGB + 0.055) / 1.055, 2.4);
 
     const luminance = 0.2126 * rLinear + 0.7152 * gLinear + 0.0722 * bLinear;
 
     // Use white text on dark backgrounds, black text on light backgrounds
     // Threshold of 0.5 works well for most cases
-    return luminance > 0.5 ? '#000000' : '#ffffff';
+    return luminance > 0.5 ? "#000000" : "#ffffff";
   }
 }

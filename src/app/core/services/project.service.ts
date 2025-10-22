@@ -204,12 +204,8 @@ export class ProjectService {
         throw new Error(`Failed to create characters directory: ${charactersResult.error}`);
       }
 
-      // Create thumbnails subdirectory
-      const thumbnailsPath = await this.electronService.pathJoin(projectPath, 'thumbnails');
-      const thumbnailsResult = await this.electronService.createDirectory(thumbnailsPath);
-      if (!thumbnailsResult.success) {
-        throw new Error(`Failed to create thumbnails directory: ${thumbnailsResult.error}`);
-      }
+      // Note: Thumbnails are now stored in individual character folders
+      // No need to create a global thumbnails directory
     } catch (error) {
       throw new Error(`Failed to create project structure: ${error}`);
     }
@@ -458,6 +454,33 @@ export class ProjectService {
   getGraphViewState(): GraphViewState | null {
     const project = this.currentProjectSubject.value;
     return project?.metadata.settings.graphView || null;
+  }
+
+  /**
+   * Saves the last visited route to project settings
+   */
+  async saveLastRoute(route: string): Promise<void> {
+    const project = this.currentProjectSubject.value;
+    if (!project) {
+      return; // Don't throw error if no project is loaded
+    }
+
+    // Only save if the route has actually changed
+    if (project.metadata.settings.lastRoute === route) {
+      return;
+    }
+
+    project.metadata.settings.lastRoute = route;
+    await this.saveMetadata(project.path, project.metadata);
+    // Don't emit a new project update to avoid triggering unnecessary re-renders
+  }
+
+  /**
+   * Gets the last visited route from project settings
+   */
+  getLastRoute(): string | null {
+    const project = this.currentProjectSubject.value;
+    return project?.metadata.settings.lastRoute || null;
   }
 
   /**

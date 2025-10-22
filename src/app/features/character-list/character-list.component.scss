@@ -450,7 +450,11 @@
   gap: var(--spacing-md);
   padding: var(--spacing-sm) var(--spacing-md);
   background-color: var(--color-accent-primary);
-  background: linear-gradient(135deg, var(--color-accent-primary), rgba(59, 130, 246, 0.8));
+  background: linear-gradient(
+    135deg,
+    var(--color-accent-primary),
+    rgba(59, 130, 246, 0.8)
+  );
   border-radius: var(--radius-md);
   margin-top: var(--spacing-sm);
 

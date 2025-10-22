@@ -42,5 +42,15 @@ export const routes: Routes = [
     loadComponent: () => import('./features/library-management/library-management.component').then(m => m.LibraryManagementComponent),
     canActivate: [projectGuard]
   },
+  {
+    path: 'casts',
+    loadComponent: () => import('./features/cast-list/cast-list.component').then(m => m.CastListComponent),
+    canActivate: [projectGuard]
+  },
+  {
+    path: 'cast/:id',
+    loadComponent: () => import('./features/cast-detail/cast-detail.component').then(m => m.CastDetailComponent),
+    canActivate: [projectGuard]
+  },
   { path: '**', redirectTo: '/project-selector' }
 ];

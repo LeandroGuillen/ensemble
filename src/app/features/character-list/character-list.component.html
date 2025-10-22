@@ -122,7 +122,10 @@
 
   <!-- Main Content -->
   <div class="content-wrapper">
-    <div class="controls-section" *ngIf="currentProject && !isLoading && !error">
+    <div
+      class="controls-section"
+      *ngIf="currentProject && !isLoading && !error"
+    >
       <div class="filters" *ngIf="categories.length > 0 || tags.length > 0">
         <!-- Category Toggle Row -->
         <div class="filter-row" *ngIf="categories.length > 0">
@@ -134,15 +137,14 @@
           ></app-category-toggle>
 
           <!-- Cast Filter (to the right of category toggle) -->
-          <div class="cast-filter" *ngIf="casts.length > 0">
-            <label for="castFilter">Cast:</label>
-            <select id="castFilter" [(ngModel)]="selectedCast" (change)="onCastChange()" class="cast-select">
-              <option value="">All Characters</option>
-              <option *ngFor="let cast of casts" [value]="cast.id">
-                {{ cast.name }} ({{ cast.characterIds.length }} characters)
-              </option>
-            </select>
-          </div>
+          <app-cast-dropdown
+            *ngIf="casts.length > 0"
+            [casts]="casts"
+            [characters]="allCharacters"
+            [selectedCastId]="selectedCast"
+            [showCharacterThumbnails]="true"
+            (castChange)="onCastDropdownChange($event)"
+          ></app-cast-dropdown>
 
           <!-- Book Filter -->
           <app-book-selector
@@ -164,19 +166,36 @@
         </div>
 
         <!-- Multi-select Actions -->
-        <div class="multi-select-actions" *ngIf="selectedCharacterIds.length > 0">
+        <div
+          class="multi-select-actions"
+          *ngIf="selectedCharacterIds.length > 0"
+        >
           <span class="selection-count"
             >{{ selectedCharacterIds.length }} character{{
-              selectedCharacterIds.length !== 1 ? 's' : ''
+              selectedCharacterIds.length !== 1 ? "s" : ""
             }}
             selected</span
           >
-          <button class="btn btn-secondary btn-sm" (click)="showCastNameFormDialog()">Save Selection as Cast</button>
-          <button class="btn btn-link btn-sm" (click)="selectedCharacterIds = []">Clear Selection</button>
+          <button
+            class="btn btn-secondary btn-sm"
+            (click)="showCastNameFormDialog()"
+          >
+            Save Selection as Cast
+          </button>
+          <button
+            class="btn btn-link btn-sm"
+            (click)="selectedCharacterIds = []"
+          >
+            Clear Selection
+          </button>
         </div>
 
         <!-- Cast Name Form Dialog -->
-        <div class="cast-name-form-overlay" *ngIf="showCastNameForm" (click)="cancelCastForm()">
+        <div
+          class="cast-name-form-overlay"
+          *ngIf="showCastNameForm"
+          (click)="cancelCastForm()"
+        >
           <div class="cast-name-form" (click)="$event.stopPropagation()">
             <div class="form-header">
               <h3>Create New Cast</h3>
@@ -184,7 +203,8 @@
             </div>
             <div class="form-body">
               <p class="form-help">
-                Enter a name for this cast ({{ selectedCharacterIds.length }} characters selected)
+                Enter a name for this cast ({{ selectedCharacterIds.length }}
+                characters selected)
               </p>
               <input
                 type="text"
@@ -197,7 +217,9 @@
               />
             </div>
             <div class="form-actions">
-              <button class="btn btn-secondary" (click)="cancelCastForm()">Cancel</button>
+              <button class="btn btn-secondary" (click)="cancelCastForm()">
+                Cancel
+              </button>
               <button
                 class="btn btn-primary"
                 (click)="saveSelectionAsCast()"
@@ -223,7 +245,9 @@
         "
       >
         <span class="text-muted text-sm"
-          >{{ filteredCharacters.length }} character{{ filteredCharacters.length !== 1 ? 's' : '' }}</span
+          >{{ filteredCharacters.length }} character{{
+            filteredCharacters.length !== 1 ? "s" : ""
+          }}</span
         >
 
         <div class="name-filter">
@@ -250,29 +274,49 @@
 
         <div class="sort-controls">
           <span class="sort-label">Sort by:</span>
-          <button class="sort-button" [class.active]="sortBy === 'name'" (click)="setSortBy('name')">
+          <button
+            class="sort-button"
+            [class.active]="sortBy === 'name'"
+            (click)="setSortBy('name')"
+          >
             Name
             <span class="sort-indicator" *ngIf="sortBy === 'name'">
-              {{ sortDirection === 'asc' ? '↑' : '↓' }}
+              {{ sortDirection === "asc" ? "↑" : "↓" }}
             </span>
           </button>
-          <button class="sort-button" [class.active]="sortBy === 'category'" (click)="setSortBy('category')">
+          <button
+            class="sort-button"
+            [class.active]="sortBy === 'category'"
+            (click)="setSortBy('category')"
+          >
             Category
             <span class="sort-indicator" *ngIf="sortBy === 'category'">
-              {{ sortDirection === 'asc' ? '↑' : '↓' }}
+              {{ sortDirection === "asc" ? "↑" : "↓" }}
             </span>
           </button>
         </div>
 
         <div class="group-controls">
           <span class="group-label">Group:</span>
-          <button class="group-button" [class.active]="groupBy === 'none'" (click)="setGroupBy('none')">
+          <button
+            class="group-button"
+            [class.active]="groupBy === 'none'"
+            (click)="setGroupBy('none')"
+          >
             None
           </button>
-          <button class="group-button" [class.active]="groupBy === 'category'" (click)="setGroupBy('category')">
+          <button
+            class="group-button"
+            [class.active]="groupBy === 'category'"
+            (click)="setGroupBy('category')"
+          >
             Category
           </button>
-          <button class="group-button" [class.active]="groupBy === 'tag'" (click)="setGroupBy('tag')">
+          <button
+            class="group-button"
+            [class.active]="groupBy === 'tag'"
+            (click)="setGroupBy('tag')"
+          >
             Tag
           </button>
         </div>
@@ -288,7 +332,13 @@
           </a>
           <a
             class="clear-filters-link"
-            *ngIf="searchTerm || selectedCategory || selectedTags.length > 0 || selectedCast || selectedBook"
+            *ngIf="
+              searchTerm ||
+              selectedCategory ||
+              selectedTags.length > 0 ||
+              selectedCast ||
+              selectedBook
+            "
             (click)="clearFilters()"
             title="Clear all filters"
           >
@@ -298,17 +348,30 @@
       </div>
     </div>
 
-    <div class="scrollable-content" *ngIf="currentProject && !isLoading && !error">
+    <div
+      class="scrollable-content"
+      *ngIf="currentProject && !isLoading && !error"
+    >
       <!-- Grouped View by Category -->
-      <div class="grouped-view" *ngIf="filteredCharacters.length > 0 && groupBy === 'category'">
-        <div class="category-group" *ngFor="let group of getGroupedCharacters()">
+      <div
+        class="grouped-view"
+        *ngIf="filteredCharacters.length > 0 && groupBy === 'category'"
+      >
+        <div
+          class="category-group"
+          *ngFor="let group of getGroupedCharacters()"
+        >
           <div
             class="category-tab"
             [style.background-color]="getCategoryColor(group.categoryId)"
-            [style.color]="getContrastTextColor(getCategoryColor(group.categoryId))"
+            [style.color]="
+              getContrastTextColor(getCategoryColor(group.categoryId))
+            "
           >
             <div class="category-label-content">
-              <span class="category-name">{{ getCategoryName(group.categoryId) }}</span>
+              <span class="category-name">{{
+                getCategoryName(group.categoryId)
+              }}</span>
             </div>
           </div>
           <div class="category-content">
@@ -323,7 +386,9 @@
               [thumbnailDataUrls]="thumbnailDataUrls"
               (characterClick)="onViewCharacterClick($event)"
               (characterDelete)="onViewCharacterDelete($event)"
-              (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
+              (characterSelectionToggle)="
+                onViewCharacterSelectionToggle($event)
+              "
             ></app-character-grid-view>
 
             <!-- List View -->
@@ -338,7 +403,9 @@
               [thumbnailDataUrls]="thumbnailDataUrls"
               (characterClick)="onViewCharacterClick($event)"
               (characterDelete)="onViewCharacterDelete($event)"
-              (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
+              (characterSelectionToggle)="
+                onViewCharacterSelectionToggle($event)
+              "
             ></app-character-list-view>
 
             <!-- Compact View -->
@@ -353,7 +420,9 @@
               [thumbnailDataUrls]="thumbnailDataUrls"
               (characterClick)="onViewCharacterClick($event)"
               (characterDelete)="onViewCharacterDelete($event)"
-              (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
+              (characterSelectionToggle)="
+                onViewCharacterSelectionToggle($event)
+              "
             ></app-character-compact-view>
 
             <!-- Gallery View -->
@@ -363,14 +432,19 @@
               [selectedCharacterIds]="selectedCharacterIds"
               [thumbnailDataUrls]="thumbnailDataUrls"
               (characterClick)="onViewCharacterClick($event)"
-              (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
+              (characterSelectionToggle)="
+                onViewCharacterSelectionToggle($event)
+              "
             ></app-character-gallery-view>
           </div>
         </div>
       </div>
 
       <!-- Grouped View by Tag -->
-      <div class="grouped-view" *ngIf="filteredCharacters.length > 0 && groupBy === 'tag'">
+      <div
+        class="grouped-view"
+        *ngIf="filteredCharacters.length > 0 && groupBy === 'tag'"
+      >
         <div class="category-group" *ngFor="let group of getGroupedByTag()">
           <div
             class="category-tab"
@@ -393,7 +467,9 @@
               [thumbnailDataUrls]="thumbnailDataUrls"
               (characterClick)="onViewCharacterClick($event)"
               (characterDelete)="onViewCharacterDelete($event)"
-              (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
+              (characterSelectionToggle)="
+                onViewCharacterSelectionToggle($event)
+              "
             ></app-character-grid-view>
 
             <!-- List View -->
@@ -408,7 +484,9 @@
               [thumbnailDataUrls]="thumbnailDataUrls"
               (characterClick)="onViewCharacterClick($event)"
               (characterDelete)="onViewCharacterDelete($event)"
-              (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
+              (characterSelectionToggle)="
+                onViewCharacterSelectionToggle($event)
+              "
             ></app-character-list-view>
 
             <!-- Compact View -->
@@ -423,7 +501,9 @@
               [thumbnailDataUrls]="thumbnailDataUrls"
               (characterClick)="onViewCharacterClick($event)"
               (characterDelete)="onViewCharacterDelete($event)"
-              (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
+              (characterSelectionToggle)="
+                onViewCharacterSelectionToggle($event)
+              "
             ></app-character-compact-view>
 
             <!-- Gallery View -->
@@ -433,7 +513,9 @@
               [selectedCharacterIds]="selectedCharacterIds"
               [thumbnailDataUrls]="thumbnailDataUrls"
               (characterClick)="onViewCharacterClick($event)"
-              (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
+              (characterSelectionToggle)="
+                onViewCharacterSelectionToggle($event)
+              "
             ></app-character-gallery-view>
           </div>
         </div>
@@ -500,20 +582,59 @@
         <div class="empty-icon">
           <i class="icon-users"></i>
         </div>
-        <h3 *ngIf="searchTerm || selectedCategory || selectedTags.length > 0 || selectedCast || selectedBook">
+        <h3
+          *ngIf="
+            searchTerm ||
+            selectedCategory ||
+            selectedTags.length > 0 ||
+            selectedCast ||
+            selectedBook
+          "
+        >
           No characters match your filters
         </h3>
-        <h3 *ngIf="!searchTerm && !selectedCategory && selectedTags.length === 0 && !selectedCast && !selectedBook">
+        <h3
+          *ngIf="
+            !searchTerm &&
+            !selectedCategory &&
+            selectedTags.length === 0 &&
+            !selectedCast &&
+            !selectedBook
+          "
+        >
           No characters yet
         </h3>
-        <p *ngIf="searchTerm || selectedCategory || selectedTags.length > 0 || selectedCast || selectedBook">
-          Try adjusting your search criteria or clearing the filters to see more characters.
+        <p
+          *ngIf="
+            searchTerm ||
+            selectedCategory ||
+            selectedTags.length > 0 ||
+            selectedCast ||
+            selectedBook
+          "
+        >
+          Try adjusting your search criteria or clearing the filters to see more
+          characters.
         </p>
-        <p *ngIf="!searchTerm && !selectedCategory && selectedTags.length === 0 && !selectedCast && !selectedBook">
+        <p
+          *ngIf="
+            !searchTerm &&
+            !selectedCategory &&
+            selectedTags.length === 0 &&
+            !selectedCast &&
+            !selectedBook
+          "
+        >
           Create your first character to get started with your project!
         </p>
         <button
-          *ngIf="!searchTerm && !selectedCategory && selectedTags.length === 0 && !selectedCast && !selectedBook"
+          *ngIf="
+            !searchTerm &&
+            !selectedCategory &&
+            selectedTags.length === 0 &&
+            !selectedCast &&
+            !selectedBook
+          "
           class="btn btn-primary"
           (click)="createNewCharacter()"
         >

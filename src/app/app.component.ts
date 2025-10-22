@@ -19,6 +19,7 @@ export class AppComponent implements OnInit {
   title = "Ensemble";
   hasProject = false;
   isWelcomeScreen = false;
+  private projectLoadedAndReady = false;
 
   constructor(
     private projectService: ProjectService,
@@ -43,6 +44,21 @@ export class AppComponent implements OnInit {
     if (mostRecentProject) {
       try {
         await this.projectService.loadProject(mostRecentProject);
+        this.projectLoadedAndReady = true;
+
+        // Restore the last visited route if it exists
+        const lastRoute = this.projectService.getLastRoute();
+        if (lastRoute && lastRoute !== '/project-selector') {
+          // Use setTimeout to ensure routing happens after Angular is ready
+          setTimeout(() => {
+            this.router.navigate([lastRoute]);
+          }, 0);
+        } else {
+          // Default to characters page if no last route
+          setTimeout(() => {
+            this.router.navigate(['/characters']);
+          }, 0);
+        }
       } catch (error) {
         console.warn('Failed to auto-load most recent project:', error);
         // If loading fails, user will be redirected to project selector by subscription below
@@ -56,10 +72,19 @@ export class AppComponent implements OnInit {
       }
     });
 
+    // Track route changes and save to project settings
     this.router.events
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
       .subscribe((event: NavigationEnd) => {
         this.isWelcomeScreen = event.url === '/project-selector' || event.url === '/';
+
+        // Save the current route to project settings (but not the project selector)
+        if (this.hasProject && !this.isWelcomeScreen) {
+          // Use setTimeout to debounce rapid navigation changes
+          setTimeout(() => {
+            this.projectService.saveLastRoute(event.url);
+          }, 500);
+        }
       });
   }
 

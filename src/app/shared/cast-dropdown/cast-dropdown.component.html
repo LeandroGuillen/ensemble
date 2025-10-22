@@ -1,0 +1,127 @@
+<div class="cast-filter">
+  <label>{{ label }}</label>
+  <div class="cast-dropdown-container">
+    <div class="cast-dropdown" [class.open]="isDropdownOpen">
+      <button
+        type="button"
+        class="cast-dropdown-trigger"
+        (click)="toggleDropdown()"
+        [class.has-selection]="selectedCastId"
+      >
+        <div class="cast-trigger-content">
+          <div *ngIf="selectedCastId" class="cast-trigger-visual">
+            <!-- Character collage for selected cast -->
+            <div
+              *ngIf="
+                showCharacterThumbnails &&
+                getCastThumbnailCollage(getSelectedCast()).length > 0
+              "
+              class="cast-trigger-collage"
+              [class.collage-1]="
+                getCastThumbnailCollage(getSelectedCast()).length === 1
+              "
+              [class.collage-2]="
+                getCastThumbnailCollage(getSelectedCast()).length === 2
+              "
+              [class.collage-3]="
+                getCastThumbnailCollage(getSelectedCast()).length === 3
+              "
+              [class.collage-4]="
+                getCastThumbnailCollage(getSelectedCast()).length === 4
+              "
+            >
+              <div
+                *ngFor="
+                  let thumbnail of getCastThumbnailCollage(getSelectedCast())
+                "
+                class="collage-item-small"
+              >
+                <img [src]="thumbnail" [alt]="'Character thumbnail'" />
+              </div>
+            </div>
+            <!-- First 4 characters if no thumbnails -->
+            <div
+              *ngIf="
+                !showCharacterThumbnails ||
+                getCastThumbnailCollage(getSelectedCast()).length === 0
+              "
+              class="cast-trigger-chars"
+            >
+              {{ getCastDisplayText(getSelectedCast()) }}
+            </div>
+          </div>
+          <span class="cast-trigger-label">
+            {{ selectedCastId ? getSelectedCast()?.name : allLabel }}
+          </span>
+        </div>
+        <span class="cast-dropdown-arrow" [class.rotated]="isDropdownOpen"
+          >▼</span
+        >
+      </button>
+
+      <div class="cast-dropdown-menu" *ngIf="isDropdownOpen">
+        <!-- All Characters option -->
+        <div
+          class="cast-dropdown-item"
+          [class.selected]="!selectedCastId"
+          (click)="selectCast('')"
+        >
+          <div class="cast-item-visual">
+            <div class="cast-item-all-icon">👥</div>
+          </div>
+          <div class="cast-item-info">
+            <div class="cast-item-name">{{ allLabel }}</div>
+            <div class="cast-item-count">{{ characters.length }} total</div>
+          </div>
+        </div>
+
+        <!-- Cast options -->
+        <div
+          *ngFor="let cast of casts"
+          class="cast-dropdown-item"
+          [class.selected]="selectedCastId === cast.id"
+          (click)="selectCast(cast.id)"
+        >
+          <div class="cast-item-visual">
+            <!-- Character collage -->
+            <div
+              *ngIf="
+                showCharacterThumbnails &&
+                getCastThumbnailCollage(cast).length > 0
+              "
+              class="cast-item-collage"
+              [class.collage-1]="getCastThumbnailCollage(cast).length === 1"
+              [class.collage-2]="getCastThumbnailCollage(cast).length === 2"
+              [class.collage-3]="getCastThumbnailCollage(cast).length === 3"
+              [class.collage-4]="getCastThumbnailCollage(cast).length === 4"
+            >
+              <div
+                *ngFor="let thumbnail of getCastThumbnailCollage(cast)"
+                class="collage-item"
+              >
+                <img [src]="thumbnail" [alt]="'Character thumbnail'" />
+              </div>
+            </div>
+            <!-- First 4 characters if no thumbnails -->
+            <div
+              *ngIf="
+                !showCharacterThumbnails ||
+                getCastThumbnailCollage(cast).length === 0
+              "
+              class="cast-item-chars"
+            >
+              {{ getCastDisplayText(cast) }}
+            </div>
+          </div>
+
+          <div class="cast-item-info">
+            <div class="cast-item-name">{{ cast.name }}</div>
+            <div class="cast-item-count">
+              {{ getCastCharacterCount(cast) }} characters
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

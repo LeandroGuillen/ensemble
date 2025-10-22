@@ -36,6 +36,15 @@
     >
       <span class="nav-icon">📚</span>
     </button>
+
+    <button
+      class="nav-item"
+      [class.active]="isActive('/casts')"
+      (click)="navigateTo('/casts')"
+      title="Casts"
+    >
+      <span class="nav-icon">🎭</span>
+    </button>
   </nav>
 
   <nav class="sidebar-nav-bottom">

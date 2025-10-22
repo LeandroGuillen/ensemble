@@ -988,13 +988,11 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private async loadThumbnailDataUrls(characters: Character[]): Promise<void> {
-    const project = this.projectService.getCurrentProject();
-    if (!project) return;
-
     for (const character of characters) {
       if (character.thumbnail && !this.thumbnailDataUrls.has(character.id)) {
         try {
-          const thumbnailPath = `${project.path}/thumbnails/${character.thumbnail}`;
+          // Thumbnails are stored in each character's folder
+          const thumbnailPath = `${character.folderPath}/${character.thumbnail}`;
           const dataUrl = await this.electronService.getImageAsDataUrl(thumbnailPath);
           if (dataUrl) {
             this.thumbnailDataUrls.set(character.id, dataUrl);

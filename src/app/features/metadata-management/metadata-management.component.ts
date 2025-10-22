@@ -6,7 +6,7 @@ import { MetadataService } from '../../core/services/metadata.service';
 import { ProjectService } from '../../core/services/project.service';
 import { CharacterService } from '../../core/services/character.service';
 import { ElectronService } from '../../core/services/electron.service';
-import { Cast, Category, Tag, ProjectSettings } from '../../core/interfaces/project.interface';
+import { Category, Tag, ProjectSettings } from '../../core/interfaces/project.interface';
 import { Character } from '../../core/interfaces/character.interface';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 
@@ -21,11 +21,6 @@ interface TagFormData {
   color: string;
 }
 
-interface CastFormData {
-  name: string;
-  characterIds: string[];
-}
-
 @Component({
   selector: 'app-metadata-management',
   standalone: true,
@@ -38,24 +33,17 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
   
   categories: Category[] = [];
   tags: Tag[] = [];
-  casts: Cast[] = [];
-  characters: Character[] = [];
-  characterThumbnails: Map<string, string> = new Map();
   settings: ProjectSettings | null = null;
-  
+
   // Form states
   showCategoryForm = false;
   showTagForm = false;
-  showCastForm = false;
   editingCategory: Category | null = null;
   editingTag: Tag | null = null;
-  editingCast: Cast | null = null;
-  characterFilter = '';
-  
+
   // Forms
   categoryForm: FormGroup;
   tagForm: FormGroup;
-  castForm: FormGroup;
   settingsForm: FormGroup;
   
   // Loading states
@@ -95,8 +83,6 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
   constructor(
     private metadataService: MetadataService,
     private projectService: ProjectService,
-    private characterService: CharacterService,
-    private electronService: ElectronService,
     private fb: FormBuilder
   ) {
     this.categoryForm = this.fb.group({
@@ -104,15 +90,10 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
       color: ['#3498db', [Validators.required, Validators.pattern(/^#[0-9A-Fa-f]{6}$/)]],
       description: ['', [Validators.maxLength(500)]]
     });
-    
+
     this.tagForm = this.fb.group({
       name: ['', [Validators.required, Validators.maxLength(100)]],
       color: ['#e74c3c', [Validators.required, Validators.pattern(/^#[0-9A-Fa-f]{6}$/)]]
-    });
-
-    this.castForm = this.fb.group({
-      name: ['', [Validators.required, Validators.maxLength(100)]],
-      characterIds: [[], []]
     });
 
     this.settingsForm = this.fb.group({
@@ -132,49 +113,10 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
         if (metadata) {
           this.categories = metadata.categories;
           this.tags = metadata.tags;
-          this.casts = metadata.casts || [];
           this.settings = metadata.settings;
           this.updateSettingsForm();
         }
       });
-
-    // Subscribe to character changes
-    this.characterService.getCharacters()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(characters => {
-        this.characters = characters;
-        this.loadCharacterThumbnails(characters);
-      });
-  }
-
-  private async loadCharacterThumbnails(characters: Character[]): Promise<void> {
-    for (const character of characters) {
-      if (character.thumbnail && !this.characterThumbnails.has(character.id)) {
-        try {
-          const thumbnailPath = `${this.projectService.getCurrentProject()?.path}/thumbnails/${character.thumbnail}`;
-          const dataUrl = await this.electronService.getImageAsDataUrl(thumbnailPath);
-          if (dataUrl) {
-            this.characterThumbnails.set(character.id, dataUrl);
-          }
-        } catch (error) {
-          console.error(`Failed to load thumbnail for ${character.name}:`, error);
-        }
-      }
-    }
-  }
-
-  getCharacterThumbnail(characterId: string): string | null {
-    return this.characterThumbnails.get(characterId) || null;
-  }
-
-  getCharacterCategoryName(characterCategoryId: string): string {
-    const category = this.categories.find(cat => cat.id === characterCategoryId);
-    return category?.name || characterCategoryId;
-  }
-
-  getCharacterCategoryColor(characterCategoryId: string): string {
-    const category = this.categories.find(cat => cat.id === characterCategoryId);
-    return category?.color || '#95a5a6';
   }
 
   ngOnDestroy(): void {
@@ -375,117 +317,6 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
     } finally {
       this.saving = false;
     }
-  }
-
-  // Cast Management
-
-  showAddCastForm(): void {
-    this.showCastForm = true;
-    this.editingCast = null;
-    this.characterFilter = '';
-    this.castForm.reset({
-      name: '',
-      characterIds: []
-    });
-  }
-
-  showEditCastForm(cast: Cast): void {
-    this.showCastForm = true;
-    this.editingCast = cast;
-    this.characterFilter = '';
-    this.castForm.patchValue({
-      name: cast.name,
-      characterIds: cast.characterIds
-    });
-  }
-
-  cancelCastForm(): void {
-    this.showCastForm = false;
-    this.editingCast = null;
-    this.characterFilter = '';
-    this.castForm.reset();
-  }
-
-  getFilteredCharacters(): Character[] {
-    if (!this.characterFilter.trim()) {
-      return this.characters;
-    }
-
-    const filterLower = this.characterFilter.toLowerCase().trim();
-    return this.characters.filter(character => {
-      const nameMatch = character.name.toLowerCase().includes(filterLower);
-      const categoryMatch = this.getCharacterCategoryName(character.category).toLowerCase().includes(filterLower);
-      return nameMatch || categoryMatch;
-    });
-  }
-
-  async saveCast(): Promise<void> {
-    if (this.castForm.invalid) {
-      this.markFormGroupTouched(this.castForm);
-      return;
-    }
-
-    try {
-      this.saving = true;
-      this.error = null;
-
-      const formData: CastFormData = this.castForm.value;
-
-      if (this.editingCast) {
-        await this.metadataService.updateCast(this.editingCast.id, formData);
-      } else {
-        await this.metadataService.addCast(formData);
-      }
-
-      this.cancelCastForm();
-    } catch (error) {
-      console.error('Failed to save cast:', error);
-      this.error = `Failed to save cast: ${error}`;
-    } finally {
-      this.saving = false;
-    }
-  }
-
-  async deleteCast(cast: Cast): Promise<void> {
-    if (!confirm(`Are you sure you want to delete the cast "${cast.name}"?`)) {
-      return;
-    }
-
-    try {
-      this.saving = true;
-      this.error = null;
-
-      await this.metadataService.removeCast(cast.id);
-    } catch (error) {
-      console.error('Failed to delete cast:', error);
-      this.error = `Failed to delete cast: ${error}`;
-    } finally {
-      this.saving = false;
-    }
-  }
-
-  toggleCharacterInCast(characterId: string): void {
-    const currentIds = this.castForm.get('characterIds')?.value || [];
-    const index = currentIds.indexOf(characterId);
-
-    if (index > -1) {
-      // Remove character
-      currentIds.splice(index, 1);
-    } else {
-      // Add character
-      currentIds.push(characterId);
-    }
-
-    this.castForm.patchValue({ characterIds: currentIds });
-  }
-
-  isCharacterInCast(characterId: string): boolean {
-    const currentIds = this.castForm.get('characterIds')?.value || [];
-    return currentIds.includes(characterId);
-  }
-
-  getCastCharacterCount(cast: Cast): number {
-    return cast.characterIds.length;
   }
 
   // Color Management

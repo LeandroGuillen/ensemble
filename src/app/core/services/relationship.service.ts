@@ -388,9 +388,10 @@ export class RelationshipService {
       };
 
       // Load thumbnail dynamically if character has one
-      if (character?.thumbnail && this.currentProjectPath) {
+      if (character?.thumbnail && character?.folderPath) {
         try {
-          const thumbnailPath = await this.electronService.pathJoin(this.currentProjectPath, 'thumbnails', character.thumbnail);
+          // Thumbnails are stored in each character's folder
+          const thumbnailPath = await this.electronService.pathJoin(character.folderPath, character.thumbnail);
           const thumbnailDataUrl = await this.electronService.getImageAsDataUrl(thumbnailPath);
           
           if (thumbnailDataUrl) {
