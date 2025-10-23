@@ -116,7 +116,7 @@
               <label class="form-label"> Category * </label>
               <app-category-toggle
                 [options]="getCategoryToggleOptions()"
-                [selectedValue]="characterForm.get('category')?.value"
+                [selectedValue]="characterForm.get('category')?.value || ''"
                 [emptyLabel]="'None'"
                 [error]="!!getFieldError('category')"
                 (valueChange)="onCategorySelect($event)"
