@@ -1,0 +1,77 @@
+<div class="backstage-container">
+  <app-page-header [title]="'Backstage'">
+    <div class="page-actions">
+      <button
+        class="btn btn-ghost"
+        (click)="reload()"
+        [disabled]="isLoading"
+        title="Reload from files"
+      >
+        Reload
+      </button>
+      <button class="btn btn-secondary" (click)="addNameList()">
+        New Name List
+      </button>
+      <button class="btn btn-primary" (click)="addConcept()">
+        New Concept
+      </button>
+    </div>
+  </app-page-header>
+
+  <div class="error-state" *ngIf="error">
+    <p class="error-message">{{ error }}</p>
+  </div>
+
+  <div class="backstage-content">
+    <!-- Concepts Section -->
+    <div class="backstage-section">
+      <div class="section-header">
+        <h3>Character Concepts</h3>
+        <span class="count">{{ concepts.length }}</span>
+      </div>
+
+      <div class="concepts-list" *ngIf="concepts.length > 0">
+        <app-concept-card
+          *ngFor="let concept of concepts; let i = index"
+          [concept]="concept"
+          [index]="i"
+          (update)="updateConcept(i, $event)"
+          (delete)="deleteConcept(i)"
+          (takeTheStage)="takeTheStage(concept)"
+        ></app-concept-card>
+      </div>
+
+      <div class="empty-state" *ngIf="concepts.length === 0">
+        <p class="text-muted">
+          No character concepts yet. Click "New Concept" to start brainstorming!
+        </p>
+      </div>
+    </div>
+
+    <!-- Name Lists Section -->
+    <div class="backstage-section">
+      <div class="section-header">
+        <h3>Name Lists</h3>
+        <span class="count">{{ nameLists.length }}</span>
+      </div>
+
+      <div class="name-lists" *ngIf="nameLists.length > 0">
+        <app-name-list-card
+          *ngFor="let nameList of nameLists; let i = index"
+          [nameList]="nameList"
+          [index]="i"
+          (update)="updateNameList(i, $event)"
+          (delete)="deleteNameList(i)"
+          (takeTheStage)="takeTheStageWithName($event)"
+        ></app-name-list-card>
+      </div>
+
+      <div class="empty-state" *ngIf="nameLists.length === 0">
+        <p class="text-muted">
+          No name lists yet. Click "New Name List" to organize your character
+          names!
+        </p>
+      </div>
+    </div>
+  </div>
+</div>

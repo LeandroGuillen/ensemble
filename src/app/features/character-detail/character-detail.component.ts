@@ -1,26 +1,62 @@
-import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
-import { Book, Category, Character, CharacterFormData, Project, Tag } from '../../core/interfaces';
-import { AiService, CharacterService, ElectronService, MetadataService, ProjectService } from '../../core/services';
-import { CategoryToggleComponent, ToggleOption } from '../../shared/category-toggle/category-toggle.component';
+import { CommonModule } from "@angular/common";
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  HostListener,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+} from "@angular/core";
+import {
+  FormBuilder,
+  FormGroup,
+  ReactiveFormsModule,
+  Validators,
+} from "@angular/forms";
+import { ActivatedRoute, Router } from "@angular/router";
+import { Subject } from "rxjs";
+import { takeUntil } from "rxjs/operators";
+import {
+  Book,
+  Category,
+  Character,
+  CharacterFormData,
+  Project,
+  Tag,
+} from "../../core/interfaces";
+import {
+  AiService,
+  CharacterService,
+  ElectronService,
+  MetadataService,
+  ProjectService,
+} from "../../core/services";
+import {
+  CategoryToggleComponent,
+  ToggleOption,
+} from "../../shared/category-toggle/category-toggle.component";
 import {
   MultiSelectButtonsComponent,
   SelectableItem,
-} from '../../shared/multi-select-buttons/multi-select-buttons.component';
+} from "../../shared/multi-select-buttons/multi-select-buttons.component";
 
 @Component({
-  selector: 'app-character-detail',
+  selector: "app-character-detail",
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, CategoryToggleComponent, MultiSelectButtonsComponent],
-  templateUrl: './character-detail.component.html',
-  styleUrls: ['./character-detail.component.scss'],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    CategoryToggleComponent,
+    MultiSelectButtonsComponent,
+  ],
+  templateUrl: "./character-detail.component.html",
+  styleUrls: ["./character-detail.component.scss"],
 })
-export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewInit {
-  @ViewChild('nameInput') nameInput?: ElementRef<HTMLInputElement>;
+export class CharacterDetailComponent
+  implements OnInit, OnDestroy, AfterViewInit
+{
+  @ViewChild("nameInput") nameInput?: ElementRef<HTMLInputElement>;
 
   private destroy$ = new Subject<void>();
 
@@ -65,31 +101,35 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
 
   ngOnInit(): void {
     // Subscribe to project changes
-    this.projectService.currentProject$.pipe(takeUntil(this.destroy$)).subscribe((project) => {
-      this.currentProject = project;
-      this.categories = this.projectService.getCategories();
-      this.tags = this.projectService.getTags();
-      this.books = this.metadataService.getBooks();
+    this.projectService.currentProject$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((project) => {
+        this.currentProject = project;
+        this.categories = this.projectService.getCategories();
+        this.tags = this.projectService.getTags();
+        this.books = this.metadataService.getBooks();
 
-      // Update cached selectable items
-      this.tagsSelectableItems = this.tags.map((tag) => ({
-        id: tag.id,
-        name: tag.name,
-        color: tag.color,
-      }));
-      this.booksSelectableItems = this.books.map((book) => ({
-        id: book.id,
-        name: book.name,
-        color: book.color,
-      }));
+        // Update cached selectable items
+        this.tagsSelectableItems = this.tags.map((tag) => ({
+          id: tag.id,
+          name: tag.name,
+          color: tag.color,
+        }));
+        this.booksSelectableItems = this.books.map((book) => ({
+          id: book.id,
+          name: book.name,
+          color: book.color,
+        }));
 
-      // Set default category if available
-      if (this.categories.length > 0 && !this.isEditing) {
-        const defaultCategory =
-          this.categories.find((cat) => cat.id === project?.metadata.settings.defaultCategory) || this.categories[0];
-        this.characterForm.patchValue({ category: defaultCategory.id });
-      }
-    });
+        // Set default category if available
+        if (this.categories.length > 0 && !this.isEditing) {
+          const defaultCategory =
+            this.categories.find(
+              (cat) => cat.id === project?.metadata.settings.defaultCategory
+            ) || this.categories[0];
+          this.characterForm.patchValue({ category: defaultCategory.id });
+        }
+      });
 
     // Subscribe to AI settings
     this.aiService
@@ -99,10 +139,19 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
         this.aiEnabled = settings?.enabled || false;
       });
 
-    const characterId = this.route.snapshot.paramMap.get('id');
-    if (characterId && characterId !== 'new') {
+    const characterId = this.route.snapshot.paramMap.get("id");
+    if (characterId && characterId !== "new") {
       this.isEditing = true;
       this.loadCharacter(characterId);
+    } else {
+      // Check for query params (e.g., from Backstage)
+      this.route.queryParams
+        .pipe(takeUntil(this.destroy$))
+        .subscribe((params) => {
+          if (params["name"]) {
+            this.characterForm.patchValue({ name: params["name"] });
+          }
+        });
     }
   }
 
@@ -118,17 +167,17 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
     }, 0);
   }
 
-  @HostListener('document:keydown', ['$event'])
+  @HostListener("document:keydown", ["$event"])
   handleKeyboardEvent(event: KeyboardEvent): void {
     // Escape to cancel
-    if (event.key === 'Escape') {
+    if (event.key === "Escape") {
       event.preventDefault();
       this.onCancel();
       return;
     }
 
     // Ctrl+Enter to save
-    if (event.ctrlKey && event.key === 'Enter') {
+    if (event.ctrlKey && event.key === "Enter") {
       event.preventDefault();
       this.onSubmit();
       return;
@@ -137,14 +186,21 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
 
   private createForm(): FormGroup {
     return this.fb.group({
-      name: ['', [Validators.required, Validators.minLength(1), Validators.maxLength(100)]],
-      category: ['', Validators.required],
-      mangamaster: [''],
+      name: [
+        "",
+        [
+          Validators.required,
+          Validators.minLength(1),
+          Validators.maxLength(100),
+        ],
+      ],
+      category: ["", Validators.required],
+      mangamaster: [""],
       tags: [[]],
       books: [[]],
-      thumbnail: [''],
-      description: [''],
-      notes: [''],
+      thumbnail: [""],
+      description: [""],
+      notes: [""],
     });
   }
 
@@ -154,7 +210,9 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
 
     try {
       // Refresh character from disk to get latest changes
-      const refreshedCharacter = await this.characterService.refreshCharacter(id);
+      const refreshedCharacter = await this.characterService.refreshCharacter(
+        id
+      );
 
       if (refreshedCharacter) {
         this.character = refreshedCharacter;
@@ -171,17 +229,19 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
 
         // Set thumbnail preview
         if (this.character.thumbnail && this.character.folderPath) {
-          this.loadThumbnailPreview(`${this.character.folderPath}/${this.character.thumbnail}`);
+          this.loadThumbnailPreview(
+            `${this.character.folderPath}/${this.character.thumbnail}`
+          );
         }
 
         // Initialize additional fields tracking
         this.additionalFieldsChanges = {};
       } else {
-        this.error = 'Character not found';
+        this.error = "Character not found";
       }
     } catch (error) {
       this.error = `Failed to load character: ${error}`;
-      console.error('Load character error:', error);
+      console.error("Load character error:", error);
     } finally {
       this.isLoading = false;
     }
@@ -194,7 +254,7 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
     }
 
     if (!this.currentProject) {
-      this.error = 'No project loaded';
+      this.error = "No project loaded";
       return;
     }
 
@@ -204,7 +264,8 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
     try {
       const formData: CharacterFormData = {
         ...this.characterForm.value,
-        thumbnail: this.selectedThumbnailPath || this.characterForm.value.thumbnail,
+        thumbnail:
+          this.selectedThumbnailPath || this.characterForm.value.thumbnail,
       };
 
       if (this.isEditing && this.character) {
@@ -212,19 +273,21 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
         const updatedCharacter = await this.characterService.updateCharacter(
           this.character.id,
           formData,
-          Object.keys(this.additionalFieldsChanges).length > 0 ? this.additionalFieldsChanges : undefined
+          Object.keys(this.additionalFieldsChanges).length > 0
+            ? this.additionalFieldsChanges
+            : undefined
         );
         if (!updatedCharacter) {
-          throw new Error('Character not found');
+          throw new Error("Character not found");
         }
       } else {
         await this.characterService.createCharacter(formData);
       }
 
-      this.router.navigate(['/characters']);
+      this.router.navigate(["/characters"]);
     } catch (error) {
       this.error = `Failed to save character: ${error}`;
-      console.error('Save error:', error);
+      console.error("Save error:", error);
     } finally {
       this.isSaving = false;
     }
@@ -232,16 +295,18 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
 
   onCancel(): void {
     if (this.characterForm.dirty) {
-      if (confirm('You have unsaved changes. Are you sure you want to leave?')) {
-        this.router.navigate(['/characters']);
+      if (
+        confirm("You have unsaved changes. Are you sure you want to leave?")
+      ) {
+        this.router.navigate(["/characters"]);
       }
     } else {
-      this.router.navigate(['/characters']);
+      this.router.navigate(["/characters"]);
     }
   }
 
   onTagChange(tagId: string, checked: boolean): void {
-    const currentTags = this.characterForm.get('tags')?.value || [];
+    const currentTags = this.characterForm.get("tags")?.value || [];
     let updatedTags: string[];
 
     if (checked) {
@@ -255,12 +320,12 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
   }
 
   isTagSelected(tagId: string): boolean {
-    const selectedTags = this.characterForm.get('tags')?.value || [];
+    const selectedTags = this.characterForm.get("tags")?.value || [];
     return selectedTags.includes(tagId);
   }
 
   onBookChange(bookId: string, checked: boolean): void {
-    const currentBooks = this.characterForm.get('books')?.value || [];
+    const currentBooks = this.characterForm.get("books")?.value || [];
     let updatedBooks: string[];
 
     if (checked) {
@@ -274,7 +339,7 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
   }
 
   isBookSelected(bookId: string): boolean {
-    const selectedBooks = this.characterForm.get('books')?.value || [];
+    const selectedBooks = this.characterForm.get("books")?.value || [];
     return selectedBooks.includes(bookId);
   }
 
@@ -287,8 +352,8 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
         this.characterForm.markAsDirty();
       }
     } catch (error) {
-      console.error('Failed to select thumbnail:', error);
-      this.error = 'Failed to select thumbnail';
+      console.error("Failed to select thumbnail:", error);
+      this.error = "Failed to select thumbnail";
     }
   }
 
@@ -297,7 +362,7 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
       const dataUrl = await this.electronService.getImageAsDataUrl(imagePath);
       this.thumbnailPreview = dataUrl;
     } catch (error) {
-      console.error('Failed to load thumbnail preview:', error);
+      console.error("Failed to load thumbnail preview:", error);
       this.thumbnailPreview = null;
     }
   }
@@ -305,7 +370,7 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
   removeThumbnail(): void {
     this.selectedThumbnailPath = null;
     this.thumbnailPreview = null;
-    this.characterForm.patchValue({ thumbnail: '' });
+    this.characterForm.patchValue({ thumbnail: "" });
     this.characterForm.markAsDirty();
   }
 
@@ -316,7 +381,7 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
 
   getCategoryColor(categoryId: string): string {
     const category = this.categories.find((cat) => cat.id === categoryId);
-    return category?.color || '#95a5a6';
+    return category?.color || "#95a5a6";
   }
 
   getCategoryTooltip(categoryId: string): string {
@@ -362,23 +427,29 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
 
   getTagColor(tagId: string): string {
     const tag = this.tags.find((t) => t.id === tagId);
-    return tag?.color || '#95a5a6';
+    return tag?.color || "#95a5a6";
   }
 
   getFieldError(fieldName: string): string | null {
     const field = this.characterForm.get(fieldName);
     if (field && field.invalid && field.touched) {
-      if (field.errors?.['required']) {
-        return `${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)} is required`;
+      if (field.errors?.["required"]) {
+        return `${
+          fieldName.charAt(0).toUpperCase() + fieldName.slice(1)
+        } is required`;
       }
-      if (field.errors?.['minlength']) {
-        return `${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)} must be at least ${
-          field.errors['minlength'].requiredLength
+      if (field.errors?.["minlength"]) {
+        return `${
+          fieldName.charAt(0).toUpperCase() + fieldName.slice(1)
+        } must be at least ${
+          field.errors["minlength"].requiredLength
         } characters`;
       }
-      if (field.errors?.['maxlength']) {
-        return `${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)} must be no more than ${
-          field.errors['maxlength'].requiredLength
+      if (field.errors?.["maxlength"]) {
+        return `${
+          fieldName.charAt(0).toUpperCase() + fieldName.slice(1)
+        } must be no more than ${
+          field.errors["maxlength"].requiredLength
         } characters`;
       }
     }
@@ -416,7 +487,7 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
 
   async generateName(): Promise<void> {
     if (!this.aiEnabled) {
-      this.error = 'AI is not enabled. Please configure AI settings first.';
+      this.error = "AI is not enabled. Please configure AI settings first.";
       return;
     }
 
@@ -425,12 +496,12 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
 
     try {
       // Build context for name generation
-      const categoryId = this.characterForm.get('category')?.value;
+      const categoryId = this.characterForm.get("category")?.value;
       const category = this.categories.find((cat) => cat.id === categoryId);
-      const selectedTags = this.characterForm.get('tags')?.value || [];
+      const selectedTags = this.characterForm.get("tags")?.value || [];
       const tags = this.tags.filter((tag) => selectedTags.includes(tag.id));
 
-      let context = '';
+      let context = "";
       if (this.currentProject) {
         context += `Project: ${this.currentProject.metadata.projectName}. `;
       }
@@ -438,18 +509,21 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
         context += `Category: ${category.name}. `;
       }
       if (tags.length > 0) {
-        context += `Tags: ${tags.map((t) => t.name).join(', ')}.`;
+        context += `Tags: ${tags.map((t) => t.name).join(", ")}.`;
       }
 
-      const generatedName = await this.aiService.generateCharacterName({ context });
+      const generatedName = await this.aiService.generateCharacterName({
+        context,
+      });
 
       if (generatedName) {
         this.characterForm.patchValue({ name: generatedName });
         this.characterForm.markAsDirty();
       }
     } catch (error) {
-      console.error('Failed to generate name:', error);
-      this.error = error instanceof Error ? error.message : 'Failed to generate name';
+      console.error("Failed to generate name:", error);
+      this.error =
+        error instanceof Error ? error.message : "Failed to generate name";
     } finally {
       this.isGeneratingName = false;
     }
@@ -469,7 +543,7 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
       return this.additionalFieldsChanges[fieldName];
     }
     // Otherwise return the original value
-    return this.character?.additionalFields[fieldName] || '';
+    return this.character?.additionalFields[fieldName] || "";
   }
 
   getFieldFileName(fieldName: string): string {
@@ -478,7 +552,7 @@ export class CharacterDetailComponent implements OnInit, OnDestroy, AfterViewIni
       return this.character.additionalFieldsFilenames[fieldName];
     }
     // Fallback to converting field name to filename
-    return fieldName.toLowerCase().replace(/\s+/g, '-') + '.md';
+    return fieldName.toLowerCase().replace(/\s+/g, "-") + ".md";
   }
 
   onAdditionalFieldChange(fieldName: string, event: Event): void {

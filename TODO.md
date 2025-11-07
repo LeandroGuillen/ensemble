@@ -4,8 +4,6 @@
 - Multiple images per character
 - Slideshow widget for character view
 - Statistics dashboard
-- Scratchpad for characters concepts (new ideas, unnamed, unlisted)
-- Name lists
 - Integrate with obsidian
 
 # Maybe

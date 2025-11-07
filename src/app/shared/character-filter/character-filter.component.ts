@@ -1,17 +1,11 @@
-import { Component, Input, Output, EventEmitter } from "@angular/core";
-import { CommonModule } from "@angular/common";
-import { FormsModule } from "@angular/forms";
-import { Category, Tag, Cast, Book, Character } from "../../core/interfaces";
-import {
-  CategoryToggleComponent,
-  ToggleOption,
-} from "../category-toggle/category-toggle.component";
-import {
-  MultiSelectButtonsComponent,
-  SelectableItem,
-} from "../multi-select-buttons/multi-select-buttons.component";
-import { CastDropdownComponent } from "../cast-dropdown/cast-dropdown.component";
-import { BookSelectorComponent } from "../book-selector/book-selector.component";
+import { CommonModule } from '@angular/common';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { Book, Cast, Category, Character, Tag } from '../../core/interfaces';
+import { BookSelectorComponent } from '../book-selector/book-selector.component';
+import { CastDropdownComponent } from '../cast-dropdown/cast-dropdown.component';
+import { CategoryToggleComponent, ToggleOption } from '../category-toggle/category-toggle.component';
+import { MultiSelectButtonsComponent, SelectableItem } from '../multi-select-buttons/multi-select-buttons.component';
 
 export interface FilterState {
   searchTerm: string;
@@ -22,7 +16,7 @@ export interface FilterState {
 }
 
 @Component({
-  selector: "app-character-filter",
+  selector: 'app-character-filter',
   standalone: true,
   imports: [
     CommonModule,
@@ -32,8 +26,8 @@ export interface FilterState {
     CastDropdownComponent,
     BookSelectorComponent,
   ],
-  templateUrl: "./character-filter.component.html",
-  styleUrls: ["./character-filter.component.scss"],
+  templateUrl: './character-filter.component.html',
+  styleUrls: ['./character-filter.component.scss'],
 })
 export class CharacterFilterComponent {
   @Input() categories: Category[] = [];
@@ -41,11 +35,12 @@ export class CharacterFilterComponent {
   @Input() casts: Cast[] = [];
   @Input() books: Book[] = [];
   @Input() allCharacters: Character[] = [];
-  @Input() searchTerm = "";
-  @Input() selectedCategory = "";
+  @Input() searchTerm = '';
+  @Input() selectedCategory = '';
   @Input() selectedTags: string[] = [];
-  @Input() selectedCast = "";
-  @Input() selectedBook = "";
+  @Input() selectedCast = '';
+  @Input() selectedBook = '';
+  @Input() isExpanded = false;
 
   @Output() searchTermChange = new EventEmitter<string>();
   @Output() categoryChange = new EventEmitter<string>();
@@ -53,11 +48,11 @@ export class CharacterFilterComponent {
   @Output() castChange = new EventEmitter<string>();
   @Output() bookChange = new EventEmitter<string>();
   @Output() clearFilters = new EventEmitter<void>();
-
-  isExpanded = false;
+  @Output() expandedChange = new EventEmitter<boolean>();
 
   toggleExpanded(): void {
     this.isExpanded = !this.isExpanded;
+    this.expandedChange.emit(this.isExpanded);
   }
 
   onSearchChange(): void {
@@ -65,7 +60,7 @@ export class CharacterFilterComponent {
   }
 
   clearSearchTerm(): void {
-    this.searchTerm = "";
+    this.searchTerm = '';
     this.searchTermChange.emit(this.searchTerm);
   }
 
@@ -143,9 +138,11 @@ export class CharacterFilterComponent {
       filters.push(this.getCategoryName(this.selectedCategory));
     }
 
-    if (this.selectedTags.length > 0) {
-      if (this.selectedTags.length === 1) {
-        filters.push(this.getTagName(this.selectedTags[0]));
+    if (this.selectedTags.length > 0 && this.tags?.length) {
+      if (this.selectedTags.length <= 3) {
+        const tags = this.selectedTags.map(this.getTagName.bind(this)).join(' • ');
+        filters.push(tags);
+        // filters.push(this.getTagName(this.selectedTags[0]));
       } else {
         filters.push(`${this.selectedTags.length} tags`);
       }
@@ -159,15 +156,10 @@ export class CharacterFilterComponent {
       filters.push(this.getBookName(this.selectedBook));
     }
 
-    return filters.length > 0 ? filters.join(" • ") : "No filters applied";
+    return filters.length > 0 ? filters.join(' • ') : 'No filters applied';
   }
 
   hasActiveFilters(): boolean {
-    return !!(
-      this.selectedCategory ||
-      this.selectedTags.length > 0 ||
-      this.selectedCast ||
-      this.selectedBook
-    );
+    return !!(this.selectedCategory || this.selectedTags.length > 0 || this.selectedCast || this.selectedBook);
   }
 }

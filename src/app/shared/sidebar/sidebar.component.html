@@ -45,6 +45,15 @@
     >
       <span class="nav-icon">🎭</span>
     </button>
+
+    <button
+      class="nav-item"
+      [class.active]="isActive('/backstage')"
+      (click)="navigateTo('/backstage')"
+      title="Backstage"
+    >
+      <span class="nav-icon">🎪</span>
+    </button>
   </nav>
 
   <nav class="sidebar-nav-bottom">

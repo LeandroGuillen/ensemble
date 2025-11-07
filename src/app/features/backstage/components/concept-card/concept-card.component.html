@@ -1,0 +1,36 @@
+<div class="concept-card">
+  <div class="concept-header">
+    <input
+      type="text"
+      class="concept-title"
+      [value]="concept.title || ''"
+      (blur)="onTitleChange($any($event.target).value)"
+      (keyup.enter)="$any($event.target).blur()"
+      placeholder="Untitled Concept"
+    />
+    <div class="concept-actions">
+      <button
+        class="icon-btn"
+        (click)="onTakeTheStage($event)"
+        title="Take the Stage - Create character from this concept"
+      >
+        ⭐
+      </button>
+      <button
+        class="icon-btn"
+        (click)="onDelete($event)"
+        title="Delete concept"
+      >
+        🗑️
+      </button>
+    </div>
+  </div>
+
+  <textarea
+    class="concept-notes"
+    [value]="concept.notes"
+    (blur)="onNotesChange($any($event.target).value)"
+    placeholder="Jot down your ideas here..."
+    rows="6"
+  ></textarea>
+</div>

@@ -1,11 +1,11 @@
 {
   "name": "ensemble",
-  "version": "0.5.4",
+  "version": "0.6.0",
   "description": "Character management application for writers and worldbuilders",
   "main": "main.js",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
+    "start": "concurrently \"ng serve\" \"wait-on http://localhost:4200 && electron .\"",
     "build": "ng build",
     "electron": "electron .",
     "electron-dev": "concurrently \"ng serve\" \"wait-on http://localhost:4200 && electron .\"",

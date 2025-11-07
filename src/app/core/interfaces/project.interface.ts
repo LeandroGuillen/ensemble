@@ -83,6 +83,7 @@ export interface ProjectSettings {
   lastRoute?: string;
   graphView?: GraphViewState;
   ai?: AiSettings;
+  filterExpanded?: boolean;
 }
 
 export interface GraphViewState {

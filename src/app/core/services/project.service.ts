@@ -495,6 +495,33 @@ export class ProjectService {
   }
 
   /**
+   * Saves the filter expanded state to project settings
+   */
+  async saveFilterExpandedState(expanded: boolean): Promise<void> {
+    const project = this.currentProjectSubject.value;
+    if (!project) {
+      return; // Don't throw error if no project is loaded
+    }
+
+    // Only save if the state has actually changed
+    if (project.metadata.settings.filterExpanded === expanded) {
+      return;
+    }
+
+    project.metadata.settings.filterExpanded = expanded;
+    await this.saveMetadata(project.path, project.metadata);
+    // Don't emit a new project update to avoid triggering unnecessary re-renders
+  }
+
+  /**
+   * Gets the filter expanded state from project settings
+   */
+  getFilterExpandedState(): boolean {
+    const project = this.currentProjectSubject.value;
+    return project?.metadata.settings.filterExpanded ?? false;
+  }
+
+  /**
    * Gets relationships data from the current project
    */
   getRelationships(): { nodes: GraphNode[]; edges: Relationship[] } {

@@ -144,12 +144,14 @@
         [selectedTags]="selectedTags"
         [selectedCast]="selectedCast"
         [selectedBook]="selectedBook"
+        [isExpanded]="filterExpanded"
         (searchTermChange)="searchTerm = $event; onSearchChange()"
         (categoryChange)="selectedCategory = $event; onCategoryChange()"
         (tagsChange)="selectedTags = $event; onTagsSelectionChange($event)"
         (castChange)="selectedCast = $event; onCastChange()"
         (bookChange)="selectedBook = $event; onBookChange()"
         (clearFilters)="clearFilters()"
+        (expandedChange)="onFilterExpandedChange($event)"
       ></app-character-filter>
 
       <!-- Multi-select Actions -->
