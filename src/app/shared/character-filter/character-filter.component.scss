@@ -1,0 +1,252 @@
+.character-filter {
+  background: var(--color-bg-secondary, #1e1e2e);
+  border: 1px solid var(--color-border, #2d3748);
+  border-radius: 8px;
+  overflow: visible; // Allow dropdowns to pop out
+  transition: all 0.2s ease;
+  position: relative;
+
+  .filter-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: var(--color-bg-secondary, #1e1e2e);
+    border-radius: 8px;
+    min-height: 56px;
+
+    .search-input-wrapper {
+      position: relative;
+      flex: 0 0 300px;
+
+      .search-input {
+        width: 100%;
+        padding: 10px 36px 10px 14px;
+        background: var(--color-bg-tertiary, #252535);
+        border: 1px solid var(--color-border, #2d3748);
+        border-radius: 6px;
+        color: var(--color-text-primary, #e2e8f0);
+        font-size: 14px;
+        transition: all 0.2s ease;
+
+        &:focus {
+          outline: none;
+          border-color: var(--color-accent-primary, #3b82f6);
+          background: var(--color-bg-elevated, #2a2a3e);
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        &:hover:not(:focus) {
+          border-color: var(--color-accent-primary, #3b82f6);
+          background: var(--color-bg-elevated, #2a2a3e);
+        }
+
+        &::placeholder {
+          color: var(--color-text-muted, #94a3b8);
+        }
+      }
+
+      .clear-search-btn {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: var(--color-text-muted, #94a3b8);
+        font-size: 20px;
+        line-height: 1;
+        cursor: pointer;
+        padding: 0;
+        width: 22px;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background: var(--color-bg-elevated, #2a2a3e);
+          color: var(--color-text-primary, #e2e8f0);
+        }
+      }
+    }
+
+    .filter-summary-area {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+      min-height: 40px;
+      cursor: pointer;
+
+      &:hover {
+        background: var(--color-bg-tertiary, #252535);
+      }
+    }
+
+    .filter-summary {
+      flex: 1;
+      font-size: 13px;
+      color: var(--color-text-muted, #94a3b8);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+
+      &.has-filters {
+        color: var(--color-text-primary, #e2e8f0);
+        font-weight: 500;
+      }
+
+      .summary-text {
+        display: inline-block;
+      }
+    }
+
+    .expand-toggle {
+      flex-shrink: 0;
+      background: none;
+      border: none;
+      color: var(--color-text-muted, #94a3b8);
+      cursor: pointer;
+      padding: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+
+      svg {
+        transition: transform 0.2s ease;
+      }
+
+      &.expanded svg {
+        transform: rotate(180deg);
+      }
+
+      &:hover {
+        background: var(--color-bg-elevated, #2a2a3e);
+        color: var(--color-text-primary, #e2e8f0);
+      }
+    }
+  }
+
+  .clear-all-btn {
+    flex-shrink: 0;
+    background: none;
+    border: 1px solid var(--color-border, #2d3748);
+    color: var(--color-text-primary, #e2e8f0);
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: var(--color-bg-tertiary, #252535);
+      border-color: var(--color-accent-primary, #3b82f6);
+      color: var(--color-accent-primary, #3b82f6);
+    }
+  }
+}
+
+.filter-body {
+  padding: 20px;
+  border-top: 1px solid var(--color-border, #2d3748);
+  background: var(--color-bg-tertiary, #252535);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: slideDown 0.2s ease;
+  border-radius: 0 0 8px 8px;
+  position: relative;
+  z-index: 1;
+
+  .filter-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+
+    .filter-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text-muted, #94a3b8);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    // Ensure dropdowns can pop out
+    app-cast-dropdown,
+    app-book-selector {
+      position: relative;
+    }
+  }
+
+  // Use ::ng-deep to style child component internals
+  ::ng-deep {
+    .cast-dropdown-container,
+    .book-selector-container {
+      position: relative;
+    }
+
+    .cast-dropdown-menu,
+    .book-dropdown {
+      position: absolute;
+      z-index: 1000;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+  }
+
+  // Give each filter section explicit z-index
+  // Earlier sections (cast) should be above later sections (book)
+  .section-category {
+    z-index: 40;
+  }
+  .section-tags {
+    z-index: 30;
+  }
+  .section-cast {
+    z-index: 20;
+  }
+  .section-book {
+    z-index: 10;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .character-filter {
+    .filter-header {
+      flex-wrap: wrap;
+      gap: 10px;
+
+      .search-input-wrapper {
+        flex: 1 1 100%;
+        min-width: 0;
+      }
+
+      .filter-summary-area {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+    }
+  }
+}

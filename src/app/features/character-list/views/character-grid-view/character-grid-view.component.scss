@@ -41,7 +41,11 @@
   position: relative;
   width: 100%;
   height: 200px;
-  background: linear-gradient(135deg, var(--color-bg-tertiary), var(--color-bg-elevated));
+  background: linear-gradient(
+    135deg,
+    var(--color-bg-tertiary),
+    var(--color-bg-elevated)
+  );
   overflow: hidden;
 
   img {
@@ -136,34 +140,6 @@
       border-color: var(--color-error);
     }
   }
-}
-
-// Character Checkbox
-.character-item {
-  .character-checkbox {
-    position: absolute;
-    top: var(--spacing-sm);
-    left: var(--spacing-sm);
-    width: 20px;
-    height: 20px;
-    cursor: pointer;
-    z-index: 10;
-    accent-color: var(--color-accent-primary);
-    border: 2px solid white;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    border-radius: var(--radius-xs);
-
-    &:hover {
-      transform: scale(1.1);
-    }
-  }
-}
-
-// Multi-selected state
-.character-item.multi-selected {
-  border-color: var(--color-accent-primary);
-  background-color: rgba(59, 130, 246, 0.08);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 
 // Responsive Design

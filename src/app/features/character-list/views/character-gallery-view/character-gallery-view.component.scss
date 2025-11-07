@@ -39,7 +39,11 @@
   position: relative;
   width: 100%;
   padding-bottom: 133%; // 3:4 aspect ratio (portrait)
-  background: linear-gradient(135deg, var(--color-bg-tertiary), var(--color-bg-elevated));
+  background: linear-gradient(
+    135deg,
+    var(--color-bg-tertiary),
+    var(--color-bg-elevated)
+  );
   overflow: hidden;
 
   img {
@@ -77,25 +81,4 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-// Character Checkbox
-.gallery-item {
-  .character-checkbox {
-    position: absolute;
-    top: var(--spacing-sm);
-    left: var(--spacing-sm);
-    width: 20px;
-    height: 20px;
-    cursor: pointer;
-    z-index: 10;
-    accent-color: var(--color-accent-primary);
-    border: 2px solid white;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    border-radius: var(--radius-xs);
-
-    &:hover {
-      transform: scale(1.1);
-    }
-  }
 }

@@ -26,17 +26,10 @@ import {
   MetadataService,
 } from "../../core/services";
 import { CommandPaletteService } from "../../shared/command-palette/command-palette.service";
-import {
-  CategoryToggleComponent,
-  ToggleOption,
-} from "../../shared/category-toggle/category-toggle.component";
-import {
-  MultiSelectButtonsComponent,
-  SelectableItem,
-} from "../../shared/multi-select-buttons/multi-select-buttons.component";
+import { ToggleOption } from "../../shared/category-toggle/category-toggle.component";
+import { SelectableItem } from "../../shared/multi-select-buttons/multi-select-buttons.component";
 import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
-import { BookSelectorComponent } from "../../shared/book-selector/book-selector.component";
-import { CastDropdownComponent } from "../../shared/cast-dropdown/cast-dropdown.component";
+import { CharacterFilterComponent } from "../../shared/character-filter/character-filter.component";
 import {
   CharacterGridViewComponent,
   CharacterListViewComponent,
@@ -50,11 +43,8 @@ import {
   imports: [
     CommonModule,
     FormsModule,
-    CategoryToggleComponent,
-    MultiSelectButtonsComponent,
     PageHeaderComponent,
-    BookSelectorComponent,
-    CastDropdownComponent,
+    CharacterFilterComponent,
     CharacterGridViewComponent,
     CharacterListViewComponent,
     CharacterCompactViewComponent,

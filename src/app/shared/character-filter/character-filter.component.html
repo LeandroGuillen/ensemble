@@ -1,0 +1,106 @@
+<div class="character-filter">
+  <!-- Collapsed State: Search + Filter Summary + Expand Button -->
+  <div class="filter-header">
+    <div class="search-input-wrapper">
+      <input
+        type="text"
+        class="search-input"
+        placeholder="Filter by name..."
+        [(ngModel)]="searchTerm"
+        (input)="onSearchChange()"
+        (click)="$event.stopPropagation()"
+        title="Filter characters by name"
+      />
+      <button
+        *ngIf="searchTerm"
+        class="clear-search-btn"
+        (click)="clearSearchTerm(); $event.stopPropagation()"
+        title="Clear search"
+        type="button"
+      >
+        ×
+      </button>
+    </div>
+
+    <div class="filter-summary-area" (click)="toggleExpanded()">
+      <div class="filter-summary" [class.has-filters]="hasActiveFilters()">
+        <span class="summary-text">{{ getFilterSummary() }}</span>
+      </div>
+
+      <button
+        class="expand-toggle"
+        [class.expanded]="isExpanded"
+        title="Toggle filter options"
+        type="button"
+      >
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <path
+            d="M4 6l4 4 4-4"
+            stroke="currentColor"
+            stroke-width="2"
+            fill="none"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </button>
+    </div>
+
+    <button
+      *ngIf="hasActiveFilters()"
+      class="clear-all-btn"
+      (click)="onClearFilters(); $event.stopPropagation()"
+      title="Clear all filters"
+      type="button"
+    >
+      Clear
+    </button>
+  </div>
+
+  <!-- Expanded State: All Filter Options -->
+  <div class="filter-body" *ngIf="isExpanded">
+    <!-- Category Filter -->
+    <div class="filter-section section-category" *ngIf="categories.length > 0">
+      <label class="filter-label">Category</label>
+      <app-category-toggle
+        [options]="getCategoryToggleOptions()"
+        [selectedValue]="selectedCategory"
+        [emptyLabel]="'All'"
+        (valueChange)="onCategoryToggle($event)"
+      ></app-category-toggle>
+    </div>
+
+    <!-- Tags Filter -->
+    <div class="filter-section section-tags" *ngIf="tags.length > 0">
+      <label class="filter-label">Tags</label>
+      <app-multi-select-buttons
+        [items]="getTagsAsSelectableItems()"
+        [selectedIds]="selectedTags"
+        (selectionChange)="onTagsSelectionChange($event)"
+      ></app-multi-select-buttons>
+    </div>
+
+    <!-- Cast Filter -->
+    <div class="filter-section section-cast" *ngIf="casts.length > 0">
+      <label class="filter-label">Cast</label>
+      <app-cast-dropdown
+        [casts]="casts"
+        [characters]="allCharacters"
+        [selectedCastId]="selectedCast"
+        [showCharacterThumbnails]="true"
+        (castChange)="onCastDropdownChange($event)"
+      ></app-cast-dropdown>
+    </div>
+
+    <!-- Book Filter -->
+    <div class="filter-section section-book" *ngIf="books.length > 0">
+      <label class="filter-label">Book</label>
+      <app-book-selector
+        [books]="books"
+        [selectedBook]="selectedBook"
+        [characterCounts]="getBookCharacterCounts()"
+        (bookChange)="selectedBook = $event; onBookChange()"
+      ></app-book-selector>
+    </div>
+  </div>
+</div>

@@ -126,113 +126,93 @@
       class="controls-section"
       *ngIf="currentProject && !isLoading && !error"
     >
-      <div class="filters" *ngIf="categories.length > 0 || tags.length > 0">
-        <!-- Category Toggle Row -->
-        <div class="filter-row" *ngIf="categories.length > 0">
-          <app-category-toggle
-            [options]="getCategoryToggleOptions()"
-            [selectedValue]="selectedCategory"
-            [emptyLabel]="'All'"
-            (valueChange)="onCategoryToggle($event)"
-          ></app-category-toggle>
+      <!-- New Collapsible Filter Component -->
+      <app-character-filter
+        *ngIf="
+          categories.length > 0 ||
+          tags.length > 0 ||
+          casts.length > 0 ||
+          books.length > 0
+        "
+        [categories]="categories"
+        [tags]="tags"
+        [casts]="casts"
+        [books]="books"
+        [allCharacters]="allCharacters"
+        [searchTerm]="searchTerm"
+        [selectedCategory]="selectedCategory"
+        [selectedTags]="selectedTags"
+        [selectedCast]="selectedCast"
+        [selectedBook]="selectedBook"
+        (searchTermChange)="searchTerm = $event; onSearchChange()"
+        (categoryChange)="selectedCategory = $event; onCategoryChange()"
+        (tagsChange)="selectedTags = $event; onTagsSelectionChange($event)"
+        (castChange)="selectedCast = $event; onCastChange()"
+        (bookChange)="selectedBook = $event; onBookChange()"
+        (clearFilters)="clearFilters()"
+      ></app-character-filter>
 
-          <!-- Cast Filter (to the right of category toggle) -->
-          <app-cast-dropdown
-            *ngIf="casts.length > 0"
-            [casts]="casts"
-            [characters]="allCharacters"
-            [selectedCastId]="selectedCast"
-            [showCharacterThumbnails]="true"
-            (castChange)="onCastDropdownChange($event)"
-          ></app-cast-dropdown>
-
-          <!-- Book Filter -->
-          <app-book-selector
-            *ngIf="books.length > 0"
-            [books]="books"
-            [selectedBook]="selectedBook"
-            [characterCounts]="getBookCharacterCounts()"
-            (bookChange)="selectedBook = $event; onBookChange()"
-          ></app-book-selector>
-        </div>
-
-        <!-- Tags Row -->
-        <div class="filter-row" *ngIf="tags.length > 0">
-          <app-multi-select-buttons
-            [items]="getTagsAsSelectableItems()"
-            [selectedIds]="selectedTags"
-            (selectionChange)="onTagsSelectionChange($event)"
-          ></app-multi-select-buttons>
-        </div>
-
-        <!-- Multi-select Actions -->
-        <div
-          class="multi-select-actions"
-          *ngIf="selectedCharacterIds.length > 0"
+      <!-- Multi-select Actions -->
+      <div class="multi-select-actions" *ngIf="selectedCharacterIds.length > 0">
+        <span class="selection-count"
+          >{{ selectedCharacterIds.length }} character{{
+            selectedCharacterIds.length !== 1 ? "s" : ""
+          }}
+          selected</span
         >
-          <span class="selection-count"
-            >{{ selectedCharacterIds.length }} character{{
-              selectedCharacterIds.length !== 1 ? "s" : ""
-            }}
-            selected</span
-          >
-          <button
-            class="btn btn-secondary btn-sm"
-            (click)="showCastNameFormDialog()"
-          >
-            Save Selection as Cast
-          </button>
-          <button
-            class="btn btn-link btn-sm"
-            (click)="selectedCharacterIds = []"
-          >
-            Clear Selection
-          </button>
-        </div>
-
-        <!-- Cast Name Form Dialog -->
-        <div
-          class="cast-name-form-overlay"
-          *ngIf="showCastNameForm"
-          (click)="cancelCastForm()"
+        <button
+          class="btn btn-secondary btn-sm"
+          (click)="showCastNameFormDialog()"
         >
-          <div class="cast-name-form" (click)="$event.stopPropagation()">
-            <div class="form-header">
-              <h3>Create New Cast</h3>
-              <button class="btn-close" (click)="cancelCastForm()">×</button>
-            </div>
-            <div class="form-body">
-              <p class="form-help">
-                Enter a name for this cast ({{ selectedCharacterIds.length }}
-                characters selected)
-              </p>
-              <input
-                type="text"
-                [(ngModel)]="newCastName"
-                placeholder="e.g., Chapter 1 Cast, Battle Scene"
-                class="form-control"
-                (keyup.enter)="saveSelectionAsCast()"
-                (keyup.escape)="cancelCastForm()"
-                autofocus
-              />
-            </div>
-            <div class="form-actions">
-              <button class="btn btn-secondary" (click)="cancelCastForm()">
-                Cancel
-              </button>
-              <button
-                class="btn btn-primary"
-                (click)="saveSelectionAsCast()"
-                [disabled]="!newCastName || newCastName.trim() === ''"
-              >
-                Create Cast
-              </button>
-            </div>
+          Save Selection as Cast
+        </button>
+        <button class="btn btn-link btn-sm" (click)="selectedCharacterIds = []">
+          Clear Selection
+        </button>
+      </div>
+
+      <!-- Cast Name Form Dialog -->
+      <div
+        class="cast-name-form-overlay"
+        *ngIf="showCastNameForm"
+        (click)="cancelCastForm()"
+      >
+        <div class="cast-name-form" (click)="$event.stopPropagation()">
+          <div class="form-header">
+            <h3>Create New Cast</h3>
+            <button class="btn-close" (click)="cancelCastForm()">×</button>
+          </div>
+          <div class="form-body">
+            <p class="form-help">
+              Enter a name for this cast ({{ selectedCharacterIds.length }}
+              characters selected)
+            </p>
+            <input
+              type="text"
+              [(ngModel)]="newCastName"
+              placeholder="e.g., Chapter 1 Cast, Battle Scene"
+              class="form-control"
+              (keyup.enter)="saveSelectionAsCast()"
+              (keyup.escape)="cancelCastForm()"
+              autofocus
+            />
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-secondary" (click)="cancelCastForm()">
+              Cancel
+            </button>
+            <button
+              class="btn btn-primary"
+              (click)="saveSelectionAsCast()"
+              [disabled]="!newCastName || newCastName.trim() === ''"
+            >
+              Create Cast
+            </button>
           </div>
         </div>
       </div>
 
-      <!-- Results Count, Filter, and Sort -->
+      <!-- Results Count and Sort -->
       <div
         class="results-bar"
         *ngIf="
@@ -249,28 +229,6 @@
             filteredCharacters.length !== 1 ? "s" : ""
           }}</span
         >
-
-        <div class="name-filter">
-          <div class="filter-input-wrapper">
-            <input
-              type="text"
-              class="filter-input"
-              placeholder="Filter by name..."
-              [(ngModel)]="searchTerm"
-              (input)="onSearchChange()"
-              title="Filter characters by name"
-            />
-            <button
-              *ngIf="searchTerm"
-              class="clear-search-btn"
-              (click)="clearSearchTerm()"
-              title="Clear search"
-              type="button"
-            >
-              ×
-            </button>
-          </div>
-        </div>
 
         <div class="sort-controls">
           <span class="sort-label">Sort by:</span>
@@ -330,20 +288,6 @@
           >
             Refresh
           </a>
-          <a
-            class="clear-filters-link"
-            *ngIf="
-              searchTerm ||
-              selectedCategory ||
-              selectedTags.length > 0 ||
-              selectedCast ||
-              selectedBook
-            "
-            (click)="clearFilters()"
-            title="Clear all filters"
-          >
-            Clear
-          </a>
         </div>
       </div>
     </div>
@@ -382,13 +326,9 @@
               [categories]="categories"
               [tags]="tags"
               [selectedCharacterIndex]="selectedCharacterIndex"
-              [selectedCharacterIds]="selectedCharacterIds"
               [thumbnailDataUrls]="thumbnailDataUrls"
               (characterClick)="onViewCharacterClick($event)"
               (characterDelete)="onViewCharacterDelete($event)"
-              (characterSelectionToggle)="
-                onViewCharacterSelectionToggle($event)
-              "
             ></app-character-grid-view>
 
             <!-- List View -->
@@ -399,7 +339,6 @@
               [tags]="tags"
               [columns]="columns"
               [selectedCharacterIndex]="selectedCharacterIndex"
-              [selectedCharacterIds]="selectedCharacterIds"
               [thumbnailDataUrls]="thumbnailDataUrls"
               (characterClick)="onViewCharacterClick($event)"
               (characterDelete)="onViewCharacterDelete($event)"
@@ -416,7 +355,6 @@
               [tags]="tags"
               [columns]="columns"
               [selectedCharacterIndex]="selectedCharacterIndex"
-              [selectedCharacterIds]="selectedCharacterIds"
               [thumbnailDataUrls]="thumbnailDataUrls"
               (characterClick)="onViewCharacterClick($event)"
               (characterDelete)="onViewCharacterDelete($event)"
@@ -429,12 +367,8 @@
             <app-character-gallery-view
               *ngIf="viewMode === 'gallery'"
               [characters]="group.characters"
-              [selectedCharacterIds]="selectedCharacterIds"
               [thumbnailDataUrls]="thumbnailDataUrls"
               (characterClick)="onViewCharacterClick($event)"
-              (characterSelectionToggle)="
-                onViewCharacterSelectionToggle($event)
-              "
             ></app-character-gallery-view>
           </div>
         </div>
@@ -463,13 +397,9 @@
               [categories]="categories"
               [tags]="tags"
               [selectedCharacterIndex]="selectedCharacterIndex"
-              [selectedCharacterIds]="selectedCharacterIds"
               [thumbnailDataUrls]="thumbnailDataUrls"
               (characterClick)="onViewCharacterClick($event)"
               (characterDelete)="onViewCharacterDelete($event)"
-              (characterSelectionToggle)="
-                onViewCharacterSelectionToggle($event)
-              "
             ></app-character-grid-view>
 
             <!-- List View -->
@@ -480,7 +410,6 @@
               [tags]="tags"
               [columns]="columns"
               [selectedCharacterIndex]="selectedCharacterIndex"
-              [selectedCharacterIds]="selectedCharacterIds"
               [thumbnailDataUrls]="thumbnailDataUrls"
               (characterClick)="onViewCharacterClick($event)"
               (characterDelete)="onViewCharacterDelete($event)"
@@ -497,7 +426,6 @@
               [tags]="tags"
               [columns]="columns"
               [selectedCharacterIndex]="selectedCharacterIndex"
-              [selectedCharacterIds]="selectedCharacterIds"
               [thumbnailDataUrls]="thumbnailDataUrls"
               (characterClick)="onViewCharacterClick($event)"
               (characterDelete)="onViewCharacterDelete($event)"
@@ -510,12 +438,8 @@
             <app-character-gallery-view
               *ngIf="viewMode === 'gallery'"
               [characters]="group.characters"
-              [selectedCharacterIds]="selectedCharacterIds"
               [thumbnailDataUrls]="thumbnailDataUrls"
               (characterClick)="onViewCharacterClick($event)"
-              (characterSelectionToggle)="
-                onViewCharacterSelectionToggle($event)
-              "
             ></app-character-gallery-view>
           </div>
         </div>
@@ -530,11 +454,9 @@
           [categories]="categories"
           [tags]="tags"
           [selectedCharacterIndex]="selectedCharacterIndex"
-          [selectedCharacterIds]="selectedCharacterIds"
           [thumbnailDataUrls]="thumbnailDataUrls"
           (characterClick)="onViewCharacterClick($event)"
           (characterDelete)="onViewCharacterDelete($event)"
-          (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
         ></app-character-grid-view>
 
         <!-- List View -->
@@ -545,7 +467,6 @@
           [tags]="tags"
           [columns]="columns"
           [selectedCharacterIndex]="selectedCharacterIndex"
-          [selectedCharacterIds]="selectedCharacterIds"
           [thumbnailDataUrls]="thumbnailDataUrls"
           (characterClick)="onViewCharacterClick($event)"
           (characterDelete)="onViewCharacterDelete($event)"
@@ -560,7 +481,6 @@
           [tags]="tags"
           [columns]="columns"
           [selectedCharacterIndex]="selectedCharacterIndex"
-          [selectedCharacterIds]="selectedCharacterIds"
           [thumbnailDataUrls]="thumbnailDataUrls"
           (characterClick)="onViewCharacterClick($event)"
           (characterDelete)="onViewCharacterDelete($event)"
@@ -571,10 +491,8 @@
         <app-character-gallery-view
           *ngIf="filteredCharacters.length > 0 && viewMode === 'gallery'"
           [characters]="filteredCharacters"
-          [selectedCharacterIds]="selectedCharacterIds"
           [thumbnailDataUrls]="thumbnailDataUrls"
           (characterClick)="onViewCharacterClick($event)"
-          (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
         ></app-character-gallery-view>
       </div>
 
