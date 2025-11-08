@@ -1,10 +1,19 @@
+export interface CharacterImage {
+  id: string;              // Unique ID for the image
+  filename: string;        // Filename in the images/ folder (e.g., "portrait.png")
+  tags: string[];          // Image tags/categories (e.g., ["portrait", "reference-art"])
+  isPrimary: boolean;      // Whether this is the primary/thumbnail image
+  order: number;           // Display order (0-indexed)
+}
+
 export interface Character {
   id: string;
   name: string;
   category: string;
   tags: string[];
   books: string[];
-  thumbnail?: string;
+  thumbnail?: string;      // DEPRECATED: For backward compatibility only
+  images: CharacterImage[]; // Image library with tags and metadata
   mangamaster: string;
   description: string;
   notes: string;
@@ -21,7 +30,8 @@ export interface CharacterFormData {
   category: string;
   tags: string[];
   books: string[];
-  thumbnail?: string;
+  thumbnail?: string;        // DEPRECATED: For backward compatibility only
+  images: CharacterImage[];  // Image library
   mangamaster: string;
   description: string;
   notes: string;

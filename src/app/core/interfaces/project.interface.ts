@@ -5,6 +5,7 @@ export interface ProjectMetadata {
   tags: Tag[];
   casts: Cast[];
   books: Book[];
+  imageTags?: string[]; // Image tags for character image library
   settings: ProjectSettings;
   relationships?: {
     nodes: GraphNode[];

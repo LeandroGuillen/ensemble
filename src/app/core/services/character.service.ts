@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { Character, CharacterFormData } from '../interfaces/character.interface';
+import { Character, CharacterFormData, CharacterImage } from '../interfaces/character.interface';
 import { MarkdownUtils } from '../utils/markdown.utils';
 import { filenameToFieldName, slugify, slugifyWithTimestamp } from '../utils/slug.utils';
 import { ElectronService } from './electron.service';
@@ -13,7 +13,8 @@ interface CharacterFrontmatter {
   category: string;
   tags: string[];
   books: string[];
-  thumbnail?: string;
+  thumbnail?: string;  // DEPRECATED: For backward compatibility only
+  images?: CharacterImage[]; // New image library with tags and metadata
   mangamaster: string;
   created: string;
   modified: string;
@@ -204,6 +205,7 @@ export class CharacterService {
         id,
         ...data,
         mangamaster: data.mangamaster || '',
+        images: data.images || [], // Initialize with provided images or empty array
         created: now,
         modified: now,
         filePath,
@@ -212,7 +214,7 @@ export class CharacterService {
         additionalFieldsFilenames: {},
       };
 
-      // Handle thumbnail if provided - copy to character folder
+      // Handle thumbnail if provided - copy to character folder (backward compatibility)
       if (data.thumbnail) {
         character.thumbnail = await this.handleThumbnailUploadToFolder(data.thumbnail, characterFolderPath);
       }
@@ -743,13 +745,31 @@ export class CharacterService {
       // Use ID from frontmatter if available, otherwise generate from slug for backward compatibility
       const id = frontmatter.id || this.extractIdFromFilename(characterSlug);
 
+      // Migration logic: Convert old thumbnail field to images array
+      let images: CharacterImage[] = frontmatter.images || [];
+
+      // If no images array but thumbnail exists, migrate it
+      if (images.length === 0 && frontmatter.thumbnail) {
+        images = [{
+          id: this.generateId(),
+          filename: frontmatter.thumbnail,
+          tags: [],
+          isPrimary: true,
+          order: 0
+        }];
+
+        // Note: We'll migrate the actual file to images/ folder on next save
+        // For now, keep backward compatibility by also setting thumbnail field
+      }
+
       const character: Character = {
         id,
         name: frontmatter.name,
         category: frontmatter.category || categorySlug,
         tags: frontmatter.tags || [],
         books: frontmatter.books || [],
-        thumbnail: frontmatter.thumbnail,
+        thumbnail: frontmatter.thumbnail, // Keep for backward compatibility
+        images: images,
         mangamaster: frontmatter.mangamaster || '',
         description: sections.description,
         notes: sections.notes,
@@ -835,7 +855,8 @@ export class CharacterService {
         category: character.category,
         tags: character.tags,
         books: character.books,
-        thumbnail: character.thumbnail,
+        thumbnail: character.thumbnail, // Keep for backward compatibility
+        images: character.images.length > 0 ? character.images : undefined, // Only save if not empty
         mangamaster: character.mangamaster,
         created: character.created.toISOString(),
         modified: character.modified.toISOString(),
@@ -1103,6 +1124,283 @@ export class CharacterService {
 
   private generateId(): string {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
+  }
+
+  /**
+   * Adds a new image to a character
+   */
+  async addImage(characterId: string, imageFilePath: string, tags: string[] = []): Promise<void> {
+    const characters = this.charactersSubject.value;
+    const character = characters.find((char) => char.id === characterId);
+
+    if (!character) {
+      throw new Error('Character not found');
+    }
+
+    try {
+      // Create images folder if it doesn't exist
+      const imagesFolderPath = await this.electronService.pathJoin(character.folderPath, 'images');
+      const folderExists = await this.electronService.fileExists(imagesFolderPath);
+      if (!folderExists) {
+        const createResult = await this.electronService.createDirectory(imagesFolderPath);
+        if (!createResult.success) {
+          throw new Error(`Failed to create images directory: ${createResult.error}`);
+        }
+      }
+
+      // Get the filename from the source path
+      const originalFilename = await this.electronService.pathBasename(imageFilePath);
+
+      // Copy image to images folder
+      const destPath = await this.electronService.pathJoin(imagesFolderPath, originalFilename);
+      const copyResult = await this.electronService.copyFile(imageFilePath, destPath);
+      if (!copyResult.success) {
+        throw new Error(`Failed to copy image: ${copyResult.error}`);
+      }
+
+      // Determine if this should be the primary image
+      const isPrimary = character.images.length === 0;
+
+      // Create CharacterImage object
+      const newImage: CharacterImage = {
+        id: this.generateId(),
+        filename: originalFilename,
+        tags: tags,
+        isPrimary: isPrimary,
+        order: character.images.length
+      };
+
+      // Add to character's images array
+      character.images.push(newImage);
+      character.modified = new Date();
+
+      // Save character to file
+      await this.saveCharacterToFile(character);
+
+      // Update in-memory list
+      const updatedCharacters = characters.map((char) => (char.id === characterId ? character : char));
+      this.charactersSubject.next(updatedCharacters);
+    } catch (error) {
+      console.error('Failed to add image:', error);
+      throw new Error(`Failed to add image: ${error}`);
+    }
+  }
+
+  /**
+   * Removes an image from a character
+   */
+  async removeImage(characterId: string, imageId: string): Promise<void> {
+    const characters = this.charactersSubject.value;
+    const character = characters.find((char) => char.id === characterId);
+
+    if (!character) {
+      throw new Error('Character not found');
+    }
+
+    try {
+      const imageToRemove = character.images.find((img) => img.id === imageId);
+      if (!imageToRemove) {
+        throw new Error('Image not found');
+      }
+
+      // Delete the image file
+      const imagesFolderPath = await this.electronService.pathJoin(character.folderPath, 'images');
+      const imagePath = await this.electronService.pathJoin(imagesFolderPath, imageToRemove.filename);
+      const deleteResult = await this.electronService.deleteFile(imagePath);
+      if (!deleteResult.success) {
+        console.warn(`Failed to delete image file: ${deleteResult.error}`);
+        // Continue anyway - frontmatter update is more important
+      }
+
+      // Remove from character's images array
+      character.images = character.images.filter((img) => img.id !== imageId);
+
+      // If removed image was primary and there are other images, make the first one primary
+      if (imageToRemove.isPrimary && character.images.length > 0) {
+        character.images[0].isPrimary = true;
+      }
+
+      // Reorder remaining images
+      character.images.forEach((img, index) => {
+        img.order = index;
+      });
+
+      character.modified = new Date();
+
+      // Save character to file
+      await this.saveCharacterToFile(character);
+
+      // Update in-memory list
+      const updatedCharacters = characters.map((char) => (char.id === characterId ? character : char));
+      this.charactersSubject.next(updatedCharacters);
+    } catch (error) {
+      console.error('Failed to remove image:', error);
+      throw new Error(`Failed to remove image: ${error}`);
+    }
+  }
+
+  /**
+   * Updates image metadata (tags, order)
+   */
+  async updateImageMetadata(characterId: string, imageId: string, updates: Partial<CharacterImage>): Promise<void> {
+    const characters = this.charactersSubject.value;
+    const character = characters.find((char) => char.id === characterId);
+
+    if (!character) {
+      throw new Error('Character not found');
+    }
+
+    try {
+      const imageIndex = character.images.findIndex((img) => img.id === imageId);
+      if (imageIndex === -1) {
+        throw new Error('Image not found');
+      }
+
+      // Update allowed fields
+      if (updates.tags !== undefined) {
+        character.images[imageIndex].tags = updates.tags;
+      }
+      if (updates.order !== undefined) {
+        character.images[imageIndex].order = updates.order;
+      }
+
+      character.modified = new Date();
+
+      // Save character to file
+      await this.saveCharacterToFile(character);
+
+      // Update in-memory list
+      const updatedCharacters = characters.map((char) => (char.id === characterId ? character : char));
+      this.charactersSubject.next(updatedCharacters);
+    } catch (error) {
+      console.error('Failed to update image metadata:', error);
+      throw new Error(`Failed to update image metadata: ${error}`);
+    }
+  }
+
+  /**
+   * Sets an image as the primary/thumbnail image
+   */
+  async setPrimaryImage(characterId: string, imageId: string): Promise<void> {
+    const characters = this.charactersSubject.value;
+    const character = characters.find((char) => char.id === characterId);
+
+    if (!character) {
+      throw new Error('Character not found');
+    }
+
+    try {
+      // Unset all primary flags
+      character.images.forEach((img) => {
+        img.isPrimary = false;
+      });
+
+      // Set the specified image as primary
+      const imageToSetPrimary = character.images.find((img) => img.id === imageId);
+      if (!imageToSetPrimary) {
+        throw new Error('Image not found');
+      }
+
+      imageToSetPrimary.isPrimary = true;
+      character.modified = new Date();
+
+      // Save character to file
+      await this.saveCharacterToFile(character);
+
+      // Update in-memory list
+      const updatedCharacters = characters.map((char) => (char.id === characterId ? character : char));
+      this.charactersSubject.next(updatedCharacters);
+    } catch (error) {
+      console.error('Failed to set primary image:', error);
+      throw new Error(`Failed to set primary image: ${error}`);
+    }
+  }
+
+  /**
+   * Reorders images for a character
+   */
+  async reorderImages(characterId: string, imageIds: string[]): Promise<void> {
+    const characters = this.charactersSubject.value;
+    const character = characters.find((char) => char.id === characterId);
+
+    if (!character) {
+      throw new Error('Character not found');
+    }
+
+    try {
+      // Create a map of image IDs to images
+      const imageMap = new Map<string, CharacterImage>();
+      character.images.forEach((img) => imageMap.set(img.id, img));
+
+      // Reorder images according to the provided array
+      const reorderedImages: CharacterImage[] = [];
+      imageIds.forEach((id, index) => {
+        const image = imageMap.get(id);
+        if (image) {
+          image.order = index;
+          reorderedImages.push(image);
+        }
+      });
+
+      character.images = reorderedImages;
+      character.modified = new Date();
+
+      // Save character to file
+      await this.saveCharacterToFile(character);
+
+      // Update in-memory list
+      const updatedCharacters = characters.map((char) => (char.id === characterId ? character : char));
+      this.charactersSubject.next(updatedCharacters);
+    } catch (error) {
+      console.error('Failed to reorder images:', error);
+      throw new Error(`Failed to reorder images: ${error}`);
+    }
+  }
+
+  /**
+   * Gets the path to an image file
+   * Checks both new location (images/) and old location (root) for backward compatibility
+   */
+  async getImagePath(characterId: string, imageId: string): Promise<string | null> {
+    const character = this.getCharacterById(characterId);
+    if (!character) {
+      return null;
+    }
+
+    const image = character.images?.find((img) => img.id === imageId);
+    if (!image) {
+      return null;
+    }
+
+    // Try new location first (images/ subfolder)
+    const imagesFolderPath = await this.electronService.pathJoin(character.folderPath, 'images');
+    const newPath = await this.electronService.pathJoin(imagesFolderPath, image.filename);
+
+    const existsInNewLocation = await this.electronService.fileExists(newPath);
+    if (existsInNewLocation) {
+      return newPath;
+    }
+
+    // Fall back to old location (root folder) for migrated characters
+    const oldPath = await this.electronService.pathJoin(character.folderPath, image.filename);
+    const existsInOldLocation = await this.electronService.fileExists(oldPath);
+    if (existsInOldLocation) {
+      return oldPath;
+    }
+
+    // File doesn't exist in either location
+    return null;
+  }
+
+  /**
+   * Gets the primary/thumbnail image for a character
+   */
+  getPrimaryImage(character: Character): CharacterImage | null {
+    if (!character.images || character.images.length === 0) {
+      return null;
+    }
+    const primaryImage = character.images.find((img) => img.isPrimary);
+    return primaryImage || character.images[0];
   }
 
   /**

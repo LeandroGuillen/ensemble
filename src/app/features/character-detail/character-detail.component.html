@@ -58,6 +58,36 @@
             {{ error }}
           </div>
 
+          <!-- Tabs -->
+          <div class="tabs">
+            <button
+              type="button"
+              class="tab"
+              [class.active]="activeTab === 'basic'"
+              (click)="setActiveTab('basic')"
+            >
+              Basic Info
+            </button>
+            <button
+              type="button"
+              class="tab"
+              [class.active]="activeTab === 'images'"
+              (click)="setActiveTab('images')"
+            >
+              Images
+            </button>
+            <button
+              type="button"
+              class="tab"
+              [class.active]="activeTab === 'additional'"
+              (click)="setActiveTab('additional')"
+            >
+              Additional Fields
+            </button>
+          </div>
+
+          <!-- Basic Info Tab -->
+          <div class="tab-content" *ngIf="activeTab === 'basic'">
           <div class="form-section">
             <div class="basic-info-row">
               <!-- Thumbnail -->
@@ -209,30 +239,48 @@
               </div>
             </div>
           </div>
+          </div>
+          <!-- End Basic Info Tab -->
 
-          <!-- Additional Fields Section -->
-          <div class="form-section" *ngIf="character && getAdditionalFieldNames().length > 0">
-            <div class="section-header">
-              <h3>Additional Fields</h3>
-              <span class="field-hint">Extra markdown files in character folder</span>
-            </div>
-
-            <div class="form-group" *ngFor="let fieldName of getAdditionalFieldNames()">
-              <label class="form-label" [for]="'field-' + fieldName">
-                {{ fieldName }}
-                <span class="field-hint">{{ getFieldFileName(fieldName) }}</span>
-              </label>
-              <textarea
-                [id]="'field-' + fieldName"
-                class="form-control"
-                [value]="getAdditionalFieldValue(fieldName)"
-                (input)="onAdditionalFieldChange(fieldName, $event)"
-                rows="6"
-                placeholder="Content for {{ fieldName }}..."
-              ></textarea>
-              <div class="char-count">{{ getAdditionalFieldValue(fieldName).length }} characters</div>
+          <!-- Images Tab -->
+          <div class="tab-content" *ngIf="activeTab === 'images'">
+            <app-image-library *ngIf="character" [character]="character"></app-image-library>
+            <div *ngIf="!character" class="empty-state">
+              <p>Save the character first to add images.</p>
             </div>
           </div>
+          <!-- End Images Tab -->
+
+          <!-- Additional Fields Tab -->
+          <div class="tab-content" *ngIf="activeTab === 'additional'">
+            <div class="form-section" *ngIf="character && getAdditionalFieldNames().length > 0">
+              <div class="section-header">
+                <h3>Additional Fields</h3>
+                <span class="field-hint">Extra markdown files in character folder</span>
+              </div>
+
+              <div class="form-group" *ngFor="let fieldName of getAdditionalFieldNames()">
+                <label class="form-label" [for]="'field-' + fieldName">
+                  {{ fieldName }}
+                  <span class="field-hint">{{ getFieldFileName(fieldName) }}</span>
+                </label>
+                <textarea
+                  [id]="'field-' + fieldName"
+                  class="form-control"
+                  [value]="getAdditionalFieldValue(fieldName)"
+                  (input)="onAdditionalFieldChange(fieldName, $event)"
+                  rows="6"
+                  placeholder="Content for {{ fieldName }}..."
+                ></textarea>
+                <div class="char-count">{{ getAdditionalFieldValue(fieldName).length }} characters</div>
+              </div>
+            </div>
+            <div *ngIf="!character || getAdditionalFieldNames().length === 0" class="empty-state">
+              <p *ngIf="!character">Save the character first to add additional fields.</p>
+              <p *ngIf="character && getAdditionalFieldNames().length === 0">No additional fields yet. Create .md files in the character folder to add custom fields.</p>
+            </div>
+          </div>
+          <!-- End Additional Fields Tab -->
         </form>
       </div>
     </div>

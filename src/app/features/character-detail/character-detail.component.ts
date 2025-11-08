@@ -40,6 +40,7 @@ import {
   MultiSelectButtonsComponent,
   SelectableItem,
 } from "../../shared/multi-select-buttons/multi-select-buttons.component";
+import { ImageLibraryComponent } from "./components/image-library/image-library.component";
 
 @Component({
   selector: "app-character-detail",
@@ -49,6 +50,7 @@ import {
     ReactiveFormsModule,
     CategoryToggleComponent,
     MultiSelectButtonsComponent,
+    ImageLibraryComponent,
   ],
   templateUrl: "./character-detail.component.html",
   styleUrls: ["./character-detail.component.scss"],
@@ -73,6 +75,7 @@ export class CharacterDetailComponent
 
   isEditing = false;
   isLoading = false;
+  activeTab: 'basic' | 'images' | 'additional' = 'basic';
   isSaving = false;
   error: string | null = null;
 
@@ -228,7 +231,24 @@ export class CharacterDetailComponent
         });
 
         // Set thumbnail preview
-        if (this.character.thumbnail && this.character.folderPath) {
+        // First check for primary image in images array, fallback to old thumbnail field
+        const primaryImage = this.characterService.getPrimaryImage(this.character);
+        if (primaryImage && this.character.folderPath) {
+          // Try new location first (images/ subfolder), then old location (root)
+          const newPath = `${this.character.folderPath}/images/${primaryImage.filename}`;
+          const oldPath = `${this.character.folderPath}/${primaryImage.filename}`;
+
+          // Check if file exists in new location
+          this.electronService.fileExists(newPath).then(async (exists) => {
+            if (exists) {
+              await this.loadThumbnailPreview(newPath);
+            } else {
+              // Fall back to old location for migrated characters
+              await this.loadThumbnailPreview(oldPath);
+            }
+          });
+        } else if (this.character.thumbnail && this.character.folderPath) {
+          // Fallback for backward compatibility with completely unmigrated characters
           this.loadThumbnailPreview(
             `${this.character.folderPath}/${this.character.thumbnail}`
           );
@@ -266,6 +286,7 @@ export class CharacterDetailComponent
         ...this.characterForm.value,
         thumbnail:
           this.selectedThumbnailPath || this.characterForm.value.thumbnail,
+        images: this.character?.images || [], // Initialize images array
       };
 
       if (this.isEditing && this.character) {
@@ -559,5 +580,9 @@ export class CharacterDetailComponent
     const textarea = event.target as HTMLTextAreaElement;
     this.additionalFieldsChanges[fieldName] = textarea.value;
     this.characterForm.markAsDirty();
+  }
+
+  setActiveTab(tab: 'basic' | 'images' | 'additional'): void {
+    this.activeTab = tab;
   }
 }

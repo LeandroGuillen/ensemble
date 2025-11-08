@@ -120,6 +120,13 @@ export class ElectronService {
     return await this.ipcRenderer.invoke('select-image');
   }
 
+  async selectImages(): Promise<string[]> {
+    if (!this.isElectron()) {
+      return [];
+    }
+    return await this.ipcRenderer.invoke('select-images');
+  }
+
   async getVersion(): Promise<string> {
     if (!this.isElectron()) {
       return '1.0.0';

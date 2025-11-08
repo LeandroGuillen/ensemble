@@ -1,0 +1,161 @@
+<div class="image-library">
+  <div class="image-library-header">
+    <h3>Images</h3>
+    <div class="header-actions">
+      <button type="button" class="btn-add-images" (click)="addImages()" [disabled]="isLoading">
+        <span class="icon">📷</span>
+        Add Images
+      </button>
+    </div>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="filter-bar" *ngIf="availableTags.length > 0">
+    <div class="filter-label">Filter by tag:</div>
+    <div class="filter-tags">
+      <button
+        type="button"
+        *ngFor="let tag of availableTags"
+        class="tag-chip"
+        [class.active]="isFilterTagActive(tag)"
+        (click)="toggleFilterTag(tag)"
+      >
+        {{ tag }}
+      </button>
+      <button
+        type="button"
+        *ngIf="selectedFilterTags.length > 0"
+        class="btn-clear-filter"
+        (click)="clearFilter()"
+      >
+        Clear
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading Indicator -->
+  <div class="loading-overlay" *ngIf="isLoading">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Empty State -->
+  <div class="empty-state" *ngIf="images.length === 0 && !isLoading">
+    <div class="empty-icon">🖼️</div>
+    <p>No images yet</p>
+    <button type="button" class="btn-add-images-primary" (click)="addImages()">
+      Add Your First Images
+    </button>
+  </div>
+
+  <!-- No Results State -->
+  <div class="empty-state" *ngIf="images.length > 0 && filteredImages.length === 0 && !isLoading">
+    <div class="empty-icon">🔍</div>
+    <p>No images match the selected filters</p>
+    <button type="button" class="btn-clear-filter" (click)="clearFilter()">
+      Clear Filters
+    </button>
+  </div>
+
+  <!-- Image Grid -->
+  <div class="image-grid" *ngIf="filteredImages.length > 0 && !isLoading">
+    <div
+      *ngFor="let image of filteredImages"
+      class="image-item"
+      [class.primary]="isPrimaryImage(image.id)"
+      draggable="true"
+      (dragstart)="onDragStart($event, image.id)"
+      (dragover)="onDragOver($event)"
+      (drop)="onDrop($event, image.id)"
+    >
+      <!-- Primary Badge -->
+      <div class="primary-badge" *ngIf="isPrimaryImage(image.id)" title="Primary Image">
+        ⭐
+      </div>
+
+      <!-- Drag Handle -->
+      <div class="drag-handle" title="Drag to reorder">
+        ☰
+      </div>
+
+      <!-- Image Preview -->
+      <div class="image-preview">
+        <img
+          *ngIf="getImagePreview(image.id)"
+          [src]="getImagePreview(image.id)"
+          [alt]="image.filename"
+        />
+        <div *ngIf="!getImagePreview(image.id)" class="image-placeholder">
+          <span>📷</span>
+        </div>
+      </div>
+
+      <!-- Image Info -->
+      <div class="image-info">
+        <div class="image-filename" [title]="image.filename">{{ image.filename }}</div>
+
+        <!-- Image Tags (View Mode) -->
+        <div class="image-tags" *ngIf="editingImageId !== image.id">
+          <span *ngFor="let tag of getImageTags(image.id)" class="tag">{{ tag }}</span>
+          <span *ngIf="getImageTags(image.id).length === 0" class="no-tags">No tags</span>
+        </div>
+
+        <!-- Image Tags (Edit Mode) -->
+        <div class="image-tags-edit" *ngIf="editingImageId === image.id">
+          <div class="tag-selector">
+            <button
+              type="button"
+              *ngFor="let tag of availableTags"
+              class="tag-chip"
+              [class.selected]="isTagSelected(tag)"
+              (click)="toggleEditingTag(tag)"
+            >
+              {{ tag }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Image Actions -->
+      <div class="image-actions">
+        <!-- Normal Actions -->
+        <div class="action-buttons" *ngIf="editingImageId !== image.id">
+          <button
+            type="button"
+            class="btn-action btn-primary-toggle"
+            (click)="setPrimaryImage(image.id)"
+            [disabled]="isPrimaryImage(image.id)"
+            title="Set as primary image"
+          >
+            {{ isPrimaryImage(image.id) ? '⭐' : '☆' }}
+          </button>
+          <button
+            type="button"
+            class="btn-action btn-edit"
+            (click)="startEditingTags(image.id)"
+            title="Edit tags"
+          >
+            ✏️
+          </button>
+          <button
+            type="button"
+            class="btn-action btn-delete"
+            (click)="removeImage(image.id)"
+            title="Delete image"
+          >
+            🗑️
+          </button>
+        </div>
+
+        <!-- Edit Mode Actions -->
+        <div class="action-buttons-edit" *ngIf="editingImageId === image.id">
+          <button type="button" class="btn-action btn-save" (click)="saveImageTags(image.id)">
+            Save
+          </button>
+          <button type="button" class="btn-action btn-cancel" (click)="cancelEditingTags()">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

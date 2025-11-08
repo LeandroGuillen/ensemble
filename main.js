@@ -79,7 +79,7 @@ ipcMain.handle('select-folder', async () => {
   return result.canceled ? null : result.filePaths[0];
 });
 
-// Handle file dialog for thumbnails
+// Handle file dialog for thumbnails (single image)
 ipcMain.handle('select-image', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ['openFile'],
@@ -88,6 +88,17 @@ ipcMain.handle('select-image', async () => {
   });
 
   return result.canceled ? null : result.filePaths[0];
+});
+
+// Handle file dialog for multiple images
+ipcMain.handle('select-images', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile', 'multiSelections'],
+    filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp'] }],
+    title: 'Select Character Images',
+  });
+
+  return result.canceled ? [] : result.filePaths;
 });
 
 // Handle version request
