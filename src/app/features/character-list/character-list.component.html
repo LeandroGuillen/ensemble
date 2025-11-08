@@ -92,6 +92,22 @@
           </svg>
         </button>
       </div>
+      <div class="slideshow-toggle" [class.disabled]="!currentProject">
+        <button
+          class="toggle-option"
+          [class.active]="slideshowEnabled"
+          (click)="toggleSlideshow()"
+          [disabled]="!currentProject"
+          title="Toggle slideshow (show all images vs. thumbnail only)"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <rect x="2" y="3" width="12" height="10" rx="1" stroke="currentColor" fill="none" stroke-width="1.5"/>
+            <circle cx="5" cy="6" r="1" />
+            <polyline points="4,11 7,8 9,10 12,7" stroke="currentColor" fill="none" stroke-width="1.2"/>
+            <path *ngIf="slideshowEnabled" d="M13,2 L15,4 L13,6 Z" fill="currentColor"/>
+          </svg>
+        </button>
+      </div>
       <button
         class="btn btn-primary"
         (click)="createNewCharacter()"
@@ -329,6 +345,8 @@
               [tags]="tags"
               [selectedCharacterIndex]="selectedCharacterIndex"
               [thumbnailDataUrls]="thumbnailDataUrls"
+              [characterImagesDataUrls]="characterImagesDataUrls"
+              [slideshowEnabled]="slideshowEnabled"
               (characterClick)="onViewCharacterClick($event)"
               (characterDelete)="onViewCharacterDelete($event)"
             ></app-character-grid-view>
@@ -370,6 +388,8 @@
               *ngIf="viewMode === 'gallery'"
               [characters]="group.characters"
               [thumbnailDataUrls]="thumbnailDataUrls"
+              [characterImagesDataUrls]="characterImagesDataUrls"
+              [slideshowEnabled]="slideshowEnabled"
               (characterClick)="onViewCharacterClick($event)"
             ></app-character-gallery-view>
           </div>
@@ -400,6 +420,8 @@
               [tags]="tags"
               [selectedCharacterIndex]="selectedCharacterIndex"
               [thumbnailDataUrls]="thumbnailDataUrls"
+              [characterImagesDataUrls]="characterImagesDataUrls"
+              [slideshowEnabled]="slideshowEnabled"
               (characterClick)="onViewCharacterClick($event)"
               (characterDelete)="onViewCharacterDelete($event)"
             ></app-character-grid-view>
@@ -441,6 +463,8 @@
               *ngIf="viewMode === 'gallery'"
               [characters]="group.characters"
               [thumbnailDataUrls]="thumbnailDataUrls"
+              [characterImagesDataUrls]="characterImagesDataUrls"
+              [slideshowEnabled]="slideshowEnabled"
               (characterClick)="onViewCharacterClick($event)"
             ></app-character-gallery-view>
           </div>
@@ -457,6 +481,8 @@
           [tags]="tags"
           [selectedCharacterIndex]="selectedCharacterIndex"
           [thumbnailDataUrls]="thumbnailDataUrls"
+          [characterImagesDataUrls]="characterImagesDataUrls"
+          [slideshowEnabled]="slideshowEnabled"
           (characterClick)="onViewCharacterClick($event)"
           (characterDelete)="onViewCharacterDelete($event)"
         ></app-character-grid-view>
@@ -494,6 +520,8 @@
           *ngIf="filteredCharacters.length > 0 && viewMode === 'gallery'"
           [characters]="filteredCharacters"
           [thumbnailDataUrls]="thumbnailDataUrls"
+          [characterImagesDataUrls]="characterImagesDataUrls"
+          [slideshowEnabled]="slideshowEnabled"
           (characterClick)="onViewCharacterClick($event)"
         ></app-character-gallery-view>
       </div>

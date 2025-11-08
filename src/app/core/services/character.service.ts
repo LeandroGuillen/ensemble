@@ -762,6 +762,11 @@ export class CharacterService {
         // For now, keep backward compatibility by also setting thumbnail field
       }
 
+      // Scan filesystem for image files and sync with metadata
+      const originalImageCount = images.length;
+      images = await this.syncImageFilesWithMetadata(folderPath, images);
+      const imagesChanged = images.length !== originalImageCount;
+
       const character: Character = {
         id,
         name: frontmatter.name,
@@ -780,6 +785,20 @@ export class CharacterService {
         additionalFields: additionalFields,
         additionalFieldsFilenames: additionalFieldsFilenames,
       };
+
+      // If images were added or removed, save the updated metadata
+      if (imagesChanged) {
+        const diff = images.length - originalImageCount;
+        if (diff > 0) {
+          console.log(`Auto-detected ${diff} new image(s) for ${character.name}`);
+        } else if (diff < 0) {
+          console.log(`Removed ${Math.abs(diff)} deleted image(s) from metadata for ${character.name}`);
+        }
+        // Save asynchronously without waiting (don't block loading)
+        this.updateCharacterMetadata(character).catch((error) => {
+          console.error('Failed to save synced images:', error);
+        });
+      }
 
       return character;
     } catch (error) {
@@ -1409,13 +1428,16 @@ export class CharacterService {
   private async handleFileChange(event: { type: string; path: string; filename: string }): Promise<void> {
     console.log('File change detected:', event);
 
-    // Only process .md files in character folders
-    if (!event.filename.endsWith('.md')) {
+    // If we haven't loaded characters yet, don't try to handle changes
+    if (!this.currentProjectPath) {
       return;
     }
 
-    // If we haven't loaded characters yet, don't try to handle changes
-    if (!this.currentProjectPath) {
+    const isMarkdownFile = event.filename.endsWith('.md');
+    const isImageFile = /\.(jpg|jpeg|png|gif|webp)$/i.test(event.filename);
+
+    // Only process .md files and image files
+    if (!isMarkdownFile && !isImageFile) {
       return;
     }
 
@@ -1425,6 +1447,12 @@ export class CharacterService {
 
       // Make sure the changed file is under the characters directory
       if (!event.path.includes(charactersPath)) {
+        return;
+      }
+
+      // For image files, handle them separately
+      if (isImageFile) {
+        await this.handleImageFileChange(event);
         return;
       }
 
@@ -1468,5 +1496,363 @@ export class CharacterService {
       console.error('Error handling file change:', error);
       // Don't throw - we don't want file watching errors to break the app
     }
+  }
+
+  /**
+   * Handles image file changes (add/remove/change) in character folders
+   */
+  private async handleImageFileChange(event: { type: string; path: string; filename: string }): Promise<void> {
+    if (!this.currentProjectPath) {
+      return;
+    }
+
+    try {
+      // Find which character folder this image belongs to
+      const charactersPath = await this.electronService.pathJoin(this.currentProjectPath, 'characters');
+
+      // Navigate up the directory tree to find the character folder
+      let currentPath = event.path;
+      let characterFolderPath: string | null = null;
+      let relativePath = '';
+
+      // Keep going up until we find a folder that's a direct child of a category folder
+      while (currentPath !== charactersPath) {
+        const parentPath = await this.electronService.pathDirname(currentPath);
+        const parentParentPath = await this.electronService.pathDirname(parentPath);
+
+        // Check if parent's parent is the characters folder (meaning parent is category, current is character)
+        if (parentParentPath === charactersPath) {
+          characterFolderPath = currentPath;
+          break;
+        }
+
+        // Store the relative path from character folder
+        if (characterFolderPath === null) {
+          const folderName = await this.electronService.pathBasename(currentPath);
+          relativePath = relativePath ? `${folderName}/${relativePath}` : folderName;
+        }
+
+        currentPath = parentPath;
+
+        // Safety check to prevent infinite loop
+        if (!currentPath || currentPath === '/') {
+          return;
+        }
+      }
+
+      if (!characterFolderPath) {
+        return;
+      }
+
+      // Find the character by folder path
+      const characters = this.charactersSubject.value;
+      const character = characters.find((char) => char.folderPath === characterFolderPath);
+
+      if (!character) {
+        return;
+      }
+
+      if (event.type === 'add') {
+        // New image file added
+        await this.autoAddImageToCharacter(character, event.path, relativePath);
+        console.log(`Auto-added image to character ${character.name}: ${event.filename}`);
+      } else if (event.type === 'unlink') {
+        // Image file removed
+        await this.autoRemoveImageFromCharacter(character, event.path);
+        console.log(`Auto-removed image from character ${character.name}: ${event.filename}`);
+      }
+      // We don't handle 'change' for images as it doesn't affect metadata
+    } catch (error) {
+      console.error('Error handling image file change:', error);
+    }
+  }
+
+  /**
+   * Automatically adds a newly detected image file to the character's images array
+   */
+  private async autoAddImageToCharacter(character: Character, imagePath: string, relativePath: string): Promise<void> {
+    // Get just the filename
+    const filename = await this.electronService.pathBasename(imagePath);
+
+    // Check if this image is already in the character's images array
+    const existingImage = character.images?.find((img) => {
+      // Compare by checking if the image path ends with the filename
+      // This handles both old (root) and new (images/) locations
+      return img.filename === filename || img.filename.endsWith(`/${filename}`);
+    });
+
+    if (existingImage) {
+      // Image already exists, don't add again
+      return;
+    }
+
+    // Extract auto-tags from subfolder structure
+    const autoTags = this.extractAutoTagsFromPath(relativePath);
+
+    // Determine the correct filename to store
+    // If the image is in the root character folder, store just the filename
+    // If it's in a subfolder, store the relative path from character folder
+    let storedFilename = filename;
+    if (relativePath && relativePath !== filename) {
+      storedFilename = relativePath;
+    }
+
+    // Create new image entry
+    const newImage: CharacterImage = {
+      id: this.generateId(),
+      filename: storedFilename,
+      tags: autoTags,
+      isPrimary: !character.images || character.images.length === 0, // First image becomes primary
+      order: character.images ? character.images.length : 0
+    };
+
+    // Update character's images array
+    const updatedImages = [...(character.images || []), newImage];
+    character.images = updatedImages;
+
+    // Save updated character
+    await this.updateCharacterMetadata(character);
+
+    // Refresh the character in the list
+    await this.refreshCharacter(character.id);
+  }
+
+  /**
+   * Automatically removes an image from character's images array when file is deleted
+   */
+  private async autoRemoveImageFromCharacter(character: Character, imagePath: string): Promise<void> {
+    if (!character.images || character.images.length === 0) {
+      return;
+    }
+
+    const filename = await this.electronService.pathBasename(imagePath);
+
+    // Find the image in the array
+    const imageIndex = character.images.findIndex((img) => {
+      return img.filename === filename || img.filename.endsWith(`/${filename}`);
+    });
+
+    if (imageIndex === -1) {
+      // Image not found in array
+      return;
+    }
+
+    const removedImage = character.images[imageIndex];
+    const wasPrimary = removedImage.isPrimary;
+
+    // Remove the image
+    const updatedImages = character.images.filter((_, index) => index !== imageIndex);
+
+    // If removed image was primary, make the first remaining image primary
+    if (wasPrimary && updatedImages.length > 0) {
+      updatedImages[0].isPrimary = true;
+    }
+
+    // Reorder remaining images
+    updatedImages.forEach((img, index) => {
+      img.order = index;
+    });
+
+    character.images = updatedImages;
+
+    // Save updated character
+    await this.updateCharacterMetadata(character);
+
+    // Refresh the character in the list
+    await this.refreshCharacter(character.id);
+  }
+
+  /**
+   * Scans the character folder for image files and syncs them with the images array
+   * Adds any new files found and removes files that no longer exist
+   */
+  private async syncImageFilesWithMetadata(
+    characterFolderPath: string,
+    existingImages: CharacterImage[]
+  ): Promise<CharacterImage[]> {
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+
+    try {
+      // Recursively scan for image files in the character folder
+      const foundImages = await this.scanForImageFiles(characterFolderPath, characterFolderPath, imageExtensions);
+      const foundPaths = new Set(foundImages.map(img => img.relativePath));
+
+      // Start with empty array and rebuild
+      const syncedImages: CharacterImage[] = [];
+      let hasPrimary = false;
+
+      // First pass: Keep existing images that still exist on disk
+      for (const existingImage of existingImages) {
+        // Check if this image file still exists on disk
+        const exists = foundPaths.has(existingImage.filename) ||
+                      Array.from(foundPaths).some(path => path.endsWith(`/${existingImage.filename}`));
+
+        if (exists) {
+          syncedImages.push(existingImage);
+          if (existingImage.isPrimary) {
+            hasPrimary = true;
+          }
+        } else {
+          console.log(`Removing deleted image from metadata: ${existingImage.filename}`);
+        }
+      }
+
+      // Second pass: Add new images that aren't in metadata
+      for (const { relativePath, autoTags } of foundImages) {
+        // Check if this image already exists in the synced array
+        const exists = syncedImages.some(
+          (img) => img.filename === relativePath || img.filename.endsWith(`/${relativePath}`)
+        );
+
+        if (!exists) {
+          // Add new image
+          const newImage: CharacterImage = {
+            id: this.generateId(),
+            filename: relativePath,
+            tags: autoTags,
+            isPrimary: !hasPrimary && syncedImages.length === 0, // First image becomes primary if none set
+            order: syncedImages.length,
+          };
+          syncedImages.push(newImage);
+          if (!hasPrimary) {
+            hasPrimary = true;
+          }
+        }
+      }
+
+      // If we had a primary but it was deleted, make the first image primary
+      if (!hasPrimary && syncedImages.length > 0) {
+        syncedImages[0].isPrimary = true;
+      }
+
+      // Reorder all images
+      syncedImages.forEach((img, index) => {
+        img.order = index;
+      });
+
+      return syncedImages;
+    } catch (error) {
+      console.error('Error syncing image files:', error);
+      return existingImages; // Return existing images if scan fails
+    }
+  }
+
+  /**
+   * Recursively scans a directory for image files
+   */
+  private async scanForImageFiles(
+    basePath: string,
+    currentPath: string,
+    extensions: string[]
+  ): Promise<Array<{ relativePath: string; autoTags: string[] }>> {
+    const results: Array<{ relativePath: string; autoTags: string[] }> = [];
+
+    try {
+      const dirContents = await this.electronService.readDirectoryFiles(currentPath);
+      if (!dirContents.success) {
+        return results;
+      }
+
+      // Process files in current directory
+      if (dirContents.files) {
+        for (const filename of dirContents.files) {
+          const ext = filename.substring(filename.lastIndexOf('.')).toLowerCase();
+          if (extensions.includes(ext)) {
+            const fullPath = await this.electronService.pathJoin(currentPath, filename);
+            const relativePath = await this.getRelativePath(basePath, fullPath);
+            const autoTags = this.extractAutoTagsFromPath(relativePath);
+
+            results.push({ relativePath, autoTags });
+          }
+        }
+      }
+
+      // Recursively process subdirectories
+      if (dirContents.directories) {
+        for (const dirname of dirContents.directories) {
+          const subPath = await this.electronService.pathJoin(currentPath, dirname);
+          const subResults = await this.scanForImageFiles(basePath, subPath, extensions);
+          results.push(...subResults);
+        }
+      }
+
+      return results;
+    } catch (error) {
+      console.error(`Error scanning directory ${currentPath}:`, error);
+      return results;
+    }
+  }
+
+  /**
+   * Gets the relative path from base to target
+   */
+  private async getRelativePath(basePath: string, targetPath: string): Promise<string> {
+    // Simple implementation: remove the base path prefix
+    if (targetPath.startsWith(basePath)) {
+      let relative = targetPath.substring(basePath.length);
+      // Remove leading slash
+      if (relative.startsWith('/') || relative.startsWith('\\')) {
+        relative = relative.substring(1);
+      }
+      return relative;
+    }
+    return targetPath;
+  }
+
+  /**
+   * Extracts auto-tags from the relative path within character folder
+   * Example: "images/portraits/headshot.png" -> ["portraits"]
+   *         "concept-art/early/sketch.png" -> ["concept-art", "early"]
+   */
+  private extractAutoTagsFromPath(relativePath: string): string[] {
+    if (!relativePath) {
+      return [];
+    }
+
+    // Split by path separator and remove the filename (last part)
+    const parts = relativePath.split(/[\/\\]/);
+    parts.pop(); // Remove filename
+
+    // Filter out common folder names that shouldn't be tags
+    const ignoredFolders = ['images', 'img', 'pictures', 'pics'];
+    const tags = parts.filter((part) => !ignoredFolders.includes(part.toLowerCase()));
+
+    return tags;
+  }
+
+  /**
+   * Updates only the character's metadata (frontmatter) without reloading the entire character
+   */
+  private async updateCharacterMetadata(character: Character): Promise<void> {
+    // Read current file content
+    const currentContent = await this.electronService.readFile(character.filePath);
+    if (!currentContent.success || !currentContent.content) {
+      throw new Error('Failed to read character file');
+    }
+
+    // Parse to extract body content
+    const parsed = MarkdownUtils.parseMarkdown(currentContent.content);
+    if (!parsed.success || !parsed.data) {
+      throw new Error('Failed to parse character markdown');
+    }
+
+    // Create updated frontmatter
+    const frontmatter: any = {
+      id: character.id,
+      name: character.name,
+      category: character.category,
+      tags: character.tags,
+      books: character.books,
+      images: character.images,
+      mangamaster: character.mangamaster,
+      created: character.created,
+      modified: new Date().toISOString()
+    };
+
+    // Regenerate markdown with updated frontmatter
+    const updatedContent = MarkdownUtils.generateMarkdown(frontmatter, parsed.data.content);
+
+    // Write back to file
+    await this.electronService.writeFile(character.filePath, updatedContent);
   }
 }

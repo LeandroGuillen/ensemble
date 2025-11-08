@@ -20,7 +20,9 @@ export class ImageLibraryComponent implements OnInit, OnDestroy {
   images: CharacterImage[] = [];
   filteredImages: CharacterImage[] = [];
   imagePreviews: Map<string, string> = new Map(); // imageId -> dataUrl
-  availableTags: string[] = [];
+  availableTags: string[] = []; // Predefined tags from ImageCategoryService
+  detectedTags: string[] = []; // Auto-detected tags from folder structure
+  allTagsForSelection: string[] = []; // Combined: available + detected
   selectedFilterTags: string[] = [];
   isLoading = false;
 
@@ -42,6 +44,9 @@ export class ImageLibraryComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe((tags) => {
         this.availableTags = tags;
+        // Re-extract detected tags and update combined list when available tags change
+        this.extractDetectedTags();
+        this.updateAllTagsForSelection();
       });
 
     // Initialize images only if character is defined
@@ -61,6 +66,8 @@ export class ImageLibraryComponent implements OnInit, OnDestroy {
   async loadImages(): Promise<void> {
     // Handle case where character.images might be undefined
     this.images = this.character.images ? [...this.character.images].sort((a, b) => a.order - b.order) : [];
+    this.extractDetectedTags();
+    this.updateAllTagsForSelection();
     this.applyFilter();
     await this.loadImagePreviews();
   }
@@ -295,6 +302,40 @@ export class ImageLibraryComponent implements OnInit, OnDestroy {
   getImageTags(imageId: string): string[] {
     const image = this.images.find((img) => img.id === imageId);
     return image?.tags || [];
+  }
+
+  /**
+   * Extracts all auto-detected tags from current images
+   */
+  private extractDetectedTags(): void {
+    const allTags = new Set<string>();
+
+    for (const image of this.images) {
+      for (const tag of image.tags) {
+        // Only include tags that are NOT in the predefined availableTags list
+        if (!this.availableTags.includes(tag)) {
+          allTags.add(tag);
+        }
+      }
+    }
+
+    this.detectedTags = Array.from(allTags).sort();
+  }
+
+  /**
+   * Updates the combined list of all tags for selection (predefined + detected)
+   */
+  private updateAllTagsForSelection(): void {
+    // Combine availableTags and detectedTags, removing duplicates
+    const combined = new Set<string>([...this.availableTags, ...this.detectedTags]);
+    this.allTagsForSelection = Array.from(combined).sort();
+  }
+
+  /**
+   * Checks if a tag is auto-detected (from folder structure)
+   */
+  isDetectedTag(tag: string): boolean {
+    return this.detectedTags.includes(tag);
   }
 
   /**

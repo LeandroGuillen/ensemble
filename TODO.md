@@ -1,13 +1,15 @@
 # For sure
-
 - Code cleanup
-- Multiple images per character
 - Slideshow widget for character view
-- Statistics dashboard
 - Integrate with obsidian
+- Style cleanup
+  - Icon set
+  - Consistent margins/padding
+  - Font choices
+  
 
 # Maybe
-
+- Portrait or image generator with mangamaster
 - Worldbuilding
 - Locations
 - Dark/light mode

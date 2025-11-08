@@ -56,6 +56,8 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   allCharacters: Character[] = [];
   filteredCharacters: Character[] = [];
   thumbnailDataUrls: Map<string, string> = new Map();
+  thumbnailModificationTimes: Map<string, string> = new Map(); // Track modification times
+  characterImagesDataUrls: Map<string, string[]> = new Map(); // All images per character for slideshow
   isLoading = false;
   error: string | null = null;
   viewMode: 'grid' | 'list' | 'compact' | 'gallery' = 'grid'; // Toggle between grid (cards), list, compact, and gallery view
@@ -65,6 +67,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   groupBy: 'none' | 'category' | 'tag' = 'none'; // Group characters by category or tag
   selectedCharacterIndex = -1; // Track selected character for keyboard navigation
   filterExpanded = false; // Track filter expanded state
+  slideshowEnabled = true; // Toggle slideshow on/off
 
   constructor(
     private characterService: CharacterService,
@@ -106,6 +109,12 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     const savedGroupBy = localStorage.getItem('characterGroupBy') as 'none' | 'category' | 'tag';
     if (savedGroupBy) {
       this.groupBy = savedGroupBy;
+    }
+
+    // Load saved slideshow preference
+    const savedSlideshowEnabled = localStorage.getItem('characterSlideshowEnabled');
+    if (savedSlideshowEnabled !== null) {
+      this.slideshowEnabled = savedSlideshowEnabled === 'true';
     }
 
     // Load filter expanded state from project settings (not localStorage)
@@ -590,24 +599,71 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   }
 
   getThumbnailPath(character: Character): string | null {
-    if (!character.thumbnail || !this.currentProject) {
+    if (!this.currentProject) {
       return null;
     }
 
-    // New structure: thumbnail is in character's folder
-    // character.folderPath is the full path to character folder
-    // character.thumbnail is just the filename
-    return `${character.folderPath}/${character.thumbnail}`;
+    // Try to get primary image from images array first
+    const primaryImage = this.characterService.getPrimaryImage(character);
+    if (primaryImage) {
+      // Check both new (images/) and old (root) locations
+      // The character service's getImagePath handles this, but we need a sync path here
+      // So we'll try the most likely location first
+      if (primaryImage.filename.includes('/')) {
+        return `${character.folderPath}/${primaryImage.filename}`;
+      } else {
+        // Could be in images/ or root - try images/ first as that's the new standard
+        return `${character.folderPath}/images/${primaryImage.filename}`;
+      }
+    }
+
+    // Fallback to old thumbnail field for backward compatibility
+    if (character.thumbnail) {
+      return `${character.folderPath}/${character.thumbnail}`;
+    }
+
+    return null;
   }
 
   async getThumbnailDataUrl(character: Character): Promise<string | null> {
-    const thumbnailPath = this.getThumbnailPath(character);
-    if (!thumbnailPath) {
+    if (!this.currentProject) {
       return null;
     }
 
     try {
-      return await this.electronService.getImageAsDataUrl(thumbnailPath);
+      // Try to get primary image from images array first
+      const primaryImage = this.characterService.getPrimaryImage(character);
+
+      if (primaryImage) {
+        // Try new location first (images/ subfolder), then old location (root)
+        let thumbnailPath: string;
+
+        if (primaryImage.filename.includes('/')) {
+          // Filename includes path, use as-is
+          thumbnailPath = `${character.folderPath}/${primaryImage.filename}`;
+        } else {
+          // Try images/ folder first
+          const newPath = `${character.folderPath}/images/${primaryImage.filename}`;
+          const existsInNew = await this.electronService.fileExists(newPath);
+
+          if (existsInNew) {
+            thumbnailPath = newPath;
+          } else {
+            // Fall back to root folder
+            thumbnailPath = `${character.folderPath}/${primaryImage.filename}`;
+          }
+        }
+
+        return await this.electronService.getImageAsDataUrl(thumbnailPath);
+      }
+
+      // Fallback to old thumbnail field
+      if (character.thumbnail) {
+        const thumbnailPath = `${character.folderPath}/${character.thumbnail}`;
+        return await this.electronService.getImageAsDataUrl(thumbnailPath);
+      }
+
+      return null;
     } catch (error) {
       console.error('Failed to load thumbnail as data URL:', error);
       return null;
@@ -621,24 +677,83 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   private async loadThumbnailDataUrls(characters: Character[]): Promise<void> {
     // Load all thumbnails outside Angular's zone
     await this.ngZone.runOutsideAngular(async () => {
-      const thumbnailPromises = characters
-        .filter((char) => char.thumbnail && !this.thumbnailDataUrls.has(char.id))
-        .map(async (character) => {
-          try {
+      const thumbnailPromises = characters.map(async (character) => {
+        try {
+          // Check if character has a primary image or thumbnail
+          const primaryImage = this.characterService.getPrimaryImage(character);
+          const hasThumbnail = primaryImage || character.thumbnail;
+
+          if (!hasThumbnail) {
+            // No thumbnail, remove from cache if present
+            if (this.thumbnailDataUrls.has(character.id)) {
+              this.thumbnailDataUrls.delete(character.id);
+              this.thumbnailModificationTimes.delete(character.id);
+              this.characterImagesDataUrls.delete(character.id);
+            }
+            return;
+          }
+
+          // Check if we need to reload the thumbnail
+          // Reload if: not cached, or character was modified since last cache
+          const cachedModTime = this.thumbnailModificationTimes.get(character.id);
+          const currentModTime = character.modified.toISOString();
+          const needsReload =
+            !this.thumbnailDataUrls.has(character.id) || cachedModTime !== currentModTime;
+
+          if (needsReload) {
             const dataUrl = await this.getThumbnailDataUrl(character);
             if (dataUrl) {
               this.thumbnailDataUrls.set(character.id, dataUrl);
+              this.thumbnailModificationTimes.set(character.id, currentModTime);
             }
-          } catch (error) {
-            console.error(`Failed to load thumbnail for character ${character.name}:`, error);
+
+            // Load all images for slideshow
+            await this.loadAllCharacterImages(character);
           }
-        });
+        } catch (error) {
+          console.error(`Failed to load thumbnail for character ${character.name}:`, error);
+        }
+      });
 
       await Promise.all(thumbnailPromises);
     });
 
     // Trigger a single change detection after all thumbnails are loaded
     this.cdr.detectChanges();
+  }
+
+  private async loadAllCharacterImages(character: Character): Promise<void> {
+    if (!character.images || character.images.length === 0) {
+      this.characterImagesDataUrls.delete(character.id);
+      return;
+    }
+
+    try {
+      const imageDataUrls: string[] = [];
+
+      // Load all images (sorted by order)
+      const sortedImages = [...character.images].sort((a, b) => a.order - b.order);
+
+      for (const image of sortedImages) {
+        const imagePath = await this.characterService.getImagePath(character.id, image.id);
+        if (imagePath) {
+          const dataUrl = await this.electronService.getImageAsDataUrl(imagePath);
+          if (dataUrl) {
+            imageDataUrls.push(dataUrl);
+          }
+        }
+      }
+
+      if (imageDataUrls.length > 0) {
+        this.characterImagesDataUrls.set(character.id, imageDataUrls);
+      }
+    } catch (error) {
+      console.error(`Failed to load images for character ${character.name}:`, error);
+    }
+  }
+
+  getCharacterImages(character: Character): string[] {
+    return this.characterImagesDataUrls.get(character.id) || [];
   }
 
   getFilterSummary(): string {
@@ -701,6 +816,11 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   setColumns(count: 1 | 2): void {
     this.columns = count;
     localStorage.setItem('characterColumns', count.toString());
+  }
+
+  toggleSlideshow(): void {
+    this.slideshowEnabled = !this.slideshowEnabled;
+    localStorage.setItem('characterSlideshowEnabled', this.slideshowEnabled.toString());
   }
 
   // Multi-select functionality

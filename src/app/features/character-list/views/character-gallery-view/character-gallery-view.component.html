@@ -6,13 +6,16 @@
   >
     <div class="gallery-thumbnail">
       <img
-        *ngIf="getCharacterThumbnailDataUrl(character)"
-        [src]="getCharacterThumbnailDataUrl(character)"
+        *ngIf="getCurrentImageUrl(character)"
+        [src]="getCurrentImageUrl(character)"
         [alt]="character.name"
         (error)="onImageError($event)"
+        class="slideshow-image"
+        [class.fade-in]="shouldFadeIn(character)"
+        [attr.data-image-key]="getImageKey(character)"
       />
       <div
-        *ngIf="!getCharacterThumbnailDataUrl(character)"
+        *ngIf="!getCurrentImageUrl(character)"
         class="thumbnail-placeholder-gallery"
       >
         <i class="icon-user"></i>
