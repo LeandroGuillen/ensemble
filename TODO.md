@@ -1,6 +1,5 @@
 # For sure
 - Code cleanup
-- Slideshow widget for character view
 - Integrate with obsidian
 - Style cleanup
   - Icon set

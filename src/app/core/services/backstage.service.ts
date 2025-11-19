@@ -111,7 +111,7 @@ export class BackstageService {
     const content = concepts
       .map((concept) => {
         const title = concept.title || 'Untitled Concept';
-        return `## ${title}\n\n${concept.notes}\n`;
+        return `# ${title}\n\n${concept.notes}\n`;
       })
       .join('\n');
 
@@ -141,7 +141,13 @@ export class BackstageService {
 
   private parseNameListsMarkdown(content: string): NameList[] {
     const nameLists: NameList[] = [];
-    const sections = content.split(/^## /m).filter((s) => s.trim());
+    // Try double hash first (preferred format), fall back to single hash for compatibility
+    let sections = content.split(/^## /m).filter((s) => s.trim());
+
+    // If no double-hash sections found, try single hash (old format)
+    if (sections.length <= 1 && content.includes('#')) {
+      sections = content.split(/^# /m).filter((s) => s.trim());
+    }
 
     for (const section of sections) {
       const lines = section.split('\n');
@@ -169,7 +175,7 @@ export class BackstageService {
     const content = nameLists
       .map((list) => {
         const nameItems = list.names.map((name) => `- ${name}`).join('\n');
-        return `# ${list.title}\n\n${nameItems}\n`;
+        return `## ${list.title}\n\n${nameItems}\n`;
       })
       .join('\n');
 
