@@ -3,6 +3,10 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { Character, CharacterFormData, CharacterImage } from '../interfaces/character.interface';
 import { MarkdownUtils } from '../utils/markdown.utils';
 import { filenameToFieldName, slugify, slugifyWithTimestamp } from '../utils/slug.utils';
+import { generateId } from '../utils/id.utils';
+import { pathJoin, pathBasename, pathDirname } from '../utils/path.utils';
+import { assertIpcSuccess, withIpcError } from '../utils/ipc.utils';
+import { requireProject } from '../utils/project.utils';
 import { ElectronService } from './electron.service';
 import { FileWatcherService } from './file-watcher.service';
 import { ProjectService } from './project.service';
@@ -98,16 +102,16 @@ export class CharacterService {
     }
 
     try {
-      const charactersPath = await this.electronService.pathJoin(projectPath, 'characters');
+      const charactersPath = pathJoin(projectPath, 'characters');
 
       // Check if characters directory exists
       const dirExists = await this.electronService.fileExists(charactersPath);
       if (!dirExists) {
         // Create characters directory if it doesn't exist
-        const createResult = await this.electronService.createDirectory(charactersPath);
-        if (!createResult.success) {
-          throw new Error(`Failed to create characters directory: ${createResult.error}`);
-        }
+        assertIpcSuccess(
+          await this.electronService.createDirectory(charactersPath),
+          'Create characters directory'
+        );
         this.hasLoadedForCurrentProject = true;
         return;
       }
@@ -128,7 +132,7 @@ export class CharacterService {
           continue;
         }
 
-        const categoryPath = await this.electronService.pathJoin(charactersPath, categoryFolder);
+        const categoryPath = pathJoin(charactersPath, categoryFolder);
 
         // Read character folders within category
         const categoryContents = await this.electronService.readDirectoryFiles(categoryPath);
@@ -139,7 +143,7 @@ export class CharacterService {
         // Load each character folder
         for (const characterSlug of categoryContents.directories) {
           try {
-            const characterFolderPath = await this.electronService.pathJoin(categoryPath, characterSlug);
+            const characterFolderPath = pathJoin(categoryPath, characterSlug);
             const character = await this.loadCharacterFromFolder(characterFolderPath, categoryFolder, characterSlug);
             if (character) {
               characters.push(character);
@@ -166,38 +170,35 @@ export class CharacterService {
    * New structure: characters/<category>/<character-slug>/
    */
   async createCharacter(data: CharacterFormData): Promise<Character> {
-    const project = this.projectService.getCurrentProject();
-    if (!project) {
-      throw new Error('No project loaded');
-    }
+    const project = requireProject(this.projectService.getCurrentProject());
 
     try {
       // Validate book references
       await this.validateBookReferences(data.books);
 
       // Generate unique ID and slug
-      const id = this.generateId();
+      const id = generateId();
       const slug = slugify(data.name);
 
       // Create folder structure: characters/<category>/<slug>/
       const categorySlug = slugify(data.category);
-      const categoryPath = await this.electronService.pathJoin(project.path, 'characters', categorySlug);
-      const characterFolderPath = await this.electronService.pathJoin(categoryPath, slug);
+      const categoryPath = pathJoin(project.path, 'characters', categorySlug);
+      const characterFolderPath = pathJoin(categoryPath, slug);
 
       // Ensure category folder exists
-      const categoryCreateResult = await this.electronService.createDirectory(categoryPath);
-      if (!categoryCreateResult.success) {
-        throw new Error(`Failed to create category directory: ${categoryCreateResult.error}`);
-      }
+      assertIpcSuccess(
+        await this.electronService.createDirectory(categoryPath),
+        'Create category directory'
+      );
 
       // Create character folder
-      const folderCreateResult = await this.electronService.createDirectory(characterFolderPath);
-      if (!folderCreateResult.success) {
-        throw new Error(`Failed to create character directory: ${folderCreateResult.error}`);
-      }
+      assertIpcSuccess(
+        await this.electronService.createDirectory(characterFolderPath),
+        'Create character directory'
+      );
 
       // Main character file path
-      const filePath = await this.electronService.pathJoin(characterFolderPath, `${slug}.md`);
+      const filePath = pathJoin(characterFolderPath, `${slug}.md`);
 
       // Create character object
       const now = new Date();
@@ -248,15 +249,15 @@ export class CharacterService {
 
     for (const [fieldName, content] of Object.entries(additionalFields)) {
       // Use the original filename if available, otherwise create a new one
-      const filename =
+      const filename: string =
         character.additionalFieldsFilenames[fieldName] || fieldName.toLowerCase().replace(/\s+/g, '-') + '.md';
-      const filePath = await this.electronService.pathJoin(character.folderPath, filename);
+      const filePath = pathJoin(character.folderPath, filename);
 
       // Write the file
-      const writeResult = await this.electronService.writeFileAtomic(filePath, content);
-      if (!writeResult.success) {
-        throw new Error(`Failed to save ${filename}: ${writeResult.error}`);
-      }
+      assertIpcSuccess(
+        await this.electronService.writeFileAtomic(filePath, content),
+        `Save ${filename}`
+      );
     }
 
     // Reload the character to update additionalFields in memory
@@ -272,10 +273,7 @@ export class CharacterService {
     data: Partial<CharacterFormData>,
     additionalFieldsChanges?: Record<string, string>
   ): Promise<Character | null> {
-    const project = this.projectService.getCurrentProject();
-    if (!project) {
-      throw new Error('No project loaded');
-    }
+    const project = requireProject(this.projectService.getCurrentProject());
 
     try {
       // Validate book references if books are being updated
@@ -304,8 +302,8 @@ export class CharacterService {
         const newSlug = slugify(newName);
         const newCategorySlug = slugify(newCategory);
 
-        const newCategoryPath = await this.electronService.pathJoin(project.path, 'characters', newCategorySlug);
-        const newCharacterFolderPath = await this.electronService.pathJoin(newCategoryPath, newSlug);
+        const newCategoryPath = pathJoin(project.path, 'characters', newCategorySlug);
+        const newCharacterFolderPath = pathJoin(newCategoryPath, newSlug);
 
         // Create new category folder if it doesn't exist
         await this.electronService.createDirectory(newCategoryPath);
@@ -321,12 +319,12 @@ export class CharacterService {
 
         // Update paths
         newFolderPath = newCharacterFolderPath;
-        newFilePath = await this.electronService.pathJoin(newCharacterFolderPath, `${newSlug}.md`);
+        newFilePath = pathJoin(newCharacterFolderPath, `${newSlug}.md`);
 
         // If the slug changed, rename the main .md file
         if (nameChanged) {
           const oldSlug = slugify(existingCharacter.name);
-          const oldMdPath = await this.electronService.pathJoin(newCharacterFolderPath, `${oldSlug}.md`);
+          const oldMdPath = pathJoin(newCharacterFolderPath, `${oldSlug}.md`);
           const oldMdExists = await this.electronService.fileExists(oldMdPath);
 
           if (oldMdExists && oldSlug !== newSlug) {
@@ -343,7 +341,7 @@ export class CharacterService {
       if (data.thumbnail && data.thumbnail !== existingCharacter.thumbnail) {
         // Remove old thumbnail if it exists
         if (existingCharacter.thumbnail) {
-          const oldThumbnailPath = await this.electronService.pathJoin(newFolderPath, existingCharacter.thumbnail);
+          const oldThumbnailPath = pathJoin(newFolderPath, existingCharacter.thumbnail);
           const thumbnailExists = await this.electronService.fileExists(oldThumbnailPath);
           if (thumbnailExists) {
             await this.electronService.deleteFile(oldThumbnailPath);
@@ -389,10 +387,7 @@ export class CharacterService {
    * Trash folder: characters/_deleted/<character-slug>-<timestamp>/
    */
   async deleteCharacter(id: string): Promise<boolean> {
-    const project = this.projectService.getCurrentProject();
-    if (!project) {
-      throw new Error('No project loaded');
-    }
+    const project = requireProject(this.projectService.getCurrentProject());
 
     try {
       const characters = this.charactersSubject.value;
@@ -403,13 +398,13 @@ export class CharacterService {
       }
 
       // Create trash folder if it doesn't exist
-      const trashPath = await this.electronService.pathJoin(project.path, 'characters', '_deleted');
+      const trashPath = pathJoin(project.path, 'characters', '_deleted');
       await this.electronService.createDirectory(trashPath);
 
       // Generate unique trash folder name with timestamp
       const characterSlug = slugify(character.name);
       const trashFolderName = slugifyWithTimestamp(characterSlug);
-      const trashDestPath = await this.electronService.pathJoin(trashPath, trashFolderName);
+      const trashDestPath = pathJoin(trashPath, trashFolderName);
 
       // Move character folder to trash
       const moveResult = await this.electronService.moveDirectory(character.folderPath, trashDestPath);
@@ -433,14 +428,11 @@ export class CharacterService {
    * Moves it back to its original category folder
    */
   async restoreCharacter(trashFolderName: string): Promise<boolean> {
-    const project = this.projectService.getCurrentProject();
-    if (!project) {
-      throw new Error('No project loaded');
-    }
+    const project = requireProject(this.projectService.getCurrentProject());
 
     try {
-      const trashPath = await this.electronService.pathJoin(project.path, 'characters', '_deleted');
-      const characterTrashPath = await this.electronService.pathJoin(trashPath, trashFolderName);
+      const trashPath = pathJoin(project.path, 'characters', '_deleted');
+      const characterTrashPath = pathJoin(trashPath, trashFolderName);
 
       // Check if trash folder exists
       const folderExists = await this.electronService.fileExists(characterTrashPath);
@@ -461,7 +453,7 @@ export class CharacterService {
       }
 
       const mainMdFile = mdFiles[0];
-      const mainFilePath = await this.electronService.pathJoin(characterTrashPath, mainMdFile);
+      const mainFilePath = pathJoin(characterTrashPath, mainMdFile);
 
       // Read character data to get category
       const readResult = await this.electronService.readFile(mainFilePath);
@@ -476,11 +468,11 @@ export class CharacterService {
 
       const { frontmatter } = parseResult.data!;
       const categorySlug = slugify(frontmatter.category || 'uncategorized');
-      const characterSlug = await this.electronService.pathBasename(mainMdFile, '.md');
+      const characterSlug = pathBasename(mainMdFile, '.md');
 
       // Determine restore destination
-      const categoryPath = await this.electronService.pathJoin(project.path, 'characters', categorySlug);
-      const restorePath = await this.electronService.pathJoin(categoryPath, characterSlug);
+      const categoryPath = pathJoin(project.path, 'characters', categorySlug);
+      const restorePath = pathJoin(categoryPath, characterSlug);
 
       // Create category folder if it doesn't exist
       await this.electronService.createDirectory(categoryPath);
@@ -505,13 +497,10 @@ export class CharacterService {
    * Gets list of deleted characters from trash
    */
   async getDeletedCharacters(): Promise<Array<{ folderName: string; name: string; deletedAt: Date }>> {
-    const project = this.projectService.getCurrentProject();
-    if (!project) {
-      throw new Error('No project loaded');
-    }
+    const project = requireProject(this.projectService.getCurrentProject());
 
     try {
-      const trashPath = await this.electronService.pathJoin(project.path, 'characters', '_deleted');
+      const trashPath = pathJoin(project.path, 'characters', '_deleted');
 
       // Check if trash folder exists
       const folderExists = await this.electronService.fileExists(trashPath);
@@ -532,7 +521,7 @@ export class CharacterService {
 
       for (const folderName of dirContents.directories) {
         try {
-          const characterFolderPath = await this.electronService.pathJoin(trashPath, folderName);
+          const characterFolderPath = pathJoin(trashPath, folderName);
 
           // Extract timestamp from folder name (format: slug-timestamp)
           const parts = folderName.split('-');
@@ -545,7 +534,7 @@ export class CharacterService {
             const mdFiles = characterDirContents.files.filter((f) => f.endsWith('.md'));
             if (mdFiles.length > 0) {
               const mainMdFile = mdFiles[0];
-              const mainFilePath = await this.electronService.pathJoin(characterFolderPath, mainMdFile);
+              const mainFilePath = pathJoin(characterFolderPath, mainMdFile);
               const readResult = await this.electronService.readFile(mainFilePath);
 
               if (readResult.success) {
@@ -589,13 +578,10 @@ export class CharacterService {
    * Permanently deletes all characters in trash
    */
   async emptyTrash(): Promise<boolean> {
-    const project = this.projectService.getCurrentProject();
-    if (!project) {
-      throw new Error('No project loaded');
-    }
+    const project = requireProject(this.projectService.getCurrentProject());
 
     try {
-      const trashPath = await this.electronService.pathJoin(project.path, 'characters', '_deleted');
+      const trashPath = pathJoin(project.path, 'characters', '_deleted');
 
       // Check if trash folder exists
       const folderExists = await this.electronService.fileExists(trashPath);
@@ -623,14 +609,11 @@ export class CharacterService {
    * Permanently deletes a single character from trash
    */
   async permanentlyDeleteCharacter(trashFolderName: string): Promise<boolean> {
-    const project = this.projectService.getCurrentProject();
-    if (!project) {
-      throw new Error('No project loaded');
-    }
+    const project = requireProject(this.projectService.getCurrentProject());
 
     try {
-      const trashPath = await this.electronService.pathJoin(project.path, 'characters', '_deleted');
-      const characterTrashPath = await this.electronService.pathJoin(trashPath, trashFolderName);
+      const trashPath = pathJoin(project.path, 'characters', '_deleted');
+      const characterTrashPath = pathJoin(trashPath, trashFolderName);
 
       // Check if folder exists
       const folderExists = await this.electronService.fileExists(characterTrashPath);
@@ -673,10 +656,10 @@ export class CharacterService {
       }
 
       // Extract category slug and character slug from folder path
-      const categorySlug = await this.electronService.pathBasename(
-        await this.electronService.pathDirname(existingCharacter.folderPath)
+      const categorySlug = pathBasename(
+        pathDirname(existingCharacter.folderPath)
       );
-      const characterSlug = await this.electronService.pathBasename(existingCharacter.folderPath);
+      const characterSlug = pathBasename(existingCharacter.folderPath);
 
       // Reload character from folder
       const refreshedCharacter = await this.loadCharacterFromFolder(
@@ -714,7 +697,7 @@ export class CharacterService {
   ): Promise<Character | null> {
     try {
       // Main character file is <slug>.md
-      const mainFilePath = await this.electronService.pathJoin(folderPath, `${characterSlug}.md`);
+      const mainFilePath = pathJoin(folderPath, `${characterSlug}.md`);
 
       const readResult = await this.electronService.readFile(mainFilePath);
       if (!readResult.success) {
@@ -751,7 +734,7 @@ export class CharacterService {
       // If no images array but thumbnail exists, migrate it
       if (images.length === 0 && frontmatter.thumbnail) {
         images = [{
-          id: this.generateId(),
+          id: generateId(),
           filename: frontmatter.thumbnail,
           tags: [],
           isPrimary: true,
@@ -842,7 +825,7 @@ export class CharacterService {
         }
 
         try {
-          const filePath = await this.electronService.pathJoin(folderPath, filename);
+          const filePath = pathJoin(folderPath, filename);
           const readResult = await this.electronService.readFile(filePath);
 
           if (readResult.success && readResult.content) {
@@ -937,8 +920,8 @@ export class CharacterService {
     const baseFilename = `${sanitized}.md`;
 
     // Check if file already exists and generate unique name if needed
-    const charactersPath = await this.electronService.pathJoin(projectPath, 'characters');
-    const fullPath = await this.electronService.pathJoin(charactersPath, baseFilename);
+    const charactersPath = pathJoin(projectPath, 'characters');
+    const fullPath = pathJoin(charactersPath, baseFilename);
 
     const exists = await this.electronService.fileExists(fullPath);
     if (!exists) {
@@ -952,7 +935,7 @@ export class CharacterService {
     while (true) {
       const nameWithoutExt = sanitized;
       uniqueFilename = `${nameWithoutExt}-${counter}.md`;
-      const uniquePath = await this.electronService.pathJoin(charactersPath, uniqueFilename);
+      const uniquePath = pathJoin(charactersPath, uniqueFilename);
       const uniqueExists = await this.electronService.fileExists(uniquePath);
 
       if (!uniqueExists) {
@@ -971,12 +954,12 @@ export class CharacterService {
   private async handleThumbnailUploadToFolder(thumbnailPath: string, characterFolderPath: string): Promise<string> {
     try {
       // Get original filename and extension
-      const originalFilename = await this.electronService.pathBasename(thumbnailPath);
+      const originalFilename = pathBasename(thumbnailPath);
       const extension = originalFilename.split('.').pop() || 'jpg';
       const thumbnailFilename = `thumbnail.${extension}`;
 
       // Create destination path in character folder
-      const destPath = await this.electronService.pathJoin(characterFolderPath, thumbnailFilename);
+      const destPath = pathJoin(characterFolderPath, thumbnailFilename);
 
       // Copy file to character folder
       const copyResult = await this.electronService.copyFile(thumbnailPath, destPath);
@@ -1005,13 +988,13 @@ export class CharacterService {
   ): Promise<string> {
     try {
       // Generate unique filename for thumbnail
-      const originalFilename = await this.electronService.pathBasename(thumbnailPath);
+      const originalFilename = pathBasename(thumbnailPath);
       const extension = originalFilename.split('.').pop() || 'jpg';
       const thumbnailFilename = `${characterId}.${extension}`;
 
       // Create destination path
-      const thumbnailsDir = await this.electronService.pathJoin(projectPath, 'thumbnails');
-      const destPath = await this.electronService.pathJoin(thumbnailsDir, thumbnailFilename);
+      const thumbnailsDir = pathJoin(projectPath, 'thumbnails');
+      const destPath = pathJoin(thumbnailsDir, thumbnailFilename);
 
       // Copy file to thumbnails directory
       const copyResult = await this.electronService.copyFile(thumbnailPath, destPath);
@@ -1036,7 +1019,7 @@ export class CharacterService {
    */
   private async removeThumbnail(thumbnailFilename: string, projectPath: string): Promise<void> {
     try {
-      const thumbnailPath = await this.electronService.pathJoin(projectPath, 'thumbnails', thumbnailFilename);
+      const thumbnailPath = pathJoin(projectPath, 'thumbnails', thumbnailFilename);
       const exists = await this.electronService.fileExists(thumbnailPath);
 
       if (exists) {
@@ -1141,9 +1124,6 @@ export class CharacterService {
     return filename.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
   }
 
-  private generateId(): string {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2);
-  }
 
   /**
    * Adds a new image to a character
@@ -1158,7 +1138,7 @@ export class CharacterService {
 
     try {
       // Create images folder if it doesn't exist
-      const imagesFolderPath = await this.electronService.pathJoin(character.folderPath, 'images');
+      const imagesFolderPath = pathJoin(character.folderPath, 'images');
       const folderExists = await this.electronService.fileExists(imagesFolderPath);
       if (!folderExists) {
         const createResult = await this.electronService.createDirectory(imagesFolderPath);
@@ -1168,10 +1148,10 @@ export class CharacterService {
       }
 
       // Get the filename from the source path
-      const originalFilename = await this.electronService.pathBasename(imageFilePath);
+      const originalFilename = pathBasename(imageFilePath);
 
       // Copy image to images folder
-      const destPath = await this.electronService.pathJoin(imagesFolderPath, originalFilename);
+      const destPath = pathJoin(imagesFolderPath, originalFilename);
       const copyResult = await this.electronService.copyFile(imageFilePath, destPath);
       if (!copyResult.success) {
         throw new Error(`Failed to copy image: ${copyResult.error}`);
@@ -1182,7 +1162,7 @@ export class CharacterService {
 
       // Create CharacterImage object
       const newImage: CharacterImage = {
-        id: this.generateId(),
+        id: generateId(),
         filename: originalFilename,
         tags: tags,
         isPrimary: isPrimary,
@@ -1223,8 +1203,8 @@ export class CharacterService {
       }
 
       // Delete the image file
-      const imagesFolderPath = await this.electronService.pathJoin(character.folderPath, 'images');
-      const imagePath = await this.electronService.pathJoin(imagesFolderPath, imageToRemove.filename);
+      const imagesFolderPath = pathJoin(character.folderPath, 'images');
+      const imagePath = pathJoin(imagesFolderPath, imageToRemove.filename);
       const deleteResult = await this.electronService.deleteFile(imagePath);
       if (!deleteResult.success) {
         console.warn(`Failed to delete image file: ${deleteResult.error}`);
@@ -1392,8 +1372,8 @@ export class CharacterService {
     }
 
     // Try new location first (images/ subfolder)
-    const imagesFolderPath = await this.electronService.pathJoin(character.folderPath, 'images');
-    const newPath = await this.electronService.pathJoin(imagesFolderPath, image.filename);
+    const imagesFolderPath = pathJoin(character.folderPath, 'images');
+    const newPath = pathJoin(imagesFolderPath, image.filename);
 
     const existsInNewLocation = await this.electronService.fileExists(newPath);
     if (existsInNewLocation) {
@@ -1401,7 +1381,7 @@ export class CharacterService {
     }
 
     // Fall back to old location (root folder) for migrated characters
-    const oldPath = await this.electronService.pathJoin(character.folderPath, image.filename);
+    const oldPath = pathJoin(character.folderPath, image.filename);
     const existsInOldLocation = await this.electronService.fileExists(oldPath);
     if (existsInOldLocation) {
       return oldPath;
@@ -1443,7 +1423,7 @@ export class CharacterService {
 
     try {
       // Check if the file is within a character folder
-      const charactersPath = await this.electronService.pathJoin(this.currentProjectPath, 'characters');
+      const charactersPath = pathJoin(this.currentProjectPath, 'characters');
 
       // Make sure the changed file is under the characters directory
       if (!event.path.includes(charactersPath)) {
@@ -1457,7 +1437,7 @@ export class CharacterService {
       }
 
       // Extract the character folder path from the file path
-      const folderPath = await this.electronService.pathDirname(event.path);
+      const folderPath = pathDirname(event.path);
 
       // Find the character by folder path
       const characters = this.charactersSubject.value;
@@ -1508,7 +1488,7 @@ export class CharacterService {
 
     try {
       // Find which character folder this image belongs to
-      const charactersPath = await this.electronService.pathJoin(this.currentProjectPath, 'characters');
+      const charactersPath = pathJoin(this.currentProjectPath, 'characters');
 
       // Navigate up the directory tree to find the character folder
       let currentPath = event.path;
@@ -1517,8 +1497,8 @@ export class CharacterService {
 
       // Keep going up until we find a folder that's a direct child of a category folder
       while (currentPath !== charactersPath) {
-        const parentPath = await this.electronService.pathDirname(currentPath);
-        const parentParentPath = await this.electronService.pathDirname(parentPath);
+        const parentPath = pathDirname(currentPath);
+        const parentParentPath = pathDirname(parentPath);
 
         // Check if parent's parent is the characters folder (meaning parent is category, current is character)
         if (parentParentPath === charactersPath) {
@@ -1528,7 +1508,7 @@ export class CharacterService {
 
         // Store the relative path from character folder
         if (characterFolderPath === null) {
-          const folderName = await this.electronService.pathBasename(currentPath);
+          const folderName = pathBasename(currentPath);
           relativePath = relativePath ? `${folderName}/${relativePath}` : folderName;
         }
 
@@ -1572,7 +1552,7 @@ export class CharacterService {
    */
   private async autoAddImageToCharacter(character: Character, imagePath: string, relativePath: string): Promise<void> {
     // Get just the filename
-    const filename = await this.electronService.pathBasename(imagePath);
+    const filename = pathBasename(imagePath);
 
     // Check if this image is already in the character's images array
     const existingImage = character.images?.find((img) => {
@@ -1599,7 +1579,7 @@ export class CharacterService {
 
     // Create new image entry
     const newImage: CharacterImage = {
-      id: this.generateId(),
+      id: generateId(),
       filename: storedFilename,
       tags: autoTags,
       isPrimary: !character.images || character.images.length === 0, // First image becomes primary
@@ -1625,7 +1605,7 @@ export class CharacterService {
       return;
     }
 
-    const filename = await this.electronService.pathBasename(imagePath);
+    const filename = pathBasename(imagePath);
 
     // Find the image in the array
     const imageIndex = character.images.findIndex((img) => {
@@ -1707,7 +1687,7 @@ export class CharacterService {
         if (!exists) {
           // Add new image
           const newImage: CharacterImage = {
-            id: this.generateId(),
+            id: generateId(),
             filename: relativePath,
             tags: autoTags,
             isPrimary: !hasPrimary && syncedImages.length === 0, // First image becomes primary if none set
@@ -1758,7 +1738,7 @@ export class CharacterService {
         for (const filename of dirContents.files) {
           const ext = filename.substring(filename.lastIndexOf('.')).toLowerCase();
           if (extensions.includes(ext)) {
-            const fullPath = await this.electronService.pathJoin(currentPath, filename);
+            const fullPath = pathJoin(currentPath, filename);
             const relativePath = await this.getRelativePath(basePath, fullPath);
             const autoTags = this.extractAutoTagsFromPath(relativePath);
 
@@ -1770,7 +1750,7 @@ export class CharacterService {
       // Recursively process subdirectories
       if (dirContents.directories) {
         for (const dirname of dirContents.directories) {
-          const subPath = await this.electronService.pathJoin(currentPath, dirname);
+          const subPath = pathJoin(currentPath, dirname);
           const subResults = await this.scanForImageFiles(basePath, subPath, extensions);
           results.push(...subResults);
         }

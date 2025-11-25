@@ -10,6 +10,9 @@ import {
   Relationship,
   Tag,
 } from '../interfaces/project.interface';
+import { generateId } from '../utils/id.utils';
+import { pathJoin } from '../utils/path.utils';
+import { assertIpcSuccess } from '../utils/ipc.utils';
 import { ElectronService } from './electron.service';
 
 @Injectable({
@@ -63,8 +66,8 @@ export class ProjectService {
       }
 
       // Load ensemble.json (or fallback to metadata.json for migration)
-      const ensemblePath = await this.electronService.pathJoin(projectPath, 'ensemble.json');
-      const metadataPath = await this.electronService.pathJoin(projectPath, 'metadata.json');
+      const ensemblePath = pathJoin(projectPath, 'ensemble.json');
+      const metadataPath = pathJoin(projectPath, 'metadata.json');
       const ensembleExists = await this.electronService.fileExists(ensemblePath);
       const metadataExists = await this.electronService.fileExists(metadataPath);
 
@@ -96,7 +99,7 @@ export class ProjectService {
           metadata = JSON.parse(result.content!);
 
           // Load relationships.json if it exists
-          const relationshipsPath = await this.electronService.pathJoin(projectPath, 'relationships.json');
+          const relationshipsPath = pathJoin(projectPath, 'relationships.json');
           const relationshipsExists = await this.electronService.fileExists(relationshipsPath);
           if (relationshipsExists) {
             const relResult = await this.electronService.readFile(relationshipsPath);
@@ -114,7 +117,7 @@ export class ProjectService {
           // Save as ensemble.json and delete old files
           await this.saveMetadata(projectPath, metadata);
           if (relationshipsExists) {
-            const relationshipsPath = await this.electronService.pathJoin(projectPath, 'relationships.json');
+            const relationshipsPath = pathJoin(projectPath, 'relationships.json');
             await this.electronService.deleteFile(relationshipsPath);
           }
           await this.electronService.deleteFile(metadataPath);
@@ -160,7 +163,7 @@ export class ProjectService {
         }
 
         // Check if it's already a project (has metadata.json)
-        const metadataPath = await this.electronService.pathJoin(projectPath, 'metadata.json');
+        const metadataPath = pathJoin(projectPath, 'metadata.json');
         const hasMetadata = await this.electronService.fileExists(metadataPath);
         if (hasMetadata) {
           throw new Error(`Directory already contains a project: ${projectPath}`);
@@ -195,17 +198,17 @@ export class ProjectService {
   private async ensureProjectStructure(projectPath: string): Promise<void> {
     try {
       // Create main project directory
-      const mainResult = await this.electronService.createDirectory(projectPath);
-      if (!mainResult.success) {
-        throw new Error(`Failed to create main directory: ${mainResult.error}`);
-      }
+      assertIpcSuccess(
+        await this.electronService.createDirectory(projectPath),
+        'Create main directory'
+      );
 
       // Create characters subdirectory
-      const charactersPath = await this.electronService.pathJoin(projectPath, 'characters');
-      const charactersResult = await this.electronService.createDirectory(charactersPath);
-      if (!charactersResult.success) {
-        throw new Error(`Failed to create characters directory: ${charactersResult.error}`);
-      }
+      const charactersPath = pathJoin(projectPath, 'characters');
+      assertIpcSuccess(
+        await this.electronService.createDirectory(charactersPath),
+        'Create characters directory'
+      );
 
       // Note: Thumbnails are now stored in individual character folders
       // No need to create a global thumbnails directory
@@ -251,12 +254,12 @@ export class ProjectService {
    * Saves metadata to the project's ensemble.json file
    */
   private async saveMetadata(projectPath: string, metadata: ProjectMetadata): Promise<void> {
-    const ensemblePath = await this.electronService.pathJoin(projectPath, 'ensemble.json');
+    const ensemblePath = pathJoin(projectPath, 'ensemble.json');
     const content = JSON.stringify(metadata, null, 2);
-    const result = await this.electronService.writeFileAtomic(ensemblePath, content);
-    if (!result.success) {
-      throw new Error(`Failed to save metadata: ${result.error}`);
-    }
+    assertIpcSuccess(
+      await this.electronService.writeFileAtomic(ensemblePath, content),
+      'Save metadata'
+    );
   }
 
   /**
@@ -301,7 +304,7 @@ export class ProjectService {
     }
 
     const newCategory: Category = {
-      id: this.generateId(),
+      id: generateId(),
       ...category,
     };
 
@@ -322,7 +325,7 @@ export class ProjectService {
     }
 
     const newTag: Tag = {
-      id: this.generateId(),
+      id: generateId(),
       ...tag,
     };
 
@@ -441,9 +444,6 @@ export class ProjectService {
     });
   }
 
-  private generateId(): string {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2);
-  }
 
   /**
    * Saves graph view state to project settings

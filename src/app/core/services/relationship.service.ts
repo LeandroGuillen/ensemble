@@ -1,6 +1,8 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { Relationship, GraphNode, GraphData } from '../interfaces/relationship.interface';
+import { generateId } from '../utils/id.utils';
+import { pathJoin } from '../utils/path.utils';
 import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
 
@@ -67,7 +69,7 @@ export class RelationshipService {
     }
 
     const newRelationship: Relationship = {
-      id: this.generateId(),
+      id: generateId(),
       ...relationship
     };
 
@@ -391,7 +393,7 @@ export class RelationshipService {
       if (character?.thumbnail && character?.folderPath) {
         try {
           // Thumbnails are stored in each character's folder
-          const thumbnailPath = await this.electronService.pathJoin(character.folderPath, character.thumbnail);
+          const thumbnailPath = pathJoin(character.folderPath, character.thumbnail);
           const thumbnailDataUrl = await this.electronService.getImageAsDataUrl(thumbnailPath);
           
           if (thumbnailDataUrl) {
@@ -642,10 +644,4 @@ export class RelationshipService {
     });
   }
 
-  /**
-   * Generates a unique ID for relationships
-   */
-  private generateId(): string {
-    return Date.now().toString(36) + Math.random().toString(36).substring(2);
-  }
 }

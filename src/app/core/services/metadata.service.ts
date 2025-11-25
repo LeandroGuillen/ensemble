@@ -5,6 +5,7 @@ import { Book, Cast, Category, ProjectMetadata, ProjectSettings, Tag } from '../
 import { ValidationResult } from '../interfaces/validation.interface';
 import { CharacterValidator } from '../validators/character.validator';
 import { ProjectValidator } from '../validators/project.validator';
+import { pathJoin } from '../utils/path.utils';
 import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
 import { CastService } from './cast.service';
@@ -808,7 +809,7 @@ export class MetadataService {
     }
 
     try {
-      const charactersPath = await this.electronService.pathJoin(this.currentProjectPath, 'characters');
+      const charactersPath = pathJoin(this.currentProjectPath, 'characters');
       const listResult = await this.electronService.listDirectory(charactersPath);
       
       if (!listResult.success || !listResult.files) {
@@ -821,7 +822,7 @@ export class MetadataService {
           continue;
         }
 
-        const filePath = await this.electronService.pathJoin(charactersPath, filename);
+        const filePath = pathJoin(charactersPath, filename);
         const readResult = await this.electronService.readFile(filePath);
         
         if (!readResult.success || !readResult.content) {

@@ -6,6 +6,9 @@ import { Observable, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { Book, Cast, Category, Character, Project, Tag } from '../../core/interfaces';
 import { CharacterService, ElectronService, MetadataService, ProjectService } from '../../core/services';
+import { MetadataHelperService } from '../../core/services/metadata-helper.service';
+import { ModalService } from '../../core/services/modal.service';
+import { PreferencesService } from '../../core/services/preferences.service';
 import { ToggleOption } from '../../shared/category-toggle/category-toggle.component';
 import { CharacterFilterComponent } from '../../shared/character-filter/character-filter.component';
 import { CommandPaletteService } from '../../shared/command-palette/command-palette.service';
@@ -74,6 +77,9 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     private projectService: ProjectService,
     private electronService: ElectronService,
     private metadataService: MetadataService,
+    public metadataHelper: MetadataHelperService,
+    private modalService: ModalService,
+    private preferences: PreferencesService,
     private router: Router,
     private commandPaletteService: CommandPaletteService,
     private ngZone: NgZone,
@@ -84,19 +90,13 @@ export class CharacterListComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     // Load saved view mode preference
-    const savedViewMode = localStorage.getItem('characterViewMode') as 'grid' | 'list' | 'compact' | 'gallery';
-    if (savedViewMode) {
-      this.viewMode = savedViewMode;
-    }
+    this.viewMode = this.preferences.getViewMode();
 
     // Load saved columns preference
-    const savedColumns = localStorage.getItem('characterColumns');
-    if (savedColumns) {
-      this.columns = parseInt(savedColumns) as 1 | 2;
-    }
+    this.columns = this.preferences.getColumns();
 
     // Load saved sort preferences
-    const savedSortBy = localStorage.getItem('characterSortBy') as 'name' | 'category';
+    const savedSortBy = this.preferences.getSortBy();
     if (savedSortBy) {
       this.sortBy = savedSortBy;
     }
@@ -271,12 +271,12 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       id: `character-${character.id}`,
       label: character.name,
       thumbnail: this.thumbnailDataUrls.get(character.id) || undefined,
-      metadata: this.getCategoryName(character.category),
+      metadata: this.metadataHelper.getCategoryName(character.category),
       keywords: [
         character.name,
-        this.getCategoryName(character.category),
-        ...character.tags.map((tagId) => this.getTagName(tagId)),
-        ...character.books.map((bookId) => this.getBookName(bookId)),
+        this.metadataHelper.getCategoryName(character.category),
+        ...character.tags.map((tagId) => this.metadataHelper.getTagName(tagId)),
+        ...character.books.map((bookId) => this.metadataHelper.getBookName(bookId)),
       ],
       group: 'characters',
       action: () => this.editCharacter(character),
@@ -369,7 +369,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   async deleteCharacter(character: Character, event: Event): Promise<void> {
     event.stopPropagation();
 
-    if (confirm(`Are you sure you want to delete "${character.name}"?\n\nThis action cannot be undone.`)) {
+    if (await this.modalService.confirm(`Are you sure you want to delete "${character.name}"?\n\nThis action cannot be undone.`)) {
       try {
         await this.characterService.deleteCharacter(character.id);
       } catch (error) {
@@ -380,7 +380,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
 
   onSearchChange(): void {
     // Save search term to localStorage
-    localStorage.setItem('characterSearchTerm', this.searchTerm);
+    this.preferences.setSearchTerm(this.searchTerm);
     // Apply filters immediately when search term changes
     this.applyFilters();
   }
@@ -474,9 +474,9 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       // Search term filter - search names, categories, tags, and books
       if (this.searchTerm) {
         const searchLower = this.searchTerm.toLowerCase();
-        const categoryName = this.getCategoryName(character.category).toLowerCase();
-        const tagNames = character.tags.map((tagId) => this.getTagName(tagId).toLowerCase());
-        const bookNames = character.books.map((bookId) => this.getBookName(bookId).toLowerCase());
+        const categoryName = this.metadataHelper.getCategoryName(character.category).toLowerCase();
+        const tagNames = character.tags.map((tagId) => this.metadataHelper.getTagName(tagId).toLowerCase());
+        const bookNames = character.books.map((bookId) => this.metadataHelper.getBookName(bookId).toLowerCase());
 
         const matchesSearch =
           character.name.toLowerCase().includes(searchLower) ||
@@ -517,25 +517,6 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     });
   }
 
-  getCategoryName(categoryId: string): string {
-    const category = this.categories.find((cat) => cat.id === categoryId);
-    return category?.name || categoryId;
-  }
-
-  getCategoryColor(categoryId: string): string {
-    const category = this.categories.find((cat) => cat.id === categoryId);
-    return category?.color || '#95a5a6';
-  }
-
-  getCategoryTooltip(categoryId: string): string {
-    const category = this.categories.find((cat) => cat.id === categoryId);
-    if (!category) return categoryId;
-
-    if (category.description) {
-      return category.description;
-    }
-    return category.name;
-  }
 
   getCategoryToggleOptions(): ToggleOption[] {
     return this.categories.map((cat) => ({
@@ -560,25 +541,6 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     this.applyFilters();
   }
 
-  getTagName(tagId: string): string {
-    const tag = this.tags.find((t) => t.id === tagId);
-    return tag?.name || tagId;
-  }
-
-  getTagColor(tagId: string): string {
-    const tag = this.tags.find((t) => t.id === tagId);
-    return tag?.color || '#95a5a6';
-  }
-
-  getBookName(bookId: string): string {
-    const book = this.books.find((b) => b.id === bookId);
-    return book?.name || bookId;
-  }
-
-  getBookColor(bookId: string): string {
-    const book = this.books.find((b) => b.id === bookId);
-    return book?.color || '#95a5a6';
-  }
 
   getBookCharacterCount(bookId: string): number {
     // Get all characters (not just filtered ones) to show total count
@@ -591,6 +553,36 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       counts.set(book.id, this.getBookCharacterCount(book.id));
     }
     return counts;
+  }
+
+  // Wrapper methods for child view components
+  // These delegate to MetadataHelperService
+  getCategoryName(categoryId: string): string {
+    return this.metadataHelper.getCategoryName(categoryId);
+  }
+
+  getCategoryColor(categoryId: string): string {
+    return this.metadataHelper.getCategoryColor(categoryId);
+  }
+
+  getCategoryTooltip(categoryId: string): string {
+    return this.metadataHelper.getCategoryTooltip(categoryId);
+  }
+
+  getTagName(tagId: string): string {
+    return this.metadataHelper.getTagName(tagId);
+  }
+
+  getTagColor(tagId: string): string {
+    return this.metadataHelper.getTagColor(tagId);
+  }
+
+  getBookName(bookId: string): string {
+    return this.metadataHelper.getBookName(bookId);
+  }
+
+  getBookColor(bookId: string): string {
+    return this.metadataHelper.getBookColor(bookId);
   }
 
   getCharacterTagsInOrder(character: Character): Tag[] {
@@ -764,12 +756,12 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     }
 
     if (this.selectedCategory) {
-      const categoryName = this.getCategoryName(this.selectedCategory);
+      const categoryName = this.metadataHelper.getCategoryName(this.selectedCategory);
       filters.push(`category: ${categoryName}`);
     }
 
     if (this.selectedTags.length > 0) {
-      const tagNames = this.selectedTags.map((tagId) => this.getTagName(tagId));
+      const tagNames = this.selectedTags.map((tagId) => this.metadataHelper.getTagName(tagId));
       filters.push(`tags: ${tagNames.join(', ')}`);
     }
 
@@ -781,7 +773,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     }
 
     if (this.selectedBook) {
-      const bookName = this.getBookName(this.selectedBook);
+      const bookName = this.metadataHelper.getBookName(this.selectedBook);
       filters.push(`book: ${bookName}`);
     }
 
@@ -805,12 +797,12 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     } else {
       this.viewMode = 'grid';
     }
-    localStorage.setItem('characterViewMode', this.viewMode);
+    this.preferences.setViewMode(this.viewMode);
   }
 
   setViewMode(mode: 'grid' | 'list' | 'compact' | 'gallery'): void {
     this.viewMode = mode;
-    localStorage.setItem('characterViewMode', this.viewMode);
+    this.preferences.setViewMode(this.viewMode);
   }
 
   setColumns(count: 1 | 2): void {
@@ -969,7 +961,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
 
   async emptyTrash(): Promise<void> {
     if (
-      !confirm('Are you sure you want to permanently delete all characters in trash?\n\nThis action cannot be undone.')
+      !(await this.modalService.confirm('Are you sure you want to permanently delete all characters in trash?\n\nThis action cannot be undone.'))
     ) {
       return;
     }
@@ -983,7 +975,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   }
 
   async permanentlyDeleteCharacter(folderName: string): Promise<void> {
-    if (!confirm('Are you sure you want to permanently delete this character?\n\nThis action cannot be undone.')) {
+    if (!(await this.modalService.confirm('Are you sure you want to permanently delete this character?\n\nThis action cannot be undone.'))) {
       return;
     }
 

@@ -2,6 +2,10 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { Cast } from '../interfaces/project.interface';
 import { slugify, slugifyWithTimestamp } from '../utils/slug.utils';
+import { generateId } from '../utils/id.utils';
+import { pathJoin } from '../utils/path.utils';
+import { assertIpcSuccess } from '../utils/ipc.utils';
+import { requireProject } from '../utils/project.utils';
 import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
 
@@ -53,7 +57,7 @@ export class CastService {
     }
 
     try {
-      const castsPath = await this.electronService.pathJoin(projectPath, 'casts');
+      const castsPath = pathJoin(projectPath, 'casts');
 
       // Check if casts directory exists
       const dirExists = await this.electronService.fileExists(castsPath);
@@ -83,7 +87,7 @@ export class CastService {
         }
 
         try {
-          const castFolderPath = await this.electronService.pathJoin(castsPath, castSlug);
+          const castFolderPath = pathJoin(castsPath, castSlug);
           const cast = await this.loadCastFromFolder(castFolderPath, castSlug);
           if (cast) {
             folderCasts.push(cast);
@@ -112,7 +116,7 @@ export class CastService {
   private async mergeCastsWithMetadata(folderCasts: Cast[], projectPath: string): Promise<Cast[]> {
     try {
       // Read ensemble.json to get cast metadata
-      const ensemblePath = await this.electronService.pathJoin(projectPath, 'ensemble.json');
+      const ensemblePath = pathJoin(projectPath, 'ensemble.json');
       const ensembleExists = await this.electronService.fileExists(ensemblePath);
 
       let metadataCasts: Cast[] = [];
@@ -158,7 +162,7 @@ export class CastService {
             // Create .castid file for future consistency
             if (folderCast.folderPath) {
               try {
-                const castIdPath = await this.electronService.pathJoin(folderCast.folderPath, '.castid');
+                const castIdPath = pathJoin(folderCast.folderPath, '.castid');
                 await this.electronService.writeFileAtomic(castIdPath, matchingMetadataCast.id);
               } catch (error) {
                 console.warn(`Failed to create .castid file for cast ${folderCast.name}:`, error);
@@ -207,19 +211,16 @@ export class CastService {
    * Structure: casts/<cast-slug>/
    */
   async createCast(castData: Omit<Cast, 'id' | 'folderPath' | 'thumbnail'>): Promise<Cast> {
-    const project = this.projectService.getCurrentProject();
-    if (!project) {
-      throw new Error('No project loaded');
-    }
+    const project = requireProject(this.projectService.getCurrentProject());
 
     try {
       // Generate unique ID and slug
-      const id = this.generateId();
+      const id = generateId();
       const slug = slugify(castData.name);
 
       // Create folder structure: casts/<slug>/
-      const castsPath = await this.electronService.pathJoin(project.path, 'casts');
-      const castFolderPath = await this.electronService.pathJoin(castsPath, slug);
+      const castsPath = pathJoin(project.path, 'casts');
+      const castFolderPath = pathJoin(castsPath, slug);
 
       // Ensure casts folder exists
       await this.electronService.createDirectory(castsPath);
@@ -231,14 +232,14 @@ export class CastService {
       }
 
       // Create .castid file to store the cast ID for consistent loading
-      const castIdPath = await this.electronService.pathJoin(castFolderPath, '.castid');
+      const castIdPath = pathJoin(castFolderPath, '.castid');
       const writeIdResult = await this.electronService.writeFileAtomic(castIdPath, id);
       if (!writeIdResult.success) {
         throw new Error(`Failed to create .castid file: ${writeIdResult.error}`);
       }
 
       // Always create description.md (even if empty) so the cast can be detected
-      const descriptionPath = await this.electronService.pathJoin(castFolderPath, 'description.md');
+      const descriptionPath = pathJoin(castFolderPath, 'description.md');
       const descriptionContent = castData.description || '';
       const writeResult = await this.electronService.writeFileAtomic(descriptionPath, descriptionContent);
       if (!writeResult.success) {
@@ -274,10 +275,7 @@ export class CastService {
    * Updates an existing cast and saves changes to disk
    */
   async updateCast(id: string, updates: Partial<Omit<Cast, 'id' | 'folderPath'>>): Promise<Cast | null> {
-    const project = this.projectService.getCurrentProject();
-    if (!project) {
-      throw new Error('No project loaded');
-    }
+    const project = requireProject(this.projectService.getCurrentProject());
 
     try {
       const casts = this.castsSubject.value;
@@ -295,8 +293,8 @@ export class CastService {
 
       if (nameChanged && updates.name) {
         const newSlug = slugify(updates.name);
-        const castsPath = await this.electronService.pathJoin(project.path, 'casts');
-        const newCastFolderPath = await this.electronService.pathJoin(castsPath, newSlug);
+        const castsPath = pathJoin(project.path, 'casts');
+        const newCastFolderPath = pathJoin(castsPath, newSlug);
 
         // Move the entire cast folder
         const moveResult = await this.electronService.moveDirectory(existingCast.folderPath!, newCastFolderPath);
@@ -309,7 +307,7 @@ export class CastService {
 
       // Update description.md if description changed
       if (updates.description !== undefined && updates.description !== existingCast.description) {
-        const descriptionPath = await this.electronService.pathJoin(newFolderPath, 'description.md');
+        const descriptionPath = pathJoin(newFolderPath, 'description.md');
         if (updates.description) {
           const writeResult = await this.electronService.writeFileAtomic(descriptionPath, updates.description);
           if (!writeResult.success) {
@@ -352,10 +350,7 @@ export class CastService {
    * Trash folder: casts/_deleted/<cast-slug>-<timestamp>/
    */
   async deleteCast(id: string): Promise<boolean> {
-    const project = this.projectService.getCurrentProject();
-    if (!project) {
-      throw new Error('No project loaded');
-    }
+    const project = requireProject(this.projectService.getCurrentProject());
 
     try {
       const casts = this.castsSubject.value;
@@ -369,13 +364,13 @@ export class CastService {
       // If cast has a folder, move it to trash
       if (cast.folderPath) {
         // Create trash folder if it doesn't exist
-        const trashPath = await this.electronService.pathJoin(project.path, 'casts', '_deleted');
+        const trashPath = pathJoin(project.path, 'casts', '_deleted');
         await this.electronService.createDirectory(trashPath);
 
         // Generate unique trash folder name with timestamp
         const castSlug = slugify(cast.name);
         const trashFolderName = slugifyWithTimestamp(castSlug);
-        const trashDestPath = await this.electronService.pathJoin(trashPath, trashFolderName);
+        const trashDestPath = pathJoin(trashPath, trashFolderName);
 
         // Move cast folder to trash
         const moveResult = await this.electronService.moveDirectory(cast.folderPath, trashDestPath);
@@ -413,7 +408,7 @@ export class CastService {
       const thumbnailFilename = `thumbnail.${extension}`;
 
       // Create destination path in cast folder
-      const destPath = await this.electronService.pathJoin(cast.folderPath, thumbnailFilename);
+      const destPath = pathJoin(cast.folderPath, thumbnailFilename);
 
       // Copy file to cast folder
       const copyResult = await this.electronService.copyFile(thumbnailPath, destPath);
@@ -447,7 +442,7 @@ export class CastService {
 
     try {
       // Delete the thumbnail file
-      const thumbnailPath = await this.electronService.pathJoin(cast.folderPath, cast.thumbnail);
+      const thumbnailPath = pathJoin(cast.folderPath, cast.thumbnail);
       const exists = await this.electronService.fileExists(thumbnailPath);
 
       if (exists) {
@@ -519,7 +514,7 @@ export class CastService {
 
       // Read description.md if it exists (optional)
       let description: string | undefined;
-      const descriptionPath = await this.electronService.pathJoin(folderPath, 'description.md');
+      const descriptionPath = pathJoin(folderPath, 'description.md');
       const descriptionExists = await this.electronService.fileExists(descriptionPath);
 
       if (descriptionExists) {
@@ -534,7 +529,7 @@ export class CastService {
 
       // Try to read cast ID from .castid file, fallback to generating from slug
       let id: string;
-      const castIdPath = await this.electronService.pathJoin(folderPath, '.castid');
+      const castIdPath = pathJoin(folderPath, '.castid');
       const castIdExists = await this.electronService.fileExists(castIdPath);
 
       if (castIdExists) {
@@ -575,9 +570,6 @@ export class CastService {
     return slug.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
   }
 
-  private generateId(): string {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2);
-  }
 
   /**
    * Resets the service state

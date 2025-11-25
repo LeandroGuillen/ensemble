@@ -325,14 +325,14 @@
         >
           <div
             class="category-tab"
-            [style.background-color]="getCategoryColor(group.categoryId)"
+            [style.background-color]="metadataHelper.getCategoryColor(group.categoryId)"
             [style.color]="
-              getContrastTextColor(getCategoryColor(group.categoryId))
+              getContrastTextColor(metadataHelper.getCategoryColor(group.categoryId))
             "
           >
             <div class="category-label-content">
               <span class="category-name">{{
-                getCategoryName(group.categoryId)
+                metadataHelper.getCategoryName(group.categoryId)
               }}</span>
             </div>
           </div>
@@ -404,11 +404,11 @@
         <div class="category-group" *ngFor="let group of getGroupedByTag()">
           <div
             class="category-tab"
-            [style.background-color]="getTagColor(group.tagId)"
-            [style.color]="getContrastTextColor(getTagColor(group.tagId))"
+            [style.background-color]="metadataHelper.getTagColor(group.tagId)"
+            [style.color]="getContrastTextColor(metadataHelper.getTagColor(group.tagId))"
           >
             <div class="category-label-content">
-              <span class="category-name">{{ getTagName(group.tagId) }}</span>
+              <span class="category-name">{{ metadataHelper.getTagName(group.tagId) }}</span>
             </div>
           </div>
           <div class="category-content">

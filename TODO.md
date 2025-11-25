@@ -1,5 +1,4 @@
 # For sure
-- Code cleanup
 - Integrate with obsidian
 - Style cleanup
   - Icon set
