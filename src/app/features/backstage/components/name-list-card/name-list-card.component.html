@@ -16,9 +16,9 @@
       placeholder="List Title"
     />
     <span class="name-count" *ngIf="isCollapsed && nameList.names.length > 0">
-      {{ nameList.names.length }}
+      ({{ nameList.names.length }})
     </span>
-    <button class="icon-btn" (click)="onDelete($event)" title="Delete list">
+    <button class="icon-btn delete-btn" (click)="onDelete($event)" title="Delete list">
       🗑️
     </button>
   </div>

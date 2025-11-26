@@ -2,7 +2,6 @@
 - Integrate with obsidian
 - Style cleanup
   - Icon set
-  - Consistent margins/padding
   - Font choices
   
 

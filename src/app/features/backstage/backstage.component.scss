@@ -8,8 +8,6 @@
 .error-state {
   padding: var(--spacing-md);
   background-color: rgba(239, 68, 68, 0.1);
-  border: 1px solid var(--color-error);
-  border-radius: var(--radius-md);
   margin: var(--spacing-md) var(--spacing-lg);
 }
 
@@ -22,7 +20,7 @@
   flex: 1;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-lg);
+  gap: var(--spacing-xl);
   padding: var(--spacing-lg);
   overflow: hidden;
 }
@@ -31,50 +29,38 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
   overflow: hidden;
 }
 
 .section-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--spacing-md) var(--spacing-lg);
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-bg-tertiary);
+  align-items: baseline;
+  gap: var(--spacing-sm);
+  padding: 0 0 var(--spacing-md) 0;
 }
 
 .section-header h3 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  color: var(--color-text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
 }
 
 .count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 24px;
-  height: 24px;
-  padding: 0 8px;
-  background: var(--color-bg-elevated);
-  border-radius: var(--radius-lg);
   font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--color-text-secondary);
+  font-weight: 500;
+  color: var(--color-text-muted);
 }
 
 .concepts-list,
 .name-lists {
   flex: 1;
   overflow-y: auto;
-  padding: var(--spacing-md);
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
 }
 
 .empty-state {

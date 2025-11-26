@@ -1,11 +1,11 @@
-// Cast dropdown styles
+// Cast dropdown styles - Compact
 .cast-filter {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
+  gap: 4px;
 
   label {
-    font-size: 0.875rem;
+    font-size: 12px;
     color: var(--color-text-secondary);
     white-space: nowrap;
   }
@@ -26,15 +26,15 @@
 .cast-dropdown-trigger {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
-  padding: var(--spacing-xs) var(--spacing-sm);
+  gap: 4px;
+  padding: 4px 8px;
   background: var(--color-bg-elevated);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all var(--transition-fast);
-  min-width: 180px;
-  height: 32px;
+  transition: all 0.15s ease;
+  min-width: 140px;
+  height: 26px;
 
   &:hover {
     border-color: var(--color-accent-primary);
@@ -49,7 +49,7 @@
 .cast-trigger-content {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
+  gap: 4px;
   flex: 1;
   min-width: 0;
 }
@@ -59,21 +59,21 @@
 }
 
 .cast-trigger-chars {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   background: var(--color-accent-primary);
   color: white;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.625rem;
+  font-size: 9px;
   font-weight: 600;
   text-transform: uppercase;
 }
 
 .cast-trigger-label {
-  font-size: 0.875rem;
+  font-size: 12px;
   color: var(--color-text-primary);
   white-space: nowrap;
   overflow: hidden;
@@ -81,9 +81,9 @@
 }
 
 .cast-dropdown-arrow {
-  font-size: 0.75rem;
+  font-size: 10px;
   color: var(--color-text-muted);
-  transition: transform var(--transition-fast);
+  transition: transform 0.15s ease;
   flex-shrink: 0;
 
   &.rotated {
@@ -98,10 +98,10 @@
   right: 0;
   background: var(--color-bg-elevated);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   z-index: 1000;
-  max-height: 300px;
+  max-height: 240px;
   overflow-y: auto;
   margin-top: 2px;
 }
@@ -109,10 +109,10 @@
 .cast-dropdown-item {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm);
+  gap: 6px;
+  padding: 6px 8px;
   cursor: pointer;
-  transition: background-color var(--transition-fast);
+  transition: background-color 0.15s ease;
   border-bottom: 1px solid var(--color-border-light);
 
   &:last-child {
@@ -134,28 +134,28 @@
 }
 
 .cast-item-chars {
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
   background: var(--color-accent-primary);
   color: white;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.75rem;
+  font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
 }
 
 .cast-item-all-icon {
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
   background: var(--color-bg-tertiary);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1rem;
+  font-size: 12px;
 }
 
 .cast-item-info {
@@ -164,7 +164,7 @@
 }
 
 .cast-item-name {
-  font-size: 0.875rem;
+  font-size: 12px;
   font-weight: 500;
   color: var(--color-text-primary);
   white-space: nowrap;
@@ -173,16 +173,16 @@
 }
 
 .cast-item-count {
-  font-size: 0.75rem;
+  font-size: 10px;
   color: var(--color-text-muted);
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 // Cast collage styles
 .cast-item-collage {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-md);
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
   display: grid;
   gap: 1px;
@@ -213,8 +213,8 @@
 }
 
 .cast-trigger-collage {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   border-radius: var(--radius-sm);
   overflow: hidden;
   display: grid;

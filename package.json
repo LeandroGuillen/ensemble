@@ -1,6 +1,6 @@
 {
   "name": "ensemble",
-  "version": "0.8.2",
+  "version": "0.8.3",
   "description": "Character management application for writers and worldbuilders",
   "main": "main.js",
   "scripts": {
@@ -50,10 +50,13 @@
     "@angular/compiler-cli": "^17.0.0",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.0.0",
+    "autoprefixer": "^10.4.22",
     "concurrently": "^8.2.2",
     "electron": "^27.0.0",
     "electron-builder": "^24.0.0",
     "electron-icon-builder": "^2.0.1",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.18",
     "typescript": "~5.2.0",
     "wait-on": "^7.0.0"
   },
