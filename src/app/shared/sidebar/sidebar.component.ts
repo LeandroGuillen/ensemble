@@ -4,6 +4,19 @@ import { CommonModule } from '@angular/common';
 import { ProjectService } from '../../core/services';
 import { filter } from 'rxjs/operators';
 
+interface NavItem {
+  icon: string;
+  label: string;
+  route: string;
+  title: string;
+}
+
+interface NavSection {
+  id: string;
+  label: string;
+  items: NavItem[];
+}
+
 @Component({
   selector: 'app-sidebar',
   standalone: true,
@@ -14,6 +27,35 @@ import { filter } from 'rxjs/operators';
 export class SidebarComponent implements OnInit {
   currentProjectName = '';
   currentRoute = '';
+  isCollapsed = true;
+
+  sections: NavSection[] = [
+    {
+      id: 'characters',
+      label: 'Characters',
+      items: [
+        { icon: 'users', label: 'Characters', route: '/characters', title: 'Characters' },
+        { icon: 'git-branch', label: 'Relationships', route: '/graph', title: 'Relationships' },
+        { icon: 'theater', label: 'Casts', route: '/casts', title: 'Casts' }
+      ]
+    },
+    {
+      id: 'references',
+      label: 'References',
+      items: [
+        { icon: 'book', label: 'Books', route: '/library', title: 'Books' },
+        { icon: 'layout', label: 'Backstage', route: '/backstage', title: 'Backstage' }
+      ]
+    },
+    {
+      id: 'settings',
+      label: 'Settings',
+      items: [
+        { icon: 'cpu', label: 'AI Settings', route: '/ai-settings', title: 'AI Settings' },
+        { icon: 'settings', label: 'General', route: '/metadata', title: 'General Settings' }
+      ]
+    }
+  ];
 
   constructor(
     private projectService: ProjectService,
@@ -30,6 +72,12 @@ export class SidebarComponent implements OnInit {
       .subscribe((event: NavigationEnd) => {
         this.currentRoute = event.url;
       });
+
+    // Load saved collapse state
+    const saved = localStorage.getItem('sidebar-collapsed');
+    if (saved !== null) {
+      this.isCollapsed = saved === 'true';
+    }
   }
 
   isActive(route: string): boolean {
@@ -42,5 +90,10 @@ export class SidebarComponent implements OnInit {
 
   selectProject(): void {
     this.router.navigate(['/project-selector']);
+  }
+
+  toggleCollapse(): void {
+    this.isCollapsed = !this.isCollapsed;
+    localStorage.setItem('sidebar-collapsed', String(this.isCollapsed));
   }
 }
