@@ -21,7 +21,12 @@
         [alt]="character.name"
         (error)="onImageError($event)"
       />
-      <div *ngIf="!getCharacterThumbnailDataUrl(character)" class="thumbnail-placeholder-small">👤</div>
+      <div *ngIf="!getCharacterThumbnailDataUrl(character)" class="thumbnail-placeholder-small" [style.background-color]="getPlaceholderColor(character)">
+        <svg viewBox="0 0 24 24" fill="currentColor" class="placeholder-icon">
+          <circle cx="12" cy="8" r="4.5"/>
+          <path d="M12 14c-5 0-9 2.5-9 5.5V22h18v-2.5c0-3-4-5.5-9-5.5z"/>
+        </svg>
+      </div>
     </div>
 
     <div class="list-item-content">

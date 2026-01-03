@@ -1,6 +1,6 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, OnChanges, SimpleChanges, NgZone } from "@angular/core";
 import { CommonModule } from "@angular/common";
-import { Character } from "../../../../core/interfaces";
+import { Character, Tag } from "../../../../core/interfaces";
 
 @Component({
   selector: "app-character-gallery-view",
@@ -11,6 +11,7 @@ import { Character } from "../../../../core/interfaces";
 })
 export class CharacterGalleryViewComponent implements OnInit, OnDestroy, OnChanges {
   @Input() characters: Character[] = [];
+  @Input() tags: Tag[] = [];
   @Input() thumbnailDataUrls: Map<string, string> = new Map();
   @Input() characterImagesDataUrls: Map<string, string[]> = new Map();
   @Input() slideshowEnabled = true;
@@ -141,5 +142,16 @@ export class CharacterGalleryViewComponent implements OnInit, OnDestroy, OnChang
     if (img) {
       img.style.display = "none";
     }
+  }
+
+  getPlaceholderColor(character: Character): string {
+    if (character.tags && character.tags.length > 0) {
+      const firstTagId = character.tags[0];
+      const tag = this.tags.find(t => t.id === firstTagId);
+      if (tag?.color) {
+        return tag.color;
+      }
+    }
+    return '#6b7280'; // Default gray
   }
 }

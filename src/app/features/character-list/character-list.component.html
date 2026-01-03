@@ -437,6 +437,7 @@
             <app-character-gallery-view
               *ngIf="viewMode === 'gallery'"
               [characters]="group.characters"
+              [tags]="tags"
               [thumbnailDataUrls]="thumbnailDataUrls"
               [characterImagesDataUrls]="characterImagesDataUrls"
               [slideshowEnabled]="slideshowEnabled"
@@ -513,6 +514,7 @@
             <app-character-gallery-view
               *ngIf="viewMode === 'gallery'"
               [characters]="group.characters"
+              [tags]="tags"
               [thumbnailDataUrls]="thumbnailDataUrls"
               [characterImagesDataUrls]="characterImagesDataUrls"
               [slideshowEnabled]="slideshowEnabled"
@@ -571,6 +573,7 @@
         <app-character-gallery-view
           *ngIf="filteredCharacters.length > 0 && viewMode === 'gallery'"
           [characters]="filteredCharacters"
+          [tags]="tags"
           [thumbnailDataUrls]="thumbnailDataUrls"
           [characterImagesDataUrls]="characterImagesDataUrls"
           [slideshowEnabled]="slideshowEnabled"

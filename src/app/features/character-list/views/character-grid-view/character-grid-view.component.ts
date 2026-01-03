@@ -171,4 +171,15 @@ export class CharacterGridViewComponent implements OnInit, OnDestroy, OnChanges 
       img.style.display = "none";
     }
   }
+
+  getPlaceholderColor(character: Character): string {
+    if (character.tags && character.tags.length > 0) {
+      const firstTagId = character.tags[0];
+      const tag = this.tags.find(t => t.id === firstTagId);
+      if (tag?.color) {
+        return tag.color;
+      }
+    }
+    return '#6b7280'; // Default gray
+  }
 }
