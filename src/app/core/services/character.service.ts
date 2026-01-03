@@ -262,15 +262,15 @@ export class CharacterService {
 
       // Iterate through all folders under characters/
       for (const folderName of dirContents.directories) {
-        // Skip trash folder
-        if (folderName === '_deleted') {
-          continue;
-        }
-
         const folderPath = pathJoin(charactersPath, folderName);
 
+        // Folders starting with underscore are always treated as category folders, never as characters
+        // This allows _other, _supporting etc. to contain characters without being treated as characters themselves
+        const isUnderscoreFolder = folderName.startsWith('_');
+
         // Determine if this is a character folder (flat mode) or a category folder
-        const isCharacterFolder = await this.isCharacterFolder(folderPath, folderName);
+        // Underscore folders are never character folders, only category folders
+        const isCharacterFolder = !isUnderscoreFolder && await this.isCharacterFolder(folderPath, folderName);
 
         if (isCharacterFolder) {
           // Flat mode: This folder IS a character folder
@@ -283,25 +283,9 @@ export class CharacterService {
             console.warn(`Failed to load character from ${folderName}:`, error);
           }
         } else {
-          // This is a category folder - scan for character subfolders
-          const categoryContents = await this.electronService.readDirectoryFiles(folderPath);
-          if (!categoryContents.success || !categoryContents.directories) {
-            continue;
-          }
-
-          // Load each character folder within this category
-          for (const characterSlug of categoryContents.directories) {
-            try {
-              const characterFolderPath = pathJoin(folderPath, characterSlug);
-              const character = await this.loadCharacterFromFolder(characterFolderPath, folderName, characterSlug);
-              if (character) {
-                characters.push(character);
-              }
-            } catch (error) {
-              console.warn(`Failed to load character from ${folderName}/${characterSlug}:`, error);
-              // Continue loading other characters even if one fails
-            }
-          }
+          // This is a category folder - scan for character subfolders (recursively handles nested categories)
+          const categoryCharacters = await this.loadCharactersFromCategory(folderPath, folderName);
+          characters.push(...categoryCharacters);
         }
       }
 
@@ -329,6 +313,45 @@ export class CharacterService {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Recursively loads characters from a category folder.
+   * Handles nested categories (e.g., _other/_unnamed/character-name).
+   * Underscore-prefixed folders are treated as sub-categories, not characters.
+   */
+  private async loadCharactersFromCategory(categoryPath: string, categorySlug: string): Promise<Character[]> {
+    const characters: Character[] = [];
+
+    const categoryContents = await this.electronService.readDirectoryFiles(categoryPath);
+    if (!categoryContents.success || !categoryContents.directories) {
+      return characters;
+    }
+
+    for (const subfolderName of categoryContents.directories) {
+      const subfolderPath = pathJoin(categoryPath, subfolderName);
+
+      // Underscore folders are always sub-categories, never characters
+      const isUnderscoreFolder = subfolderName.startsWith('_');
+
+      if (isUnderscoreFolder) {
+        // Recursively scan underscore folders as sub-categories
+        const subCategoryCharacters = await this.loadCharactersFromCategory(subfolderPath, categorySlug);
+        characters.push(...subCategoryCharacters);
+      } else {
+        // Try to load as a character folder
+        try {
+          const character = await this.loadCharacterFromFolder(subfolderPath, categorySlug, subfolderName);
+          if (character) {
+            characters.push(character);
+          }
+        } catch (error) {
+          console.warn(`Failed to load character from ${categorySlug}/${subfolderName}:`, error);
+        }
+      }
+    }
+
+    return characters;
   }
 
   /**
