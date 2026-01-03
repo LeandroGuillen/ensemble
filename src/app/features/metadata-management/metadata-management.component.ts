@@ -6,7 +6,7 @@ import { MetadataService } from '../../core/services/metadata.service';
 import { ProjectService } from '../../core/services/project.service';
 import { CharacterService } from '../../core/services/character.service';
 import { ElectronService } from '../../core/services/electron.service';
-import { Category, Tag, ProjectSettings } from '../../core/interfaces/project.interface';
+import { Category, Tag, ProjectSettings, CategoryFolderMode } from '../../core/interfaces/project.interface';
 import { Character } from '../../core/interfaces/character.interface';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 
@@ -14,6 +14,8 @@ interface CategoryFormData {
   name: string;
   color: string;
   description?: string;
+  folderMode?: CategoryFolderMode;
+  folderPath?: string;
 }
 
 interface TagFormData {
@@ -83,12 +85,15 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
   constructor(
     private metadataService: MetadataService,
     private projectService: ProjectService,
+    private characterService: CharacterService,
     private fb: FormBuilder
   ) {
     this.categoryForm = this.fb.group({
       name: ['', [Validators.required, Validators.maxLength(100)]],
       color: ['#3498db', [Validators.required, Validators.pattern(/^#[0-9A-Fa-f]{6}$/)]],
-      description: ['', [Validators.maxLength(500)]]
+      description: ['', [Validators.maxLength(500)]],
+      folderMode: ['auto'],
+      folderPath: ['', [Validators.maxLength(100)]]
     });
 
     this.tagForm = this.fb.group({
@@ -161,7 +166,9 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
     this.categoryForm.reset({
       name: '',
       color: '#3498db',
-      description: ''
+      description: '',
+      folderMode: 'auto',
+      folderPath: ''
     });
   }
 
@@ -171,7 +178,9 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
     this.categoryForm.patchValue({
       name: category.name,
       color: category.color,
-      description: category.description || ''
+      description: category.description || '',
+      folderMode: category.folderMode || 'auto',
+      folderPath: category.folderPath || ''
     });
   }
 
@@ -193,10 +202,33 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
       
       const formData: CategoryFormData = this.categoryForm.value;
       
+      // Track if folder mode or path changed for relocation
+      let needsRelocation = false;
+      let categoryId: string | null = null;
+      
       if (this.editingCategory) {
+        categoryId = this.editingCategory.id;
+        
+        // Check if folder configuration changed
+        const oldFolderMode = this.editingCategory.folderMode || 'auto';
+        const oldFolderPath = this.editingCategory.folderPath || '';
+        const newFolderMode = formData.folderMode || 'auto';
+        const newFolderPath = formData.folderPath || '';
+        
+        needsRelocation = (oldFolderMode !== newFolderMode) || 
+                          (newFolderMode === 'specify' && oldFolderPath !== newFolderPath);
+        
         await this.metadataService.updateCategory(this.editingCategory.id, formData);
       } else {
         await this.metadataService.addCategory(formData);
+      }
+      
+      // If folder configuration changed, relocate existing characters
+      if (needsRelocation && categoryId) {
+        const relocatedCount = await this.characterService.relocateCharactersForCategory(categoryId);
+        if (relocatedCount > 0) {
+          console.log(`Relocated ${relocatedCount} character(s) due to folder mode change`);
+        }
       }
       
       this.cancelCategoryForm();

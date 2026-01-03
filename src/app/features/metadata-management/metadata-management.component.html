@@ -109,6 +109,37 @@
             </div>
           </div>
 
+          <!-- Folder Mode -->
+          <div class="form-group">
+            <label>Folder Structure</label>
+            <div class="folder-mode-options">
+              <label class="radio-label">
+                <input type="radio" formControlName="folderMode" value="auto">
+                <span class="radio-text">Auto</span>
+                <small class="radio-help">Creates a folder named after the category</small>
+              </label>
+              <label class="radio-label">
+                <input type="radio" formControlName="folderMode" value="flat">
+                <span class="radio-text">Flat</span>
+                <small class="radio-help">Characters at root level (no subfolder)</small>
+              </label>
+              <label class="radio-label">
+                <input type="radio" formControlName="folderMode" value="specify">
+                <span class="radio-text">Custom folder</span>
+                <small class="radio-help">Specify a shared folder name</small>
+              </label>
+            </div>
+            <div *ngIf="categoryForm.get('folderMode')?.value === 'specify'" class="folder-path-input">
+              <input 
+                type="text" 
+                formControlName="folderPath" 
+                placeholder="e.g., _others"
+                class="form-control"
+              >
+              <small class="form-help">Multiple categories can share the same folder.</small>
+            </div>
+          </div>
+
           <div class="form-actions">
             <button type="button" class="btn btn-secondary" (click)="cancelCategoryForm()">
               Cancel
@@ -209,6 +240,32 @@
                   (click)="selectColor(color, 'category')"
                   [title]="color"
                 ></button>
+              </div>
+              
+              <!-- Inline Folder Mode -->
+              <div class="inline-folder-mode">
+                <label class="inline-label">Folder:</label>
+                <div class="inline-radio-group">
+                  <label class="inline-radio">
+                    <input type="radio" formControlName="folderMode" value="auto">
+                    <span>Auto</span>
+                  </label>
+                  <label class="inline-radio">
+                    <input type="radio" formControlName="folderMode" value="flat">
+                    <span>Flat</span>
+                  </label>
+                  <label class="inline-radio">
+                    <input type="radio" formControlName="folderMode" value="specify">
+                    <span>Custom</span>
+                  </label>
+                </div>
+                <input 
+                  *ngIf="categoryForm.get('folderMode')?.value === 'specify'"
+                  type="text" 
+                  formControlName="folderPath" 
+                  placeholder="folder name"
+                  class="form-control-inline folder-path-inline"
+                >
               </div>
               
               <!-- Error Messages -->

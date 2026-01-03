@@ -4,6 +4,7 @@
 
 /**
  * Converts a string into a URL-safe slug suitable for folder names
+ * Preserves accented characters (á, é, í, ó, ú, ñ, etc.) for better readability
  * @param text - The text to convert to a slug
  * @returns A lowercase, hyphenated slug
  */
@@ -16,8 +17,9 @@ export function slugify(text: string): string {
     .replace(/\s+/g, '-')
     // Remove invalid filename characters
     .replace(/[<>:"|?*\/\\]/g, '')
-    // Remove other non-alphanumeric characters except hyphens and underscores
-    .replace(/[^\w\-]+/g, '')
+    // Remove non-letter/non-number characters except hyphens and underscores
+    // Uses Unicode property escapes to preserve accented characters
+    .replace(/[^\p{L}\p{N}\-_]+/gu, '')
     // Replace multiple hyphens with single hyphen
     .replace(/\-\-+/g, '-')
     // Remove leading/trailing hyphens

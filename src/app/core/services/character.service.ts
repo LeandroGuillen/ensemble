@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { Character, CharacterFormData, CharacterImage } from '../interfaces/character.interface';
+import { Category } from '../interfaces/project.interface';
 import { MarkdownUtils } from '../utils/markdown.utils';
 import { filenameToFieldName, slugify, slugifyWithTimestamp } from '../utils/slug.utils';
 import { generateId } from '../utils/id.utils';
@@ -44,6 +45,129 @@ export class CharacterService {
     });
   }
 
+  /**
+   * Gets the folder path for a category based on its folder mode configuration.
+   * @param categoryId The category ID to look up
+   * @returns The subfolder name (relative to characters/), or null for flat mode
+   */
+  getCategoryFolderPath(categoryId: string): string | null {
+    const project = this.projectService.getCurrentProject();
+    if (!project?.metadata?.categories) {
+      // Fallback to slugified category ID for backward compatibility
+      return slugify(categoryId);
+    }
+
+    const category = project.metadata.categories.find((c) => c.id === categoryId);
+    if (!category) {
+      // Category not found, use slugified ID
+      return slugify(categoryId);
+    }
+
+    const folderMode = category.folderMode || 'auto'; // Default to 'auto' for backward compatibility
+
+    switch (folderMode) {
+      case 'flat':
+        return null; // No subfolder, characters go directly in characters/
+      case 'specify':
+        return category.folderPath || slugify(categoryId); // Use custom path or fallback to slug
+      case 'auto':
+      default:
+        return slugify(categoryId); // Use category slug as folder name
+    }
+  }
+
+  /**
+   * Gets a Category object by its ID from project metadata
+   */
+  getCategoryById(categoryId: string): Category | undefined {
+    const project = this.projectService.getCurrentProject();
+    return project?.metadata?.categories?.find((c) => c.id === categoryId);
+  }
+
+  /**
+   * Relocates all characters of a given category to their new folder locations.
+   * Called when a category's folder mode or folder path changes.
+   * @param categoryId The category ID whose characters should be relocated
+   * @returns The number of characters relocated
+   */
+  async relocateCharactersForCategory(categoryId: string): Promise<number> {
+    const project = requireProject(this.projectService.getCurrentProject());
+    const charactersPath = pathJoin(project.path, 'characters');
+
+    // Ensure characters are loaded before relocation
+    if (this.charactersSubject.value.length === 0) {
+      await this.forceReloadCharacters();
+    }
+
+    // Get all characters in this category
+    const characters = this.charactersSubject.value.filter(
+      (char) => char.category === categoryId
+    );
+
+    if (characters.length === 0) {
+      return 0;
+    }
+
+    // Get the new folder path based on current category settings
+    const newCategoryFolder = this.getCategoryFolderPath(categoryId);
+    console.log(`[relocateCharactersForCategory] New category folder: ${newCategoryFolder}`);
+
+    let relocatedCount = 0;
+
+    for (const character of characters) {
+      try {
+        const characterSlug = slugify(character.name);
+
+        // Determine the new folder path
+        let newFolderPath: string;
+        if (newCategoryFolder === null) {
+          // Flat mode: characters/<slug>/
+          newFolderPath = pathJoin(charactersPath, characterSlug);
+        } else {
+          // Auto or Specify mode: characters/<category-folder>/<slug>/
+          const categoryPath = pathJoin(charactersPath, newCategoryFolder);
+          newFolderPath = pathJoin(categoryPath, characterSlug);
+
+          // Ensure category folder exists
+          await this.electronService.createDirectory(categoryPath);
+        }
+
+        // Skip if already in the correct location
+        if (character.folderPath === newFolderPath) {
+          continue;
+        }
+
+        // Move the character folder
+        const moveResult = await this.electronService.moveDirectory(
+          character.folderPath,
+          newFolderPath
+        );
+
+        if (!moveResult.success) {
+          console.error(`Failed to move character ${character.name}: ${moveResult.error}`);
+          continue;
+        }
+
+        // Update the character's paths in memory
+        const newFilePath = pathJoin(newFolderPath, `${characterSlug}.md`);
+        character.folderPath = newFolderPath;
+        character.filePath = newFilePath;
+        relocatedCount++;
+
+        console.log(`Relocated character ${character.name} to ${newFolderPath}`);
+      } catch (error) {
+        console.error(`Failed to relocate character ${character.name}:`, error);
+      }
+    }
+
+    // Update the characters subject with the modified paths
+    if (relocatedCount > 0) {
+      this.charactersSubject.next([...this.charactersSubject.value]);
+    }
+
+    return relocatedCount;
+  }
+
   getCharacters(): Observable<Character[]> {
     return this.characters$;
   }
@@ -57,10 +181,19 @@ export class CharacterService {
    */
   async forceReloadCharacters(): Promise<void> {
     this.hasLoadedForCurrentProject = false;
-    if (this.currentProjectPath) {
+    
+    // Get project path from current state or from projectService
+    let projectPath = this.currentProjectPath;
+    if (!projectPath) {
+      const project = this.projectService.getCurrentProject();
+      projectPath = project?.path || null;
+      this.currentProjectPath = projectPath;
+    }
+    
+    if (projectPath) {
       // Clear current characters before reloading
       this.charactersSubject.next([]);
-      await this.loadCharacters(this.currentProjectPath);
+      await this.loadCharacters(projectPath);
     }
   }
 
@@ -86,7 +219,9 @@ export class CharacterService {
 
   /**
    * Loads all characters from the current project's characters directory
-   * New structure: characters/<category>/<character-slug>/
+   * Supports mixed folder structures based on category folder modes:
+   * - Flat mode: characters/<character-slug>/ (folder contains .md file directly)
+   * - Auto/Specify mode: characters/<category-folder>/<character-slug>/
    */
   async loadCharacters(projectPath: string): Promise<void> {
     // If this is the same project and we've already loaded, don't reload
@@ -116,7 +251,7 @@ export class CharacterService {
         return;
       }
 
-      // Read all category folders under characters/
+      // Read all folders under characters/
       const dirContents = await this.electronService.readDirectoryFiles(charactersPath);
       if (!dirContents.success || !dirContents.directories) {
         this.hasLoadedForCurrentProject = true;
@@ -125,32 +260,47 @@ export class CharacterService {
 
       const characters: Character[] = [];
 
-      // Iterate through category folders (skip _deleted and other special folders)
-      for (const categoryFolder of dirContents.directories) {
+      // Iterate through all folders under characters/
+      for (const folderName of dirContents.directories) {
         // Skip trash folder
-        if (categoryFolder === '_deleted') {
+        if (folderName === '_deleted') {
           continue;
         }
 
-        const categoryPath = pathJoin(charactersPath, categoryFolder);
+        const folderPath = pathJoin(charactersPath, folderName);
 
-        // Read character folders within category
-        const categoryContents = await this.electronService.readDirectoryFiles(categoryPath);
-        if (!categoryContents.success || !categoryContents.directories) {
-          continue;
-        }
+        // Determine if this is a character folder (flat mode) or a category folder
+        const isCharacterFolder = await this.isCharacterFolder(folderPath, folderName);
 
-        // Load each character folder
-        for (const characterSlug of categoryContents.directories) {
+        if (isCharacterFolder) {
+          // Flat mode: This folder IS a character folder
           try {
-            const characterFolderPath = pathJoin(categoryPath, characterSlug);
-            const character = await this.loadCharacterFromFolder(characterFolderPath, categoryFolder, characterSlug);
+            const character = await this.loadCharacterFromFolder(folderPath, '', folderName);
             if (character) {
               characters.push(character);
             }
           } catch (error) {
-            console.warn(`Failed to load character from ${categoryFolder}/${characterSlug}:`, error);
-            // Continue loading other characters even if one fails
+            console.warn(`Failed to load character from ${folderName}:`, error);
+          }
+        } else {
+          // This is a category folder - scan for character subfolders
+          const categoryContents = await this.electronService.readDirectoryFiles(folderPath);
+          if (!categoryContents.success || !categoryContents.directories) {
+            continue;
+          }
+
+          // Load each character folder within this category
+          for (const characterSlug of categoryContents.directories) {
+            try {
+              const characterFolderPath = pathJoin(folderPath, characterSlug);
+              const character = await this.loadCharacterFromFolder(characterFolderPath, folderName, characterSlug);
+              if (character) {
+                characters.push(character);
+              }
+            } catch (error) {
+              console.warn(`Failed to load character from ${folderName}/${characterSlug}:`, error);
+              // Continue loading other characters even if one fails
+            }
           }
         }
       }
@@ -166,8 +316,27 @@ export class CharacterService {
   }
 
   /**
+   * Checks if a folder is a character folder (flat mode) or a category folder
+   * A character folder contains a <slug>.md file directly
+   */
+  private async isCharacterFolder(folderPath: string, folderSlug: string): Promise<boolean> {
+    try {
+      // Check if the folder contains a <slug>.md file
+      const expectedMdFile = `${folderSlug}.md`;
+      const mdFilePath = pathJoin(folderPath, expectedMdFile);
+      const exists = await this.electronService.fileExists(mdFilePath);
+      return exists;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * Creates a new character and saves it to disk
-   * New structure: characters/<category>/<character-slug>/
+   * Structure depends on category folder mode:
+   * - flat: characters/<character-slug>/
+   * - auto: characters/<category-slug>/<character-slug>/
+   * - specify: characters/<custom-folder>/<character-slug>/
    */
   async createCharacter(data: CharacterFormData): Promise<Character> {
     const project = requireProject(this.projectService.getCurrentProject());
@@ -180,16 +349,25 @@ export class CharacterService {
       const id = generateId();
       const slug = slugify(data.name);
 
-      // Create folder structure: characters/<category>/<slug>/
-      const categorySlug = slugify(data.category);
-      const categoryPath = pathJoin(project.path, 'characters', categorySlug);
-      const characterFolderPath = pathJoin(categoryPath, slug);
+      // Get category folder path based on folder mode
+      const categoryFolderPath = this.getCategoryFolderPath(data.category);
 
-      // Ensure category folder exists
-      assertIpcSuccess(
-        await this.electronService.createDirectory(categoryPath),
-        'Create category directory'
-      );
+      // Create folder structure based on folder mode
+      let characterFolderPath: string;
+      if (categoryFolderPath === null) {
+        // Flat mode: characters/<slug>/
+        characterFolderPath = pathJoin(project.path, 'characters', slug);
+      } else {
+        // Auto or Specify mode: characters/<category-folder>/<slug>/
+        const categoryPath = pathJoin(project.path, 'characters', categoryFolderPath);
+        characterFolderPath = pathJoin(categoryPath, slug);
+
+        // Ensure category folder exists
+        assertIpcSuccess(
+          await this.electronService.createDirectory(categoryPath),
+          'Create category directory'
+        );
+      }
 
       // Create character folder
       assertIpcSuccess(
@@ -300,13 +478,22 @@ export class CharacterService {
         const newName = data.name || existingCharacter.name;
         const newCategory = data.category || existingCharacter.category;
         const newSlug = slugify(newName);
-        const newCategorySlug = slugify(newCategory);
 
-        const newCategoryPath = pathJoin(project.path, 'characters', newCategorySlug);
-        const newCharacterFolderPath = pathJoin(newCategoryPath, newSlug);
+        // Get category folder path based on folder mode
+        const categoryFolderPath = this.getCategoryFolderPath(newCategory);
 
-        // Create new category folder if it doesn't exist
-        await this.electronService.createDirectory(newCategoryPath);
+        let newCharacterFolderPath: string;
+        if (categoryFolderPath === null) {
+          // Flat mode: characters/<slug>/
+          newCharacterFolderPath = pathJoin(project.path, 'characters', newSlug);
+        } else {
+          // Auto or Specify mode: characters/<category-folder>/<slug>/
+          const newCategoryPath = pathJoin(project.path, 'characters', categoryFolderPath);
+          newCharacterFolderPath = pathJoin(newCategoryPath, newSlug);
+
+          // Create new category folder if it doesn't exist
+          await this.electronService.createDirectory(newCategoryPath);
+        }
 
         // Move the entire character folder
         const moveResult = await this.electronService.moveDirectory(
@@ -467,15 +654,25 @@ export class CharacterService {
       }
 
       const { frontmatter } = parseResult.data!;
-      const categorySlug = slugify(frontmatter.category || 'uncategorized');
+      const characterCategory = frontmatter.category || 'uncategorized';
       const characterSlug = pathBasename(mainMdFile, '.md');
 
-      // Determine restore destination
-      const categoryPath = pathJoin(project.path, 'characters', categorySlug);
-      const restorePath = pathJoin(categoryPath, characterSlug);
+      // Get category folder path based on folder mode
+      const categoryFolderPath = this.getCategoryFolderPath(characterCategory);
 
-      // Create category folder if it doesn't exist
-      await this.electronService.createDirectory(categoryPath);
+      // Determine restore destination based on folder mode
+      let restorePath: string;
+      if (categoryFolderPath === null) {
+        // Flat mode: characters/<slug>/
+        restorePath = pathJoin(project.path, 'characters', characterSlug);
+      } else {
+        // Auto or Specify mode: characters/<category-folder>/<slug>/
+        const categoryPath = pathJoin(project.path, 'characters', categoryFolderPath);
+        restorePath = pathJoin(categoryPath, characterSlug);
+
+        // Create category folder if it doesn't exist
+        await this.electronService.createDirectory(categoryPath);
+      }
 
       // Move from trash back to category folder
       const moveResult = await this.electronService.moveDirectory(characterTrashPath, restorePath);
@@ -753,7 +950,7 @@ export class CharacterService {
       const character: Character = {
         id,
         name: frontmatter.name,
-        category: frontmatter.category || categorySlug,
+        category: frontmatter.category || categorySlug || 'uncategorized',
         tags: frontmatter.tags || [],
         books: frontmatter.books || [],
         thumbnail: frontmatter.thumbnail, // Keep for backward compatibility

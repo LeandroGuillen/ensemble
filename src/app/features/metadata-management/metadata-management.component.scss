@@ -350,6 +350,121 @@
     }
   }
 
+  // Folder Mode Options (for category form)
+  .folder-mode-options {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+
+    .radio-label {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--spacing-sm);
+      cursor: pointer;
+      padding: var(--spacing-sm);
+      border-radius: var(--radius-sm);
+      transition: background-color var(--transition-fast);
+
+      &:hover {
+        background-color: var(--color-bg-tertiary);
+      }
+
+      input[type="radio"] {
+        margin-top: 2px;
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+        accent-color: var(--color-accent-primary);
+      }
+
+      .radio-text {
+        color: var(--color-text-primary);
+        font-weight: 500;
+        font-size: 0.9375rem;
+      }
+
+      .radio-help {
+        display: block;
+        color: var(--color-text-muted);
+        font-size: 0.8125rem;
+        margin-top: 2px;
+      }
+    }
+  }
+
+  .folder-path-input {
+    margin-top: var(--spacing-sm);
+    margin-left: calc(16px + var(--spacing-sm) + var(--spacing-sm));
+
+    .form-control {
+      max-width: 300px;
+      color: var(--color-text-primary);
+      
+      &::placeholder {
+        color: var(--color-text-muted);
+      }
+    }
+  }
+
+  // Inline folder mode (for editing existing categories)
+  .inline-folder-mode {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
+    margin-left: calc(32px + var(--spacing-sm));
+    padding: var(--spacing-sm);
+    background-color: var(--color-bg-tertiary);
+    border-radius: var(--radius-sm);
+
+    .inline-label {
+      color: var(--color-text-secondary);
+      font-size: 0.8125rem;
+      font-weight: 500;
+    }
+
+    .inline-radio-group {
+      display: flex;
+      gap: var(--spacing-sm);
+
+      .inline-radio {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        cursor: pointer;
+        font-size: 0.875rem;
+        color: var(--color-text-primary);
+
+        input[type="radio"] {
+          width: 14px;
+          height: 14px;
+          cursor: pointer;
+          accent-color: var(--color-accent-primary);
+        }
+      }
+    }
+
+    .folder-path-inline {
+      width: 120px;
+      padding: 4px 8px;
+      font-size: 0.875rem;
+      color: var(--color-text-primary);
+      background-color: var(--color-bg-secondary);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      
+      &::placeholder {
+        color: var(--color-text-muted);
+      }
+      
+      &:focus {
+        outline: none;
+        border-color: var(--color-accent-primary);
+      }
+    }
+  }
+
   .form-actions {
     display: flex;
     gap: var(--spacing-md);

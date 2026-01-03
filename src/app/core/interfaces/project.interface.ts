@@ -31,11 +31,15 @@ export interface GraphNode {
   color?: string;
 }
 
+export type CategoryFolderMode = 'flat' | 'auto' | 'specify';
+
 export interface Category {
   id: string;
   name: string;
   color: string;
   description?: string;
+  folderMode?: CategoryFolderMode;  // Default: 'auto' for backward compatibility
+  folderPath?: string;              // Custom folder path, used when folderMode is 'specify'
 }
 
 export interface Tag {
