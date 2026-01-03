@@ -14,6 +14,7 @@ export class CharacterGalleryViewComponent implements OnInit, OnDestroy, OnChang
   @Input() thumbnailDataUrls: Map<string, string> = new Map();
   @Input() characterImagesDataUrls: Map<string, string[]> = new Map();
   @Input() slideshowEnabled = true;
+  @Input() thumbnailSize: 'big' | 'medium' | 'small' = 'big';
 
   @Output() characterClick = new EventEmitter<Character>();
 

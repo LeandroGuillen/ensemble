@@ -94,6 +94,14 @@ export class PreferencesService {
     localStorage.setItem('characterSelectedCasts', JSON.stringify(casts));
   }
 
+  getGalleryThumbnailSize(): 'big' | 'medium' | 'small' {
+    return (localStorage.getItem('galleryThumbnailSize') as any) || 'big';
+  }
+
+  setGalleryThumbnailSize(size: 'big' | 'medium' | 'small'): void {
+    localStorage.setItem('galleryThumbnailSize', size);
+  }
+
   // Generic get/set with type safety
   get<T>(key: string, defaultValue: T): T {
     const saved = localStorage.getItem(key);

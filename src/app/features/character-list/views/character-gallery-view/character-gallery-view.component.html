@@ -1,4 +1,4 @@
-<div class="character-gallery-view">
+<div class="character-gallery-view" [class.size-medium]="thumbnailSize === 'medium'" [class.size-small]="thumbnailSize === 'small'">
   <div
     *ngFor="let character of characters; let i = index"
     class="gallery-item"

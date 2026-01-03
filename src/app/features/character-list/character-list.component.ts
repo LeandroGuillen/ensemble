@@ -71,6 +71,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   selectedCharacterIndex = -1; // Track selected character for keyboard navigation
   filterExpanded = false; // Track filter expanded state
   slideshowEnabled = true; // Toggle slideshow on/off
+  galleryThumbnailSize: 'big' | 'medium' | 'small' = 'big'; // Gallery thumbnail size
 
   constructor(
     private characterService: CharacterService,
@@ -116,6 +117,9 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     if (savedSlideshowEnabled !== null) {
       this.slideshowEnabled = savedSlideshowEnabled === 'true';
     }
+
+    // Load saved gallery thumbnail size preference
+    this.galleryThumbnailSize = this.preferences.getGalleryThumbnailSize();
 
     // Load filter expanded state from project settings (not localStorage)
     // This will be loaded after project is loaded in the subscription below
@@ -813,6 +817,11 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   toggleSlideshow(): void {
     this.slideshowEnabled = !this.slideshowEnabled;
     localStorage.setItem('characterSlideshowEnabled', this.slideshowEnabled.toString());
+  }
+
+  setGalleryThumbnailSize(size: 'big' | 'medium' | 'small'): void {
+    this.galleryThumbnailSize = size;
+    this.preferences.setGalleryThumbnailSize(size);
   }
 
   // Multi-select functionality

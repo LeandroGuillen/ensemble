@@ -30,6 +30,56 @@
           </svg>
         </button>
       </div>
+      <div
+        class="thumbnail-size-toggle"
+        [class.disabled]="!currentProject"
+        *ngIf="viewMode === 'gallery'"
+      >
+        <button
+          class="toggle-option"
+          [class.active]="galleryThumbnailSize === 'big'"
+          (click)="setGalleryThumbnailSize('big')"
+          [disabled]="!currentProject"
+          title="Big thumbnails"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <rect x="1" y="1" width="14" height="14" rx="1.5" />
+          </svg>
+        </button>
+        <button
+          class="toggle-option"
+          [class.active]="galleryThumbnailSize === 'medium'"
+          (click)="setGalleryThumbnailSize('medium')"
+          [disabled]="!currentProject"
+          title="Medium thumbnails"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <rect x="1" y="1" width="6" height="6" rx="1" />
+            <rect x="9" y="1" width="6" height="6" rx="1" />
+            <rect x="1" y="9" width="6" height="6" rx="1" />
+            <rect x="9" y="9" width="6" height="6" rx="1" />
+          </svg>
+        </button>
+        <button
+          class="toggle-option"
+          [class.active]="galleryThumbnailSize === 'small'"
+          (click)="setGalleryThumbnailSize('small')"
+          [disabled]="!currentProject"
+          title="Small thumbnails"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <rect x="1" y="1" width="4" height="4" rx="0.5" />
+            <rect x="6" y="1" width="4" height="4" rx="0.5" />
+            <rect x="11" y="1" width="4" height="4" rx="0.5" />
+            <rect x="1" y="6" width="4" height="4" rx="0.5" />
+            <rect x="6" y="6" width="4" height="4" rx="0.5" />
+            <rect x="11" y="6" width="4" height="4" rx="0.5" />
+            <rect x="1" y="11" width="4" height="4" rx="0.5" />
+            <rect x="6" y="11" width="4" height="4" rx="0.5" />
+            <rect x="11" y="11" width="4" height="4" rx="0.5" />
+          </svg>
+        </button>
+      </div>
       <div class="view-toggle" [class.disabled]="!currentProject">
         <button
           class="toggle-option"
@@ -390,6 +440,7 @@
               [thumbnailDataUrls]="thumbnailDataUrls"
               [characterImagesDataUrls]="characterImagesDataUrls"
               [slideshowEnabled]="slideshowEnabled"
+              [thumbnailSize]="galleryThumbnailSize"
               (characterClick)="onViewCharacterClick($event)"
             ></app-character-gallery-view>
           </div>
@@ -465,6 +516,7 @@
               [thumbnailDataUrls]="thumbnailDataUrls"
               [characterImagesDataUrls]="characterImagesDataUrls"
               [slideshowEnabled]="slideshowEnabled"
+              [thumbnailSize]="galleryThumbnailSize"
               (characterClick)="onViewCharacterClick($event)"
             ></app-character-gallery-view>
           </div>
@@ -522,6 +574,7 @@
           [thumbnailDataUrls]="thumbnailDataUrls"
           [characterImagesDataUrls]="characterImagesDataUrls"
           [slideshowEnabled]="slideshowEnabled"
+          [thumbnailSize]="galleryThumbnailSize"
           (characterClick)="onViewCharacterClick($event)"
         ></app-character-gallery-view>
       </div>

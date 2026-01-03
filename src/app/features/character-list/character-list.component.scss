@@ -74,7 +74,8 @@
 // View Toggle Switch
 .view-toggle,
 .column-toggle,
-.slideshow-toggle {
+.slideshow-toggle,
+.thumbnail-size-toggle {
   display: flex;
   background-color: var(--color-bg-tertiary);
   border: 1px solid var(--color-border);

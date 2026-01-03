@@ -12,6 +12,52 @@
   @media (min-width: 1024px) {
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   }
+
+  // Medium thumbnail size
+  &.size-medium {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: var(--spacing-md);
+
+    @media (min-width: 768px) {
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    }
+
+    @media (min-width: 1024px) {
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    }
+
+    .gallery-name {
+      padding: var(--spacing-xs);
+      font-size: 0.8125rem;
+    }
+
+    .thumbnail-placeholder-gallery {
+      font-size: 2.5rem;
+    }
+  }
+
+  // Small thumbnail size
+  &.size-small {
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: var(--spacing-sm);
+
+    @media (min-width: 768px) {
+      grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    }
+
+    @media (min-width: 1024px) {
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    }
+
+    .gallery-name {
+      padding: 4px;
+      font-size: 0.6875rem;
+    }
+
+    .thumbnail-placeholder-gallery {
+      font-size: 1.5rem;
+    }
+  }
 }
 
 .gallery-item {
