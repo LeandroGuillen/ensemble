@@ -35,7 +35,7 @@ export class SidebarComponent implements OnInit {
       label: 'Characters',
       items: [
         { icon: 'users', label: 'Characters', route: '/characters', title: 'Characters' },
-        { icon: 'git-branch', label: 'Relationships', route: '/graph', title: 'Relationships' },
+        { icon: 'git-branch', label: 'Pinboard', route: '/pinboard', title: 'Pinboard' },
         { icon: 'theater', label: 'Casts', route: '/casts', title: 'Casts' }
       ]
     },

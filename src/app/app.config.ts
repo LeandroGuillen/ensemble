@@ -6,7 +6,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { routes } from './app.routes';
 
 // Core Services
-import { CharacterService, ProjectService, RelationshipService, FileWatcherService } from './core/services';
+import { CharacterService, ProjectService, PinboardService, FileWatcherService } from './core/services';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -15,7 +15,7 @@ export const appConfig: ApplicationConfig = {
     importProvidersFrom(FormsModule, ReactiveFormsModule),
     CharacterService,
     ProjectService,
-    RelationshipService,
+    PinboardService,
     FileWatcherService
   ]
 };

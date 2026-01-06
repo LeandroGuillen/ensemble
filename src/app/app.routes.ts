@@ -36,10 +36,10 @@ export const routes: Routes = [
     canActivate: [projectGuard],
   },
   {
-    path: "graph",
+    path: "pinboard",
     loadComponent: () =>
-      import("./features/graph-view/graph-view.component").then(
-        (m) => m.GraphViewComponent
+      import("./features/pinboard-view/pinboard-view.component").then(
+        (m) => m.PinboardViewComponent
       ),
     canActivate: [projectGuard],
   },

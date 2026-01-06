@@ -1,0 +1,26 @@
+<div class="color-selector">
+  <label [for]="'colorPicker-' + label">{{ label }}:</label>
+  <div class="color-selector-content">
+    <input 
+      type="color" 
+      [id]="'colorPicker-' + label"
+      [value]="color"
+      (input)="onColorChange($any($event.target).value)"
+    />
+    <div class="quick-colors" *ngIf="filteredUsedColors.length > 0">
+      <span class="quick-colors-label">Quick select:</span>
+      <div class="color-swatches">
+        <button
+          *ngFor="let usedColor of filteredUsedColors"
+          type="button"
+          class="color-swatch"
+          [style.background-color]="usedColor"
+          [title]="usedColor"
+          (click)="selectColor(usedColor)"
+          [class.active]="color === usedColor"
+        ></button>
+      </div>
+    </div>
+  </div>
+</div>
+

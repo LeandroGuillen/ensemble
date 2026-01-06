@@ -1,20 +1,20 @@
-import { Relationship, GraphNode, GraphData } from '../interfaces/relationship.interface';
+import { PinboardConnection, PinboardPin, PinboardData } from '../interfaces/pinboard.interface';
 import { ValidationResult, ValidationError } from '../interfaces/validation.interface';
 
-export class RelationshipValidator {
-  static validateRelationship(relationship: Relationship): ValidationResult {
+export class PinboardValidator {
+  static validateConnection(connection: PinboardConnection): ValidationResult {
     const errors: ValidationError[] = [];
 
     // Required field validations
-    if (!relationship.id || relationship.id.trim().length === 0) {
+    if (!connection.id || connection.id.trim().length === 0) {
       errors.push({
         field: 'id',
-        message: 'Relationship ID is required',
+        message: 'Connection ID is required',
         code: 'REQUIRED_FIELD'
       });
     }
 
-    if (!relationship.source || relationship.source.trim().length === 0) {
+    if (!connection.source || connection.source.trim().length === 0) {
       errors.push({
         field: 'source',
         message: 'Source character ID is required',
@@ -22,7 +22,7 @@ export class RelationshipValidator {
       });
     }
 
-    if (!relationship.target || relationship.target.trim().length === 0) {
+    if (!connection.target || connection.target.trim().length === 0) {
       errors.push({
         field: 'target',
         message: 'Target character ID is required',
@@ -30,32 +30,32 @@ export class RelationshipValidator {
       });
     }
 
-    if (!relationship.type || relationship.type.trim().length === 0) {
+    if (!connection.type || connection.type.trim().length === 0) {
       errors.push({
         field: 'type',
-        message: 'Relationship type is required',
+        message: 'Connection type is required',
         code: 'REQUIRED_FIELD'
       });
     }
 
-    if (!relationship.label || relationship.label.trim().length === 0) {
+    if (!connection.label || connection.label.trim().length === 0) {
       errors.push({
         field: 'label',
-        message: 'Relationship label is required',
+        message: 'Connection label is required',
         code: 'REQUIRED_FIELD'
       });
     }
 
-    if (!relationship.color || relationship.color.trim().length === 0) {
+    if (!connection.color || connection.color.trim().length === 0) {
       errors.push({
         field: 'color',
-        message: 'Relationship color is required',
+        message: 'Connection color is required',
         code: 'REQUIRED_FIELD'
       });
     }
 
     // Data type validations
-    if (typeof relationship.bidirectional !== 'boolean') {
+    if (typeof connection.bidirectional !== 'boolean') {
       errors.push({
         field: 'bidirectional',
         message: 'Bidirectional must be a boolean value',
@@ -64,17 +64,17 @@ export class RelationshipValidator {
     }
 
     // Self-reference validation
-    if (relationship.source === relationship.target) {
+    if (connection.source === connection.target) {
       errors.push({
         field: 'target',
-        message: 'A character cannot have a relationship with themselves',
+        message: 'A character cannot have a connection with themselves',
         code: 'SELF_REFERENCE'
       });
     }
 
     // Color format validation (hex color)
     const hexColorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
-    if (relationship.color && !hexColorRegex.test(relationship.color)) {
+    if (connection.color && !hexColorRegex.test(connection.color)) {
       errors.push({
         field: 'color',
         message: 'Color must be a valid hex color (e.g., #FF0000)',
@@ -88,35 +88,35 @@ export class RelationshipValidator {
     };
   }
 
-  static validateGraphNode(node: GraphNode): ValidationResult {
+  static validatePin(pin: PinboardPin): ValidationResult {
     const errors: ValidationError[] = [];
 
     // Required field validations
-    if (!node.id || node.id.trim().length === 0) {
+    if (!pin.id || pin.id.trim().length === 0) {
       errors.push({
         field: 'id',
-        message: 'Node ID is required',
+        message: 'Pin ID is required',
         code: 'REQUIRED_FIELD'
       });
     }
 
-    if (!node.name || node.name.trim().length === 0) {
+    if (!pin.name || pin.name.trim().length === 0) {
       errors.push({
         field: 'name',
-        message: 'Node name is required',
+        message: 'Pin name is required',
         code: 'REQUIRED_FIELD'
       });
     }
 
     // Position validation
-    if (!node.position || typeof node.position !== 'object') {
+    if (!pin.position || typeof pin.position !== 'object') {
       errors.push({
         field: 'position',
-        message: 'Node position is required and must be an object',
+        message: 'Pin position is required and must be an object',
         code: 'REQUIRED_FIELD'
       });
     } else {
-      if (typeof node.position.x !== 'number' || isNaN(node.position.x)) {
+      if (typeof pin.position.x !== 'number' || isNaN(pin.position.x)) {
         errors.push({
           field: 'position.x',
           message: 'Position x must be a valid number',
@@ -124,7 +124,7 @@ export class RelationshipValidator {
         });
       }
 
-      if (typeof node.position.y !== 'number' || isNaN(node.position.y)) {
+      if (typeof pin.position.y !== 'number' || isNaN(pin.position.y)) {
         errors.push({
           field: 'position.y',
           message: 'Position y must be a valid number',
@@ -134,9 +134,9 @@ export class RelationshipValidator {
     }
 
     // Optional color validation
-    if (node.color) {
+    if (pin.color) {
       const hexColorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
-      if (!hexColorRegex.test(node.color)) {
+      if (!hexColorRegex.test(pin.color)) {
         errors.push({
           field: 'color',
           message: 'Color must be a valid hex color (e.g., #FF0000)',
@@ -151,11 +151,11 @@ export class RelationshipValidator {
     };
   }
 
-  static validateGraphData(graphData: GraphData): ValidationResult {
+  static validatePinboardData(pinboardData: PinboardData): ValidationResult {
     const errors: ValidationError[] = [];
 
     // Validate nodes array
-    if (!Array.isArray(graphData.nodes)) {
+    if (!Array.isArray(pinboardData.nodes)) {
       errors.push({
         field: 'nodes',
         message: 'Nodes must be an array',
@@ -163,8 +163,8 @@ export class RelationshipValidator {
       });
     } else {
       // Validate each node
-      graphData.nodes.forEach((node, index) => {
-        const nodeValidation = this.validateGraphNode(node);
+      pinboardData.nodes.forEach((node, index) => {
+        const nodeValidation = this.validatePin(node);
         if (!nodeValidation.isValid) {
           nodeValidation.errors.forEach(error => {
             errors.push({
@@ -177,19 +177,19 @@ export class RelationshipValidator {
       });
 
       // Check for duplicate node IDs
-      const nodeIds = graphData.nodes.map(node => node.id);
+      const nodeIds = pinboardData.nodes.map(node => node.id);
       const duplicateIds = nodeIds.filter((id, index) => nodeIds.indexOf(id) !== index);
       if (duplicateIds.length > 0) {
         errors.push({
           field: 'nodes',
-          message: `Duplicate node IDs found: ${duplicateIds.join(', ')}`,
+          message: `Duplicate pin IDs found: ${duplicateIds.join(', ')}`,
           code: 'DUPLICATE_ID'
         });
       }
     }
 
     // Validate edges array
-    if (!Array.isArray(graphData.edges)) {
+    if (!Array.isArray(pinboardData.edges)) {
       errors.push({
         field: 'edges',
         message: 'Edges must be an array',
@@ -197,8 +197,8 @@ export class RelationshipValidator {
       });
     } else {
       // Validate each edge
-      graphData.edges.forEach((edge, index) => {
-        const edgeValidation = this.validateRelationship(edge);
+      pinboardData.edges.forEach((edge, index) => {
+        const edgeValidation = this.validateConnection(edge);
         if (!edgeValidation.isValid) {
           edgeValidation.errors.forEach(error => {
             errors.push({
@@ -211,13 +211,13 @@ export class RelationshipValidator {
       });
 
       // Validate edge references to nodes
-      if (Array.isArray(graphData.nodes)) {
-        const nodeIds = graphData.nodes.map(node => node.id);
-        graphData.edges.forEach((edge, index) => {
+      if (Array.isArray(pinboardData.nodes)) {
+        const nodeIds = pinboardData.nodes.map(node => node.id);
+        pinboardData.edges.forEach((edge, index) => {
           if (!nodeIds.includes(edge.source)) {
             errors.push({
               field: `edges[${index}].source`,
-              message: `Source node '${edge.source}' does not exist`,
+              message: `Source pin '${edge.source}' does not exist`,
               code: 'INVALID_REFERENCE'
             });
           }
@@ -225,7 +225,7 @@ export class RelationshipValidator {
           if (!nodeIds.includes(edge.target)) {
             errors.push({
               field: `edges[${index}].target`,
-              message: `Target node '${edge.target}' does not exist`,
+              message: `Target pin '${edge.target}' does not exist`,
               code: 'INVALID_REFERENCE'
             });
           }
@@ -239,3 +239,4 @@ export class RelationshipValidator {
     };
   }
 }
+

@@ -8,22 +8,29 @@ export interface ProjectMetadata {
   imageTags?: string[]; // Image tags for character image library
   settings: ProjectSettings;
   relationships?: {
-    nodes: GraphNode[];
-    edges: Relationship[];
+    nodes: PinboardPin[];
+    edges: PinboardConnection[];
   };
 }
 
-export interface Relationship {
+// Legacy type aliases for backward compatibility with JSON data
+export type Relationship = PinboardConnection;
+export type GraphNode = PinboardPin;
+
+export interface PinboardConnection {
   id: string;
   source: string;
   target: string;
   type: string;
   label: string;
   color: string;
-  bidirectional: boolean;
+  labelColor?: string; // Optional: color for the label text (defaults to white with black outline)
+  bidirectional: boolean; // Legacy: true = both arrows, false = arrow to target only
+  arrowFrom?: boolean; // Optional: arrow pointing from source
+  arrowTo?: boolean;    // Optional: arrow pointing to target
 }
 
-export interface GraphNode {
+export interface PinboardPin {
   id: string;
   name: string;
   position: { x: number; y: number };
@@ -86,12 +93,16 @@ export interface ProjectSettings {
   autoSave: boolean;
   fileWatchEnabled: boolean;
   lastRoute?: string;
-  graphView?: GraphViewState;
+  graphView?: PinboardViewState; // Legacy name for backward compatibility
+  pinboardView?: PinboardViewState;
   ai?: AiSettings;
   filterExpanded?: boolean;
 }
 
-export interface GraphViewState {
+// Legacy type alias for backward compatibility
+export type GraphViewState = PinboardViewState;
+
+export interface PinboardViewState {
   zoomIndex: number;
   viewPosition: { x: number; y: number };
 }

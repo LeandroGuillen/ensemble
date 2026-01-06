@@ -5,6 +5,9 @@ import {
   Category,
   GraphNode,
   GraphViewState,
+  PinboardPin,
+  PinboardConnection,
+  PinboardViewState,
   Project,
   ProjectMetadata,
   Relationship,
@@ -446,25 +449,44 @@ export class ProjectService {
 
 
   /**
-   * Saves graph view state to project settings
+   * Saves pinboard view state to project settings
    */
-  async saveGraphViewState(state: GraphViewState): Promise<void> {
+  async savePinboardViewState(state: PinboardViewState): Promise<void> {
     const project = this.currentProjectSubject.value;
     if (!project) {
       throw new Error('No project loaded');
     }
 
+    // Save to both new and legacy fields for backward compatibility
+    project.metadata.settings.pinboardView = state;
     project.metadata.settings.graphView = state;
     await this.saveMetadata(project.path, project.metadata);
     this.currentProjectSubject.next({ ...project });
   }
 
   /**
-   * Gets the saved graph view state from project settings
+   * Gets the saved pinboard view state from project settings
+   */
+  getPinboardViewState(): PinboardViewState | null {
+    const project = this.currentProjectSubject.value;
+    // Check new field first, then fall back to legacy field
+    return project?.metadata.settings.pinboardView || project?.metadata.settings.graphView || null;
+  }
+
+  /**
+   * @deprecated Use savePinboardViewState() instead
+   * Legacy method for backward compatibility
+   */
+  async saveGraphViewState(state: GraphViewState): Promise<void> {
+    return this.savePinboardViewState(state);
+  }
+
+  /**
+   * @deprecated Use getPinboardViewState() instead
+   * Legacy method for backward compatibility
    */
   getGraphViewState(): GraphViewState | null {
-    const project = this.currentProjectSubject.value;
-    return project?.metadata.settings.graphView || null;
+    return this.getPinboardViewState();
   }
 
   /**
@@ -522,24 +544,40 @@ export class ProjectService {
   }
 
   /**
-   * Gets relationships data from the current project
+   * Gets pinboard data from the current project
    */
-  getRelationships(): { nodes: GraphNode[]; edges: Relationship[] } {
+  getPinboard(): { nodes: PinboardPin[]; edges: PinboardConnection[] } {
     const project = this.currentProjectSubject.value;
     return project?.metadata.relationships || { nodes: [], edges: [] };
   }
 
   /**
-   * Updates relationships data in the current project
+   * Updates pinboard data in the current project
    */
-  async updateRelationships(relationships: { nodes: GraphNode[]; edges: Relationship[] }): Promise<void> {
+  async updatePinboard(pinboard: { nodes: PinboardPin[]; edges: PinboardConnection[] }): Promise<void> {
     const project = this.currentProjectSubject.value;
     if (!project) {
       throw new Error('No project loaded');
     }
 
-    project.metadata.relationships = relationships;
+    project.metadata.relationships = pinboard;
     await this.saveMetadata(project.path, project.metadata);
     this.currentProjectSubject.next({ ...project });
+  }
+
+  /**
+   * @deprecated Use getPinboard() instead
+   * Legacy method for backward compatibility
+   */
+  getRelationships(): { nodes: GraphNode[]; edges: Relationship[] } {
+    return this.getPinboard();
+  }
+
+  /**
+   * @deprecated Use updatePinboard() instead
+   * Legacy method for backward compatibility
+   */
+  async updateRelationships(relationships: { nodes: GraphNode[]; edges: Relationship[] }): Promise<void> {
+    return this.updatePinboard(relationships);
   }
 }
