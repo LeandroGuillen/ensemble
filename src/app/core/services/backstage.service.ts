@@ -32,6 +32,10 @@ export class BackstageService {
     return this.backstageData$.asObservable();
   }
 
+  getCurrentProjectPath(): string | null {
+    return this.currentProjectPath;
+  }
+
   private getCharactersFolderPath(): string {
     if (!this.currentProjectPath) {
       throw new Error('No project loaded');
@@ -153,12 +157,67 @@ export class BackstageService {
       const lines = section.split('\n');
       const titleLine = lines[0].trim();
 
-      // Parse names from list items
-      const names: string[] = [];
-      for (const line of lines) {
+      // Parse names with notes from list items
+      const names: Array<{ name: string; notes?: string }> = [];
+      let i = 1; // Start after title line
+      
+      while (i < lines.length) {
+        const line = lines[i];
         const trimmed = line.trim();
-        if (trimmed.startsWith('- ')) {
-          names.push(trimmed.substring(2).trim());
+        
+        // Check if this is a main bullet (starts with `- ` and is not indented)
+        if (trimmed.startsWith('- ') && !line.startsWith(' ') && !line.startsWith('\t')) {
+          const name = trimmed.substring(2).trim();
+          const notes: string[] = [];
+          
+          // Collect following indented lines as notes
+          i++;
+          while (i < lines.length) {
+            const nextLine = lines[i];
+            const nextTrimmed = nextLine.trim();
+            
+            // Check if this is an indented bullet (2+ spaces or tab + `- `)
+            const isIndented = (nextLine.startsWith('  ') || nextLine.startsWith('\t')) && 
+                               nextTrimmed.startsWith('- ');
+            
+            if (isIndented) {
+              // Extract note text (remove bullet marker)
+              const noteText = nextTrimmed.substring(2).trim();
+              if (noteText) {
+                notes.push(noteText);
+              }
+              i++;
+            } else if (nextLine.trim() === '' || nextTrimmed.startsWith('- ')) {
+              // Empty line or next main bullet - stop collecting notes
+              break;
+            } else if (nextLine.startsWith(' ') || nextLine.startsWith('\t')) {
+              // Continuation of previous note (indented but not a bullet)
+              const noteText = nextTrimmed;
+              if (noteText) {
+                if (notes.length > 0) {
+                  notes[notes.length - 1] += ' ' + noteText;
+                } else {
+                  notes.push(noteText);
+                }
+              }
+              i++;
+            } else {
+              // Non-indented, non-bullet line - stop collecting
+              break;
+            }
+          }
+          
+          // Add tab prefix to each note line for internal storage
+          const notesWithTabs = notes.length > 0 
+            ? notes.map(note => note.startsWith('\t') ? note : `\t${note}`).join('\n')
+            : undefined;
+          
+          names.push({
+            name,
+            notes: notesWithTabs,
+          });
+        } else {
+          i++;
         }
       }
 
@@ -174,7 +233,25 @@ export class BackstageService {
   private async saveNameLists(nameLists: NameList[]): Promise<void> {
     const content = nameLists
       .map((list) => {
-        const nameItems = list.names.map((name) => `- ${name}`).join('\n');
+        const nameItems = list.names
+          .map((nameItem) => {
+            let result = `- ${nameItem.name}`;
+            if (nameItem.notes) {
+              // Split notes by newlines and add as indented bullets
+              // Use tab character for indentation in markdown
+              const noteLines = nameItem.notes.split('\n').filter((n) => n.trim());
+              if (noteLines.length > 0) {
+                const indentedNotes = noteLines.map((note) => {
+                  // Remove leading tab if present, then add markdown indentation with tab
+                  const cleanedNote = note.startsWith('\t') ? note.substring(1) : note;
+                  return `\t- ${cleanedNote.trim()}`;
+                }).join('\n');
+                result += '\n' + indentedNotes;
+              }
+            }
+            return result;
+          })
+          .join('\n');
         return `## ${list.title}\n\n${nameItems}\n`;
       })
       .join('\n');
@@ -220,7 +297,16 @@ export class BackstageService {
   // Name list methods
   async addNameList(nameList: NameList): Promise<void> {
     const data = this.backstageData$.value;
-    data.nameLists.push(nameList);
+    // Ensure names array has the correct structure
+    const normalizedNameList: NameList = {
+      title: nameList.title,
+      names: nameList.names.map((name) => 
+        typeof name === 'string' 
+          ? { name } 
+          : name
+      ),
+    };
+    data.nameLists.push(normalizedNameList);
     await this.saveNameLists(data.nameLists);
     this.backstageData$.next(data);
   }

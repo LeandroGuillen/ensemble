@@ -1,4 +1,11 @@
-<div class="concept-card">
+<div
+  class="concept-card"
+  [class.focused]="isFocused"
+  [class.dimmed]="isDimmed"
+  [class.selected]="isSelected"
+  (dblclick)="onFocus()"
+  tabindex="0"
+>
   <div class="concept-header">
     <input
       type="text"

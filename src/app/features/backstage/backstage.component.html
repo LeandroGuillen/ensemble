@@ -1,6 +1,24 @@
 <div class="backstage-container">
   <app-page-header [title]="'Backstage'">
     <div class="page-actions">
+      <div class="search-container">
+        <input
+          type="text"
+          class="search-input"
+          data-search-input
+          [(ngModel)]="searchQuery"
+          (ngModelChange)="onSearchChange()"
+          [placeholder]="activeTab === 'concepts' ? 'Search concepts...' : 'Search name lists...'"
+        />
+        <button
+          class="btn-icon"
+          *ngIf="searchQuery"
+          (click)="clearSearch()"
+          title="Clear search"
+        >
+          ×
+        </button>
+      </div>
       <button
         class="btn btn-ghost"
         (click)="reload()"
@@ -9,10 +27,27 @@
       >
         Reload
       </button>
-      <button class="btn btn-secondary" (click)="addNameList()">
+      <button
+        *ngIf="activeTab === 'nameLists'"
+        class="btn-icon"
+        [class.active]="showSorted"
+        (click)="toggleSortedView()"
+        title="Show sorted"
+      >
+        ⇅
+      </button>
+      <button
+        *ngIf="activeTab === 'nameLists'"
+        class="btn btn-secondary"
+        (click)="addNameList()"
+      >
         New Name List
       </button>
-      <button class="btn btn-primary" (click)="addConcept()">
+      <button
+        *ngIf="activeTab === 'concepts'"
+        class="btn btn-primary"
+        (click)="addConcept()"
+      >
         New Concept
       </button>
     </div>
@@ -22,55 +57,301 @@
     <p class="error-message">{{ error }}</p>
   </div>
 
+  <div class="tabs-container">
+    <div class="tabs">
+      <button
+        class="tab"
+        [class.active]="activeTab === 'concepts'"
+        (click)="setActiveTab('concepts')"
+      >
+        Character Concepts
+        <span class="tab-count"
+          >({{ searchQuery ? filteredConcepts.length + " / " : "" }}{{
+            concepts.length
+          }})</span
+        >
+      </button>
+      <button
+        class="tab"
+        [class.active]="activeTab === 'nameLists'"
+        (click)="setActiveTab('nameLists')"
+      >
+        Name Lists
+        <span class="tab-count"
+          >({{ searchQuery ? filteredNameLists.length + " / " : "" }}{{
+            nameLists.length
+          }})</span
+        >
+      </button>
+    </div>
+    <div class="shortcuts-help" *ngIf="activeTab === 'nameLists'">
+      <span class="shortcut-item">↑↓ Navigate</span>
+      <span class="shortcut-item">ENTER Edit</span>
+      <span class="shortcut-item">C Comment</span>
+      <span class="shortcut-item">S Strikethrough</span>
+      <span class="shortcut-item">N New</span>
+      <span class="shortcut-item">DEL Delete</span>
+    </div>
+    <div class="shortcuts-help" *ngIf="activeTab === 'concepts'">
+      <span class="shortcut-item">↑↓ Navigate</span>
+      <span class="shortcut-item">ENTER Select</span>
+    </div>
+  </div>
+
   <div class="backstage-content">
-    <!-- Concepts Section -->
-    <div class="backstage-section">
-      <div class="section-header">
-        <h3>Concepts</h3>
-        <span class="count">({{ concepts.length }})</span>
+    <!-- Concepts Master-Detail View -->
+    <div class="master-detail-view" *ngIf="activeTab === 'concepts'">
+      <!-- Left: List View -->
+      <div class="master-panel">
+        <div class="panel-header">
+          <h3>Concepts</h3>
+          <button
+            class="btn-icon"
+            (click)="openConceptsInEditor()"
+            title="Open concepts.md in system editor"
+          >
+            📝
+          </button>
+        </div>
+        <div class="master-list" *ngIf="filteredConcepts.length > 0">
+          <div
+            class="master-item concept-item"
+            *ngFor="let concept of filteredConcepts; let i = index"
+            [class.selected]="concepts.indexOf(concept) === selectedConceptIndex"
+            [class.editing]="editingConceptTitleIndex === concepts.indexOf(concept)"
+            [attr.data-index]="i"
+          >
+            <div class="concept-item-content" (click)="selectConcept(concepts.indexOf(concept))">
+              <div class="item-title" *ngIf="editingConceptTitleIndex !== concepts.indexOf(concept)">
+                {{ concept.title || "Untitled Concept" }}
+              </div>
+              <input
+                *ngIf="editingConceptTitleIndex === concepts.indexOf(concept)"
+                type="text"
+                class="form-control concept-title-input"
+                [value]="concept.title || ''"
+                (blur)="onConceptTitleBlur(concepts.indexOf(concept), $any($event.target).value)"
+                (keyup.enter)="$any($event.target).blur()"
+                (keyup.escape)="cancelEditConceptTitle()"
+                #conceptTitleInput
+              />
+              <div class="item-preview" *ngIf="concept.notes">
+                {{ concept.notes.substring(0, 100)
+                }}{{ concept.notes.length > 100 ? "..." : "" }}
+              </div>
+            </div>
+            <div class="master-item-actions" (click)="$event.stopPropagation()">
+              <button
+                class="btn-icon-sm"
+                (click)="startEditConceptTitle(concepts.indexOf(concept))"
+                title="Edit concept title"
+                *ngIf="editingConceptTitleIndex !== concepts.indexOf(concept)"
+              >
+                ✏️
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="empty-state" *ngIf="filteredConcepts.length === 0">
+          <p class="text-muted">
+            <span *ngIf="searchQuery">No concepts match your search.</span>
+            <span *ngIf="!searchQuery"
+              >No character concepts yet. Click "New Concept" to start
+              brainstorming!</span
+            >
+          </p>
+        </div>
       </div>
 
-      <div class="concepts-list" *ngIf="concepts.length > 0">
-        <app-concept-card
-          *ngFor="let concept of concepts; let i = index"
-          [concept]="concept"
-          [index]="i"
-          (update)="updateConcept(i, $event)"
-          (delete)="deleteConcept(i)"
-          (takeTheStage)="takeTheStage(concept)"
-        ></app-concept-card>
+      <!-- Right: Detail View -->
+      <div class="detail-panel" *ngIf="getSelectedConcept()">
+        <div class="detail-header">
+          <div class="detail-actions">
+            <button
+              class="btn btn-secondary btn-sm"
+              (click)="takeTheStage(getSelectedConcept()!)"
+              title="Take the Stage - Create character from this concept"
+            >
+              ⭐ Take the Stage
+            </button>
+            <button
+              class="btn btn-ghost btn-sm"
+              (click)="deleteConcept(selectedConceptIndex!)"
+              title="Delete concept"
+            >
+              🗑️ Delete
+            </button>
+          </div>
+        </div>
+        <div class="detail-content">
+          <div class="notes-view-mode" *ngIf="!editingConceptNotes" (click)="toggleEditNotes()">
+            <div class="markdown-content" [innerHTML]="renderMarkdown(getSelectedConcept()?.notes)"></div>
+            <div class="edit-hint">Click to edit</div>
+          </div>
+          <textarea
+            *ngIf="editingConceptNotes"
+            class="form-control notes-textarea"
+            [value]="getSelectedConcept()?.notes || ''"
+            (blur)="updateConcept(selectedConceptIndex!, { notes: $any($event.target).value }); editingConceptNotes = false"
+            (keydown.escape)="editingConceptNotes = false"
+            placeholder="Jot down your ideas here... (Markdown supported)"
+            #notesTextarea
+          ></textarea>
+        </div>
       </div>
-
-      <div class="empty-state" *ngIf="concepts.length === 0">
-        <p class="text-muted">
-          No character concepts yet. Click "New Concept" to start brainstorming!
-        </p>
+      <div class="detail-panel empty-detail" *ngIf="!getSelectedConcept()">
+        <div class="empty-detail-message">
+          <p>Select a concept from the list to view and edit it.</p>
+        </div>
       </div>
     </div>
 
-    <!-- Name Lists Section -->
-    <div class="backstage-section">
-      <div class="section-header">
-        <h3>Name Lists</h3>
-        <span class="count">({{ nameLists.length }})</span>
+    <!-- Name Lists Master-Detail View -->
+    <div class="master-detail-view" *ngIf="activeTab === 'nameLists'">
+      <!-- Left: List View -->
+      <div class="master-panel">
+        <div class="panel-header">
+          <h3>Name Lists</h3>
+          <button
+            class="btn-icon"
+            (click)="openNamesInEditor()"
+            title="Open names.md in system editor"
+          >
+            📝
+          </button>
+        </div>
+        <div class="master-list" *ngIf="filteredNameLists.length > 0">
+          <div
+            class="master-item"
+            *ngFor="let nameList of filteredNameLists; let i = index"
+            [class.selected]="nameLists.indexOf(nameList) === selectedNameListIndex"
+            [class.editing]="editingNameListIndex === nameLists.indexOf(nameList)"
+            [attr.data-index]="i"
+          >
+            <div class="master-item-content" (click)="selectNameList(nameLists.indexOf(nameList))">
+              <div class="item-title" *ngIf="editingNameListIndex !== nameLists.indexOf(nameList)">
+                {{ nameList.title }}
+              </div>
+              <input
+                *ngIf="editingNameListIndex === nameLists.indexOf(nameList)"
+                type="text"
+                class="form-control item-title-input"
+                [value]="nameList.title"
+                (blur)="onNameListTitleBlur(nameLists.indexOf(nameList), $any($event.target).value)"
+                (keyup.enter)="$any($event.target).blur()"
+                (keyup.escape)="cancelEditNameList()"
+                #nameListTitleInput
+              />
+              <div class="item-preview">
+                {{ nameList.names.length }} name{{ nameList.names.length !== 1 ? "s" : "" }}
+              </div>
+            </div>
+            <div class="master-item-actions" (click)="$event.stopPropagation()">
+              <button
+                class="btn-icon-sm"
+                (click)="startEditNameList(nameLists.indexOf(nameList))"
+                title="Edit name list"
+                *ngIf="editingNameListIndex !== nameLists.indexOf(nameList)"
+              >
+                ✏️
+              </button>
+              <button
+                class="btn-icon-sm"
+                (click)="deleteNameList(nameLists.indexOf(nameList))"
+                title="Delete name list"
+              >
+                🗑️
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="empty-state" *ngIf="filteredNameLists.length === 0">
+          <p class="text-muted">
+            <span *ngIf="searchQuery">No name lists match your search.</span>
+            <span *ngIf="!searchQuery"
+              >No name lists yet. Click "New Name List" to organize your character
+              names!</span
+            >
+          </p>
+        </div>
       </div>
 
-      <div class="name-lists" *ngIf="nameLists.length > 0">
-        <app-name-list-card
-          *ngFor="let nameList of nameLists; let i = index"
-          [nameList]="nameList"
-          [index]="i"
-          (update)="updateNameList(i, $event)"
-          (delete)="deleteNameList(i)"
-          (takeTheStage)="takeTheStageWithName($event)"
-        ></app-name-list-card>
+      <!-- Right: Detail View -->
+      <div class="detail-panel names-panel" *ngIf="getSelectedNameList()" tabindex="0" (focus)="onNamesPanelFocus()" (click)="onNamesPanelClick($event)">
+        <div class="names-list-container">
+          <div
+            class="name-item"
+            *ngFor="let nameItem of getDisplayNames(); let i = index"
+            [class.selected]="getOriginalIndex(i) === selectedNameIndex"
+            [class.editing]="getOriginalIndex(i) === editingNameIndex"
+            (click)="selectNameItem(getOriginalIndex(i))"
+          >
+            <div class="name-item-content">
+              <span class="name-bullet">•</span>
+              <span class="name-text" *ngIf="getOriginalIndex(i) !== editingNameIndex" [innerHTML]="formatNameForDisplay(nameItem.name)"></span>
+              <input
+                *ngIf="getOriginalIndex(i) === editingNameIndex"
+                type="text"
+                class="name-input-inline"
+                [value]="nameItem.name"
+                (blur)="onNameItemChange(getOriginalIndex(i), 'name', $any($event.target).value); finishEditName()"
+                (keydown.enter)="$event.preventDefault(); onNameItemChange(getOriginalIndex(i), 'name', $any($event.target).value); finishEditName()"
+                (keydown.escape)="$event.preventDefault(); finishEditName()"
+                #nameInput
+              />
+              <span 
+                class="name-comment" 
+                *ngIf="nameItem.notes && getOriginalIndex(i) !== editingCommentIndex"
+              >
+                {{ getCommentForDisplay(nameItem.notes) }}
+              </span>
+              <input
+                *ngIf="getOriginalIndex(i) === editingCommentIndex"
+                type="text"
+                class="comment-input-inline"
+                [value]="getCommentForDisplay(nameItem.notes)"
+                (blur)="onNameItemChange(getOriginalIndex(i), 'notes', $any($event.target).value); finishEditComment()"
+                (keydown.enter)="$event.preventDefault(); onNameItemChange(getOriginalIndex(i), 'notes', $any($event.target).value); finishEditComment()"
+                (keydown.escape)="$event.preventDefault(); finishEditComment()"
+                placeholder="Comment..."
+                #commentInput
+              />
+            </div>
+            <div class="name-item-actions" (click)="$event.stopPropagation()">
+              <button
+                class="btn-icon-xs"
+                (click)="takeTheStageWithName(nameItem.name)"
+                title="Take the Stage"
+              >
+                ⭐
+              </button>
+              <button
+                class="btn-icon-xs"
+                (click)="onRemoveNameItem(getOriginalIndex(i))"
+                title="Remove"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+          <div class="add-name-item">
+            <span class="name-bullet">+</span>
+            <input
+              type="text"
+              class="add-name-input"
+              [(ngModel)]="newNameInput"
+              (keydown.enter)="$event.preventDefault(); onAddNameToSelectedList()"
+              (keydown.escape)="$event.preventDefault(); onEscapeAddName()"
+              placeholder="Add name (ENTER to add)"
+              #addNameInput
+            />
+          </div>
+        </div>
       </div>
-
-      <div class="empty-state" *ngIf="nameLists.length === 0">
-        <p class="text-muted">
-          No name lists yet. Click "New Name List" to organize your character
-          names!
-        </p>
+      <div class="detail-panel empty-detail" *ngIf="!getSelectedNameList()">
+        <div class="empty-detail-message">
+          <p>Select a name list from the list to view and edit it.</p>
+        </div>
       </div>
     </div>
   </div>

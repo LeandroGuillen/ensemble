@@ -13,9 +13,13 @@ import { CharacterConcept } from "../../../../core/interfaces/backstage.interfac
 export class ConceptCardComponent {
   @Input() concept!: CharacterConcept;
   @Input() index!: number;
+  @Input() isFocused = false;
+  @Input() isDimmed = false;
+  @Input() isSelected = false;
   @Output() update = new EventEmitter<Partial<CharacterConcept>>();
   @Output() delete = new EventEmitter<void>();
   @Output() takeTheStage = new EventEmitter<void>();
+  @Output() focus = new EventEmitter<void>();
 
   onTitleChange(title: string): void {
     this.update.emit({ title });
@@ -33,5 +37,9 @@ export class ConceptCardComponent {
   onTakeTheStage(event: Event): void {
     event.stopPropagation();
     this.takeTheStage.emit();
+  }
+
+  onFocus(): void {
+    this.focus.emit();
   }
 }

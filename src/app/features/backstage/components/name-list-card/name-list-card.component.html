@@ -1,4 +1,11 @@
-<div class="name-list-card">
+<div
+  class="name-list-card"
+  [class.focused]="isFocused"
+  [class.dimmed]="isDimmed"
+  [class.selected]="isSelected"
+  (dblclick)="onFocus()"
+  tabindex="0"
+>
   <div class="name-list-header">
     <button
       class="icon-btn collapse-btn"
@@ -25,30 +32,54 @@
 
   <div class="name-list-content" *ngIf="!isCollapsed">
     <div class="names-list" *ngIf="nameList.names.length > 0">
-      <div class="name-item" *ngFor="let name of nameList.names; let i = index">
-        <input
-          type="text"
-          class="name-input"
-          [value]="name"
-          (blur)="onNameChange(i, $any($event.target).value)"
-          (keyup.enter)="$any($event.target).blur()"
-          placeholder="Name"
-        />
-        <div class="name-actions">
-          <button
-            class="icon-btn-sm"
-            (click)="onTakeTheStage(name, $event)"
-            title="Take the Stage - Create character with this name"
-          >
-            ⭐
-          </button>
-          <button
-            class="icon-btn-sm"
-            (click)="onRemoveName(i)"
-            title="Remove name"
-          >
-            ×
-          </button>
+      <div
+        class="name-item"
+        [class.selected]="isNameSelected(i)"
+        *ngFor="let nameItem of nameList.names; let i = index"
+      >
+        <div class="name-main">
+          <input
+            type="text"
+            class="name-input"
+            [value]="nameItem.name"
+            [attr.data-name-index]="i"
+            (blur)="onNameChange(i, $any($event.target).value)"
+            (keyup.enter)="$any($event.target).blur()"
+            placeholder="Name"
+          />
+          <div class="name-actions">
+            <button
+              class="icon-btn-sm"
+              (click)="onTakeTheStage(nameItem.name, $event)"
+              title="Take the Stage - Create character with this name"
+            >
+              ⭐
+            </button>
+            <button
+              class="icon-btn-sm notes-toggle"
+              *ngIf="hasNotes(i) || true"
+              (click)="toggleNotes(i)"
+              [title]="isNotesExpanded(i) ? 'Hide notes' : 'Show notes'"
+            >
+              {{ isNotesExpanded(i) ? '▼' : '▶' }}
+            </button>
+            <button
+              class="icon-btn-sm"
+              (click)="onRemoveName(i)"
+              title="Remove name"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+        <div class="name-notes" *ngIf="isNotesExpanded(i)">
+          <textarea
+            class="notes-textarea"
+            [value]="nameItem.notes || ''"
+            (blur)="onNotesChange(i, $any($event.target).value)"
+            placeholder="Add notes (sub-bullets)..."
+            rows="3"
+          ></textarea>
         </div>
       </div>
     </div>
@@ -58,20 +89,53 @@
     </div>
 
     <div class="add-name-form">
-      <input
-        type="text"
-        class="form-control"
-        [(ngModel)]="newNameInput"
-        (keyup.enter)="onAddName()"
-        placeholder="Add a name..."
-      />
-      <button
-        class="btn btn-secondary btn-sm"
-        (click)="onAddName()"
-        [disabled]="!newNameInput.trim()"
-      >
-        Add
-      </button>
+      <div *ngIf="!bulkAddMode" class="single-add-mode">
+        <input
+          type="text"
+          class="form-control"
+          data-new-name-input
+          [(ngModel)]="newNameInput"
+          (keyup.enter)="onAddName()"
+          placeholder="Add a name..."
+        />
+        <button
+          class="btn btn-secondary btn-sm"
+          (click)="onAddName()"
+          [disabled]="!newNameInput.trim()"
+        >
+          Add
+        </button>
+        <button
+          class="btn btn-ghost btn-sm"
+          (click)="toggleBulkAddMode()"
+          title="Bulk add mode"
+        >
+          Bulk Add
+        </button>
+      </div>
+      <div *ngIf="bulkAddMode" class="bulk-add-mode">
+        <textarea
+          class="form-control bulk-input"
+          [(ngModel)]="bulkInputText"
+          placeholder="Paste multiple names (one per line, or comma/semicolon separated)..."
+          rows="4"
+        ></textarea>
+        <div class="bulk-actions">
+          <button
+            class="btn btn-primary btn-sm"
+            (click)="onBulkAdd()"
+            [disabled]="!bulkInputText.trim()"
+          >
+            Add All
+          </button>
+          <button
+            class="btn btn-ghost btn-sm"
+            (click)="toggleBulkAddMode()"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </div>

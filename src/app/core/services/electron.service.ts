@@ -238,4 +238,11 @@ export class ElectronService {
     }
     return await this.ipcRenderer.invoke('save-recent-projects', projects);
   }
+
+  async openFileInEditor(filePath: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.isElectron()) {
+      return { success: false, error: 'Not running in Electron' };
+    }
+    return await this.ipcRenderer.invoke('open-file-in-editor', filePath);
+  }
 }

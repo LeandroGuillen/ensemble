@@ -3,9 +3,14 @@ export interface CharacterConcept {
   notes: string;
 }
 
+export interface NameWithNotes {
+  name: string;
+  notes?: string;
+}
+
 export interface NameList {
   title: string;
-  names: string[];
+  names: NameWithNotes[];
 }
 
 export interface BackstageData {

@@ -2,7 +2,10 @@
   position: relative;
   padding: var(--spacing-sm) 0;
   border-bottom: 1px solid var(--color-border-subtle);
-  transition: background-color var(--transition-fast);
+  transition: all var(--transition-fast);
+  border-radius: var(--radius-md);
+  margin: var(--spacing-xs) 0;
+  cursor: pointer;
 }
 
 .concept-card:last-child {
@@ -11,6 +14,27 @@
 
 .concept-card:hover {
   background: rgba(229, 168, 85, 0.02);
+}
+
+.concept-card.selected {
+  background: rgba(229, 168, 85, 0.05);
+  border-left: 3px solid var(--color-accent-primary);
+  padding-left: var(--spacing-sm);
+}
+
+.concept-card.focused {
+  background: var(--color-bg-elevated);
+  border: 2px solid var(--color-accent-primary);
+  box-shadow: 0 4px 12px rgba(229, 168, 85, 0.15);
+  padding: var(--spacing-md);
+  margin: var(--spacing-md) 0;
+  z-index: 10;
+}
+
+.concept-card.dimmed {
+  opacity: 0.4;
+  filter: blur(1px);
+  pointer-events: none;
 }
 
 .concept-card.dragging {
@@ -72,7 +96,8 @@
   transition: opacity var(--transition-fast);
 }
 
-.concept-card:hover .concept-actions {
+.concept-card:hover .concept-actions,
+.concept-card.focused .concept-actions {
   opacity: 1;
 }
 
@@ -89,6 +114,7 @@
   font-family: inherit;
   line-height: 1.6;
   transition: border-color var(--transition-fast);
+  overscroll-behavior: contain;
 }
 
 .concept-notes::placeholder {

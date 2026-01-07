@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, ipcMain } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
 const https = require('https');
@@ -505,6 +505,16 @@ ipcMain.handle('ai-request', async (event, url, options) => {
 
     req.end();
   });
+});
+
+// Handle opening file in system default editor
+ipcMain.handle('open-file-in-editor', async (event, filePath) => {
+  try {
+    await shell.openPath(filePath);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 });
 
 // Cleanup watcher on app quit
