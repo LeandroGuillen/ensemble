@@ -46,7 +46,7 @@
 
   &.selected {
     border-color: var(--color-accent-primary);
-    background-color: rgba(59, 130, 246, 0.1);
+    background-color: rgba(229, 168, 85, 0.1);
     box-shadow: 0 0 0 1px var(--color-accent-primary);
   }
 }
@@ -184,8 +184,8 @@
 // Multi-selected state
 .character-item.multi-selected {
   border-color: var(--color-accent-primary);
-  background-color: rgba(59, 130, 246, 0.08);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  background-color: rgba(229, 168, 85, 0.08);
+  box-shadow: 0 0 0 2px rgba(229, 168, 85, 0.2);
 }
 
 // Responsive breakpoint for reverting to single column

@@ -3,6 +3,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: var(--color-bg-primary);
 }
 
 .library-content {
@@ -10,39 +11,12 @@
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: var(--spacing-lg);
+  padding: var(--spacing-xl);
 }
 
 .library-inner {
   max-width: 1400px;
   margin: 0 auto;
-}
-
-.page-subtitle {
-  color: var(--color-text-secondary);
-  font-size: 1rem;
-  margin-bottom: var(--spacing-xl);
-  text-align: center;
-  font-style: italic;
-}
-
-.header {
-  margin-bottom: var(--spacing-lg);
-  padding-bottom: var(--spacing-md);
-  border-bottom: 1px solid var(--color-border);
-
-  h1 {
-    margin: 0 0 var(--spacing-xs) 0;
-    color: var(--color-text-primary);
-    font-size: 1.75rem;
-    font-weight: 600;
-  }
-
-  p {
-    margin: 0;
-    color: var(--color-text-secondary);
-    font-size: 0.9rem;
-  }
 }
 
 // Loading state
@@ -51,37 +25,32 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: calc(var(--spacing-xl) * 2);
+  padding: var(--spacing-3xl);
   text-align: center;
   color: var(--color-text-secondary);
   min-height: 300px;
 
   .spinner {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     border: 3px solid var(--color-border);
-    border-top: 3px solid var(--color-primary);
+    border-top-color: var(--color-accent-primary);
     border-radius: 50%;
     animation: spin 1s linear infinite;
-    margin-bottom: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
   }
 }
 
 @keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }
 
 // Error banner
 .error-banner {
-  background: var(--color-error-bg);
-  border: 1px solid var(--color-error-border);
-  border-radius: var(--radius-md);
-  margin-bottom: var(--spacing-lg);
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--spacing-xl);
 
   .error-content {
     display: flex;
@@ -90,21 +59,21 @@
     gap: var(--spacing-sm);
 
     .error-icon {
-      font-size: 1.2rem;
+      font-size: 1.125rem;
     }
 
     .error-message {
       flex: 1;
-      color: var(--color-error-text);
-      font-size: 0.9rem;
+      color: var(--color-error);
+      font-size: 0.9375rem;
     }
 
     .error-close {
       background: none;
       border: none;
-      color: var(--color-error-text);
+      color: var(--color-error);
       cursor: pointer;
-      font-size: 1.2rem;
+      font-size: 1.25rem;
       padding: 0;
       width: 24px;
       height: 24px;
@@ -112,9 +81,11 @@
       align-items: center;
       justify-content: center;
       border-radius: var(--radius-sm);
+      opacity: 0.7;
 
       &:hover {
-        background: rgba(0, 0, 0, 0.1);
+        opacity: 1;
+        background: rgba(248, 113, 113, 0.1);
       }
     }
   }
@@ -122,15 +93,15 @@
 
 // Section styles
 .section {
-  margin-bottom: var(--spacing-xl);
+  margin-bottom: var(--spacing-2xl);
 }
 
 // Books Library Layout
 .books-library {
   background: var(--color-bg-secondary);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   padding: var(--spacing-xl);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-card);
   border: 1px solid var(--color-border);
 }
 
@@ -142,24 +113,15 @@
   align-items: flex-end;
   min-height: 200px;
   padding: var(--spacing-lg) 0;
+  position: relative;
 
-  // Add a subtle texture effect that matches the dark theme
-  background: linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(59, 130, 246, 0.03) 50%,
-      transparent 100%
-    ),
-    repeating-linear-gradient(
-      90deg,
-      transparent,
-      transparent 2px,
-      rgba(59, 130, 246, 0.01) 2px,
-      rgba(59, 130, 246, 0.01) 4px
-    );
-  border-radius: var(--radius-md);
+  // Subtle pattern
+  background: 
+    linear-gradient(90deg, transparent 0%, rgba(229, 168, 85, 0.02) 50%, transparent 100%),
+    repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(229, 168, 85, 0.01) 2px, rgba(229, 168, 85, 0.01) 4px);
+  border-radius: var(--radius-lg);
 
-  // Bookshelf edge effect with theme colors
+  // Shelf edge
   &::after {
     content: "";
     position: absolute;
@@ -167,16 +129,9 @@
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(
-      to right,
-      var(--color-border),
-      var(--color-border-light),
-      var(--color-border)
-    );
-    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    background: linear-gradient(to right, var(--color-border), var(--color-border-light), var(--color-border));
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
   }
-
-  position: relative;
 }
 
 .empty-bookshelf {
@@ -197,8 +152,8 @@
 
   .placeholder-icon {
     font-size: 3rem;
-    opacity: 0.3;
-    margin-bottom: var(--spacing-sm);
+    opacity: 0.25;
+    margin-bottom: var(--spacing-xs);
   }
 
   p {
@@ -206,23 +161,15 @@
     color: var(--color-text-secondary);
 
     &:first-of-type {
-      font-size: 1.1rem;
+      font-size: 1.0625rem;
       font-weight: 500;
       color: var(--color-text-primary);
     }
   }
 
   .empty-subtitle {
-    font-size: 0.9rem;
+    font-size: 0.9375rem;
     opacity: 0.7;
-  }
-}
-
-// Responsive design
-@media (max-width: 768px) {
-  .bookshelf {
-    justify-content: center;
-    gap: var(--spacing-md);
   }
 }
 
@@ -230,7 +177,7 @@
 .book-slot {
   position: relative;
   display: inline-block;
-  margin: 0 var(--spacing-sm);
+  margin: 0 var(--spacing-xs);
 
   .drop-zone-left,
   .drop-zone-right {
@@ -239,67 +186,36 @@
     width: 50%;
     height: 100%;
     z-index: 5;
-    pointer-events: none;
-  }
-
-  .drop-zone-left {
-    left: -25%;
-  }
-
-  .drop-zone-right {
-    right: -25%;
-  }
-
-  // Always enable drop zones for better compatibility
-  .drop-zone-left,
-  .drop-zone-right {
     pointer-events: auto;
   }
 
-  // Visual feedback for drop zones
-  &.drag-over-left::before {
-    content: "";
-    position: absolute;
-    left: -10px;
-    top: 0;
-    width: 4px;
-    height: 100%;
-    background: #007bff;
-    box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
-    z-index: 10;
-    border-radius: 2px;
-  }
+  .drop-zone-left { left: -25%; }
+  .drop-zone-right { right: -25%; }
 
+  &.drag-over-left::before,
   &.drag-over-right::after {
     content: "";
     position: absolute;
-    right: -10px;
     top: 0;
-    width: 4px;
+    width: 3px;
     height: 100%;
-    background: #007bff;
-    box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
+    background: var(--color-accent-primary);
+    box-shadow: 0 0 12px rgba(229, 168, 85, 0.4);
     z-index: 10;
     border-radius: 2px;
   }
+
+  &.drag-over-left::before { left: -8px; }
+  &.drag-over-right::after { right: -8px; }
 }
 
-// Global drop zone activation when dragging
-.bookshelf:has(.book-container.dragging) {
-  .book-slot {
-    .drop-zone-left,
-    .drop-zone-right {
-      pointer-events: auto;
-    }
+@media (max-width: 768px) {
+  .library-content {
+    padding: var(--spacing-md);
   }
-}
 
-// Fallback for browsers that don't support :has()
-.bookshelf {
-  .book-slot {
-    .drop-zone-left,
-    .drop-zone-right {
-      pointer-events: auto;
-    }
+  .bookshelf {
+    justify-content: center;
+    gap: var(--spacing-md);
   }
 }

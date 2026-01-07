@@ -9,7 +9,7 @@
 .character-item.selected {
   outline: 2px solid var(--color-accent-primary);
   outline-offset: 2px;
-  background-color: rgba(59, 130, 246, 0.1);
+  background-color: rgba(229, 168, 85, 0.1);
 }
 
 .character-card {
@@ -32,8 +32,8 @@
 
   &.selected {
     border-color: var(--color-accent-primary);
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
-    background-color: rgba(59, 130, 246, 0.05);
+    box-shadow: 0 0 0 2px rgba(229, 168, 85, 0.3);
+    background-color: rgba(229, 168, 85, 0.05);
   }
 }
 
