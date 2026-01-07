@@ -1,5 +1,5 @@
 .container {
-  height: 100vh;
+  height: calc(100vh - 64px); // Subtract page header height
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -9,15 +9,17 @@
 .pinboard-view {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: var(--spacing-lg);
+  overflow: hidden;
+  padding: var(--spacing-sm);
+  display: flex;
+  flex-direction: column;
 }
 
 .page-actions {
   display: flex;
   gap: var(--spacing-sm);
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .btn {
@@ -75,18 +77,12 @@
   }
 }
 
-.pinboard-header {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  margin-bottom: var(--spacing-md);
-  padding: 0 var(--spacing-lg);
-}
-
-.pinboard-controls {
-  display: flex;
-  gap: var(--spacing-sm);
-  align-items: center;
+// Divider for separating control groups in the header
+.divider {
+  width: 1px;
+  height: 24px;
+  background: var(--color-border-light);
+  margin: 0 var(--spacing-xs);
 }
 
 .zoom-controls {
@@ -175,9 +171,9 @@
 }
 
 .pinboard-container {
-  margin-bottom: var(--spacing-lg);
+  flex: 1;
+  min-height: 0;
   padding: 0;
-  height: 600px;
   position: relative;
   border: 1px solid var(--color-border-light);
   border-radius: var(--radius-lg);
@@ -193,59 +189,6 @@
   overflow: visible;
 }
 
-.pinboard-legend {
-  padding: var(--spacing-lg);
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-}
-
-.pinboard-legend h4,
-.pinboard-legend h5 {
-  margin: 0 0 var(--spacing-md) 0;
-  color: var(--color-text-primary);
-  font-weight: 600;
-}
-
-.legend-items {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-lg);
-  margin-bottom: var(--spacing-lg);
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  font-size: 0.875rem;
-  color: var(--color-text-secondary);
-}
-
-.legend-color {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-sm);
-}
-
-.pinboard-instructions {
-  margin-top: var(--spacing-lg);
-  padding-top: var(--spacing-lg);
-  border-top: 1px solid var(--color-border-subtle);
-}
-
-.pinboard-instructions ul {
-  margin: var(--spacing-sm) 0;
-  padding-left: var(--spacing-lg);
-}
-
-.pinboard-instructions li {
-  margin-bottom: var(--spacing-xs);
-  color: var(--color-text-secondary);
-  font-size: 0.875rem;
-}
 
 // Pinboard canvas styles with dark background
 .pinboard-canvas {
@@ -263,8 +206,8 @@
 // Connection plus icon
 .connection-plus-icon {
   position: absolute;
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   transform: translate(-50%, -50%);
   cursor: pointer;
   z-index: 10000;
@@ -272,18 +215,19 @@
   pointer-events: auto;
   user-select: none;
   background: transparent;
+  opacity: 1;
   
   &:hover {
-    transform: translate(-50%, -50%) scale(1.3);
-    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(1.2);
+    opacity: 1;
   }
   
   &:active {
-    transform: translate(-50%, -50%) scale(1.15);
+    transform: translate(-50%, -50%) scale(1.1);
   }
   
   svg {
-    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4));
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.6));
     width: 100%;
     height: 100%;
     display: block;
@@ -694,22 +638,20 @@
 }
 
 @media (max-width: 768px) {
+  .container {
+    height: calc(100vh - 56px); // Smaller header on mobile
+  }
+
   .pinboard-view {
-    padding: var(--spacing-md);
+    padding: var(--spacing-xs);
   }
 
-  .pinboard-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--spacing-md);
+  .page-actions {
+    gap: var(--spacing-xs);
   }
 
-  .pinboard-controls {
-    flex-wrap: wrap;
-  }
-
-  .pinboard-container {
-    height: 400px;
+  .zoom-level {
+    display: none; // Hide zoom level text on small screens
   }
 
   .modal-dialog {
@@ -719,10 +661,6 @@
 
   .modal-actions {
     flex-direction: column;
-  }
-
-  .legend-items {
-    gap: var(--spacing-sm);
   }
 
   .add-pin-dialog {

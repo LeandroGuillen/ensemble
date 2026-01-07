@@ -15,6 +15,7 @@ import {
   Validators,
 } from "@angular/forms";
 import { ActivatedRoute, Router } from "@angular/router";
+import { Location } from "@angular/common";
 import { Subject } from "rxjs";
 import { takeUntil } from "rxjs/operators";
 import {
@@ -92,6 +93,7 @@ export class CharacterDetailComponent
   constructor(
     private route: ActivatedRoute,
     private router: Router,
+    private location: Location,
     private fb: FormBuilder,
     private characterService: CharacterService,
     private projectService: ProjectService,
@@ -319,9 +321,20 @@ export class CharacterDetailComponent
       if (
         confirm("You have unsaved changes. Are you sure you want to leave?")
       ) {
-        this.router.navigate(["/characters"]);
+        this.navigateBack();
       }
     } else {
+      this.navigateBack();
+    }
+  }
+
+  private navigateBack(): void {
+    // Use browser history to go back to previous page
+    // This will take the user back to wherever they came from (pinboard, character list, etc.)
+    if (window.history.length > 1) {
+      this.location.back();
+    } else {
+      // Fallback: if no history, go to characters list
       this.router.navigate(["/characters"]);
     }
   }

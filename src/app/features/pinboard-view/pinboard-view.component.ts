@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { Observable, Subscription } from 'rxjs';
 import { take } from 'rxjs/operators';
 import { DataSet, Edge, Network, Node, Options } from 'vis-network/standalone';
@@ -83,6 +84,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
     private characterService: CharacterService,
     private projectService: ProjectService,
     private electronService: ElectronService,
+    private router: Router,
     private cdr: ChangeDetectorRef
   ) {
     this.pinboardData$ = this.pinboardService.getPinboardData();
@@ -202,6 +204,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
         selectConnectedEdges: false,
         multiselect: true, // Enable multi-select with left-click drag
         selectable: true,
+        hover: true, // Enable hover events for plus icon
       },
       manipulation: {
         enabled: false,
@@ -348,6 +351,8 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
         }
         return;
       }
+      // Note: Character detail view is opened via double-click, not single click
+      // This allows the plus icon for connections to work on hover/click
     });
     
     // Handle hover to show plus icon
@@ -384,23 +389,25 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
           }
         }
       }
+      // Note: Node selection and navigation is handled in selectNode event
     });
 
     // Handle edge selection for editing (removed - now only on double-click)
     // Edge selection is now handled via doubleClick event
 
-    // Handle double-click for connection editing or creation
+    // Handle double-click for character detail, connection editing, or creation
     this.network.on('doubleClick', (params) => {
-      if (params.edges.length > 0) {
+      if (params.nodes.length > 0 && params.edges.length === 0) {
+        // Double-click on a node - open character detail view
+        const clickedNodeId = params.nodes[0];
+        this.openCharacterDetail(clickedNodeId);
+      } else if (params.edges.length > 0) {
         // Double-click on edge/connection - open edit dialog
         const edgeId = params.edges[0];
         const connection = this.findConnectionById(edgeId);
         if (connection) {
           this.openEditDialog(connection);
         }
-      } else if (params.nodes.length === 2 && !this.connectionMode) {
-        // Double-click on two nodes - legacy support for quick connection creation
-        this.openConnectionDialog(params.nodes[0], params.nodes[1]);
       }
     });
 
@@ -749,45 +756,31 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
     
     // Get the container (pinboard-container) for positioning
     const container = this.pinboardContainer.nativeElement.closest('.pinboard-container');
-    const canvasDiv = this.pinboardContainer.nativeElement;
-    
     if (!container) {
       return;
     }
     
-    // Get network scale and view position
-    const scale = this.network.getScale();
-    const viewPosition = this.network.getViewPosition();
+    // Use vis-network's canvasToDOM to convert network coordinates to DOM coordinates
+    // This gives us the pixel position on the canvas
+    const canvasPos = this.network.canvasToDOM(nodePosition);
     
-    // Get canvas dimensions in pixels (clientWidth/Height gives us the rendered size)
-    const canvasWidth = canvas.clientWidth;
-    const canvasHeight = canvas.clientHeight;
+    // Get the canvas position relative to the container
+    const canvasRect = canvas.getBoundingClientRect();
+    const containerRect = (container as HTMLElement).getBoundingClientRect();
     
-    // Calculate center of canvas (this is where (0,0) in network coordinates maps to)
-    const centerX = canvasWidth / 2;
-    const centerY = canvasHeight / 2;
-    
-    // Convert network coordinates to pixel coordinates on the canvas
-    // vis-network uses a coordinate system where the view position is the center
-    const pixelX = centerX + (nodePosition.x - viewPosition.x) * scale;
-    const pixelY = centerY + (nodePosition.y - viewPosition.y) * scale;
+    // Calculate the offset from canvas to container
+    const canvasOffsetX = canvasRect.left - containerRect.left;
+    const canvasOffsetY = canvasRect.top - containerRect.top;
     
     // Get node size (approximate, including thumbnail)
     const nodeSize = 30;
-    const plusIconOffset = nodeSize / 2 + 25; // Distance from node center
+    const plusIconSize = 32; // Size of the plus icon
+    const plusIconOffset = nodeSize / 2 + plusIconSize / 2 + 10; // Distance from node center
     
-    // Get container bounds to calculate relative position
-    const containerRect = container.getBoundingClientRect();
-    const canvasRect = canvas.getBoundingClientRect();
-    
-    // Calculate position relative to container
-    // Account for the offset between canvas and container
-    const offsetX = canvasRect.left - containerRect.left;
-    const offsetY = canvasRect.top - containerRect.top;
-    
+    // Position the plus icon to the right of the node
     this.plusIconPosition = {
-      x: pixelX + plusIconOffset + offsetX,
-      y: pixelY + offsetY
+      x: canvasPos.x + plusIconOffset + canvasOffsetX,
+      y: canvasPos.y + canvasOffsetY
     };
     
     // Force change detection to update the view
@@ -927,10 +920,12 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
   onToggleGrid(): void {
     this.showGrid = !this.showGrid;
     this.redrawGrid();
+    this.saveViewState();
   }
 
   onToggleSnapToGrid(): void {
     this.snapToGrid = !this.snapToGrid;
+    this.saveViewState();
   }
 
   onRefreshPinboard(): void {
@@ -966,48 +961,53 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
     const scale = this.network.getScale();
     const viewPosition = this.network.getViewPosition();
 
-    // Get canvas dimensions
-    const canvas = ctx.canvas;
-    const canvasWidth = canvas.width;
-    const canvasHeight = canvas.height;
+    // Get canvas dimensions in CSS pixels
+    const canvas = this.pinboardContainer.nativeElement.querySelector('canvas');
+    if (!canvas) return;
+    
+    const canvasWidth = canvas.clientWidth;
+    const canvasHeight = canvas.clientHeight;
 
-    // Center of the canvas
-    const centerX = canvasWidth / 2;
-    const centerY = canvasHeight / 2;
-
-    // Grid size in screen pixels
+    // Grid size in screen pixels at current zoom
     const gridScreenSize = this.gridSize * scale;
+    
+    // Ensure grid size is at least 10 pixels to avoid too many lines
+    if (gridScreenSize < 10) {
+      return;
+    }
 
-    // Calculate the offset based on view position
-    // This determines where grid (0,0) appears on screen
-    const offsetX = (centerX - viewPosition.x * scale) % gridScreenSize;
-    const offsetY = (centerY - viewPosition.y * scale) % gridScreenSize;
+    // Calculate the visible area in network coordinates
+    const halfWidth = canvasWidth / (2 * scale);
+    const halfHeight = canvasHeight / (2 * scale);
+    
+    const left = viewPosition.x - halfWidth;
+    const right = viewPosition.x + halfWidth;
+    const top = viewPosition.y - halfHeight;
+    const bottom = viewPosition.y + halfHeight;
+
+    // Find the first grid line in each direction (in network coordinates)
+    const startX = Math.floor(left / this.gridSize) * this.gridSize;
+    const endX = Math.ceil(right / this.gridSize) * this.gridSize;
+    const startY = Math.floor(top / this.gridSize) * this.gridSize;
+    const endY = Math.ceil(bottom / this.gridSize) * this.gridSize;
 
     // Set grid line style - dark theme
     ctx.strokeStyle = 'rgba(45, 55, 72, 0.5)';
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1 / scale; // Adjust line width for zoom
     ctx.setLineDash([]);
 
     ctx.beginPath();
 
-    // Draw vertical lines
-    for (let x = offsetX; x < canvasWidth; x += gridScreenSize) {
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, canvasHeight);
-    }
-    for (let x = offsetX - gridScreenSize; x > 0; x -= gridScreenSize) {
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, canvasHeight);
+    // Draw vertical lines (in network coordinates - vis-network's transform handles conversion)
+    for (let x = startX; x <= endX; x += this.gridSize) {
+      ctx.moveTo(x, startY - this.gridSize);
+      ctx.lineTo(x, endY + this.gridSize);
     }
 
-    // Draw horizontal lines
-    for (let y = offsetY; y < canvasHeight; y += gridScreenSize) {
-      ctx.moveTo(0, y);
-      ctx.lineTo(canvasWidth, y);
-    }
-    for (let y = offsetY - gridScreenSize; y > 0; y -= gridScreenSize) {
-      ctx.moveTo(0, y);
-      ctx.lineTo(canvasWidth, y);
+    // Draw horizontal lines (in network coordinates)
+    for (let y = startY; y <= endY; y += this.gridSize) {
+      ctx.moveTo(startX - this.gridSize, y);
+      ctx.lineTo(endX + this.gridSize, y);
     }
 
     ctx.stroke();
@@ -1142,6 +1142,10 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
       arrowTo: false,
     };
 
+    // Clear plus icon state before showing dialog
+    this.selectedNodeForConnection = null;
+    this.plusIconPosition = null;
+    
     this.showConnectionDialog = true;
   }
 
@@ -1420,6 +1424,13 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
     return character ? character.name : 'Unknown';
   }
 
+  /**
+   * Opens the character detail view for the given character ID
+   */
+  openCharacterDetail(characterId: string): void {
+    this.router.navigate(['/character', characterId]);
+  }
+
 
 
   /**
@@ -1451,6 +1462,8 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
     const state = {
       zoomIndex: this.currentZoomIndex,
       viewPosition: { x: viewPosition.x, y: viewPosition.y },
+      showGrid: this.showGrid,
+      snapToGrid: this.snapToGrid,
     };
 
     // Save asynchronously without blocking UI
@@ -1470,6 +1483,14 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
       // Restore zoom level
       if (state.zoomIndex >= 0 && state.zoomIndex < this.zoomLevels.length) {
         this.currentZoomIndex = state.zoomIndex;
+      }
+
+      // Restore grid settings
+      if (state.showGrid !== undefined) {
+        this.showGrid = state.showGrid;
+      }
+      if (state.snapToGrid !== undefined) {
+        this.snapToGrid = state.snapToGrid;
       }
 
       // Restore view position

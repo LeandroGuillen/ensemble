@@ -364,6 +364,16 @@ export class PinboardService {
       return baseNode;
     });
 
+    // Group edges by node pairs to handle multiple connections between same nodes
+    const edgePairCounts = new Map<string, number>();
+    const edgePairIndex = new Map<string, number>();
+    
+    // Count edges between each pair of nodes
+    currentData.edges.forEach(edge => {
+      const pairKey = [edge.source, edge.target].sort().join('|');
+      edgePairCounts.set(pairKey, (edgePairCounts.get(pairKey) || 0) + 1);
+    });
+    
     const visEdges = currentData.edges.map(edge => {
       // Determine arrows based on arrowFrom/arrowTo or bidirectional (for backward compatibility)
       let arrows: string | object = {};
@@ -393,6 +403,23 @@ export class PinboardService {
         }
       }
       
+      // Calculate smooth settings for multiple edges between same nodes
+      const pairKey = [edge.source, edge.target].sort().join('|');
+      const totalEdges = edgePairCounts.get(pairKey) || 1;
+      const currentIndex = edgePairIndex.get(pairKey) || 0;
+      edgePairIndex.set(pairKey, currentIndex + 1);
+      
+      let smooth: any = { enabled: true, type: 'continuous', roundness: 0.5 };
+      if (totalEdges > 1) {
+        const isEven = currentIndex % 2 === 0;
+        const roundnessBase = 0.2 + (Math.floor(currentIndex / 2) * 0.15);
+        smooth = {
+          enabled: true,
+          type: isEven ? 'curvedCW' : 'curvedCCW',
+          roundness: Math.min(roundnessBase, 0.8)
+        };
+      }
+      
       return {
         id: edge.id,
         from: edge.source,
@@ -402,6 +429,7 @@ export class PinboardService {
           color: edge.color || '#848484'
         },
         arrows: arrows,
+        smooth: smooth,
         font: {
           color: edge.labelColor || '#ffffff',
           size: 12,
@@ -504,6 +532,17 @@ export class PinboardService {
       return baseNode;
     }));
 
+    // Group edges by node pairs to handle multiple connections between same nodes
+    const edgePairCounts = new Map<string, number>();
+    const edgePairIndex = new Map<string, number>();
+    
+    // Count edges between each pair of nodes
+    currentData.edges.forEach(edge => {
+      // Create a consistent key for the node pair (sorted to treat A-B same as B-A)
+      const pairKey = [edge.source, edge.target].sort().join('|');
+      edgePairCounts.set(pairKey, (edgePairCounts.get(pairKey) || 0) + 1);
+    });
+    
     const visEdges = currentData.edges.map(edge => {
       // Determine arrows based on arrowFrom/arrowTo or bidirectional (for backward compatibility)
       let arrows: string | object = {};
@@ -533,6 +572,31 @@ export class PinboardService {
         }
       }
       
+      // Calculate smooth settings for multiple edges between same nodes
+      const pairKey = [edge.source, edge.target].sort().join('|');
+      const totalEdges = edgePairCounts.get(pairKey) || 1;
+      const currentIndex = edgePairIndex.get(pairKey) || 0;
+      edgePairIndex.set(pairKey, currentIndex + 1);
+      
+      // Default smooth settings
+      let smooth: any = {
+        enabled: true,
+        type: 'continuous',
+        roundness: 0.5
+      };
+      
+      // If there are multiple edges between the same nodes, curve them differently
+      if (totalEdges > 1) {
+        // Alternate between curvedCW and curvedCCW with varying roundness
+        const isEven = currentIndex % 2 === 0;
+        const roundnessBase = 0.2 + (Math.floor(currentIndex / 2) * 0.15);
+        smooth = {
+          enabled: true,
+          type: isEven ? 'curvedCW' : 'curvedCCW',
+          roundness: Math.min(roundnessBase, 0.8) // Cap at 0.8
+        };
+      }
+      
       return {
         id: edge.id,
         from: edge.source,
@@ -542,6 +606,7 @@ export class PinboardService {
           color: edge.color || '#848484'
         },
         arrows: arrows,
+        smooth: smooth,
         font: {
           color: edge.labelColor || '#ffffff',
           size: 12,

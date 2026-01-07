@@ -105,6 +105,8 @@ export type GraphViewState = PinboardViewState;
 export interface PinboardViewState {
   zoomIndex: number;
   viewPosition: { x: number; y: number };
+  showGrid?: boolean;
+  snapToGrid?: boolean;
 }
 
 export interface Project {
