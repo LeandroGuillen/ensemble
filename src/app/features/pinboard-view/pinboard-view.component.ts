@@ -1,14 +1,17 @@
 import { CommonModule } from '@angular/common';
 import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { Observable, Subscription } from 'rxjs';
 import { take } from 'rxjs/operators';
 import { DataSet, Edge, Network, Node, Options } from 'vis-network/standalone';
-import { Character, PinboardData, PinboardConnection } from '../../core/interfaces';
+import { Character, PinboardData, PinboardConnection, Pinboard } from '../../core/interfaces';
 import { CharacterService, ProjectService, PinboardService, ElectronService } from '../../core/services';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { ColorSelectorComponent } from '../../shared/color-selector/color-selector.component';
+import { PinboardSidebarComponent } from '../../shared/pinboard-sidebar/pinboard-sidebar.component';
+import { PinboardCreateDialogComponent } from '../../shared/pinboard-create-dialog/pinboard-create-dialog.component';
+import { PinboardRenameDialogComponent } from '../../shared/pinboard-rename-dialog/pinboard-rename-dialog.component';
 
 interface ConnectionFormData {
   source: string;
@@ -23,12 +26,21 @@ interface ConnectionFormData {
 @Component({
   selector: 'app-pinboard-view',
   standalone: true,
-  imports: [CommonModule, FormsModule, PageHeaderComponent, ColorSelectorComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    PageHeaderComponent,
+    ColorSelectorComponent,
+    PinboardSidebarComponent,
+    PinboardCreateDialogComponent,
+    PinboardRenameDialogComponent,
+  ],
   templateUrl: './pinboard-view.component.html',
   styleUrls: ['./pinboard-view.component.scss'],
 })
 export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('pinboardContainer', { static: true }) pinboardContainer!: ElementRef;
+  @ViewChild('characterFilterInput', { static: false }) characterFilterInput!: ElementRef<HTMLInputElement>;
 
   pinboardData$: Observable<PinboardData>;
   characters$: Observable<Character[]>;
@@ -54,6 +66,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
   // Add node dialog state
   characterFilter = '';
   filteredCharacters: Character[] = [];
+  selectedCharacterIndex = -1; // Index of highlighted character in filtered list
   thumbnailDataUrls: Map<string, string> = new Map();
 
   // Grid configuration
@@ -79,12 +92,23 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
 
   editingConnection: PinboardConnection | null = null;
 
+  // Pinboard management state
+  showCreatePinboardDialog = false;
+  showRenamePinboardDialog = false;
+  pinboardToRename: string | null = null;
+  currentPinboard: Pinboard | null = null;
+  pinboards: Pinboard[] = [];
+
+  // Node hover state for delete functionality
+  hoveredNodeId: string | null = null;
+
   constructor(
     private pinboardService: PinboardService,
     private characterService: CharacterService,
     private projectService: ProjectService,
     private electronService: ElectronService,
     private router: Router,
+    private route: ActivatedRoute,
     private cdr: ChangeDetectorRef
   ) {
     this.pinboardData$ = this.pinboardService.getPinboardData();
@@ -104,6 +128,8 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
     this.loadCharactersIfNeeded();
     
     this.subscribeToData();
+    this.subscribeToPinboardChanges();
+    this.loadPinboards();
   }
   
   private async loadCharactersIfNeeded(): Promise<void> {
@@ -131,6 +157,9 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnDestroy(): void {
+    // Save view state before destroying
+    this.saveViewState();
+    
     this.subscriptions.unsubscribe();
     if (this.network) {
       this.network.destroy();
@@ -147,6 +176,67 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
       keyboardEvent.preventDefault();
       this.closeDialogs();
     }
+  }
+
+  @HostListener('document:keydown.p', ['$event'])
+  handlePKey(event: KeyboardEvent): void {
+    // Only trigger if not typing in an input, textarea, or if a dialog is open
+    const target = event.target as HTMLElement;
+    const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+    
+    if (!isInput && 
+        !this.showAddPinDialog && 
+        !this.showConnectionDialog && 
+        !this.showEditDialog &&
+        !this.showCreatePinboardDialog &&
+        !this.showRenamePinboardDialog &&
+        !this.connectionMode) {
+      event.preventDefault();
+      this.openAddPinDialog();
+    }
+  }
+
+
+  private navigateCharacterList(direction: number): void {
+    if (this.filteredCharacters.length === 0) {
+      this.selectedCharacterIndex = -1;
+      return;
+    }
+
+    this.selectedCharacterIndex += direction;
+
+    // Clamp to valid range
+    if (this.selectedCharacterIndex < 0) {
+      this.selectedCharacterIndex = 0;
+    } else if (this.selectedCharacterIndex >= this.filteredCharacters.length) {
+      this.selectedCharacterIndex = this.filteredCharacters.length - 1;
+    }
+
+    // Scroll the selected item into view
+    this.scrollToSelectedCharacter();
+  }
+
+  private selectHighlightedCharacter(): void {
+    if (this.selectedCharacterIndex >= 0 && 
+        this.selectedCharacterIndex < this.filteredCharacters.length) {
+      const character = this.filteredCharacters[this.selectedCharacterIndex];
+      this.addCharacterToPinboard(character);
+    }
+  }
+
+  private scrollToSelectedCharacter(): void {
+    // Use setTimeout to ensure DOM is updated
+    setTimeout(() => {
+      const selectedElement = document.querySelector(
+        `.character-item.selected`
+      ) as HTMLElement;
+      if (selectedElement) {
+        selectedElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+        });
+      }
+    }, 0);
   }
 
   private initializePinboard(): void {
@@ -213,6 +303,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
 
     this.network = new Network(container, { nodes: this.nodes, edges: this.edges }, options);
 
+    console.log('Network initialized, setting up events...');
     this.setupNetworkEvents();
     this.setupDiscreteZoom();
     this.setupMiddleClickPan();
@@ -321,8 +412,9 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
     // Handle case where mouse is released outside canvas
     document.addEventListener('mouseup', handleMouseUp);
 
-    // Prevent context menu on middle click
+    // Prevent context menu on middle click (but allow right-click for node context menu)
     canvas.addEventListener('contextmenu', (event: MouseEvent) => {
+      // Only prevent default for middle click
       if (event.button === 1) {
         event.preventDefault();
       }
@@ -355,20 +447,24 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
       // This allows the plus icon for connections to work on hover/click
     });
     
-    // Handle hover to show plus icon
+    // Handle hover to show plus icon and delete button
     this.network.on('hoverNode', (params) => {
       if (!this.connectionMode && params.node) {
         this.selectedNodeForConnection = params.node;
+        this.hoveredNodeId = params.node;
         setTimeout(() => {
           this.updatePlusIconPosition(params.node);
+          // Trigger change detection to update delete icon position
+          this.cdr.detectChanges();
         }, 10);
       }
     });
-    
-    // Handle blur to hide plus icon
+
+    // Handle blur to hide plus icon and delete button
     this.network.on('blurNode', () => {
       if (!this.connectionMode) {
         this.selectedNodeForConnection = null;
+        this.hoveredNodeId = null;
         this.plusIconPosition = null;
       }
     });
@@ -392,6 +488,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
       // Note: Node selection and navigation is handled in selectNode event
     });
 
+
     // Handle edge selection for editing (removed - now only on double-click)
     // Edge selection is now handled via doubleClick event
 
@@ -411,6 +508,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
       }
     });
 
+
     // Disable physics when starting to drag
     this.network.on('dragStart', (params) => {
       if (params.nodes.length > 0) {
@@ -428,6 +526,11 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
         // Update plus icon position in real-time if dragging the selected node
         if (this.selectedNodeForConnection === draggedNodeId) {
           this.updatePlusIconPosition(draggedNodeId);
+        }
+        
+        // Trigger change detection to update delete icon position if dragging hovered node
+        if (this.hoveredNodeId === draggedNodeId) {
+          this.cdr.detectChanges();
         }
 
         // Apply grid snapping if enabled
@@ -531,6 +634,10 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
       if (this.selectedNodeForConnection) {
         this.updatePlusIconPosition(this.selectedNodeForConnection);
       }
+      // Trigger change detection to update delete icon position
+      if (this.hoveredNodeId) {
+        this.cdr.detectChanges();
+      }
     });
     
     // Update plus icon position when view changes
@@ -539,6 +646,10 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
         setTimeout(() => {
           this.updatePlusIconPosition(this.selectedNodeForConnection!);
         }, 50);
+      }
+      // Trigger change detection to update delete icon position
+      if (this.hoveredNodeId) {
+        this.cdr.detectChanges();
       }
     });
 
@@ -603,6 +714,50 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
         await this.updatePinboard(pinboardData);
       })
     );
+  }
+
+  private subscribeToPinboardChanges(): void {
+    // Get initial pinboard ID from current pinboard
+    const initialPinboard = this.projectService.getCurrentPinboard();
+    let previousPinboardId: string | null = initialPinboard?.id || null;
+    
+    // Subscribe to current pinboard ID changes to reload data when switching
+    this.subscriptions.add(
+      this.pinboardService.currentPinboardId$.subscribe(async (pinboardId) => {
+        if (pinboardId) {
+          // Save view state for the previous pinboard before switching
+          if (previousPinboardId && previousPinboardId !== pinboardId) {
+            await this.saveViewStateForPinboard(previousPinboardId);
+          }
+          
+          // Load new pinboard data
+          await this.refreshPinboardData();
+          
+          // Restore view state for new pinboard
+          this.restoreViewState();
+          
+          // Update current pinboard reference
+          this.currentPinboard = this.projectService.getCurrentPinboard();
+          this.loadPinboards();
+          
+          // Update previous pinboard ID
+          previousPinboardId = pinboardId;
+        }
+      })
+    );
+
+    // Subscribe to project changes to update pinboard list
+    this.subscriptions.add(
+      this.projectService.currentProject$.subscribe(() => {
+        this.loadPinboards();
+        this.currentPinboard = this.projectService.getCurrentPinboard();
+      })
+    );
+  }
+
+  private loadPinboards(): void {
+    this.pinboards = this.projectService.getPinboards();
+    this.currentPinboard = this.projectService.getCurrentPinboard();
   }
 
   private async updatePinboard(pinboardData: PinboardData): Promise<void> {
@@ -1247,6 +1402,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
     this.editingConnection = null;
     this.characterFilter = '';
     this.filteredCharacters = [];
+    this.selectedCharacterIndex = -1;
     this.connectionForm = {
       source: '',
       target: '',
@@ -1262,8 +1418,16 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
   // Add Pin Dialog Methods
   openAddPinDialog(): void {
     this.characterFilter = '';
+    this.selectedCharacterIndex = -1;
     this.updateFilteredCharacters();
     this.showAddPinDialog = true;
+    
+    // Focus the search input after the dialog is rendered
+    setTimeout(() => {
+      if (this.characterFilterInput) {
+        this.characterFilterInput.nativeElement.focus();
+      }
+    }, 0);
   }
 
   updateFilteredCharacters(): void {
@@ -1289,6 +1453,13 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     this.filteredCharacters = availableCharacters;
+    
+    // Reset selection if current selection is out of bounds
+    if (this.selectedCharacterIndex >= this.filteredCharacters.length) {
+      this.selectedCharacterIndex = this.filteredCharacters.length > 0 
+        ? this.filteredCharacters.length - 1 
+        : -1;
+    }
   }
 
   async addCharacterToPinboard(character: Character): Promise<void> {
@@ -1473,6 +1644,27 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
+   * Saves the current zoom and pan state for a specific pinboard
+   */
+  private async saveViewStateForPinboard(pinboardId: string): Promise<void> {
+    if (!this.network) return;
+
+    const viewPosition = this.network.getViewPosition();
+    const state = {
+      zoomIndex: this.currentZoomIndex,
+      viewPosition: { x: viewPosition.x, y: viewPosition.y },
+      showGrid: this.showGrid,
+      snapToGrid: this.snapToGrid,
+    };
+
+    try {
+      await this.projectService.savePinboardViewState(state, pinboardId);
+    } catch (error) {
+      console.warn('Failed to save pinboard view state:', error);
+    }
+  }
+
+  /**
    * Restores the saved zoom and pan state from project settings
    */
   private restoreViewState(): void {
@@ -1506,6 +1698,158 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
           });
         }
       }, 500); // Delay to ensure pinboard is fully initialized
+    }
+  }
+
+  // Pinboard Management Methods
+  onCreatePinboard(): void {
+    this.showCreatePinboardDialog = true;
+  }
+
+  async onPinboardCreate(event: { name: string; duplicateFromId?: string }): Promise<void> {
+    try {
+      await this.projectService.createPinboard(event.name, event.duplicateFromId);
+      this.showCreatePinboardDialog = false;
+      
+      // Switch to the newly created pinboard
+      const pinboards = this.projectService.getPinboards();
+      const newPinboard = pinboards.find(p => p.name === event.name);
+      if (newPinboard) {
+        await this.pinboardService.switchPinboard(newPinboard.id);
+      }
+    } catch (error: any) {
+      alert(error.message || 'Failed to create pinboard');
+    }
+  }
+
+  onRenamePinboard(id: string): void {
+    this.pinboardToRename = id;
+    this.showRenamePinboardDialog = true;
+  }
+
+  async onPinboardRename(name: string): Promise<void> {
+    if (!this.pinboardToRename) return;
+
+    try {
+      await this.projectService.updatePinboardName(this.pinboardToRename, name);
+      this.showRenamePinboardDialog = false;
+      this.pinboardToRename = null;
+      this.loadPinboards();
+    } catch (error: any) {
+      alert(error.message || 'Failed to rename pinboard');
+    }
+  }
+
+  async onDeletePinboard(id: string): Promise<void> {
+    if (!confirm('Are you sure you want to delete this pinboard? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await this.projectService.deletePinboard(id);
+      this.loadPinboards();
+      
+      // If we deleted the current pinboard, the service will have switched to another
+      this.currentPinboard = this.projectService.getCurrentPinboard();
+      if (this.currentPinboard) {
+        await this.refreshPinboardData();
+        this.restoreViewState();
+      }
+    } catch (error: any) {
+      alert(error.message || 'Failed to delete pinboard');
+    }
+  }
+
+  getCurrentPinboardName(): string {
+    return this.currentPinboard?.name || 'Pinboard';
+  }
+
+  getAllPinboardNames(): string[] {
+    return this.pinboards.map(p => p.name);
+  }
+
+  getPinboardToRenameName(): string {
+    if (!this.pinboardToRename) return '';
+    const pinboard = this.pinboards.find(p => p.id === this.pinboardToRename);
+    return pinboard?.name || '';
+  }
+
+  // Node Hover Delete Methods
+  onNodeHover(nodeId: string): void {
+    this.hoveredNodeId = nodeId;
+  }
+
+  onNodeHoverEnd(): void {
+    this.hoveredNodeId = null;
+  }
+
+  getHoveredNodePosition(): { x: number; y: number } | null {
+    if (!this.hoveredNodeId || !this.network) {
+      return null;
+    }
+
+    try {
+      const positions = this.network.getPositions([this.hoveredNodeId]);
+      const nodePosition = positions[this.hoveredNodeId];
+
+      if (!nodePosition) {
+        return null;
+      }
+
+      // Get the canvas element
+      const canvas = this.pinboardContainer.nativeElement.querySelector('canvas');
+      if (!canvas) {
+        return null;
+      }
+
+      // Get the container (pinboard-container) for positioning
+      const container = this.pinboardContainer.nativeElement.closest('.pinboard-container');
+      if (!container) {
+        return null;
+      }
+
+      // Use vis-network's canvasToDOM to convert network coordinates to DOM coordinates
+      // This gives us the pixel position on the canvas
+      const canvasPos = this.network.canvasToDOM(nodePosition);
+
+      // Get the canvas position relative to the container
+      const canvasRect = canvas.getBoundingClientRect();
+      const containerRect = (container as HTMLElement).getBoundingClientRect();
+
+      // Calculate the offset from canvas to container
+      const canvasOffsetX = canvasRect.left - containerRect.left;
+      const canvasOffsetY = canvasRect.top - containerRect.top;
+
+      // Get node size (approximate, including thumbnail) - same as plus icon
+      const nodeSize = 30;
+      const deleteIconSize = 24; // Size of the delete icon
+      const deleteIconOffset = nodeSize / 2 + deleteIconSize / 2 + 5; // Distance from node center
+
+      // Position the delete icon to the top-right of the node
+      // Using same calculation structure as plus icon, but offset upward
+      return {
+        x: canvasPos.x + deleteIconOffset + canvasOffsetX,
+        y: canvasPos.y - deleteIconOffset + canvasOffsetY
+      };
+    } catch (error) {
+      console.error('Error calculating hovered node position:', error);
+      return null;
+    }
+  }
+
+  async removePinFromPinboard(nodeId: string): Promise<void> {
+    const character = this.characters.find(c => c.id === nodeId);
+    const characterName = character?.name || 'Character';
+
+    if (!confirm(`Are you sure you want to remove "${characterName}" from the pinboard?`)) {
+      return;
+    }
+
+    try {
+      await this.pinboardService.removePin(nodeId);
+    } catch (error) {
+      console.error('Failed to remove pin:', error);
+      alert('Failed to remove character from pinboard. Please try again.');
     }
   }
 }

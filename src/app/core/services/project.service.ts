@@ -5,6 +5,7 @@ import {
   Category,
   GraphNode,
   GraphViewState,
+  Pinboard,
   PinboardPin,
   PinboardConnection,
   PinboardViewState,
@@ -137,6 +138,14 @@ export class ProjectService {
       // Ensure required directories exist
       await this.ensureProjectStructure(projectPath);
 
+      // Migrate legacy pinboard to new structure if needed
+      await this.migrateLegacyPinboard(metadata);
+      
+      // Save metadata if migration occurred (migration modifies metadata in place)
+      if (metadata.pinboards && metadata.pinboards.length > 0) {
+        await this.saveMetadata(projectPath, metadata);
+      }
+
       const project: Project = {
         path: projectPath,
         metadata,
@@ -246,6 +255,16 @@ export class ProjectService {
         autoSave: true,
         fileWatchEnabled: true,
       },
+      pinboards: [
+        {
+          id: generateId(),
+          name: 'Default',
+          nodes: [],
+          edges: [],
+          createdAt: new Date().toISOString(),
+        },
+      ],
+      currentPinboardId: undefined, // Will be set to first pinboard
       relationships: {
         nodes: [],
         edges: [],
@@ -449,28 +468,56 @@ export class ProjectService {
 
 
   /**
-   * Saves pinboard view state to project settings
+   * Saves pinboard view state to the current pinboard's viewState
    */
-  async savePinboardViewState(state: PinboardViewState): Promise<void> {
+  async savePinboardViewState(state: PinboardViewState, pinboardId?: string): Promise<void> {
     const project = this.currentProjectSubject.value;
     if (!project) {
       throw new Error('No project loaded');
     }
 
-    // Save to both new and legacy fields for backward compatibility
-    project.metadata.settings.pinboardView = state;
-    project.metadata.settings.graphView = state;
+    const targetPinboard = pinboardId 
+      ? project.metadata.pinboards?.find(p => p.id === pinboardId)
+      : this.getCurrentPinboard();
+    
+    if (targetPinboard) {
+      // Save to target pinboard's viewState
+      const pinboards = project.metadata.pinboards || [];
+      const pinboardIndex = pinboards.findIndex(p => p.id === targetPinboard.id);
+      if (pinboardIndex !== -1) {
+        pinboards[pinboardIndex] = {
+          ...pinboards[pinboardIndex],
+          viewState: state,
+          updatedAt: new Date().toISOString(),
+        };
+        project.metadata.pinboards = pinboards;
+      }
+    } else {
+      // Fallback to project settings for backward compatibility
+      project.metadata.settings.pinboardView = state;
+      project.metadata.settings.graphView = state;
+    }
+
     await this.saveMetadata(project.path, project.metadata);
     this.currentProjectSubject.next({ ...project });
   }
 
   /**
-   * Gets the saved pinboard view state from project settings
+   * Gets the saved pinboard view state from the current pinboard's viewState
    */
   getPinboardViewState(): PinboardViewState | null {
     const project = this.currentProjectSubject.value;
-    // Check new field first, then fall back to legacy field
-    return project?.metadata.settings.pinboardView || project?.metadata.settings.graphView || null;
+    if (!project) {
+      return null;
+    }
+
+    const currentPinboard = this.getCurrentPinboard();
+    if (currentPinboard?.viewState) {
+      return currentPinboard.viewState;
+    }
+
+    // Fallback to project settings for backward compatibility
+    return project.metadata.settings.pinboardView || project.metadata.settings.graphView || null;
   }
 
   /**
@@ -544,15 +591,276 @@ export class ProjectService {
   }
 
   /**
-   * Gets pinboard data from the current project
+   * Migrates legacy single pinboard to new multiple pinboards structure
+   */
+  private async migrateLegacyPinboard(metadata: ProjectMetadata): Promise<void> {
+    // If pinboards array already exists, no migration needed
+    if (metadata.pinboards && metadata.pinboards.length > 0) {
+      // Ensure currentPinboardId is set
+      if (!metadata.currentPinboardId && metadata.pinboards.length > 0) {
+        metadata.currentPinboardId = metadata.pinboards[0].id;
+      }
+      return;
+    }
+
+    // Check for legacy relationships
+    if (metadata.relationships) {
+      const legacyData = metadata.relationships;
+      
+      // Create "Default" pinboard from legacy data
+      const defaultPinboard: Pinboard = {
+        id: generateId(),
+        name: 'Default',
+        nodes: legacyData.nodes || [],
+        edges: legacyData.edges || [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      // Migrate view state if it exists
+      if (metadata.settings?.pinboardView) {
+        defaultPinboard.viewState = metadata.settings.pinboardView;
+      } else if (metadata.settings?.graphView) {
+        defaultPinboard.viewState = metadata.settings.graphView;
+      }
+
+      metadata.pinboards = [defaultPinboard];
+      metadata.currentPinboardId = defaultPinboard.id;
+      
+      // Keep relationships temporarily for rollback safety
+      // Will be removed after stable period
+    } else {
+      // No legacy data, create empty default pinboard
+      metadata.pinboards = [
+        {
+          id: generateId(),
+          name: 'Default',
+          nodes: [],
+          edges: [],
+          createdAt: new Date().toISOString(),
+        },
+      ];
+      metadata.currentPinboardId = metadata.pinboards[0].id;
+    }
+  }
+
+  /**
+   * Gets all pinboards from the current project
+   */
+  getPinboards(): Pinboard[] {
+    const project = this.currentProjectSubject.value;
+    return project?.metadata.pinboards || [];
+  }
+
+  /**
+   * Gets the current active pinboard
+   */
+  getCurrentPinboard(): Pinboard | null {
+    const project = this.currentProjectSubject.value;
+    if (!project) {
+      return null;
+    }
+
+    const pinboards = project.metadata.pinboards || [];
+    const currentId = project.metadata.currentPinboardId;
+
+    if (currentId) {
+      const pinboard = pinboards.find(p => p.id === currentId);
+      if (pinboard) {
+        return pinboard;
+      }
+    }
+
+    // Fallback to first pinboard if current not found
+    if (pinboards.length > 0) {
+      return pinboards[0];
+    }
+
+    return null;
+  }
+
+  /**
+   * Sets the current active pinboard
+   */
+  async setCurrentPinboard(id: string): Promise<void> {
+    const project = this.currentProjectSubject.value;
+    if (!project) {
+      throw new Error('No project loaded');
+    }
+
+    const pinboards = project.metadata.pinboards || [];
+    const pinboard = pinboards.find(p => p.id === id);
+    if (!pinboard) {
+      throw new Error(`Pinboard with id ${id} not found`);
+    }
+
+    project.metadata.currentPinboardId = id;
+    await this.saveMetadata(project.path, project.metadata);
+    this.currentProjectSubject.next({ ...project });
+  }
+
+  /**
+   * Creates a new pinboard
+   */
+  async createPinboard(name: string, duplicateFromId?: string): Promise<Pinboard> {
+    const project = this.currentProjectSubject.value;
+    if (!project) {
+      throw new Error('No project loaded');
+    }
+
+    const pinboards = project.metadata.pinboards || [];
+    
+    // Check for duplicate name
+    if (pinboards.some(p => p.name === name)) {
+      throw new Error(`A pinboard named "${name}" already exists`);
+    }
+
+    const newPinboard: Pinboard = {
+      id: generateId(),
+      name,
+      nodes: [],
+      edges: [],
+      createdAt: new Date().toISOString(),
+    };
+
+    // Optionally duplicate from another pinboard
+    if (duplicateFromId) {
+      const sourcePinboard = pinboards.find(p => p.id === duplicateFromId);
+      if (sourcePinboard) {
+        newPinboard.nodes = JSON.parse(JSON.stringify(sourcePinboard.nodes));
+        newPinboard.edges = JSON.parse(JSON.stringify(sourcePinboard.edges));
+        if (sourcePinboard.viewState) {
+          newPinboard.viewState = JSON.parse(JSON.stringify(sourcePinboard.viewState));
+        }
+      }
+    }
+
+    pinboards.push(newPinboard);
+    project.metadata.pinboards = pinboards;
+    
+    // Set as current if it's the first pinboard
+    if (pinboards.length === 1) {
+      project.metadata.currentPinboardId = newPinboard.id;
+    }
+
+    await this.saveMetadata(project.path, project.metadata);
+    this.currentProjectSubject.next({ ...project });
+
+    return newPinboard;
+  }
+
+  /**
+   * Updates pinboard data (nodes and edges) for a specific pinboard by ID
+   */
+  async updatePinboardById(id: string, data: { nodes: PinboardPin[]; edges: PinboardConnection[] }): Promise<void> {
+    const project = this.currentProjectSubject.value;
+    if (!project) {
+      throw new Error('No project loaded');
+    }
+
+    const pinboards = project.metadata.pinboards || [];
+    const pinboardIndex = pinboards.findIndex(p => p.id === id);
+    
+    if (pinboardIndex === -1) {
+      throw new Error(`Pinboard with id ${id} not found`);
+    }
+
+    pinboards[pinboardIndex] = {
+      ...pinboards[pinboardIndex],
+      nodes: data.nodes,
+      edges: data.edges,
+      updatedAt: new Date().toISOString(),
+    };
+
+    project.metadata.pinboards = pinboards;
+    await this.saveMetadata(project.path, project.metadata);
+    this.currentProjectSubject.next({ ...project });
+  }
+
+  /**
+   * Updates pinboard name
+   */
+  async updatePinboardName(id: string, name: string): Promise<void> {
+    const project = this.currentProjectSubject.value;
+    if (!project) {
+      throw new Error('No project loaded');
+    }
+
+    const pinboards = project.metadata.pinboards || [];
+    const pinboardIndex = pinboards.findIndex(p => p.id === id);
+    
+    if (pinboardIndex === -1) {
+      throw new Error(`Pinboard with id ${id} not found`);
+    }
+
+    // Check for duplicate name
+    if (pinboards.some((p, idx) => p.name === name && idx !== pinboardIndex)) {
+      throw new Error(`A pinboard named "${name}" already exists`);
+    }
+
+    pinboards[pinboardIndex] = {
+      ...pinboards[pinboardIndex],
+      name,
+      updatedAt: new Date().toISOString(),
+    };
+
+    project.metadata.pinboards = pinboards;
+    await this.saveMetadata(project.path, project.metadata);
+    this.currentProjectSubject.next({ ...project });
+  }
+
+  /**
+   * Deletes a pinboard
+   */
+  async deletePinboard(id: string): Promise<void> {
+    const project = this.currentProjectSubject.value;
+    if (!project) {
+      throw new Error('No project loaded');
+    }
+
+    const pinboards = project.metadata.pinboards || [];
+    
+    if (pinboards.length <= 1) {
+      throw new Error('Cannot delete the last pinboard. At least one pinboard must exist.');
+    }
+
+    const pinboardIndex = pinboards.findIndex(p => p.id === id);
+    if (pinboardIndex === -1) {
+      throw new Error(`Pinboard with id ${id} not found`);
+    }
+
+    // Remove the pinboard
+    pinboards.splice(pinboardIndex, 1);
+    project.metadata.pinboards = pinboards;
+
+    // If deleted pinboard was current, switch to first available
+    if (project.metadata.currentPinboardId === id) {
+      project.metadata.currentPinboardId = pinboards.length > 0 ? pinboards[0].id : undefined;
+    }
+
+    await this.saveMetadata(project.path, project.metadata);
+    this.currentProjectSubject.next({ ...project });
+  }
+
+  /**
+   * Gets pinboard data from the current active pinboard
    */
   getPinboard(): { nodes: PinboardPin[]; edges: PinboardConnection[] } {
+    const currentPinboard = this.getCurrentPinboard();
+    if (currentPinboard) {
+      return {
+        nodes: currentPinboard.nodes,
+        edges: currentPinboard.edges,
+      };
+    }
+    
+    // Fallback to legacy relationships for backward compatibility
     const project = this.currentProjectSubject.value;
     return project?.metadata.relationships || { nodes: [], edges: [] };
   }
 
   /**
-   * Updates pinboard data in the current project
+   * Updates pinboard data in the current active pinboard
    */
   async updatePinboard(pinboard: { nodes: PinboardPin[]; edges: PinboardConnection[] }): Promise<void> {
     const project = this.currentProjectSubject.value;
@@ -560,9 +868,15 @@ export class ProjectService {
       throw new Error('No project loaded');
     }
 
-    project.metadata.relationships = pinboard;
-    await this.saveMetadata(project.path, project.metadata);
-    this.currentProjectSubject.next({ ...project });
+    const currentPinboard = this.getCurrentPinboard();
+    if (currentPinboard) {
+      await this.updatePinboardById(currentPinboard.id, pinboard);
+    } else {
+      // Fallback to legacy relationships for backward compatibility
+      project.metadata.relationships = pinboard;
+      await this.saveMetadata(project.path, project.metadata);
+      this.currentProjectSubject.next({ ...project });
+    }
   }
 
   /**

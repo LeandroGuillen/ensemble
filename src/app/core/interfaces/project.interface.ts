@@ -1,3 +1,13 @@
+export interface Pinboard {
+  id: string;
+  name: string;
+  nodes: PinboardPin[];
+  edges: PinboardConnection[];
+  viewState?: PinboardViewState;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface ProjectMetadata {
   projectName: string;
   version: string;
@@ -7,7 +17,9 @@ export interface ProjectMetadata {
   books: Book[];
   imageTags?: string[]; // Image tags for character image library
   settings: ProjectSettings;
-  relationships?: {
+  pinboards?: Pinboard[];  // New: array of pinboards
+  currentPinboardId?: string;  // Track active pinboard
+  relationships?: {        // Deprecated: kept for migration
     nodes: PinboardPin[];
     edges: PinboardConnection[];
   };

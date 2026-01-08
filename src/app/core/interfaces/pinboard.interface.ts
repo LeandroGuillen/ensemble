@@ -1,7 +1,7 @@
-import { PinboardConnection, PinboardPin } from './project.interface';
+import { PinboardConnection, PinboardPin, Pinboard } from './project.interface';
 
 // Re-export from project.interface to maintain backward compatibility
-export type { PinboardConnection, PinboardPin } from './project.interface';
+export type { PinboardConnection, PinboardPin, Pinboard } from './project.interface';
 
 export interface PinboardData {
   nodes: PinboardPin[];

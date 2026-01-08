@@ -13,6 +13,8 @@ import { CharacterService } from './character.service';
 export class PinboardService {
   private pinboardDataSubject = new BehaviorSubject<PinboardData>({ nodes: [], edges: [] });
   public pinboardData$ = this.pinboardDataSubject.asObservable();
+  private currentPinboardIdSubject = new BehaviorSubject<string | null>(null);
+  public currentPinboardId$ = this.currentPinboardIdSubject.asObservable();
   private currentProjectPath: string | null = null;
   private pinboardLoaded = false;
 
@@ -29,24 +31,45 @@ export class PinboardService {
       } else if (!project) {
         this.currentProjectPath = null;
         this.pinboardDataSubject.next({ nodes: [], edges: [] });
+        this.currentPinboardIdSubject.next(null);
+      } else if (project) {
+        // Project path unchanged, but check if pinboard changed
+        const currentPinboardId = project.metadata.currentPinboardId;
+        const previousPinboardId = this.currentPinboardIdSubject.value;
+        if (currentPinboardId !== previousPinboardId) {
+          this.loadPinboardFromProject(project);
+        }
       }
     });
   }
 
   /**
-   * Loads pinboard data from the project metadata
+   * Loads pinboard data from the current active pinboard
    */
   private loadPinboardFromProject(project: any): void {
-    const pinboard = this.projectService.getPinboard();
+    const currentPinboard = this.projectService.getCurrentPinboard();
+    const currentPinboardId = project?.metadata?.currentPinboardId || null;
 
     // Ensure the data structure is valid
     const validPinboard = {
-      nodes: pinboard?.nodes || [],
-      edges: pinboard?.edges || []
+      nodes: currentPinboard?.nodes || [],
+      edges: currentPinboard?.edges || []
     };
 
     this.pinboardLoaded = true;
+    this.currentPinboardIdSubject.next(currentPinboardId);
     this.pinboardDataSubject.next(validPinboard);
+  }
+
+  /**
+   * Switches to a different pinboard
+   */
+  async switchPinboard(id: string): Promise<void> {
+    await this.projectService.setCurrentPinboard(id);
+    const project = this.projectService.getCurrentProject();
+    if (project) {
+      this.loadPinboardFromProject(project);
+    }
   }
 
   getPinboardData(): Observable<PinboardData> {
@@ -776,6 +799,33 @@ export class PinboardService {
     const updatedData = {
       nodes: [...(currentData.nodes || []), newPin],
       edges: [...(currentData.edges || [])]
+    };
+
+    await this.projectService.updatePinboard(updatedData);
+    this.pinboardDataSubject.next(updatedData);
+  }
+
+  /**
+   * Removes a pin from the current pinboard (and its connections)
+   */
+  async removePin(characterId: string): Promise<void> {
+    if (!this.currentProjectPath) {
+      throw new Error('No project loaded');
+    }
+
+    const currentData = this.pinboardDataSubject.value;
+
+    // Remove the pin
+    const updatedNodes = currentData.nodes.filter(node => node.id !== characterId);
+
+    // Remove all edges involving this character
+    const updatedEdges = currentData.edges.filter(edge =>
+      edge.source !== characterId && edge.target !== characterId
+    );
+
+    const updatedData = {
+      nodes: updatedNodes,
+      edges: updatedEdges
     };
 
     await this.projectService.updatePinboard(updatedData);
