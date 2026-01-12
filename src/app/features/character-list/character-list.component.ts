@@ -367,6 +367,10 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   }
 
   editCharacter(character: Character): void {
+    if (!character || !character.id) {
+      console.error('Character or character.id is missing:', character);
+      return;
+    }
     this.router.navigate(['/character', character.id]);
   }
 
