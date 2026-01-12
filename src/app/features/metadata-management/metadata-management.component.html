@@ -488,6 +488,156 @@
       </section>
     </div>
 
+    <!-- Color Palette Management Section -->
+    <section class="section" *ngIf="colorPalette">
+      <div class="section-header">
+        <button 
+          class="section-toggle"
+          (click)="colorPaletteExpanded = !colorPaletteExpanded"
+          [attr.aria-expanded]="colorPaletteExpanded"
+        >
+          <h2>Color Palette</h2>
+          <span class="toggle-icon" [class.expanded]="colorPaletteExpanded">▼</span>
+        </button>
+        <button 
+          *ngIf="colorPaletteExpanded"
+          class="btn btn-secondary" 
+          (click)="resetBaseColors()" 
+          [disabled]="saving"
+          title="Reset all base colors to defaults"
+        >
+          Reset to Defaults
+        </button>
+      </div>
+
+      <div class="form-card" *ngIf="colorPaletteExpanded">
+        <p class="form-help">
+          Manage the color palette used for categories and tags. Base colors can be themed but not removed. 
+          You can add extra colors beyond the base 10.
+        </p>
+
+        <!-- Base Colors -->
+        <div class="color-palette-section">
+          <h3>Base Colors (10 - Themable, Not Removable)</h3>
+          <div class="color-grid">
+            <div 
+              *ngFor="let color of getBaseColors(); let i = index" 
+              class="color-item"
+            >
+              <div class="color-preview" [style.background-color]="color"></div>
+              <div class="color-info">
+                <div class="color-name">{{ baseColorNames[i] }}</div>
+                <div class="color-value" *ngIf="editingBaseColorIndex !== i">{{ color }}</div>
+                <div class="color-edit" *ngIf="editingBaseColorIndex === i">
+                  <input 
+                    type="color" 
+                    [value]="color"
+                    (change)="saveBaseColor(i, $any($event.target).value)"
+                    class="color-input-inline"
+                  >
+                  <input 
+                    type="text" 
+                    [value]="color"
+                    (change)="saveBaseColor(i, $any($event.target).value)"
+                    class="color-text-inline"
+                    pattern="^#[0-9A-Fa-f]{6}$"
+                  >
+                  <button class="btn-icon" (click)="cancelEditingBaseColor()" title="Cancel">×</button>
+                </div>
+              </div>
+              <button 
+                *ngIf="editingBaseColorIndex !== i"
+                class="btn-icon" 
+                (click)="startEditingBaseColor(i)"
+                title="Edit color"
+                [disabled]="saving"
+              >
+                ✎
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Theme Overrides -->
+        <div class="color-palette-section" *ngIf="currentTheme">
+          <h3>Theme-Specific Colors</h3>
+          <p class="form-help">
+            Current theme: <strong>{{ currentTheme.name }}</strong>
+            <span *ngIf="hasThemeOverrides()"> (has custom colors)</span>
+          </p>
+          <div class="form-actions-inline">
+            <button 
+              class="btn btn-secondary" 
+              (click)="setThemeOverrides()"
+              [disabled]="saving"
+              title="Save current base colors as theme-specific overrides"
+            >
+              Save as Theme Override
+            </button>
+            <button 
+              *ngIf="hasThemeOverrides()"
+              class="btn btn-secondary" 
+              (click)="removeThemeOverrides()"
+              [disabled]="saving"
+              title="Remove theme-specific color overrides"
+            >
+              Remove Theme Override
+            </button>
+          </div>
+        </div>
+
+        <!-- Extra Colors -->
+        <div class="color-palette-section">
+          <h3>Extra Colors</h3>
+          <p class="form-help">Add additional colors beyond the base 10. These can be removed.</p>
+          
+          <div class="add-color-form">
+            <input 
+              type="color" 
+              [(ngModel)]="newExtraColor"
+              class="color-input-inline"
+              placeholder="#000000"
+            >
+            <input 
+              type="text" 
+              [(ngModel)]="newExtraColor"
+              class="form-control color-text-inline"
+              placeholder="#3498db"
+              pattern="^#[0-9A-Fa-f]{6}$"
+            >
+            <button 
+              class="btn btn-primary" 
+              (click)="addExtraColor()"
+              [disabled]="saving || !newExtraColor"
+            >
+              Add Color
+            </button>
+          </div>
+
+          <div class="color-grid" *ngIf="getExtraColors().length > 0">
+            <div 
+              *ngFor="let color of getExtraColors()" 
+              class="color-item"
+            >
+              <div class="color-preview" [style.background-color]="color"></div>
+              <div class="color-info">
+                <div class="color-value">{{ color }}</div>
+              </div>
+              <button 
+                class="btn-icon btn-danger" 
+                (click)="removeExtraColor(color)"
+                title="Remove color"
+                [disabled]="saving"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+          <p *ngIf="getExtraColors().length === 0" class="form-help">No extra colors added yet.</p>
+        </div>
+      </div>
+    </section>
+
     <!-- Settings Section -->
     <section class="section">
       <div class="section-header">

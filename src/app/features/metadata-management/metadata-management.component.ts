@@ -7,10 +7,14 @@ import { ProjectService } from '../../core/services/project.service';
 import { CharacterService } from '../../core/services/character.service';
 import { ElectronService } from '../../core/services/electron.service';
 import { ThemeService } from '../../core/services/theme.service';
+import { ColorPaletteService } from '../../core/services/color-palette.service';
 import { Category, Tag, ProjectSettings, CategoryFolderMode } from '../../core/interfaces/project.interface';
 import { Character } from '../../core/interfaces/character.interface';
 import { Theme } from '../../core/interfaces/theme.interface';
+import { ColorPaletteConfig } from '../../core/interfaces/color-palette.interface';
+import { BASE_COLOR_NAMES } from '../../core/interfaces/color-palette.interface';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+import { DEFAULT_BASE_COLORS } from '../../core/utils/color-palette.utils';
 
 interface CategoryFormData {
   name: string;
@@ -40,6 +44,13 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
   settings: ProjectSettings | null = null;
   availableThemes: Theme[] = [];
   currentTheme: Theme | null = null;
+  
+  // Color palette management
+  colorPalette: ColorPaletteConfig | null = null;
+  baseColorNames = BASE_COLOR_NAMES;
+  editingBaseColorIndex: number | null = null;
+  newExtraColor = '';
+  colorPaletteExpanded = false;
 
   // Form states
   showCategoryForm = false;
@@ -67,35 +78,20 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
   tagDraggedIndex: number | null = null;
   tagDragOverIndex: number | null = null;
 
-  // Color presets - distinct and visually unique colors
-  colorPresets = [
-    '#e74c3c', // Red
-    '#3498db', // Blue  
-    '#2ecc71', // Green
-    '#f39c12', // Orange
-    '#9b59b6', // Purple
-    '#1abc9c', // Teal
-    '#e91e63', // Pink
-    '#ff5722', // Deep Orange
-    '#4caf50', // Light Green
-    '#2196f3', // Light Blue
-    '#ff9800', // Amber
-    '#795548', // Brown
-    '#607d8b', // Blue Grey
-    '#ffeb3b', // Yellow
-    '#8bc34a'  // Lime
-  ];
+  // Color presets - uses the shared color palette
+  colorPresets: string[] = [];
 
   constructor(
     private metadataService: MetadataService,
     private projectService: ProjectService,
     private characterService: CharacterService,
     private themeService: ThemeService,
+    private colorPaletteService: ColorPaletteService,
     private fb: FormBuilder
   ) {
     this.categoryForm = this.fb.group({
       name: ['', [Validators.required, Validators.maxLength(100)]],
-      color: ['#3498db', [Validators.required, Validators.pattern(/^#[0-9A-Fa-f]{6}$/)]],
+      color: [DEFAULT_BASE_COLORS[0], [Validators.required, Validators.pattern(/^#[0-9A-Fa-f]{6}$/)]],
       description: ['', [Validators.maxLength(500)]],
       folderMode: ['auto'],
       folderPath: ['', [Validators.maxLength(100)]]
@@ -103,7 +99,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
 
     this.tagForm = this.fb.group({
       name: ['', [Validators.required, Validators.maxLength(100)]],
-      color: ['#e74c3c', [Validators.required, Validators.pattern(/^#[0-9A-Fa-f]{6}$/)]]
+      color: [DEFAULT_BASE_COLORS[2], [Validators.required, Validators.pattern(/^#[0-9A-Fa-f]{6}$/)]]
     });
 
     this.settingsForm = this.fb.group({
@@ -123,6 +119,16 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe(theme => {
         this.currentTheme = theme;
+      });
+    
+    // Subscribe to color palette changes
+    this.colorPaletteService.palette$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(palette => {
+        this.colorPalette = palette;
+        if (palette) {
+          this.colorPresets = this.colorPaletteService.getAllColors();
+        }
       });
     
     this.loadData();
@@ -180,9 +186,10 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
   showAddCategoryForm(): void {
     this.showCategoryForm = true;
     this.editingCategory = null;
+    const defaultColor = this.colorPresets[0] || DEFAULT_BASE_COLORS[0];
     this.categoryForm.reset({
       name: '',
-      color: '#3498db',
+      color: defaultColor,
       description: '',
       folderMode: 'auto',
       folderPath: ''
@@ -280,9 +287,10 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
   showAddTagForm(): void {
     this.showTagForm = true;
     this.editingTag = null;
+    const defaultColor = this.colorPresets[2] || DEFAULT_BASE_COLORS[2];
     this.tagForm.reset({
       name: '',
-      color: '#e74c3c'
+      color: defaultColor
     });
   }
 
@@ -605,5 +613,138 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
     } finally {
       this.saving = false;
     }
+  }
+
+  // Color Palette Management
+
+  getBaseColors(): string[] {
+    return this.colorPaletteService.getBaseColors();
+  }
+
+  getExtraColors(): string[] {
+    return this.colorPaletteService.getExtraColors();
+  }
+
+  async updateBaseColor(index: number, color: string): Promise<void> {
+    try {
+      this.saving = true;
+      this.error = null;
+      await this.colorPaletteService.updateBaseColor(index, color);
+    } catch (error) {
+      console.error('Failed to update base color:', error);
+      this.error = `Failed to update color: ${error}`;
+    } finally {
+      this.saving = false;
+    }
+  }
+
+  startEditingBaseColor(index: number): void {
+    this.editingBaseColorIndex = index;
+  }
+
+  cancelEditingBaseColor(): void {
+    this.editingBaseColorIndex = null;
+  }
+
+  async saveBaseColor(index: number, color: string): Promise<void> {
+    if (!/^#[0-9A-Fa-f]{6}$/.test(color)) {
+      this.error = 'Invalid color format. Use hex format like #3498db';
+      return;
+    }
+    await this.updateBaseColor(index, color);
+    this.editingBaseColorIndex = null;
+  }
+
+  async resetBaseColors(): Promise<void> {
+    if (!confirm('Reset all base colors to defaults? This cannot be undone.')) {
+      return;
+    }
+    try {
+      this.saving = true;
+      this.error = null;
+      await this.colorPaletteService.resetBaseColors();
+    } catch (error) {
+      console.error('Failed to reset base colors:', error);
+      this.error = `Failed to reset colors: ${error}`;
+    } finally {
+      this.saving = false;
+    }
+  }
+
+  async addExtraColor(): Promise<void> {
+    if (!this.newExtraColor || !/^#[0-9A-Fa-f]{6}$/.test(this.newExtraColor)) {
+      this.error = 'Please enter a valid hex color (e.g., #3498db)';
+      return;
+    }
+    try {
+      this.saving = true;
+      this.error = null;
+      await this.colorPaletteService.addExtraColor(this.newExtraColor);
+      this.newExtraColor = '';
+    } catch (error) {
+      console.error('Failed to add extra color:', error);
+      this.error = `Failed to add color: ${error}`;
+    } finally {
+      this.saving = false;
+    }
+  }
+
+  async removeExtraColor(color: string): Promise<void> {
+    if (!confirm(`Remove color ${color}?`)) {
+      return;
+    }
+    try {
+      this.saving = true;
+      this.error = null;
+      await this.colorPaletteService.removeExtraColor(color);
+    } catch (error) {
+      console.error('Failed to remove extra color:', error);
+      this.error = `Failed to remove color: ${error}`;
+    } finally {
+      this.saving = false;
+    }
+  }
+
+  async setThemeOverrides(): Promise<void> {
+    if (!this.currentTheme) {
+      return;
+    }
+    const baseColors = this.getBaseColors();
+    try {
+      this.saving = true;
+      this.error = null;
+      await this.colorPaletteService.setThemeOverrides(this.currentTheme.id, baseColors);
+    } catch (error) {
+      console.error('Failed to set theme overrides:', error);
+      this.error = `Failed to set theme overrides: ${error}`;
+    } finally {
+      this.saving = false;
+    }
+  }
+
+  async removeThemeOverrides(): Promise<void> {
+    if (!this.currentTheme) {
+      return;
+    }
+    if (!confirm(`Remove color overrides for ${this.currentTheme.name} theme?`)) {
+      return;
+    }
+    try {
+      this.saving = true;
+      this.error = null;
+      await this.colorPaletteService.removeThemeOverrides(this.currentTheme.id);
+    } catch (error) {
+      console.error('Failed to remove theme overrides:', error);
+      this.error = `Failed to remove theme overrides: ${error}`;
+    } finally {
+      this.saving = false;
+    }
+  }
+
+  hasThemeOverrides(): boolean {
+    if (!this.currentTheme || !this.colorPalette) {
+      return false;
+    }
+    return !!this.colorPalette.themeOverrides?.[this.currentTheme.id];
   }
 }

@@ -48,5 +48,17 @@ export const grayscaleTheme: Theme = {
     shadowGlow: '0 0 24px rgba(156, 163, 175, 0.2)',
     shadowCard: '0 2px 8px rgba(0, 0, 0, 0.3), 0 0 1px rgba(0, 0, 0, 0.4)',
   },
+  colorPalette: [
+    '#9ca3af', // Light Gray Blue
+    '#a1a1a1', // Medium Gray Green
+    '#8b8b8b', // Dark Gray Red
+    '#7a7a7a', // Medium Gray Purple
+    '#b8b8b8', // Light Gray Orange
+    '#6b7280', // Dark Gray Teal
+    '#a8a8a8', // Light Gray Pink
+    '#9a9a9a', // Medium Gray Deep Orange
+    '#d1d5db', // Very Light Gray Yellow
+    '#4b5563'  // Dark Gray Blue-Grey
+  ],
 };
 

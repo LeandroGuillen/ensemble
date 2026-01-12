@@ -6,6 +6,7 @@ import { ValidationResult } from '../interfaces/validation.interface';
 import { CharacterValidator } from '../validators/character.validator';
 import { ProjectValidator } from '../validators/project.validator';
 import { pathJoin } from '../utils/path.utils';
+import { COLOR_PALETTE } from '../utils/color-palette.utils';
 import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
 import { CastService } from './cast.service';
@@ -106,16 +107,16 @@ export class MetadataService {
       projectName,
       version: '1.0.0',
       categories: [
-        { id: 'main-character', name: 'Main Character', color: '#3498db', description: 'Primary characters central to the story' },
-        { id: 'supporting', name: 'Supporting Character', color: '#2ecc71', description: 'Important characters who support the main story' },
-        { id: 'antagonist', name: 'Antagonist', color: '#e74c3c', description: 'Characters who oppose the protagonists' },
-        { id: 'minor', name: 'Minor Character', color: '#9b59b6', description: 'Characters with smaller roles in the story' },
+        { id: 'main-character', name: 'Main Character', color: COLOR_PALETTE[0], description: 'Primary characters central to the story' },
+        { id: 'supporting', name: 'Supporting Character', color: COLOR_PALETTE[1], description: 'Important characters who support the main story' },
+        { id: 'antagonist', name: 'Antagonist', color: COLOR_PALETTE[2], description: 'Characters who oppose the protagonists' },
+        { id: 'minor', name: 'Minor Character', color: COLOR_PALETTE[3], description: 'Characters with smaller roles in the story' },
       ],
       tags: [
-        { id: 'magic-user', name: 'Magic User', color: '#9b59b6' },
-        { id: 'noble', name: 'Noble', color: '#e91e63' },
-        { id: 'warrior', name: 'Warrior', color: '#ff5722' },
-        { id: 'scholar', name: 'Scholar', color: '#1abc9c' },
+        { id: 'magic-user', name: 'Magic User', color: COLOR_PALETTE[6] },
+        { id: 'noble', name: 'Noble', color: COLOR_PALETTE[7] },
+        { id: 'warrior', name: 'Warrior', color: COLOR_PALETTE[2] },
+        { id: 'scholar', name: 'Scholar', color: COLOR_PALETTE[5] },
       ],
       casts: [],
       books: [],

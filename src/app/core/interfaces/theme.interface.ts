@@ -50,5 +50,10 @@ export interface Theme {
   name: string;
   description?: string;
   colors: ThemeColors;
+  /**
+   * Theme-specific color palette for categories and tags
+   * Array of 10 distinct colors that match the theme aesthetic
+   */
+  colorPalette: string[];
 }
 

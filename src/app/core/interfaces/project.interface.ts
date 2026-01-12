@@ -110,6 +110,7 @@ export interface ProjectSettings {
   ai?: AiSettings;
   filterExpanded?: boolean;
   theme?: string; // Theme ID (e.g., "blue-gold")
+  colorPalette?: import('./color-palette.interface').ColorPaletteConfig;
 }
 
 // Legacy type alias for backward compatibility

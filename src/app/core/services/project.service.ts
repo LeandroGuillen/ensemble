@@ -17,6 +17,7 @@ import {
 import { generateId } from '../utils/id.utils';
 import { pathJoin } from '../utils/path.utils';
 import { assertIpcSuccess } from '../utils/ipc.utils';
+import { COLOR_PALETTE } from '../utils/color-palette.utils';
 import { ElectronService } from './electron.service';
 
 @Injectable({
@@ -237,16 +238,16 @@ export class ProjectService {
       projectName,
       version: '1.0.0',
       categories: [
-        { id: 'main-character', name: 'Main Character', color: '#3498db' },
-        { id: 'supporting', name: 'Supporting Character', color: '#2ecc71' },
-        { id: 'antagonist', name: 'Antagonist', color: '#e74c3c' },
-        { id: 'minor', name: 'Minor Character', color: '#9b59b6' },
+        { id: 'main-character', name: 'Main Character', color: COLOR_PALETTE[0] },
+        { id: 'supporting', name: 'Supporting Character', color: COLOR_PALETTE[1] },
+        { id: 'antagonist', name: 'Antagonist', color: COLOR_PALETTE[2] },
+        { id: 'minor', name: 'Minor Character', color: COLOR_PALETTE[3] },
       ],
       tags: [
-        { id: 'magic-user', name: 'Magic User', color: '#9b59b6' },
-        { id: 'noble', name: 'Noble', color: '#f39c12' },
-        { id: 'warrior', name: 'Warrior', color: '#ff5722' },
-        { id: 'scholar', name: 'Scholar', color: '#1abc9c' },
+        { id: 'magic-user', name: 'Magic User', color: COLOR_PALETTE[6] },
+        { id: 'noble', name: 'Noble', color: COLOR_PALETTE[7] },
+        { id: 'warrior', name: 'Warrior', color: COLOR_PALETTE[2] },
+        { id: 'scholar', name: 'Scholar', color: COLOR_PALETTE[5] },
       ],
       casts: [],
       books: [],

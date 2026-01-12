@@ -48,5 +48,17 @@ export const sepiaTheme: Theme = {
     shadowGlow: '0 0 24px rgba(201, 169, 97, 0.3)',
     shadowCard: '0 2px 8px rgba(0, 0, 0, 0.3), 0 0 1px rgba(0, 0, 0, 0.35)',
   },
+  colorPalette: [
+    '#8b7355', // Sepia Blue (muted blue-brown)
+    '#7a8b6b', // Sepia Green (muted green-brown)
+    '#a67c52', // Sepia Red (warm brown-red)
+    '#8b6b7a', // Sepia Purple (muted purple-brown)
+    '#c9a961', // Sepia Orange (warm amber)
+    '#6b8b7a', // Sepia Teal (muted teal-brown)
+    '#a67c8b', // Sepia Pink (muted pink-brown)
+    '#b88a5a', // Sepia Deep Orange (warm deep brown)
+    '#d4a574', // Sepia Yellow (warm gold)
+    '#6b6b6b'  // Sepia Grey (warm gray-brown)
+  ],
 };
 

@@ -48,5 +48,17 @@ export const blueGoldTheme: Theme = {
     shadowGlow: '0 0 24px rgba(229, 168, 85, 0.25)',
     shadowCard: '0 2px 8px rgba(0, 0, 0, 0.25), 0 0 1px rgba(0, 0, 0, 0.3)',
   },
+  colorPalette: [
+    '#3498db', // Blue
+    '#2ecc71', // Green
+    '#e74c3c', // Red
+    '#9b59b6', // Purple
+    '#f39c12', // Orange
+    '#1abc9c', // Teal
+    '#e91e63', // Pink
+    '#ff5722', // Deep Orange
+    '#f1c40f', // Yellow
+    '#34495e'  // Dark Blue-Grey
+  ],
 };
 
