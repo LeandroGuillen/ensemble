@@ -109,6 +109,7 @@ export interface ProjectSettings {
   pinboardView?: PinboardViewState;
   ai?: AiSettings;
   filterExpanded?: boolean;
+  theme?: string; // Theme ID (e.g., "blue-gold")
 }
 
 // Legacy type alias for backward compatibility

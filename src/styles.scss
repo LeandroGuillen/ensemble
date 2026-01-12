@@ -11,7 +11,8 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  /* Color Palette - Deep navy with warm amber accents */
+  /* Color Palette - Default values (Blue Gold theme)
+     These will be overridden by ThemeService when a theme is applied */
   --color-bg-primary: #0c0f14;
   --color-bg-secondary: #12161e;
   --color-bg-tertiary: #1a1f2b;
@@ -55,6 +56,9 @@
   --transition-base: 200ms ease;
   --transition-slow: 350ms ease;
   --transition-spring: 350ms cubic-bezier(0.16, 1, 0.3, 1);
+  
+  /* Theme transition - smooth color changes */
+  --theme-transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
 
   /* Spacing */
   --spacing-xs: 4px;
@@ -104,6 +108,7 @@
     background-color: var(--color-bg-primary);
     color: var(--color-text-primary);
     font-weight: 400;
+    transition: var(--theme-transition);
   }
 
   /* Typography */

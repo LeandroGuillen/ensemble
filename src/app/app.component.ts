@@ -1,9 +1,10 @@
-import { Component, OnInit, HostListener } from "@angular/core";
+import { Component, OnInit, HostListener, OnDestroy } from "@angular/core";
 import { Router, RouterOutlet, NavigationEnd } from "@angular/router";
 import { CommonModule } from "@angular/common";
 import { Title } from "@angular/platform-browser";
-import { ProjectService, ElectronService } from "./core/services";
+import { ProjectService, ElectronService, ThemeService } from "./core/services";
 import { filter } from "rxjs/operators";
+import { Subject, takeUntil } from "rxjs";
 import { CommandPaletteComponent } from "./shared/command-palette/command-palette.component";
 import { CommandPaletteService } from "./shared/command-palette/command-palette.service";
 import { SidebarComponent } from "./shared/sidebar/sidebar.component";
@@ -15,18 +16,20 @@ import { SidebarComponent } from "./shared/sidebar/sidebar.component";
   templateUrl: "./app.component.html",
   styleUrls: ["./app.component.scss"],
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, OnDestroy {
   title = "Ensemble";
   hasProject = false;
   isWelcomeScreen = false;
   private projectLoadedAndReady = false;
+  private destroy$ = new Subject<void>();
 
   constructor(
     private projectService: ProjectService,
     private router: Router,
     private commandPaletteService: CommandPaletteService,
     private titleService: Title,
-    private electronService: ElectronService
+    private electronService: ElectronService,
+    private themeService: ThemeService
   ) {}
 
   async ngOnInit() {
@@ -67,14 +70,21 @@ export class AppComponent implements OnInit {
       this.router.navigate(["/project-selector"]);
     }
 
-    this.projectService.currentProject$.subscribe((project: any) => {
-      this.hasProject = !!project;
-      // Only redirect to project selector if we're already past initial load
-      // and the project becomes null (e.g., user closes project)
-      if (!project && this.projectLoadedAndReady) {
-        this.router.navigate(["/project-selector"]);
-      }
-    });
+    this.projectService.currentProject$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((project: any) => {
+        this.hasProject = !!project;
+        // Only redirect to project selector if we're already past initial load
+        // and the project becomes null (e.g., user closes project)
+        if (!project && this.projectLoadedAndReady) {
+          this.router.navigate(["/project-selector"]);
+        } else if (project) {
+          // Initialize theme when project loads
+          this.themeService.initialize();
+          // Register theme commands
+          this.registerThemeCommands();
+        }
+      });
 
     // Track route changes and save to project settings
     this.router.events
@@ -102,5 +112,38 @@ export class AppComponent implements OnInit {
       this.commandPaletteService.open();
       return;
     }
+  }
+
+  /**
+   * Register theme switching commands in the command palette
+   */
+  private registerThemeCommands(): void {
+    const themes = this.themeService.getAvailableThemes();
+    const currentTheme = this.themeService.getCurrentTheme();
+
+    // Remove existing theme commands (if any)
+    themes.forEach(theme => {
+      this.commandPaletteService.removeCommand(`theme-${theme.id}`);
+    });
+
+    // Add commands for each theme
+    themes.forEach(theme => {
+      this.commandPaletteService.addCommand({
+        id: `theme-${theme.id}`,
+        label: `Switch to ${theme.name}`,
+        keywords: ['theme', 'appearance', 'color', 'style', theme.name.toLowerCase(), theme.id],
+        action: () => {
+          this.themeService.setTheme(theme.id).catch(error => {
+            console.error('Failed to set theme:', error);
+          });
+        },
+        group: 'Appearance'
+      });
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }

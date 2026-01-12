@@ -6,8 +6,10 @@ import { MetadataService } from '../../core/services/metadata.service';
 import { ProjectService } from '../../core/services/project.service';
 import { CharacterService } from '../../core/services/character.service';
 import { ElectronService } from '../../core/services/electron.service';
+import { ThemeService } from '../../core/services/theme.service';
 import { Category, Tag, ProjectSettings, CategoryFolderMode } from '../../core/interfaces/project.interface';
 import { Character } from '../../core/interfaces/character.interface';
+import { Theme } from '../../core/interfaces/theme.interface';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 
 interface CategoryFormData {
@@ -36,6 +38,8 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
   categories: Category[] = [];
   tags: Tag[] = [];
   settings: ProjectSettings | null = null;
+  availableThemes: Theme[] = [];
+  currentTheme: Theme | null = null;
 
   // Form states
   showCategoryForm = false;
@@ -86,6 +90,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
     private metadataService: MetadataService,
     private projectService: ProjectService,
     private characterService: CharacterService,
+    private themeService: ThemeService,
     private fb: FormBuilder
   ) {
     this.categoryForm = this.fb.group({
@@ -104,11 +109,22 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
     this.settingsForm = this.fb.group({
       defaultCategory: ['', Validators.required],
       autoSave: [true],
-      fileWatchEnabled: [true]
+      fileWatchEnabled: [true],
+      theme: ['']
     });
   }
 
   ngOnInit(): void {
+    // Load available themes
+    this.availableThemes = this.themeService.getAvailableThemes();
+    
+    // Subscribe to current theme changes
+    this.themeService.currentTheme$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(theme => {
+        this.currentTheme = theme;
+      });
+    
     this.loadData();
     
     // Subscribe to metadata changes
@@ -153,7 +169,8 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
       this.settingsForm.patchValue({
         defaultCategory: this.settings.defaultCategory,
         autoSave: this.settings.autoSave,
-        fileWatchEnabled: this.settings.fileWatchEnabled
+        fileWatchEnabled: this.settings.fileWatchEnabled,
+        theme: this.settings.theme || 'blue-gold'
       });
     }
   }
@@ -342,6 +359,12 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
       this.error = null;
       
       const formData = this.settingsForm.value;
+      
+      // If theme changed, apply it immediately
+      if (formData.theme) {
+        await this.themeService.setTheme(formData.theme);
+      }
+      
       await this.metadataService.updateSettings(formData);
     } catch (error) {
       console.error('Failed to save settings:', error);

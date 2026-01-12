@@ -7,3 +7,4 @@ export { ElectronService } from "./electron.service";
 export { MetadataService } from "./metadata.service";
 export { AiService } from "./ai.service";
 export { BackstageService } from "./backstage.service";
+export { ThemeService } from "./theme.service";
