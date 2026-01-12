@@ -33,6 +33,7 @@ import {
   MetadataService,
   ProjectService,
 } from "../../core/services";
+import { ModalService } from "../../core/services/modal.service";
 import {
   CategoryToggleComponent,
   ToggleOption,
@@ -99,7 +100,8 @@ export class CharacterDetailComponent
     private projectService: ProjectService,
     private electronService: ElectronService,
     private metadataService: MetadataService,
-    private aiService: AiService
+    private aiService: AiService,
+    private modalService: ModalService
   ) {
     this.characterForm = this.createForm();
   }
@@ -598,4 +600,27 @@ export class CharacterDetailComponent
   setActiveTab(tab: 'basic' | 'images' | 'additional'): void {
     this.activeTab = tab;
   }
+
+  async deleteCharacter(): Promise<void> {
+    if (!this.character || !this.isEditing) {
+      return;
+    }
+
+    const confirmed = await this.modalService.confirm(
+      `Are you sure you want to delete "${this.character.name}"?\n\nThis action cannot be undone.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await this.characterService.deleteCharacter(this.character.id);
+      this.router.navigate(["/characters"]);
+    } catch (error) {
+      this.error = `Failed to delete character: ${error}`;
+      console.error("Delete error:", error);
+    }
+  }
 }
+
