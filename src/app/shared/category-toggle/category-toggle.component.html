@@ -4,7 +4,7 @@
     class="toggle-option"
     [class.active]="selectedValue === ''"
     [class.error]="error"
-    (click)="onOptionClick('')"
+    (click)="onOptionClick('', $event)"
     [title]="emptyLabel === 'All' ? 'Show all categories' : 'No category'"
   >
     {{ emptyLabel }}
@@ -15,7 +15,7 @@
     class="toggle-option"
     [class.active]="selectedValue === option.id"
     [class.error]="error"
-    (click)="onOptionClick(option.id)"
+    (click)="onOptionClick(option.id, $event)"
     [title]="option.tooltip || option.name"
   >
     {{ option.name }}

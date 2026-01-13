@@ -22,7 +22,11 @@ export class CategoryToggleComponent {
 
   @Output() valueChange = new EventEmitter<string>();
 
-  onOptionClick(value: string): void {
+  onOptionClick(value: string, event?: Event): void {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
     this.valueChange.emit(value);
   }
 }

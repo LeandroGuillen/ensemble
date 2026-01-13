@@ -500,8 +500,15 @@ export class CharacterDetailComponent
   }
 
   onCategorySelect(categoryId: string): void {
-    this.characterForm.patchValue({ category: categoryId });
-    this.characterForm.markAsDirty();
+    const categoryControl = this.characterForm.get('category');
+    if (categoryControl) {
+      categoryControl.setValue(categoryId, { emitEvent: true });
+      this.characterForm.markAsDirty();
+    }
+  }
+
+  getSelectedCategory(): string {
+    return this.characterForm.get('category')?.value || '';
   }
 
   onTagToggle(tagId: string): void {
