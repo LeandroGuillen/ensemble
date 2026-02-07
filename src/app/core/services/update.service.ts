@@ -115,5 +115,39 @@ export class UpdateService {
   getCurrentStatus(): UpdateStatus {
     return this.updateStatusSubject.value;
   }
+
+  /**
+   * Copy downloaded update file to Downloads folder
+   */
+  async copyUpdateToDownloads(updatePath: string): Promise<{ success: boolean; path?: string; error?: string }> {
+    if (!this.electronService.isElectron()) {
+      return { success: false, error: 'Not running in Electron' };
+    }
+
+    try {
+      const result = await this.electronService.ipcRenderer.invoke('copy-update-to-downloads', updatePath);
+      return result;
+    } catch (error: any) {
+      this.logger.error('Error copying update to Downloads', error);
+      return { success: false, error: error.message || 'Unknown error' };
+    }
+  }
+
+  /**
+   * Open the folder containing the downloaded update file
+   */
+  async openUpdateFolder(updatePath: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.electronService.isElectron()) {
+      return { success: false, error: 'Not running in Electron' };
+    }
+
+    try {
+      const result = await this.electronService.ipcRenderer.invoke('open-update-folder', updatePath);
+      return result;
+    } catch (error: any) {
+      this.logger.error('Error opening update folder', error);
+      return { success: false, error: error.message || 'Unknown error' };
+    }
+  }
 }
 

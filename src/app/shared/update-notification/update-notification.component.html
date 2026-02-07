@@ -34,7 +34,7 @@
         class="btn btn-primary"
         (click)="onDownload()"
       >
-        Download Update
+        Download
       </button>
       <button 
         type="button" 
@@ -73,6 +73,27 @@
       <li>Make the new AppImage executable: <code>chmod +x Ensemble-{{ updateStatus.version }}.AppImage</code></li>
       <li>Launch the new AppImage</li>
     </ol>
+    <div class="update-file-info" *ngIf="updateStatus.path">
+      <p class="update-file-path">
+        <strong>Downloaded to:</strong> {{ updateStatus.path }}
+      </p>
+      <div class="update-file-actions">
+        <button 
+          type="button" 
+          class="btn btn-secondary btn-sm"
+          (click)="onCopyToDownloads()"
+        >
+          Copy to Downloads
+        </button>
+        <button 
+          type="button" 
+          class="btn btn-secondary btn-sm"
+          (click)="onOpenFolder()"
+        >
+          Open Folder
+        </button>
+      </div>
+    </div>
     <div class="update-actions">
       <button 
         type="button" 

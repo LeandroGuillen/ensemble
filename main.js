@@ -14,20 +14,15 @@ let fileWatcher = null;
 autoUpdater.autoDownload = false; // Manual download after user approval
 autoUpdater.autoInstallOnAppQuit = false; // AppImage requires manual replacement
 
-// Suppress electron-updater's internal logging for 404 errors
-// We handle these gracefully in the error handler
+// Configure logging for electron-updater
+// Enable debug logging to see what's happening with update checks
 autoUpdater.logger = {
   info: (message) => {
-    // Only log non-404 messages
-    if (message && !message.includes('404') && !message.includes('releases.atom')) {
-      console.log(message);
-    }
+    // Log all info messages for debugging
+    console.log('[Updater]', message);
   },
   warn: (message) => {
-    // Only log non-404 messages
-    if (message && !message.includes('404') && !message.includes('releases.atom')) {
-      console.warn(message);
-    }
+    console.warn('[Updater]', message);
   },
   error: (message, err) => {
     // Check if it's a 404 error
@@ -38,17 +33,23 @@ autoUpdater.logger = {
       (message && message.includes('releases.atom')) ||
       errorMessage.includes('404');
     
-    // Don't log 404 errors - they're handled gracefully
-    if (!is404Error) {
-      console.error(message, err);
+    // Log 404 errors at info level (they're expected when no releases exist)
+    if (is404Error) {
+      console.log('[Updater] 404 - No releases found (this is normal if no releases have been published)');
+    } else {
+      console.error('[Updater]', message, err);
     }
   },
-  debug: () => {} // Suppress debug logs
+  debug: (message) => {
+    // Enable debug logging to see network requests
+    console.log('[Updater Debug]', message);
+  }
 };
 
 // Update check interval (4 hours in milliseconds)
 const UPDATE_CHECK_INTERVAL = 4 * 60 * 60 * 1000;
 let updateCheckInterval = null;
+let updaterInitialized = false;
 
 function createWindow() {
   // Get app version for title
@@ -638,8 +639,30 @@ app.on('before-quit', async () => {
 // ==================== Auto-Updater Functions ====================
 
 function initializeUpdater() {
+  // Prevent duplicate initialization
+  if (updaterInitialized) {
+    console.log('[Update] Updater already initialized, skipping...');
+    return;
+  }
+  
+  console.log('[Update] Initializing auto-updater...');
+  console.log('[Update] App version:', app.getVersion());
+  console.log('[Update] Is packaged:', app.isPackaged);
+  console.log('[Update] Platform:', process.platform);
+  
+  // Log updater configuration
+  console.log('[Update] Updater config:', {
+    autoDownload: autoUpdater.autoDownload,
+    autoInstallOnAppQuit: autoUpdater.autoInstallOnAppQuit,
+    channel: autoUpdater.channel,
+    allowPrerelease: autoUpdater.allowPrerelease
+  });
+  
+  updaterInitialized = true;
+  
   // Set up auto-updater event handlers
   autoUpdater.on('checking-for-update', () => {
+    console.log('[Update] Event: checking-for-update');
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('update-status', {
         status: 'checking',
@@ -649,6 +672,7 @@ function initializeUpdater() {
   });
 
   autoUpdater.on('update-available', (info) => {
+    console.log('[Update] Event: update-available', info.version);
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('update-status', {
         status: 'available',
@@ -661,6 +685,7 @@ function initializeUpdater() {
   });
 
   autoUpdater.on('update-not-available', (info) => {
+    console.log('[Update] Event: update-not-available', info.version);
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('update-status', {
         status: 'not-available',
@@ -675,6 +700,8 @@ function initializeUpdater() {
     const errorMessage = err.message || err.toString() || '';
     const errorString = JSON.stringify(err);
     
+    console.log('[Update] Event: error', errorMessage);
+    
     // Check for 404 in multiple ways to catch all variations
     const is404Error = 
       err.statusCode === 404 ||
@@ -688,6 +715,7 @@ function initializeUpdater() {
     
     if (is404Error) {
       // Treat 404 as "no updates available" - don't show as error
+      console.log('[Update] 404 error - treating as no updates available');
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('update-status', {
           status: 'not-available',
@@ -700,6 +728,7 @@ function initializeUpdater() {
       }
     } else {
       // For other errors, show them normally
+      console.error('[Update] Error checking for updates:', err);
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('update-status', {
           status: 'error',
@@ -707,7 +736,6 @@ function initializeUpdater() {
           error: errorMessage
         });
       }
-      console.error('Error checking for updates:', err);
     }
   });
 
@@ -757,25 +785,31 @@ function checkForUpdates() {
     return;
   }
   
+  console.log('[Update] checkForUpdates() called (automatic check)');
   try {
     autoUpdater.checkForUpdates().catch(err => {
       // The error handler will catch and process this, so we don't need to log it here
       // This catch is just to prevent unhandled promise rejections
+      console.error('[Update] Unhandled error in checkForUpdates():', err);
     });
   } catch (error) {
     // The error handler will catch and process this, so we don't need to log it here
     // This catch is just to prevent unhandled promise rejections
+    console.error('[Update] Unhandled exception in checkForUpdates():', error);
   }
 }
 
 // IPC handlers for update operations
 ipcMain.handle('check-for-updates', async () => {
+  console.log('[Update] Manual update check requested');
+  
   if (isDev) {
     // In dev mode, simulate update checking for testing
     // Set ENABLE_UPDATE_TESTING=1 environment variable to enable
     const enableTesting = process.env.ENABLE_UPDATE_TESTING === '1';
     
     if (!enableTesting) {
+      console.log('[Update] Update checking is disabled in development mode');
       return { success: false, error: 'Update checking is disabled in development mode. Set ENABLE_UPDATE_TESTING=1 to test.' };
     }
     
@@ -821,12 +855,30 @@ ipcMain.handle('check-for-updates', async () => {
     }
   }
   
+  // Ensure updater is initialized (only in production)
+  if (!isDev && !updaterInitialized) {
+    console.log('[Update] Updater not initialized yet, initializing now...');
+    initializeUpdater();
+  }
+  
   try {
+    console.log('[Update] Calling autoUpdater.checkForUpdates()...');
+    // Manually trigger the 'checking-for-update' event to ensure UI feedback
+    // This ensures the UI shows "checking" even if the event doesn't fire immediately
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('update-status', {
+        status: 'checking',
+        message: 'Checking for updates...'
+      });
+    }
+    
     // The autoUpdater will emit events that are handled by the event listeners above
     // We don't need to catch errors here as they're handled by the 'error' event handler
-    await autoUpdater.checkForUpdates();
+    const result = await autoUpdater.checkForUpdates();
+    console.log('[Update] checkForUpdates() completed:', result ? `result received (updateInfo: ${result.updateInfo?.version || 'N/A'})` : 'no result');
     return { success: true };
   } catch (error) {
+    console.error('[Update] Error in checkForUpdates():', error);
     // If we get here, it's an unexpected error
     const errorMessage = error.message || error.toString() || '';
     const errorString = JSON.stringify(error);
@@ -842,6 +894,7 @@ ipcMain.handle('check-for-updates', async () => {
     
     if (is404Error) {
       // Treat 404 as success (no updates available)
+      console.log('[Update] 404 error - treating as no updates available');
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('update-status', {
           status: 'not-available',
@@ -849,6 +902,15 @@ ipcMain.handle('check-for-updates', async () => {
         });
       }
       return { success: true };
+    }
+    
+    // Send error to UI
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('update-status', {
+        status: 'error',
+        message: 'Error checking for updates',
+        error: errorMessage
+      });
     }
     
     return { success: false, error: errorMessage };
@@ -893,4 +955,59 @@ ipcMain.handle('quit-and-install', async () => {
   // The user will need to manually replace the AppImage file
   app.quit();
   return { success: true };
+});
+
+// Copy downloaded update file to Downloads folder
+ipcMain.handle('copy-update-to-downloads', async (event, updatePath) => {
+  if (isDev) {
+    return { success: false, error: 'Not available in development mode' };
+  }
+  
+  try {
+    if (!updatePath) {
+      return { success: false, error: 'Update path not provided' };
+    }
+    
+    // Get Downloads folder path
+    const downloadsPath = app.getPath('downloads');
+    const fileName = path.basename(updatePath);
+    const destPath = path.join(downloadsPath, fileName);
+    
+    // Ensure Downloads directory exists
+    await fs.mkdir(downloadsPath, { recursive: true });
+    
+    // Copy file to Downloads
+    await fs.copyFile(updatePath, destPath);
+    
+    // Make it executable (for AppImage)
+    await fs.chmod(destPath, 0o755);
+    
+    console.log('[Update] Copied update file to Downloads:', destPath);
+    return { success: true, path: destPath };
+  } catch (error) {
+    console.error('[Update] Error copying update to Downloads:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Open the folder containing the downloaded update file
+ipcMain.handle('open-update-folder', async (event, updatePath) => {
+  if (isDev) {
+    return { success: false, error: 'Not available in development mode' };
+  }
+  
+  try {
+    if (!updatePath) {
+      return { success: false, error: 'Update path not provided' };
+    }
+    
+    const folderPath = path.dirname(updatePath);
+    await shell.openPath(folderPath);
+    
+    console.log('[Update] Opened folder:', folderPath);
+    return { success: true };
+  } catch (error) {
+    console.error('[Update] Error opening update folder:', error);
+    return { success: false, error: error.message };
+  }
 });

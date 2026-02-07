@@ -92,7 +92,7 @@
         margin-bottom: 0.5rem;
 
         code {
-          background: var(--color-bg-subtle, #1a1f2e);
+          background: var(--color-bg-tertiary, #1a1f2b);
           padding: 0.125rem 0.375rem;
           border-radius: 0.25rem;
           font-family: 'Courier New', monospace;
@@ -105,7 +105,7 @@
     .update-error-message {
       margin: 0 0 1rem 0;
       font-size: 0.875rem;
-      color: #ef4444;
+      color: var(--color-error, #f87171);
       line-height: 1.5;
     }
 
@@ -113,14 +113,14 @@
       .progress-bar {
         width: 100%;
         height: 0.5rem;
-        background: var(--color-bg-subtle, #1a1f2e);
+        background: var(--color-bg-tertiary, #1a1f2b);
         border-radius: 0.25rem;
         overflow: hidden;
         margin-bottom: 0.5rem;
 
         .progress-fill {
           height: 100%;
-          background: linear-gradient(90deg, #3b82f6, #2563eb);
+          background: linear-gradient(90deg, var(--color-info, #60a5fa), var(--color-accent-primary, #e5a855));
           border-radius: 0.25rem;
           transition: width 0.3s ease;
         }
@@ -131,6 +131,56 @@
         justify-content: space-between;
         font-size: 0.8125rem;
         color: var(--color-text-secondary, #a0a8b8);
+      }
+    }
+
+    .update-file-info {
+      margin: 1rem 0;
+      padding: 0.75rem;
+      background: var(--color-bg-tertiary, #1a1f2b);
+      border-radius: 0.5rem;
+      border: 1px solid var(--color-border, #2a3142);
+
+      .update-file-path {
+        margin: 0 0 0.75rem 0;
+        font-size: 0.8125rem;
+        color: var(--color-text-secondary, #a0a8b8);
+        word-break: break-all;
+        line-height: 1.5;
+
+        strong {
+          color: var(--color-text-primary, #f2f4f7);
+        }
+      }
+
+      .update-file-actions {
+        display: flex;
+        gap: 0.5rem;
+
+        .btn {
+          flex: 1;
+          padding: 0.375rem 0.75rem;
+          border: none;
+          border-radius: 0.375rem;
+          font-size: 0.8125rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+
+          &.btn-secondary {
+            background: var(--color-bg-elevated, #222838);
+            color: var(--color-text-primary, #f2f4f7);
+            border: 1px solid var(--color-border, #2a3142);
+
+            &:hover {
+              background: var(--color-bg-hover, #252b3d);
+            }
+
+            &:active {
+              transform: scale(0.98);
+            }
+          }
+        }
       }
     }
 
@@ -150,11 +200,11 @@
         transition: all 0.2s;
 
         &.btn-primary {
-          background: #3b82f6;
-          color: white;
+          background: var(--color-accent-primary, #e5a855);
+          color: var(--color-text-inverse, #0c0f14);
 
           &:hover {
-            background: #2563eb;
+            background: var(--color-accent-dark, #c48b3a);
           }
 
           &:active {
@@ -163,7 +213,7 @@
         }
 
         &.btn-secondary {
-          background: var(--color-bg-subtle, #1a1f2e);
+          background: var(--color-bg-tertiary, #1a1f2b);
           color: var(--color-text-primary, #f2f4f7);
           border: 1px solid var(--color-border, #2a3142);
 
@@ -181,34 +231,34 @@
 }
 
 .update-available {
-  border-left: 3px solid #3b82f6;
+  border-left: 3px solid var(--color-info, #60a5fa);
 
   .update-header i {
-    color: #3b82f6;
+    color: var(--color-info, #60a5fa);
   }
 }
 
 .update-downloading {
-  border-left: 3px solid #f59e0b;
+  border-left: 3px solid var(--color-warning, #fbbf24);
 
   .update-header i {
-    color: #f59e0b;
+    color: var(--color-warning, #fbbf24);
   }
 }
 
 .update-downloaded {
-  border-left: 3px solid #10b981;
+  border-left: 3px solid var(--color-success, #4ade80);
 
   .update-header i {
-    color: #10b981;
+    color: var(--color-success, #4ade80);
   }
 }
 
 .update-error {
-  border-left: 3px solid #ef4444;
+  border-left: 3px solid var(--color-error, #f87171);
 
   .update-header i {
-    color: #ef4444;
+    color: var(--color-error, #f87171);
   }
 }
 

@@ -18,6 +18,17 @@ export class UpdateNotificationComponent implements OnInit, OnDestroy {
   constructor(private updateService: UpdateService) {}
 
   ngOnInit(): void {
+    // Check current status immediately in case status was set before component initialized
+    const currentStatus = this.updateService.getCurrentStatus();
+    if (currentStatus) {
+      this.updateStatus = currentStatus;
+      this.isVisible = currentStatus.status === 'available' || 
+                      currentStatus.status === 'downloading' || 
+                      currentStatus.status === 'downloaded' ||
+                      currentStatus.status === 'error';
+    }
+
+    // Subscribe to future status changes
     this.updateService.updateStatus$
       .pipe(takeUntil(this.destroy$))
       .subscribe(status => {
@@ -47,6 +58,33 @@ export class UpdateNotificationComponent implements OnInit, OnDestroy {
     const result = await this.updateService.quitAndInstall();
     if (!result.success) {
       console.error('Failed to quit for install:', result.error);
+    }
+  }
+
+  async onCopyToDownloads(): Promise<void> {
+    if (!this.updateStatus?.path) {
+      console.error('Update path not available');
+      return;
+    }
+
+    const result = await this.updateService.copyUpdateToDownloads(this.updateStatus.path);
+    if (result.success) {
+      console.log('Update copied to Downloads:', result.path);
+      // Optionally show a success message or update the UI
+    } else {
+      console.error('Failed to copy update to Downloads:', result.error);
+    }
+  }
+
+  async onOpenFolder(): Promise<void> {
+    if (!this.updateStatus?.path) {
+      console.error('Update path not available');
+      return;
+    }
+
+    const result = await this.updateService.openUpdateFolder(this.updateStatus.path);
+    if (!result.success) {
+      console.error('Failed to open update folder:', result.error);
     }
   }
 
