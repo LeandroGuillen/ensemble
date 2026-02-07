@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Observable, Subscription } from 'rxjs';
 import { DataSet, Edge, Network, Node, Options } from 'vis-network/standalone';
 import { Character, GraphData, Relationship } from '../../core/interfaces';
-import { CharacterService, ProjectService, RelationshipService, ElectronService, LoggingService } from '../../core/services';
+import { CharacterService, ProjectService, RelationshipService, ElectronService, LoggingService, NotificationService } from '../../core/services';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 
 interface RelationshipFormData {
@@ -74,7 +74,8 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
     private characterService: CharacterService,
     private projectService: ProjectService,
     private electronService: ElectronService,
-    private logger: LoggingService
+    private logger: LoggingService,
+    private notificationService: NotificationService
   ) {
     this.graphData$ = this.relationshipService.getGraphData();
     this.characters$ = this.characterService.getCharacters();
@@ -563,7 +564,7 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
     if (this.selectedNodes.length === 2) {
       this.openRelationshipDialog(this.selectedNodes[0], this.selectedNodes[1]);
     } else {
-      alert('Please select exactly two characters to create a relationship.');
+      this.notificationService.showWarning('Please select exactly two characters to create a relationship.');
     }
   }
 
@@ -830,7 +831,7 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
     const targetChar = this.characters.find((c) => c.id === targetId);
 
     if (!sourceChar || !targetChar) {
-      alert('Invalid character selection.');
+      this.notificationService.showError('Invalid character selection.');
       return;
     }
 
@@ -871,7 +872,7 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
 
       this.closeDialogs();
     } catch (error) {
-      alert('Failed to save relationship. Please try again.');
+      this.notificationService.showError('Failed to save relationship. Please try again.');
     }
   }
 
@@ -883,7 +884,7 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
         await this.relationshipService.deleteRelationship(this.editingRelationship.id);
         this.closeDialogs();
       } catch (error) {
-        alert('Failed to delete relationship. Please try again.');
+        this.notificationService.showError('Failed to delete relationship. Please try again.');
       }
     }
   }
@@ -946,7 +947,7 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
     } catch (error) {
       this.logger.error('Failed to add character to graph:', error);
       this.logger.error('Error details:', error);
-      alert(`Failed to add character to graph: ${error}`);
+      this.notificationService.showError(`Failed to add character to graph: ${error}`);
     }
   }
 

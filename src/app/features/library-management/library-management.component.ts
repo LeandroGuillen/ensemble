@@ -11,6 +11,7 @@ import { Subject, takeUntil } from "rxjs";
 import { MetadataService } from "../../core/services/metadata.service";
 import { ProjectService } from "../../core/services/project.service";
 import { LoggingService } from "../../core/services/logging.service";
+import { NotificationService } from "../../core/services/notification.service";
 import { Book } from "../../core/interfaces/project.interface";
 import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
 import { BookEditorComponent } from "./components/book-editor/book-editor.component";
@@ -97,7 +98,8 @@ export class LibraryManagementComponent implements OnInit, OnDestroy {
     private metadataService: MetadataService,
     private projectService: ProjectService,
     private fb: FormBuilder,
-    private logger: LoggingService
+    private logger: LoggingService,
+    private notificationService: NotificationService
   ) {
     this.bookForm = this.fb.group({
       name: ["", [Validators.required, Validators.maxLength(200)]],
@@ -228,8 +230,10 @@ export class LibraryManagementComponent implements OnInit, OnDestroy {
 
       if (this.editingBook) {
         await this.metadataService.updateBook(this.editingBook.id, formData);
+        this.notificationService.showSuccess("Book updated successfully");
       } else {
         await this.metadataService.addBook(formData);
+        this.notificationService.showSuccess("Book created successfully");
       }
 
       this.cancelBookForm();
@@ -255,6 +259,7 @@ export class LibraryManagementComponent implements OnInit, OnDestroy {
       this.error = null;
 
       await this.metadataService.removeBook(book.id);
+      this.notificationService.showSuccess(`Book "${book.name}" deleted successfully`);
     } catch (error) {
       this.logger.error("Failed to delete book:", error);
       this.error = `Failed to delete book: ${error}`;

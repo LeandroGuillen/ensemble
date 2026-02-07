@@ -24,6 +24,7 @@ import {
   ProjectService,
   CastService,
   LoggingService,
+  NotificationService,
 } from "../../core/services";
 import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
 
@@ -77,7 +78,8 @@ export class CastDetailComponent implements OnInit, OnDestroy {
     private projectService: ProjectService,
     private ngZone: NgZone,
     private cdr: ChangeDetectorRef,
-    private logger: LoggingService
+    private logger: LoggingService,
+    private notificationService: NotificationService
   ) {
     this.castForm = this.fb.group({
       name: ["", [Validators.required, Validators.maxLength(100)]],
@@ -429,6 +431,7 @@ export class CastDetailComponent implements OnInit, OnDestroy {
 
       if (this.isNewCast) {
         savedCast = await this.metadataService.addCast(formData);
+        this.notificationService.showSuccess("Cast created successfully");
 
         // If there's a pending thumbnail, upload it now
         if (this.pendingThumbnailPath && savedCast.id) {
@@ -450,6 +453,7 @@ export class CastDetailComponent implements OnInit, OnDestroy {
           this.castId,
           formData
         );
+        this.notificationService.showSuccess("Cast saved successfully");
       }
 
       // Navigate back to cast list
@@ -476,6 +480,7 @@ export class CastDetailComponent implements OnInit, OnDestroy {
     ) {
       try {
         await this.metadataService.removeCast(this.cast.id);
+        this.notificationService.showSuccess(`Cast "${this.cast.name}" deleted successfully`);
         this.router.navigate(["/casts"]);
       } catch (error) {
         this.error = `Failed to delete cast: ${error}`;
