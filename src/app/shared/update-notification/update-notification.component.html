@@ -1,0 +1,109 @@
+<div 
+  *ngIf="isVisible && updateStatus" 
+  class="update-notification"
+  [class.update-available]="updateStatus.status === 'available'"
+  [class.update-downloading]="updateStatus.status === 'downloading'"
+  [class.update-downloaded]="updateStatus.status === 'downloaded'"
+  [class.update-error]="updateStatus.status === 'error'"
+  role="alert"
+  aria-live="polite"
+>
+  <div class="update-header">
+    <i class="icon-download"></i>
+    <div class="update-title">
+      <h3>{{ getTitle() }}</h3>
+      <p class="update-message">{{ updateStatus.message }}</p>
+    </div>
+    <button
+      type="button"
+      class="update-close"
+      (click)="onDismiss()"
+      aria-label="Close update notification"
+    >
+      <i class="icon-x"></i>
+    </button>
+  </div>
+
+  <div class="update-content" *ngIf="updateStatus.status === 'available'">
+    <p *ngIf="updateStatus.version" class="update-version">
+      Version {{ updateStatus.version }} is available
+    </p>
+    <div class="update-actions">
+      <button 
+        type="button" 
+        class="btn btn-primary"
+        (click)="onDownload()"
+      >
+        Download Update
+      </button>
+      <button 
+        type="button" 
+        class="btn btn-secondary"
+        (click)="onDismiss()"
+      >
+        Later
+      </button>
+    </div>
+  </div>
+
+  <div class="update-content" *ngIf="updateStatus.status === 'downloading'">
+    <div class="progress-container" *ngIf="updateStatus.progress">
+      <div class="progress-bar">
+        <div 
+          class="progress-fill" 
+          [style.width.%]="updateStatus.progress.percent"
+        ></div>
+      </div>
+      <div class="progress-info">
+        <span>{{ updateStatus.progress.percent.toFixed(1) }}%</span>
+        <span *ngIf="updateStatus.progress.total">
+          {{ formatBytes(updateStatus.progress.transferred) }} / {{ formatBytes(updateStatus.progress.total) }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="update-content" *ngIf="updateStatus.status === 'downloaded'">
+    <p class="update-instructions">
+      Update downloaded successfully. For AppImage, please:
+    </p>
+    <ol class="update-steps">
+      <li>Close Ensemble</li>
+      <li>Replace the old AppImage file with the new one</li>
+      <li>Make the new AppImage executable: <code>chmod +x Ensemble-{{ updateStatus.version }}.AppImage</code></li>
+      <li>Launch the new AppImage</li>
+    </ol>
+    <div class="update-actions">
+      <button 
+        type="button" 
+        class="btn btn-primary"
+        (click)="onInstall()"
+      >
+        Quit and Install
+      </button>
+      <button 
+        type="button" 
+        class="btn btn-secondary"
+        (click)="onDismiss()"
+      >
+        Install Later
+      </button>
+    </div>
+  </div>
+
+  <div class="update-content" *ngIf="updateStatus.status === 'error'">
+    <p class="update-error-message" *ngIf="updateStatus.error">
+      {{ updateStatus.error }}
+    </p>
+    <div class="update-actions">
+      <button 
+        type="button" 
+        class="btn btn-secondary"
+        (click)="onDismiss()"
+      >
+        Dismiss
+      </button>
+    </div>
+  </div>
+</div>
+
