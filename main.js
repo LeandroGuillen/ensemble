@@ -14,6 +14,38 @@ let fileWatcher = null;
 autoUpdater.autoDownload = false; // Manual download after user approval
 autoUpdater.autoInstallOnAppQuit = false; // AppImage requires manual replacement
 
+// Suppress electron-updater's internal logging for 404 errors
+// We handle these gracefully in the error handler
+autoUpdater.logger = {
+  info: (message) => {
+    // Only log non-404 messages
+    if (message && !message.includes('404') && !message.includes('releases.atom')) {
+      console.log(message);
+    }
+  },
+  warn: (message) => {
+    // Only log non-404 messages
+    if (message && !message.includes('404') && !message.includes('releases.atom')) {
+      console.warn(message);
+    }
+  },
+  error: (message, err) => {
+    // Check if it's a 404 error
+    const errorMessage = (err && err.message) || message || '';
+    const is404Error = 
+      (err && (err.statusCode === 404 || err.code === 404)) ||
+      (message && message.includes('404')) || 
+      (message && message.includes('releases.atom')) ||
+      errorMessage.includes('404');
+    
+    // Don't log 404 errors - they're handled gracefully
+    if (!is404Error) {
+      console.error(message, err);
+    }
+  },
+  debug: () => {} // Suppress debug logs
+};
+
 // Update check interval (4 hours in milliseconds)
 const UPDATE_CHECK_INTERVAL = 4 * 60 * 60 * 1000;
 let updateCheckInterval = null;
@@ -641,11 +673,18 @@ function initializeUpdater() {
   autoUpdater.on('error', (err) => {
     // Handle 404 errors gracefully - they're expected when there are no releases yet
     const errorMessage = err.message || err.toString() || '';
+    const errorString = JSON.stringify(err);
+    
+    // Check for 404 in multiple ways to catch all variations
     const is404Error = 
       err.statusCode === 404 ||
+      err.code === 404 ||
       errorMessage.includes('404') || 
       errorMessage.includes('releases.atom') ||
-      (err.response && err.response.statusCode === 404);
+      errorString.includes('"statusCode":404') ||
+      errorString.includes('"status":404') ||
+      (err.response && (err.response.statusCode === 404 || err.response.status === 404)) ||
+      (err.response && err.response.status === 404);
     
     if (is404Error) {
       // Treat 404 as "no updates available" - don't show as error
@@ -709,49 +748,110 @@ function initializeUpdater() {
 
 function checkForUpdates() {
   if (isDev) {
+    // In dev mode, only check if testing is enabled
+    if (process.env.ENABLE_UPDATE_TESTING !== '1') {
+      return;
+    }
+    // If testing is enabled, the IPC handler will handle the mock response
+    // This function is called automatically on startup, so we'll skip it in test mode
     return;
   }
   
   try {
     autoUpdater.checkForUpdates().catch(err => {
-      // Don't log 404 errors as they're expected when no releases exist
-      const errorMessage = err.message || err.toString() || '';
-      const is404Error = 
-        err.statusCode === 404 ||
-        errorMessage.includes('404') || 
-        errorMessage.includes('releases.atom') ||
-        (err.response && err.response.statusCode === 404);
-      
-      if (!is404Error) {
-        console.error('Error checking for updates:', err);
-      }
+      // The error handler will catch and process this, so we don't need to log it here
+      // This catch is just to prevent unhandled promise rejections
     });
   } catch (error) {
-    // Don't log 404 errors as they're expected when no releases exist
-    const errorMessage = error.message || error.toString() || '';
-    const is404Error = 
-      error.statusCode === 404 ||
-      errorMessage.includes('404') || 
-      errorMessage.includes('releases.atom') ||
-      (error.response && error.response.statusCode === 404);
-    
-    if (!is404Error) {
-      console.error('Failed to check for updates:', error);
-    }
+    // The error handler will catch and process this, so we don't need to log it here
+    // This catch is just to prevent unhandled promise rejections
   }
 }
 
 // IPC handlers for update operations
 ipcMain.handle('check-for-updates', async () => {
   if (isDev) {
-    return { success: false, error: 'Update checking is disabled in development mode' };
+    // In dev mode, simulate update checking for testing
+    // Set ENABLE_UPDATE_TESTING=1 environment variable to enable
+    const enableTesting = process.env.ENABLE_UPDATE_TESTING === '1';
+    
+    if (!enableTesting) {
+      return { success: false, error: 'Update checking is disabled in development mode. Set ENABLE_UPDATE_TESTING=1 to test.' };
+    }
+    
+    // Simulate checking delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Simulate different scenarios based on UPDATE_TEST_SCENARIO env var
+    // Options: 'available', 'not-available', 'error'
+    const scenario = process.env.UPDATE_TEST_SCENARIO || 'not-available';
+    
+    if (scenario === 'available') {
+      // Simulate update available
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update-status', {
+          status: 'available',
+          message: 'Update available',
+          version: '1.2.0',
+          releaseDate: new Date().toISOString(),
+          releaseNotes: 'Test update with new features'
+        });
+      }
+      return { success: true };
+    } else if (scenario === 'error') {
+      // Simulate error
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update-status', {
+          status: 'error',
+          message: 'Error checking for updates',
+          error: 'Test error: Network connection failed'
+        });
+      }
+      return { success: false, error: 'Test error: Network connection failed' };
+    } else {
+      // Simulate no update available (default)
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update-status', {
+          status: 'not-available',
+          message: 'You are using the latest version',
+          version: app.getVersion()
+        });
+      }
+      return { success: true };
+    }
   }
   
   try {
+    // The autoUpdater will emit events that are handled by the event listeners above
+    // We don't need to catch errors here as they're handled by the 'error' event handler
     await autoUpdater.checkForUpdates();
     return { success: true };
   } catch (error) {
-    return { success: false, error: error.message };
+    // If we get here, it's an unexpected error
+    const errorMessage = error.message || error.toString() || '';
+    const errorString = JSON.stringify(error);
+    
+    // Check if it's a 404 error
+    const is404Error = 
+      error.statusCode === 404 ||
+      error.code === 404 ||
+      errorMessage.includes('404') || 
+      errorMessage.includes('releases.atom') ||
+      errorString.includes('"statusCode":404') ||
+      errorString.includes('"status":404');
+    
+    if (is404Error) {
+      // Treat 404 as success (no updates available)
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update-status', {
+          status: 'not-available',
+          message: 'You are using the latest version'
+        });
+      }
+      return { success: true };
+    }
+    
+    return { success: false, error: errorMessage };
   }
 });
 

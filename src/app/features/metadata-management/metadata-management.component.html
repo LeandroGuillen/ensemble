@@ -697,6 +697,29 @@
             <small class="form-help">Choose the color theme for this project.</small>
           </div>
 
+          <div class="form-group">
+            <label>Application Updates</label>
+            <div class="update-check-section">
+              <button 
+                type="button"
+                class="btn btn-secondary"
+                (click)="checkForUpdates()"
+                [disabled]="checkingForUpdates"
+              >
+                <i *ngIf="checkingForUpdates" class="icon-loader"></i>
+                <i *ngIf="!checkingForUpdates" class="icon-download"></i>
+                {{ checkingForUpdates ? 'Checking...' : 'Check for Updates' }}
+              </button>
+              <div *ngIf="hasUpdateStatus()" class="update-status-message" [class.update-available]="isUpdateAvailable()" [class.update-error]="isUpdateError()">
+                <i *ngIf="isUpdateAvailable()" class="icon-check"></i>
+                <i *ngIf="isUpdateError()" class="icon-alert-circle"></i>
+                <i *ngIf="updateStatus.status === 'not-available'" class="icon-info"></i>
+                <span>{{ getUpdateStatusMessage() }}</span>
+              </div>
+            </div>
+            <small class="form-help">Check if a new version of the application is available.</small>
+          </div>
+
           <div class="form-actions">
             <button type="submit" class="btn btn-primary" [disabled]="saving || settingsForm.invalid">
               <span *ngIf="saving" class="spinner-small"></span>

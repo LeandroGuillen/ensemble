@@ -274,6 +274,53 @@
     resize: vertical;
     min-height: 80px;
   }
+
+  .update-check-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+
+    .update-status-message {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-xs);
+      padding: var(--spacing-sm) var(--spacing-md);
+      border-radius: var(--radius-md);
+      font-size: 0.875rem;
+      font-weight: 500;
+      background: var(--color-bg-tertiary);
+      color: var(--color-text-secondary);
+      border: 1px solid var(--color-border);
+
+      i {
+        font-size: 1rem;
+      }
+
+      &.update-available {
+        background: rgba(52, 211, 153, 0.1);
+        border-color: rgba(52, 211, 153, 0.3);
+        color: rgb(52, 211, 153);
+
+        i {
+          color: rgb(52, 211, 153);
+        }
+      }
+
+      &.update-error {
+        background: rgba(239, 68, 68, 0.1);
+        border-color: rgba(239, 68, 68, 0.3);
+        color: rgb(239, 68, 68);
+
+        i {
+          color: rgb(239, 68, 68);
+        }
+      }
+
+      i.icon-info {
+        color: var(--color-accent-primary);
+      }
+    }
+  }
 }
 
 .color-input-group {

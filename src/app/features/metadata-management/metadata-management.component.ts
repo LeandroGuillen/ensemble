@@ -9,6 +9,7 @@ import { CharacterService } from '../../core/services/character.service';
 import { ElectronService } from '../../core/services/electron.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { ColorPaletteService } from '../../core/services/color-palette.service';
+import { UpdateService, UpdateStatus } from '../../core/services/update.service';
 import { Category, Tag, ProjectSettings, CategoryFolderMode } from '../../core/interfaces/project.interface';
 import { Character } from '../../core/interfaces/character.interface';
 import { Theme } from '../../core/interfaces/theme.interface';
@@ -71,6 +72,10 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
   // Error handling
   error: string | null = null;
 
+  // Update checking
+  updateStatus: UpdateStatus = { status: 'idle' };
+  checkingForUpdates = false;
+
   // Drag and drop state for categories
   draggedIndex: number | null = null;
   dragOverIndex: number | null = null;
@@ -88,6 +93,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
     private characterService: CharacterService,
     private themeService: ThemeService,
     private colorPaletteService: ColorPaletteService,
+    private updateService: UpdateService,
     private fb: FormBuilder,
     private logger: LoggingService
   ) {
@@ -130,6 +136,17 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
         this.colorPalette = palette;
         if (palette) {
           this.colorPresets = this.colorPaletteService.getAllColors();
+        }
+      });
+    
+    // Subscribe to update status changes
+    this.updateService.updateStatus$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(status => {
+        this.updateStatus = status;
+        // Reset checking flag when status changes from checking
+        if (status.status !== 'checking') {
+          this.checkingForUpdates = false;
         }
       });
     
@@ -748,5 +765,56 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
       return false;
     }
     return !!this.colorPalette.themeOverrides?.[this.currentTheme.id];
+  }
+
+  // Update checking
+  async checkForUpdates(): Promise<void> {
+    this.checkingForUpdates = true;
+    this.updateStatus = { status: 'checking', message: 'Checking for updates...' };
+    
+    try {
+      const result = await this.updateService.checkForUpdates();
+      if (!result.success) {
+        this.updateStatus = {
+          status: 'error',
+          message: 'Failed to check for updates',
+          error: result.error
+        };
+      }
+      // The actual status will be updated via the updateStatus$ subscription
+    } catch (error: any) {
+      this.logger.error('Error checking for updates', error);
+      this.updateStatus = {
+        status: 'error',
+        message: 'Failed to check for updates',
+        error: error.message || 'Unknown error'
+      };
+      this.checkingForUpdates = false;
+    }
+  }
+
+  getUpdateStatusMessage(): string {
+    if (this.updateStatus.status === 'checking') {
+      return 'Checking for updates...';
+    } else if (this.updateStatus.status === 'available') {
+      return `Update available: ${this.updateStatus.version || 'new version'}`;
+    } else if (this.updateStatus.status === 'not-available') {
+      return 'You are using the latest version';
+    } else if (this.updateStatus.status === 'error') {
+      return this.updateStatus.error || 'Error checking for updates';
+    }
+    return '';
+  }
+
+  hasUpdateStatus(): boolean {
+    return this.updateStatus.status !== 'idle';
+  }
+
+  isUpdateAvailable(): boolean {
+    return this.updateStatus.status === 'available';
+  }
+
+  isUpdateError(): boolean {
+    return this.updateStatus.status === 'error';
   }
 }
