@@ -753,14 +753,68 @@ function initializeUpdater() {
     }
   });
 
-  autoUpdater.on('update-downloaded', (info) => {
+  autoUpdater.on('update-downloaded', async (info) => {
+    console.log('[Update] update-downloaded event:', {
+      version: info.version,
+      path: info.path,
+      files: info.files,
+      releaseDate: info.releaseDate
+    });
+    
+    // Get the actual file path - info.path might be relative or just a filename
+    // For AppImage, we need to find the actual downloaded file
+    let actualPath = info.path;
+    
+    // If path is not absolute, try to resolve it
+    if (actualPath && !path.isAbsolute(actualPath)) {
+      // Check if it's in the cache directory
+      const cacheDir = autoUpdater.downloadedUpdateHelper?.cacheDir || 
+                       path.join(app.getPath('userData'), 'pending');
+      
+      const possiblePath = path.join(cacheDir, actualPath);
+      try {
+        // Check if file exists at this path
+        const stats = await fs.stat(possiblePath);
+        if (stats.isFile()) {
+          actualPath = possiblePath;
+          console.log('[Update] Resolved path to:', actualPath);
+        }
+      } catch (e) {
+        // File not found at this location, try to find it
+        console.log('[Update] Could not resolve path, trying to find file...');
+      }
+    }
+    
+    // If still not absolute, try to find the file in common cache locations
+    if (actualPath && !path.isAbsolute(actualPath)) {
+      const fileName = path.basename(actualPath);
+      const possibleLocations = [
+        path.join(app.getPath('userData'), 'pending', fileName),
+        path.join(app.getPath('temp'), fileName),
+        path.join(app.getPath('cache'), 'ensemble', fileName)
+      ];
+      
+      for (const loc of possibleLocations) {
+        try {
+          const stats = await fs.stat(loc);
+          if (stats.isFile()) {
+            actualPath = loc;
+            console.log('[Update] Found file at:', actualPath);
+            break;
+          }
+        } catch (e) {
+          // Continue searching
+        }
+      }
+    }
+    
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('update-status', {
         status: 'downloaded',
         message: 'Update downloaded and ready',
         version: info.version,
         releaseNotes: info.releaseNotes,
-        path: info.path
+        path: actualPath
       });
     }
   });
@@ -968,16 +1022,71 @@ ipcMain.handle('copy-update-to-downloads', async (event, updatePath) => {
       return { success: false, error: 'Update path not provided' };
     }
     
+    console.log('[Update] Copy to Downloads - received path:', updatePath);
+    
+    // Resolve the actual file path if it's not absolute
+    let actualFilePath = updatePath;
+    
+    if (!path.isAbsolute(updatePath)) {
+      // Try to find the file in common cache locations
+      const fileName = path.basename(updatePath);
+      const possibleLocations = [
+        path.join(app.getPath('userData'), 'pending', fileName),
+        path.join(app.getPath('temp'), fileName),
+        path.join(app.getPath('cache'), 'ensemble', fileName),
+        // electron-updater cache locations
+        path.join(app.getPath('userData'), 'updates', fileName),
+        path.join(app.getPath('userData'), 'downloaded', fileName)
+      ];
+      
+      let found = false;
+      for (const loc of possibleLocations) {
+        try {
+          await fs.access(loc);
+          actualFilePath = loc;
+          found = true;
+          console.log('[Update] Found file at:', actualFilePath);
+          break;
+        } catch (e) {
+          // Continue searching
+        }
+      }
+      
+      if (!found) {
+        // Last resort: try to get from autoUpdater's cache
+        try {
+          const cacheDir = autoUpdater.downloadedUpdateHelper?.cacheDir;
+          if (cacheDir) {
+            const cachePath = path.join(cacheDir, fileName);
+            await fs.access(cachePath);
+            actualFilePath = cachePath;
+            console.log('[Update] Found file in cache:', actualFilePath);
+          } else {
+            throw new Error(`Could not find downloaded file. Searched: ${possibleLocations.join(', ')}`);
+          }
+        } catch (e) {
+          throw new Error(`Could not find downloaded file. Path provided: ${updatePath}. Searched: ${possibleLocations.join(', ')}`);
+        }
+      }
+    } else {
+      // Verify the absolute path exists
+      try {
+        await fs.access(actualFilePath);
+      } catch (e) {
+        throw new Error(`File not found at path: ${actualFilePath}`);
+      }
+    }
+    
     // Get Downloads folder path
     const downloadsPath = app.getPath('downloads');
-    const fileName = path.basename(updatePath);
+    const fileName = path.basename(actualFilePath);
     const destPath = path.join(downloadsPath, fileName);
     
     // Ensure Downloads directory exists
     await fs.mkdir(downloadsPath, { recursive: true });
     
     // Copy file to Downloads
-    await fs.copyFile(updatePath, destPath);
+    await fs.copyFile(actualFilePath, destPath);
     
     // Make it executable (for AppImage)
     await fs.chmod(destPath, 0o755);
@@ -1001,7 +1110,59 @@ ipcMain.handle('open-update-folder', async (event, updatePath) => {
       return { success: false, error: 'Update path not provided' };
     }
     
-    const folderPath = path.dirname(updatePath);
+    console.log('[Update] Open folder - received path:', updatePath);
+    
+    // Resolve the actual file path if it's not absolute
+    let actualFilePath = updatePath;
+    let folderPath;
+    
+    if (path.isAbsolute(updatePath)) {
+      folderPath = path.dirname(updatePath);
+    } else {
+      // Try to find the file first
+      const fileName = path.basename(updatePath);
+      const possibleLocations = [
+        path.join(app.getPath('userData'), 'pending', fileName),
+        path.join(app.getPath('temp'), fileName),
+        path.join(app.getPath('cache'), 'ensemble', fileName),
+        path.join(app.getPath('userData'), 'updates', fileName),
+        path.join(app.getPath('userData'), 'downloaded', fileName)
+      ];
+      
+      let found = false;
+      for (const loc of possibleLocations) {
+        try {
+          await fs.access(loc);
+          actualFilePath = loc;
+          folderPath = path.dirname(loc);
+          found = true;
+          console.log('[Update] Found file at:', actualFilePath);
+          break;
+        } catch (e) {
+          // Continue searching
+        }
+      }
+      
+      if (!found) {
+        // If we can't find the file, try to open the most likely cache directory
+        folderPath = path.join(app.getPath('userData'), 'pending');
+        console.log('[Update] File not found, opening likely cache directory:', folderPath);
+      }
+    }
+    
+    // Verify folder exists
+    try {
+      await fs.access(folderPath);
+    } catch (e) {
+      // Try to create it or use a fallback
+      try {
+        await fs.mkdir(folderPath, { recursive: true });
+      } catch (mkdirError) {
+        folderPath = app.getPath('downloads');
+        console.log('[Update] Using Downloads folder as fallback:', folderPath);
+      }
+    }
+    
     await shell.openPath(folderPath);
     
     console.log('[Update] Opened folder:', folderPath);
