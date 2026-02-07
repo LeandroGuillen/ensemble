@@ -4,10 +4,19 @@ const fs = require('fs').promises;
 const https = require('https');
 const http = require('http');
 const chokidar = require('chokidar');
+const { autoUpdater } = require('electron-updater');
 const isDev = !app.isPackaged;
 
 let mainWindow;
 let fileWatcher = null;
+
+// Update configuration
+autoUpdater.autoDownload = false; // Manual download after user approval
+autoUpdater.autoInstallOnAppQuit = false; // AppImage requires manual replacement
+
+// Update check interval (4 hours in milliseconds)
+const UPDATE_CHECK_INTERVAL = 4 * 60 * 60 * 1000;
+let updateCheckInterval = null;
 
 function createWindow() {
   // Get app version for title
@@ -56,7 +65,14 @@ function createWindow() {
 }
 
 // This method will be called when Electron has finished initialization
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  createWindow();
+  
+  // Initialize auto-updater (only in production)
+  if (!isDev) {
+    initializeUpdater();
+  }
+});
 
 // Quit when all windows are closed
 app.on('window-all-closed', () => {
@@ -535,4 +551,158 @@ app.on('before-quit', async () => {
     await fileWatcher.close();
     fileWatcher = null;
   }
+  
+  // Clear update check interval
+  if (updateCheckInterval) {
+    clearInterval(updateCheckInterval);
+    updateCheckInterval = null;
+  }
+});
+
+// ==================== Auto-Updater Functions ====================
+
+function initializeUpdater() {
+  // Set up auto-updater event handlers
+  autoUpdater.on('checking-for-update', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('update-status', {
+        status: 'checking',
+        message: 'Checking for updates...'
+      });
+    }
+  });
+
+  autoUpdater.on('update-available', (info) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('update-status', {
+        status: 'available',
+        message: 'Update available',
+        version: info.version,
+        releaseDate: info.releaseDate,
+        releaseNotes: info.releaseNotes
+      });
+    }
+  });
+
+  autoUpdater.on('update-not-available', (info) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('update-status', {
+        status: 'not-available',
+        message: 'You are using the latest version',
+        version: info.version
+      });
+    }
+  });
+
+  autoUpdater.on('error', (err) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('update-status', {
+        status: 'error',
+        message: 'Error checking for updates',
+        error: err.message
+      });
+    }
+  });
+
+  autoUpdater.on('download-progress', (progressObj) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('update-status', {
+        status: 'downloading',
+        message: 'Downloading update...',
+        progress: {
+          percent: progressObj.percent,
+          transferred: progressObj.transferred,
+          total: progressObj.total
+        }
+      });
+    }
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('update-status', {
+        status: 'downloaded',
+        message: 'Update downloaded and ready',
+        version: info.version,
+        releaseNotes: info.releaseNotes,
+        path: info.path
+      });
+    }
+  });
+
+  // Check for updates on startup
+  checkForUpdates();
+
+  // Set up periodic update checks (every 4 hours)
+  updateCheckInterval = setInterval(() => {
+    checkForUpdates();
+  }, UPDATE_CHECK_INTERVAL);
+}
+
+function checkForUpdates() {
+  if (isDev) {
+    return;
+  }
+  
+  try {
+    autoUpdater.checkForUpdates().catch(err => {
+      console.error('Error checking for updates:', err);
+    });
+  } catch (error) {
+    console.error('Failed to check for updates:', error);
+  }
+}
+
+// IPC handlers for update operations
+ipcMain.handle('check-for-updates', async () => {
+  if (isDev) {
+    return { success: false, error: 'Update checking is disabled in development mode' };
+  }
+  
+  try {
+    await autoUpdater.checkForUpdates();
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('download-update', async () => {
+  if (isDev) {
+    return { success: false, error: 'Update downloading is disabled in development mode' };
+  }
+  
+  try {
+    await autoUpdater.downloadUpdate();
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-update-status', async () => {
+  if (isDev) {
+    return { success: false, error: 'Update status is not available in development mode' };
+  }
+  
+  try {
+    const updateInfo = await autoUpdater.checkForUpdates();
+    return {
+      success: true,
+      updateInfo: updateInfo ? {
+        version: updateInfo.updateInfo?.version,
+        releaseDate: updateInfo.updateInfo?.releaseDate,
+        releaseNotes: updateInfo.updateInfo?.releaseNotes
+      } : null
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('quit-and-install', async () => {
+  // For AppImage, we can't auto-install, so we just quit
+  // The user will need to manually replace the AppImage file
+  app.quit();
+  return { success: true };
 });

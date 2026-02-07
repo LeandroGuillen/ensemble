@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Router, NavigationEnd } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { ProjectService } from '../../core/services';
+import { ProjectService, UpdateService } from '../../core/services';
 import { KeyboardShortcutsService } from '../keyboard-shortcuts-dialog/keyboard-shortcuts.service';
 import { filter } from 'rxjs/operators';
 
@@ -61,7 +61,8 @@ export class SidebarComponent implements OnInit {
       id: 'help',
       label: 'Help',
       items: [
-        { icon: 'keyboard', label: 'Shortcuts', title: 'Keyboard Shortcuts', action: () => this.openShortcuts() }
+        { icon: 'keyboard', label: 'Shortcuts', title: 'Keyboard Shortcuts', action: () => this.openShortcuts() },
+        { icon: 'download', label: 'Check for Updates', title: 'Check for Updates', action: () => this.checkForUpdates() }
       ]
     }
   ];
@@ -69,7 +70,8 @@ export class SidebarComponent implements OnInit {
   constructor(
     private projectService: ProjectService,
     private router: Router,
-    private shortcutsService: KeyboardShortcutsService
+    private shortcutsService: KeyboardShortcutsService,
+    private updateService: UpdateService
   ) {}
 
   ngOnInit(): void {
@@ -117,5 +119,12 @@ export class SidebarComponent implements OnInit {
 
   openShortcuts(): void {
     this.shortcutsService.open();
+  }
+
+  async checkForUpdates(): Promise<void> {
+    const result = await this.updateService.checkForUpdates();
+    if (!result.success) {
+      console.error('Failed to check for updates:', result.error);
+    }
   }
 }
