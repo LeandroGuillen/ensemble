@@ -184,6 +184,36 @@
   }
 }
 
+.project-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.duplicate-btn {
+  flex-shrink: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  border: none;
+  font-size: 1rem;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  opacity: 0.6;
+
+  &:hover {
+    background: rgba(229, 168, 85, 0.1);
+    color: var(--color-accent-primary);
+    opacity: 1;
+  }
+}
+
 .remove-btn {
   flex-shrink: 0;
   background: transparent;
@@ -388,6 +418,16 @@
     outline: none;
     border-color: var(--color-accent-primary);
     box-shadow: 0 0 0 3px rgba(229, 168, 85, 0.1);
+  }
+
+  &.form-control-readonly {
+    background: var(--color-bg-secondary);
+    cursor: not-allowed;
+    opacity: 0.8;
+
+    &:hover {
+      border-color: var(--color-border);
+    }
   }
 }
 

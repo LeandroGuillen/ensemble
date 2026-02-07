@@ -375,6 +375,38 @@ ipcMain.handle('delete-directory-recursive', async (event, dirPath) => {
   }
 });
 
+// Handle recursive directory copying
+ipcMain.handle('copy-directory-recursive', async (event, sourcePath, destPath) => {
+  try {
+    // Recursive function to copy directory and all contents
+    async function copyRecursive(source, dest) {
+      // Ensure destination directory exists
+      await fs.mkdir(dest, { recursive: true });
+
+      // Read all entries in source directory
+      const entries = await fs.readdir(source, { withFileTypes: true });
+
+      for (const entry of entries) {
+        const sourcePath = pathModule.join(source, entry.name);
+        const destPath = pathModule.join(dest, entry.name);
+
+        if (entry.isDirectory()) {
+          // Recursively copy subdirectories
+          await copyRecursive(sourcePath, destPath);
+        } else {
+          // Copy files
+          await fs.copyFile(sourcePath, destPath);
+        }
+      }
+    }
+
+    await copyRecursive(sourcePath, destPath);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 // Handle reading all files in a directory (non-recursive)
 ipcMain.handle('read-directory-files', async (event, dirPath) => {
   try {

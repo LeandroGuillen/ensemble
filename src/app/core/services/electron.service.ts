@@ -191,6 +191,13 @@ export class ElectronService {
     return await this.ipcRenderer.invoke('delete-directory-recursive', dirPath);
   }
 
+  async copyDirectoryRecursive(sourcePath: string, destPath: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.isElectron()) {
+      return { success: false, error: 'Not running in Electron' };
+    }
+    return await this.ipcRenderer.invoke('copy-directory-recursive', sourcePath, destPath);
+  }
+
   async readDirectoryFiles(dirPath: string): Promise<{ success: boolean; files?: string[]; directories?: string[]; error?: string }> {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };

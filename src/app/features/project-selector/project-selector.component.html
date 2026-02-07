@@ -13,7 +13,7 @@
     </div>
 
     <!-- Recent Projects Section -->
-    <div class="recent-projects-section" *ngIf="!showCreateForm">
+    <div class="recent-projects-section" *ngIf="!showCreateForm && !showDuplicateForm">
       <div class="section-header" *ngIf="recentProjects.length > 0">
         <h2>Recent Projects</h2>
         <button class="btn btn-link clear-btn" (click)="clearRecentProjects()">
@@ -46,24 +46,33 @@
             </div>
           </div>
 
-          <button
-            class="btn btn-icon remove-btn"
-            (click)="removeFromRecent(project.path, $event)"
-            title="Remove from recent projects">
-            ×
-          </button>
+          <div class="project-actions">
+            <button
+              class="btn btn-icon duplicate-btn"
+              (click)="startDuplicateProject(project.path, project.name); $event.stopPropagation()"
+              title="Duplicate project"
+              *ngIf="project.exists">
+              📋
+            </button>
+            <button
+              class="btn btn-icon remove-btn"
+              (click)="removeFromRecent(project.path, $event)"
+              title="Remove from recent projects">
+              ×
+            </button>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Loading State -->
-    <div class="loading-state" *ngIf="isLoading && !showCreateForm">
+    <div class="loading-state" *ngIf="isLoading && !showCreateForm && !showDuplicateForm">
       <div class="spinner"></div>
       <p>Loading...</p>
     </div>
 
     <!-- Main Actions -->
-    <div class="main-actions" *ngIf="!showCreateForm && !isLoading">
+    <div class="main-actions" *ngIf="!showCreateForm && !showDuplicateForm && !isLoading">
       <div class="action-card">
         <h3>Open Existing Project</h3>
         <p>Browse for a folder containing an existing Ensemble project</p>
@@ -146,6 +155,75 @@
             [disabled]="isLoading || !newProjectName.trim() || !newProjectPath.trim()">
             <span *ngIf="!isLoading">Create Project</span>
             <span *ngIf="isLoading">Creating...</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Duplicate Project Form -->
+    <div class="create-project-form" *ngIf="showDuplicateForm">
+      <div class="form-header">
+        <h2>Duplicate Project</h2>
+        <button class="btn btn-link back-btn" (click)="cancelDuplicate()">
+          ← Back
+        </button>
+      </div>
+
+      <div class="form-content">
+        <div class="form-group">
+          <label>Source Project</label>
+          <div class="form-control form-control-readonly">
+            {{ duplicateSourceName }}
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="duplicateProjectName">New Project Name</label>
+          <input 
+            type="text" 
+            id="duplicateProjectName"
+            class="form-control"
+            [(ngModel)]="duplicateProjectName"
+            placeholder="Enter project name"
+            [disabled]="isLoading">
+        </div>
+
+        <div class="form-group">
+          <label for="duplicateProjectPath">Destination Location</label>
+          <div class="path-input-group">
+            <input 
+              type="text" 
+              id="duplicateProjectPath"
+              class="form-control"
+              [(ngModel)]="duplicateProjectPath"
+              placeholder="Select folder where duplicate project will be created"
+              readonly
+              [disabled]="isLoading">
+            <button 
+              class="btn btn-outline browse-btn"
+              (click)="selectDuplicateDestination()"
+              [disabled]="isLoading">
+              Browse
+            </button>
+          </div>
+          <small class="form-help" *ngIf="duplicateProjectPath && duplicateProjectName">
+            Duplicate will be created at: {{ duplicateProjectPath }}/{{ duplicateProjectName }}
+          </small>
+        </div>
+
+        <div class="form-actions">
+          <button 
+            class="btn btn-secondary"
+            (click)="cancelDuplicate()"
+            [disabled]="isLoading">
+            Cancel
+          </button>
+          <button 
+            class="btn btn-primary"
+            (click)="duplicateProject()"
+            [disabled]="isLoading || !duplicateProjectName.trim() || !duplicateProjectPath.trim()">
+            <span *ngIf="!isLoading">Duplicate Project</span>
+            <span *ngIf="isLoading">Duplicating...</span>
           </button>
         </div>
       </div>

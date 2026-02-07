@@ -218,6 +218,97 @@ export class ProjectService {
   }
 
   /**
+   * Duplicates an existing project to a new location with a new name
+   */
+  async duplicateProject(sourceProjectPath: string, destinationPath: string, newProjectName: string): Promise<Project | null> {
+    try {
+      // Validate source project exists and is a valid project
+      const sourceExists = await this.electronService.fileExists(sourceProjectPath);
+      if (!sourceExists) {
+        throw new Error(`Source project does not exist: ${sourceProjectPath}`);
+      }
+
+      const sourceIsDir = await this.electronService.isDirectory(sourceProjectPath);
+      if (!sourceIsDir) {
+        throw new Error(`Source path is not a directory: ${sourceProjectPath}`);
+      }
+
+      // Check if source has ensemble.json or metadata.json (valid project)
+      const sourceEnsemblePath = pathJoin(sourceProjectPath, 'ensemble.json');
+      const sourceMetadataPath = pathJoin(sourceProjectPath, 'metadata.json');
+      const hasEnsemble = await this.electronService.fileExists(sourceEnsemblePath);
+      const hasMetadata = await this.electronService.fileExists(sourceMetadataPath);
+      
+      if (!hasEnsemble && !hasMetadata) {
+        throw new Error(`Source directory does not appear to be a valid project: ${sourceProjectPath}`);
+      }
+
+      // Validate destination path doesn't already contain a project
+      const sanitizedName = await this.electronService.sanitizeFilename(newProjectName);
+      const destProjectPath = await this.electronService.pathJoin(destinationPath, sanitizedName);
+      
+      const destExists = await this.electronService.fileExists(destProjectPath);
+      if (destExists) {
+        const destEnsemblePath = pathJoin(destProjectPath, 'ensemble.json');
+        const destMetadataPath = pathJoin(destProjectPath, 'metadata.json');
+        const destHasEnsemble = await this.electronService.fileExists(destEnsemblePath);
+        const destHasMetadata = await this.electronService.fileExists(destMetadataPath);
+        
+        if (destHasEnsemble || destHasMetadata) {
+          throw new Error(`Destination already contains a project: ${destProjectPath}`);
+        }
+      }
+
+      // Recursively copy entire project directory to destination
+      const copyResult = await this.electronService.copyDirectoryRecursive(sourceProjectPath, destProjectPath);
+      if (!copyResult.success) {
+        throw new Error(`Failed to copy project: ${copyResult.error}`);
+      }
+
+      // Load the duplicated project's ensemble.json (or metadata.json for legacy)
+      const destEnsemblePath = pathJoin(destProjectPath, 'ensemble.json');
+      const destMetadataPath = pathJoin(destProjectPath, 'metadata.json');
+      const destHasEnsemble = await this.electronService.fileExists(destEnsemblePath);
+      const destHasMetadata = await this.electronService.fileExists(destMetadataPath);
+
+      let metadata: ProjectMetadata;
+      if (destHasEnsemble) {
+        const result = await this.electronService.readFile(destEnsemblePath);
+        if (!result.success) {
+          throw new Error(`Failed to read ensemble.json: ${result.error}`);
+        }
+        metadata = JSON.parse(result.content!);
+      } else if (destHasMetadata) {
+        const result = await this.electronService.readFile(destMetadataPath);
+        if (!result.success) {
+          throw new Error(`Failed to read metadata.json: ${result.error}`);
+        }
+        metadata = JSON.parse(result.content!);
+      } else {
+        throw new Error('Duplicated project does not contain metadata file');
+      }
+
+      // Update the projectName in metadata to the new name
+      metadata.projectName = newProjectName;
+
+      // Save the updated metadata
+      await this.saveMetadata(destProjectPath, metadata);
+
+      // Load the duplicated project
+      const project = await this.loadProject(destProjectPath);
+      
+      if (!project) {
+        throw new Error('Failed to load duplicated project');
+      }
+
+      return project;
+    } catch (error) {
+      this.logger.error('Failed to duplicate project', error);
+      throw new Error(`Failed to duplicate project: ${error}`);
+    }
+  }
+
+  /**
    * Ensures the project directory structure exists
    */
   private async ensureProjectStructure(projectPath: string): Promise<void> {

@@ -25,6 +25,11 @@ export class ProjectSelectorComponent implements OnInit {
   showCreateForm = false;
   newProjectName = '';
   newProjectPath = '';
+  showDuplicateForm = false;
+  duplicateSourcePath: string | null = null;
+  duplicateSourceName: string = '';
+  duplicateProjectName = '';
+  duplicateProjectPath = '';
 
   constructor(
     private projectService: ProjectService,
@@ -45,8 +50,8 @@ export class ProjectSelectorComponent implements OnInit {
       return;
     }
 
-    // Ignore if in create form mode
-    if (this.showCreateForm) {
+    // Ignore if in create form mode or duplicate form mode
+    if (this.showCreateForm || this.showDuplicateForm) {
       return;
     }
 
@@ -291,6 +296,87 @@ export class ProjectSelectorComponent implements OnInit {
       return `${diffDays} days ago`;
     } else {
       return date.toLocaleDateString();
+    }
+  }
+
+  /**
+   * Initiates the duplicate project flow
+   */
+  startDuplicateProject(projectPath: string, projectName: string): void {
+    this.showDuplicateForm = true;
+    this.duplicateSourcePath = projectPath;
+    this.duplicateSourceName = projectName;
+    this.duplicateProjectName = `${projectName} (Copy)`;
+    this.duplicateProjectPath = '';
+    this.error = null;
+  }
+
+  /**
+   * Cancels the duplicate project flow
+   */
+  cancelDuplicate(): void {
+    this.showDuplicateForm = false;
+    this.duplicateSourcePath = null;
+    this.duplicateSourceName = '';
+    this.duplicateProjectName = '';
+    this.duplicateProjectPath = '';
+    this.error = null;
+  }
+
+  /**
+   * Opens folder browser to select destination for duplicate project
+   */
+  async selectDuplicateDestination(): Promise<void> {
+    try {
+      const selectedPath = await this.projectService.selectProject();
+      if (selectedPath) {
+        this.duplicateProjectPath = selectedPath;
+      }
+    } catch (error) {
+      this.error = `Failed to select folder: ${error}`;
+      this.logger.error('Folder selection error:', error);
+    }
+  }
+
+  /**
+   * Duplicates a project
+   */
+  async duplicateProject(): Promise<void> {
+    if (!this.duplicateProjectName.trim()) {
+      this.error = 'Please enter a project name.';
+      return;
+    }
+
+    if (!this.duplicateProjectPath.trim()) {
+      this.error = 'Please select a folder for the duplicate project.';
+      return;
+    }
+
+    if (!this.duplicateSourcePath) {
+      this.error = 'Source project path is missing.';
+      return;
+    }
+
+    this.isLoading = true;
+    this.error = null;
+
+    try {
+      const project = await this.projectService.duplicateProject(
+        this.duplicateSourcePath,
+        this.duplicateProjectPath,
+        this.duplicateProjectName
+      );
+      
+      if (project) {
+        this.router.navigate(['/characters']);
+      } else {
+        this.error = 'Failed to duplicate project.';
+      }
+    } catch (error) {
+      this.error = `Failed to duplicate project: ${error}`;
+      this.logger.error('Project duplication error:', error);
+    } finally {
+      this.isLoading = false;
     }
   }
 }
