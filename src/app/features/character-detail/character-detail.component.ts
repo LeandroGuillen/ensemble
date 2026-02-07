@@ -208,19 +208,46 @@ export class CharacterDetailComponent
     return this.fb.group({
       name: [
         "",
-        [
-          Validators.required,
-          Validators.minLength(1),
-          Validators.maxLength(100),
-        ],
+        {
+          validators: [
+            Validators.required,
+            Validators.minLength(1),
+            Validators.maxLength(100),
+          ],
+          updateOn: 'blur' // Validate on blur for better UX
+        }
       ],
-      category: ["", Validators.required],
-      mangamaster: [""],
+      category: [
+        "",
+        {
+          validators: [Validators.required],
+          updateOn: 'change' // Validate immediately on change
+        }
+      ],
+      mangamaster: [
+        "",
+        {
+          validators: [Validators.maxLength(20000)],
+          updateOn: 'blur'
+        }
+      ],
       tags: [[]],
       books: [[]],
       thumbnail: [""],
-      description: [""],
-      notes: [""],
+      description: [
+        "",
+        {
+          validators: [Validators.maxLength(1000)],
+          updateOn: 'blur'
+        }
+      ],
+      notes: [
+        "",
+        {
+          validators: [Validators.maxLength(5000)],
+          updateOn: 'blur'
+        }
+      ],
     });
   }
 
@@ -303,6 +330,8 @@ export class CharacterDetailComponent
   async onSubmit(): Promise<void> {
     if (this.characterForm.invalid) {
       this.markFormGroupTouched(this.characterForm);
+      this.highlightRequiredFields();
+      this.scrollToFirstInvalidField();
       return;
     }
 
@@ -349,11 +378,18 @@ export class CharacterDetailComponent
     }
   }
 
-  onCancel(): void {
+  async onCancel(): Promise<void> {
     if (this.characterForm.dirty) {
-      if (
-        confirm("You have unsaved changes. Are you sure you want to leave?")
-      ) {
+      const confirmed = await this.modalService.confirm(
+        "You have unsaved changes. Are you sure you want to leave?",
+        "Discard Changes",
+        {
+          confirmText: "Discard",
+          cancelText: "Keep Editing",
+          danger: false
+        }
+      );
+      if (confirmed) {
         this.navigateBack();
       }
     } else {
@@ -513,28 +549,45 @@ export class CharacterDetailComponent
 
   getFieldError(fieldName: string): string | null {
     const field = this.characterForm.get(fieldName);
-    if (field && field.invalid && field.touched) {
+    if (field && field.invalid && (field.touched || field.dirty)) {
+      // Show errors if field has been touched or modified
       if (field.errors?.["required"]) {
-        return `${
-          fieldName.charAt(0).toUpperCase() + fieldName.slice(1)
-        } is required`;
+        const fieldLabel = this.getFieldLabel(fieldName);
+        return `${fieldLabel} is required. Please enter a value.`;
       }
       if (field.errors?.["minlength"]) {
-        return `${
-          fieldName.charAt(0).toUpperCase() + fieldName.slice(1)
-        } must be at least ${
-          field.errors["minlength"].requiredLength
-        } characters`;
+        const fieldLabel = this.getFieldLabel(fieldName);
+        const requiredLength = field.errors["minlength"].requiredLength;
+        const actualLength = field.errors["minlength"].actualLength;
+        return `${fieldLabel} is too short. Please enter at least ${requiredLength} character${requiredLength > 1 ? 's' : ''} (currently ${actualLength}).`;
       }
       if (field.errors?.["maxlength"]) {
-        return `${
-          fieldName.charAt(0).toUpperCase() + fieldName.slice(1)
-        } must be no more than ${
-          field.errors["maxlength"].requiredLength
-        } characters`;
+        const fieldLabel = this.getFieldLabel(fieldName);
+        const maxLength = field.errors["maxlength"].requiredLength;
+        const actualLength = field.errors["maxlength"].actualLength;
+        return `${fieldLabel} is too long. Maximum ${maxLength} characters allowed (currently ${actualLength}).`;
       }
     }
     return null;
+  }
+
+  private getFieldLabel(fieldName: string): string {
+    const labels: Record<string, string> = {
+      name: 'Character name',
+      category: 'Category',
+      mangamaster: 'Mangamaster prompt',
+      description: 'Description',
+      notes: 'Notes'
+    };
+    return labels[fieldName] || fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+  }
+
+  // Mark field as touched on blur for better validation feedback
+  onFieldBlur(fieldName: string): void {
+    const field = this.characterForm.get(fieldName);
+    if (field) {
+      field.markAsTouched();
+    }
   }
 
   onTagCheckboxChange(event: Event, tagId: string): void {
@@ -571,6 +624,62 @@ export class CharacterDetailComponent
       const control = formGroup.get(key);
       control?.markAsTouched();
     });
+  }
+
+  /**
+   * Highlights required fields that are invalid by adding a highlight class
+   */
+  private highlightRequiredFields(): void {
+    // Add a temporary class to invalid required fields
+    // This will be handled via CSS based on the error state
+    // The visual highlight is already handled by the .error class
+    // We just need to ensure fields are marked as touched
+  }
+
+  /**
+   * Scrolls to the first invalid required field
+   */
+  private scrollToFirstInvalidField(): void {
+    const requiredFields = ['name', 'category'];
+    
+    for (const fieldName of requiredFields) {
+      const field = this.characterForm.get(fieldName);
+      if (field && field.invalid && field.touched) {
+        let element: HTMLElement | null = null;
+        
+        if (fieldName === 'category') {
+          // For category, find the form-group container
+          element = document.querySelector('.form-group-category') as HTMLElement;
+        } else {
+          // For other fields, find the input element
+          element = document.getElementById(fieldName) || 
+                   document.querySelector(`[formControlName="${fieldName}"]`) as HTMLElement;
+        }
+        
+        if (element) {
+          // Scroll to the element with some offset from the top
+          element.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          });
+          
+          // Add a brief highlight animation
+          element.classList.add('field-highlight');
+          const elementToHighlight = element;
+          setTimeout(() => {
+            elementToHighlight.classList.remove('field-highlight');
+          }, 2000);
+          
+          // Focus the field if it's an input (not category)
+          if (fieldName !== 'category' && (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement)) {
+            const elementToFocus = element;
+            setTimeout(() => elementToFocus.focus(), 300);
+          }
+          
+          break; // Only scroll to the first invalid field
+        }
+      }
+    }
   }
 
   async generateName(): Promise<void> {
