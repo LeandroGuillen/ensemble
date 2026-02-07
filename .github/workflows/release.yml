@@ -21,7 +21,12 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install dependencies
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
+
+      - name: Install npm dependencies
         run: npm ci
 
       - name: Build icons
@@ -31,14 +36,26 @@ jobs:
         run: npm run build -- --configuration production
 
       - name: Build AppImage
-        run: npm run build-electron-linux-appimage
+        run: |
+          # Temporarily disable publish to prevent electron-builder from auto-publishing
+          # We'll handle publishing manually via GitHub Actions
+          npm run build-electron-linux-appimage -- --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PUBLISH_FOR_CI: true
 
       - name: Get version from tag
         id: get_version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Tag version: $VERSION"
+
+      - name: List release artifacts
+        run: |
+          echo "Checking for release artifacts..."
+          ls -lh release/ || echo "Release directory not found"
+          find release -name "*.AppImage" -o -name "*.yml" || echo "No AppImage or YML files found"
 
       - name: Upload AppImage to release
         uses: softprops/action-gh-release@v1
@@ -46,8 +63,10 @@ jobs:
           files: |
             release/*.AppImage
             release/latest-linux.yml
-          tag_name: ${{ github.ref }}
+          tag_name: ${{ github.ref_name }}
           name: Release ${{ steps.get_version.outputs.VERSION }}
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

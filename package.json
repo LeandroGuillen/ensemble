@@ -1,6 +1,6 @@
 {
   "name": "ensemble",
-  "version": "1.0.0alpha",
+  "version": "1.0.0",
   "description": "Character management application for writers and worldbuilders",
   "main": "main.js",
   "scripts": {
@@ -224,7 +224,7 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "ensemble",
+      "owner": "leandroguillen",
       "repo": "ensemble"
     }
   }
