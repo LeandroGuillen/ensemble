@@ -32,6 +32,7 @@ import {
   ElectronService,
   LoggingService,
   MetadataService,
+  NotificationService,
   ProjectService,
 } from "../../core/services";
 import { ModalService } from "../../core/services/modal.service";
@@ -103,7 +104,8 @@ export class CharacterDetailComponent
     private metadataService: MetadataService,
     private aiService: AiService,
     private modalService: ModalService,
-    private logger: LoggingService
+    private logger: LoggingService,
+    private notificationService: NotificationService
   ) {
     this.characterForm = this.createForm();
   }
@@ -332,8 +334,10 @@ export class CharacterDetailComponent
         if (!updatedCharacter) {
           throw new Error("Character not found");
         }
+        this.notificationService.showSuccess("Character saved successfully");
       } else {
         await this.characterService.createCharacter(formData);
+        this.notificationService.showSuccess("Character created successfully");
       }
 
       this.router.navigate(["/characters"]);
@@ -664,6 +668,7 @@ export class CharacterDetailComponent
 
     try {
       await this.characterService.deleteCharacter(this.character.id);
+      this.notificationService.showSuccess(`Character "${this.character.name}" deleted successfully`);
       this.router.navigate(["/characters"]);
     } catch (error) {
       this.error = `Failed to delete character: ${error}`;

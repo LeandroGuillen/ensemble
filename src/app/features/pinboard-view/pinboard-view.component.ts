@@ -6,7 +6,7 @@ import { Observable, Subscription } from 'rxjs';
 import { take } from 'rxjs/operators';
 import { DataSet, Edge, Network, Node, Options } from 'vis-network/standalone';
 import { Character, PinboardData, PinboardConnection, Pinboard } from '../../core/interfaces';
-import { CharacterService, ProjectService, PinboardService, ElectronService, LoggingService } from '../../core/services';
+import { CharacterService, ProjectService, PinboardService, ElectronService, LoggingService, NotificationService } from '../../core/services';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { ColorSelectorComponent } from '../../shared/color-selector/color-selector.component';
 import { PinboardSidebarComponent } from '../../shared/pinboard-sidebar/pinboard-sidebar.component';
@@ -110,7 +110,8 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
     private router: Router,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
-    private logger: LoggingService
+    private logger: LoggingService,
+    private notificationService: NotificationService
   ) {
     this.pinboardData$ = this.pinboardService.getPinboardData();
     this.characters$ = this.characterService.getCharacters();
@@ -885,7 +886,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
     if (this.selectedNodes.length === 2) {
       this.openConnectionDialog(this.selectedNodes[0], this.selectedNodes[1]);
     } else {
-      alert('Please select exactly two characters to create a connection.');
+      this.notificationService.showWarning('Please select exactly two characters to create a connection.');
     }
   }
   
@@ -1258,7 +1259,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
           }, 50);
         } else {
           this.logger.error('No characters available in observable');
-          alert('Characters are not loaded. Please wait a moment and try again.');
+          this.notificationService.showWarning('Characters are not loaded. Please wait a moment and try again.');
         }
       });
       return;
@@ -1280,7 +1281,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
         matchingSource: currentCharacters.filter(c => c.id.includes(sourceId) || sourceId.includes(c.id)),
         matchingTarget: currentCharacters.filter(c => c.id.includes(targetId) || targetId.includes(c.id))
       });
-      alert(`Could not find character information for the selected nodes. Please try again.`);
+      this.notificationService.showError(`Could not find character information for the selected nodes. Please try again.`);
       return;
     }
 
@@ -1379,7 +1380,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
         this.network.unselectAll();
       }
     } catch (error) {
-      alert('Failed to save connection. Please try again.');
+      this.notificationService.showError('Failed to save connection. Please try again.');
     }
   }
 
@@ -1391,7 +1392,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
         await this.pinboardService.deleteConnection(this.editingConnection.id);
         this.closeDialogs();
       } catch (error) {
-        alert('Failed to delete connection. Please try again.');
+        this.notificationService.showError('Failed to delete connection. Please try again.');
       }
     }
   }
@@ -1469,7 +1470,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
       this.closeDialogs();
     } catch (error) {
       this.logger.error('Failed to add character to pinboard:', error);
-      alert(`Failed to add character to pinboard: ${error}`);
+      this.notificationService.showError(`Failed to add character to pinboard: ${error}`);
     }
   }
 
@@ -1719,7 +1720,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
         await this.pinboardService.switchPinboard(newPinboard.id);
       }
     } catch (error: any) {
-      alert(error.message || 'Failed to create pinboard');
+      this.notificationService.showError(error.message || 'Failed to create pinboard');
     }
   }
 
@@ -1737,7 +1738,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
       this.pinboardToRename = null;
       this.loadPinboards();
     } catch (error: any) {
-      alert(error.message || 'Failed to rename pinboard');
+      this.notificationService.showError(error.message || 'Failed to rename pinboard');
     }
   }
 
@@ -1757,7 +1758,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
         this.restoreViewState();
       }
     } catch (error: any) {
-      alert(error.message || 'Failed to delete pinboard');
+      this.notificationService.showError(error.message || 'Failed to delete pinboard');
     }
   }
 
@@ -1850,7 +1851,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
       await this.pinboardService.removePin(nodeId);
     } catch (error) {
       this.logger.error('Failed to remove pin:', error);
-      alert('Failed to remove character from pinboard. Please try again.');
+      this.notificationService.showError('Failed to remove character from pinboard. Please try again.');
     }
   }
 }

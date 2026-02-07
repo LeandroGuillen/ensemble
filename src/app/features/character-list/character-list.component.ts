@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 import { Observable, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { Book, Cast, Category, Character, Project, Tag } from '../../core/interfaces';
-import { CharacterService, ElectronService, MetadataService, ProjectService, LoggingService } from '../../core/services';
+import { CharacterService, ElectronService, MetadataService, NotificationService, ProjectService, LoggingService } from '../../core/services';
 import { MetadataHelperService } from '../../core/services/metadata-helper.service';
 import { ModalService } from '../../core/services/modal.service';
 import { PreferencesService } from '../../core/services/preferences.service';
@@ -89,7 +89,8 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     private commandPaletteService: CommandPaletteService,
     private ngZone: NgZone,
     private cdr: ChangeDetectorRef,
-    private logger: LoggingService
+    private logger: LoggingService,
+    private notificationService: NotificationService
   ) {
     this.characters$ = this.characterService.getCharacters();
   }
@@ -355,9 +356,9 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       const character = await this.characterService.loadSpecificCharacterFile(filename);
 
       if (character) {
-        alert(`Successfully loaded character: ${character.name}`);
+        this.notificationService.showSuccess(`Successfully loaded character: ${character.name}`);
       } else {
-        alert(`File not found or failed to load: ${filename}`);
+        this.notificationService.showError(`File not found or failed to load: ${filename}`);
       }
     } catch (error) {
       this.error = `Failed to load specific file: ${error}`;
@@ -385,8 +386,9 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     if (await this.modalService.confirm(`Are you sure you want to delete "${character.name}"?\n\nThis action cannot be undone.`)) {
       try {
         await this.characterService.deleteCharacter(character.id);
+        this.notificationService.showSuccess(`Character "${character.name}" deleted successfully`);
       } catch (error) {
-        alert(`Failed to delete character: ${error}`);
+        this.logger.error("Failed to delete character:", error);
       }
     }
   }

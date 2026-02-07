@@ -266,6 +266,11 @@ export class CharacterService {
       for (const folderName of dirContents.directories) {
         const folderPath = pathJoin(charactersPath, folderName);
 
+        // Skip _deleted folder - it contains deleted characters and should not be loaded
+        if (folderName === '_deleted') {
+          continue;
+        }
+
         // Folders starting with underscore are always treated as category folders, never as characters
         // This allows _other, _supporting etc. to contain characters without being treated as characters themselves
         const isUnderscoreFolder = folderName.startsWith('_');
@@ -282,7 +287,7 @@ export class CharacterService {
               characters.push(character);
             }
           } catch (error) {
-            console.warn(`Failed to load character from ${folderName}:`, error);
+            this.logger.error(`Failed to load character from ${folderName}:`, error);
           }
         } else {
           // This is a category folder - scan for character subfolders (recursively handles nested categories)
@@ -333,6 +338,11 @@ export class CharacterService {
     for (const subfolderName of categoryContents.directories) {
       const subfolderPath = pathJoin(categoryPath, subfolderName);
 
+      // Skip _deleted folder - it contains deleted characters and should not be loaded
+      if (subfolderName === '_deleted') {
+        continue;
+      }
+
       // Underscore folders are always sub-categories, never characters
       const isUnderscoreFolder = subfolderName.startsWith('_');
 
@@ -348,7 +358,7 @@ export class CharacterService {
             characters.push(character);
           }
         } catch (error) {
-          console.warn(`Failed to load character from ${categorySlug}/${subfolderName}:`, error);
+          this.logger.error(`Failed to load character from ${categorySlug}/${subfolderName}:`, error);
         }
       }
     }
@@ -921,21 +931,31 @@ export class CharacterService {
       // Main character file is <slug>.md
       const mainFilePath = pathJoin(folderPath, `${characterSlug}.md`);
 
+      // Check if file exists first
+      const fileExists = await this.electronService.fileExists(mainFilePath);
+      if (!fileExists) {
+        this.logger.log(`Character file not found: ${mainFilePath}, skipping`);
+        return null;
+      }
+
       const readResult = await this.electronService.readFile(mainFilePath);
       if (!readResult.success) {
-        throw new Error(readResult.error);
+        this.logger.error(`Failed to read character file ${mainFilePath}:`, readResult.error);
+        return null;
       }
 
       const parseResult = MarkdownUtils.parseMarkdown<CharacterFrontmatter>(readResult.content!);
       if (!parseResult.success) {
-        throw new Error(parseResult.error);
+        this.logger.error(`Failed to parse character file ${mainFilePath}:`, parseResult.error);
+        return null;
       }
 
       const { frontmatter, content } = parseResult.data!;
 
       // Validate required fields
       if (!frontmatter.name) {
-        throw new Error('Character file missing required name field');
+        this.logger.error(`Character file missing required name field: ${mainFilePath}`);
+        return null;
       }
 
       // Extract description and notes from content
