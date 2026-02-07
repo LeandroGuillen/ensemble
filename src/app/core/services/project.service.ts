@@ -49,10 +49,12 @@ export class ProjectService {
   }
 
   getRecentProjectsWithTimestamps(): Array<{ path: string; lastAccessed: Date }> {
-    return this.recentProjects.map(p => ({
-      path: p.path,
-      lastAccessed: new Date(p.lastAccessed)
-    }));
+    return this.recentProjects
+      .filter(p => p && typeof p.path === 'string' && p.path.trim().length > 0)
+      .map(p => ({
+        path: p.path,
+        lastAccessed: new Date(p.lastAccessed)
+      }));
   }
 
   getMostRecentProject(): string | null {
@@ -535,7 +537,10 @@ export class ProjectService {
       // The electron service already handles backward compatibility
       // and returns Array<{ path: string; lastAccessed: string }>
       if (Array.isArray(projects)) {
-        this.recentProjects = projects;
+        // Filter out invalid entries where path is not a string
+        this.recentProjects = projects.filter(
+          p => p && typeof p.path === 'string' && p.path.trim().length > 0
+        );
       } else {
         this.recentProjects = [];
       }

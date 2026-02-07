@@ -50,7 +50,10 @@ function createWindow() {
     mainWindow.loadURL('http://localhost:4200');
     // mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, 'dist/index.html'));
+    // In packaged apps, __dirname should still point to the app directory
+    // where main.js and dist/ are located
+    const indexPath = path.join(__dirname, 'dist', 'index.html');
+    mainWindow.loadFile(indexPath);
   }
 
   // Show window when ready to prevent visual flash
@@ -134,13 +137,22 @@ ipcMain.handle('get-recent-projects', async () => {
     
     // Handle backward compatibility: if array of strings, convert to new format
     if (Array.isArray(projects) && projects.length > 0 && typeof projects[0] === 'string') {
-      return projects.map(path => ({
-        path,
-        lastAccessed: new Date().toISOString()
-      }));
+      return projects
+        .filter(path => typeof path === 'string' && path.trim().length > 0)
+        .map(path => ({
+          path,
+          lastAccessed: new Date().toISOString()
+        }));
     }
     
-    return projects;
+    // Filter out invalid entries where path is not a string
+    if (Array.isArray(projects)) {
+      return projects.filter(
+        p => p && typeof p.path === 'string' && p.path.trim().length > 0
+      );
+    }
+    
+    return [];
   } catch (error) {
     // File doesn't exist or is invalid, return empty array
     return [];
@@ -627,12 +639,36 @@ function initializeUpdater() {
   });
 
   autoUpdater.on('error', (err) => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('update-status', {
-        status: 'error',
-        message: 'Error checking for updates',
-        error: err.message
-      });
+    // Handle 404 errors gracefully - they're expected when there are no releases yet
+    const errorMessage = err.message || err.toString() || '';
+    const is404Error = 
+      err.statusCode === 404 ||
+      errorMessage.includes('404') || 
+      errorMessage.includes('releases.atom') ||
+      (err.response && err.response.statusCode === 404);
+    
+    if (is404Error) {
+      // Treat 404 as "no updates available" - don't show as error
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update-status', {
+          status: 'not-available',
+          message: 'You are using the latest version'
+        });
+      }
+      // Only log at debug level, not as error
+      if (isDev) {
+        console.log('No releases found (404) - this is normal if no releases have been published yet');
+      }
+    } else {
+      // For other errors, show them normally
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update-status', {
+          status: 'error',
+          message: 'Error checking for updates',
+          error: errorMessage
+        });
+      }
+      console.error('Error checking for updates:', err);
     }
   });
 
@@ -678,10 +714,30 @@ function checkForUpdates() {
   
   try {
     autoUpdater.checkForUpdates().catch(err => {
-      console.error('Error checking for updates:', err);
+      // Don't log 404 errors as they're expected when no releases exist
+      const errorMessage = err.message || err.toString() || '';
+      const is404Error = 
+        err.statusCode === 404 ||
+        errorMessage.includes('404') || 
+        errorMessage.includes('releases.atom') ||
+        (err.response && err.response.statusCode === 404);
+      
+      if (!is404Error) {
+        console.error('Error checking for updates:', err);
+      }
     });
   } catch (error) {
-    console.error('Failed to check for updates:', error);
+    // Don't log 404 errors as they're expected when no releases exist
+    const errorMessage = error.message || error.toString() || '';
+    const is404Error = 
+      error.statusCode === 404 ||
+      errorMessage.includes('404') || 
+      errorMessage.includes('releases.atom') ||
+      (error.response && error.response.statusCode === 404);
+    
+    if (!is404Error) {
+      console.error('Failed to check for updates:', error);
+    }
   }
 }
 

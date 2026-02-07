@@ -79,6 +79,12 @@ export class ProjectSelectorComponent implements OnInit {
 
       for (const { path: projectPath, lastAccessed } of recentProjectsWithTimestamps) {
         try {
+          // Validate projectPath is a string
+          if (typeof projectPath !== 'string' || !projectPath.trim()) {
+            console.warn('Invalid project path (not a string):', projectPath);
+            continue;
+          }
+
           const exists = await this.electronService.fileExists(projectPath);
           const isDir = exists ? await this.electronService.isDirectory(projectPath) : false;
           
@@ -110,7 +116,10 @@ export class ProjectSelectorComponent implements OnInit {
           });
         } catch (error) {
           console.warn('Failed to check project path:', projectPath, error);
-          const fallbackName = await this.electronService.pathBasename(projectPath);
+          // Ensure projectPath is a string before calling pathBasename
+          const fallbackName = typeof projectPath === 'string' 
+            ? await this.electronService.pathBasename(projectPath)
+            : 'Unknown Project';
           this.recentProjects.push({
             path: projectPath,
             name: fallbackName,
