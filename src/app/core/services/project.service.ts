@@ -19,6 +19,7 @@ import { pathJoin } from '../utils/path.utils';
 import { assertIpcSuccess } from '../utils/ipc.utils';
 import { COLOR_PALETTE } from '../utils/color-palette.utils';
 import { ElectronService } from './electron.service';
+import { LoggingService } from './logging.service';
 
 @Injectable({
   providedIn: 'root',
@@ -26,12 +27,15 @@ import { ElectronService } from './electron.service';
 export class ProjectService {
   private currentProjectSubject = new BehaviorSubject<Project | null>(null);
   public currentProject$ = this.currentProjectSubject.asObservable();
-  private recentProjects: string[] = [];
+  private recentProjects: Array<{ path: string; lastAccessed: string }> = [];
 
-  constructor(private electronService: ElectronService) {
+  constructor(
+    private electronService: ElectronService,
+    private logger: LoggingService
+  ) {
     // Load recent projects asynchronously
     this.loadRecentProjects().catch(err => {
-      console.error('Failed to load recent projects on init:', err);
+      this.logger.error('Failed to load recent projects on init', err);
     });
   }
 
@@ -40,11 +44,19 @@ export class ProjectService {
   }
 
   getRecentProjects(): string[] {
-    return [...this.recentProjects];
+    // Return just the paths for backward compatibility
+    return this.recentProjects.map(p => p.path);
+  }
+
+  getRecentProjectsWithTimestamps(): Array<{ path: string; lastAccessed: Date }> {
+    return this.recentProjects.map(p => ({
+      path: p.path,
+      lastAccessed: new Date(p.lastAccessed)
+    }));
   }
 
   getMostRecentProject(): string | null {
-    return this.recentProjects.length > 0 ? this.recentProjects[0] : null;
+    return this.recentProjects.length > 0 ? this.recentProjects[0].path : null;
   }
 
   /**
@@ -54,7 +66,7 @@ export class ProjectService {
     try {
       return await this.electronService.selectFolder();
     } catch (error) {
-      console.error('Failed to open folder selection dialog:', error);
+      this.logger.error('Failed to open folder selection dialog', error);
       return null;
     }
   }
@@ -157,7 +169,7 @@ export class ProjectService {
 
       return project;
     } catch (error) {
-      console.error('Failed to load project:', error);
+      this.logger.error('Failed to load project', error);
       throw new Error(`Failed to load project: ${error}`);
     }
   }
@@ -200,7 +212,7 @@ export class ProjectService {
 
       return project;
     } catch (error) {
-      console.error('Failed to create project:', error);
+      this.logger.error('Failed to create project', error);
       throw new Error(`Failed to create project: ${error}`);
     }
   }
@@ -406,17 +418,20 @@ export class ProjectService {
    */
   private addToRecentProjects(projectPath: string): void {
     // Remove if already exists
-    this.recentProjects = this.recentProjects.filter((p) => p !== projectPath);
+    this.recentProjects = this.recentProjects.filter((p) => p.path !== projectPath);
 
-    // Add to beginning
-    this.recentProjects.unshift(projectPath);
+    // Add to beginning with current timestamp
+    this.recentProjects.unshift({
+      path: projectPath,
+      lastAccessed: new Date().toISOString()
+    });
 
     // Keep only last 10
     this.recentProjects = this.recentProjects.slice(0, 10);
 
     // Save asynchronously (fire and forget)
     this.saveRecentProjects().catch(err => {
-      console.error('Failed to save recent projects:', err);
+      this.logger.error('Failed to save recent projects', err);
     });
   }
 
@@ -426,7 +441,13 @@ export class ProjectService {
   private async loadRecentProjects(): Promise<void> {
     try {
       const projects = await this.electronService.getRecentProjects();
-      this.recentProjects = projects || [];
+      // The electron service already handles backward compatibility
+      // and returns Array<{ path: string; lastAccessed: string }>
+      if (Array.isArray(projects)) {
+        this.recentProjects = projects;
+      } else {
+        this.recentProjects = [];
+      }
     } catch (error) {
       console.warn('Failed to load recent projects:', error);
       this.recentProjects = [];
@@ -440,7 +461,7 @@ export class ProjectService {
     try {
       const result = await this.electronService.saveRecentProjects(this.recentProjects);
       if (!result.success) {
-        console.error('Failed to save recent projects:', result.error);
+        this.logger.error('Failed to save recent projects', result.error);
       }
     } catch (error) {
       console.warn('Failed to save recent projects:', error);
@@ -451,9 +472,9 @@ export class ProjectService {
    * Removes a project from recent projects list
    */
   removeFromRecentProjects(projectPath: string): void {
-    this.recentProjects = this.recentProjects.filter((p) => p !== projectPath);
+    this.recentProjects = this.recentProjects.filter((p) => p.path !== projectPath);
     this.saveRecentProjects().catch(err => {
-      console.error('Failed to save recent projects:', err);
+      this.logger.error('Failed to save recent projects', err);
     });
   }
 
@@ -463,7 +484,7 @@ export class ProjectService {
   clearRecentProjects(): void {
     this.recentProjects = [];
     this.saveRecentProjects().catch(err => {
-      console.error('Failed to save recent projects:', err);
+      this.logger.error('Failed to save recent projects', err);
     });
   }
 

@@ -2,7 +2,7 @@ import { Component, OnInit, HostListener } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ProjectService, ElectronService } from '../../core/services';
+import { ProjectService, ElectronService, LoggingService } from '../../core/services';
 
 interface RecentProject {
   path: string;
@@ -29,7 +29,8 @@ export class ProjectSelectorComponent implements OnInit {
   constructor(
     private projectService: ProjectService,
     private electronService: ElectronService,
-    private router: Router
+    private router: Router,
+    private logger: LoggingService
   ) {}
 
   async ngOnInit(): Promise<void> {
@@ -68,10 +69,10 @@ export class ProjectSelectorComponent implements OnInit {
    */
   private async loadRecentProjects(): Promise<void> {
     try {
-      const recentPaths = this.projectService.getRecentProjects();
+      const recentProjectsWithTimestamps = this.projectService.getRecentProjectsWithTimestamps();
       this.recentProjects = [];
 
-      for (const projectPath of recentPaths) {
+      for (const { path: projectPath, lastAccessed } of recentProjectsWithTimestamps) {
         try {
           const exists = await this.electronService.fileExists(projectPath);
           const isDir = exists ? await this.electronService.isDirectory(projectPath) : false;
@@ -99,7 +100,7 @@ export class ProjectSelectorComponent implements OnInit {
           this.recentProjects.push({
             path: projectPath,
             name: projectName,
-            lastAccessed: new Date(), // TODO: Store actual last accessed time
+            lastAccessed: lastAccessed,
             exists: exists && isDir
           });
         } catch (error) {
@@ -108,13 +109,13 @@ export class ProjectSelectorComponent implements OnInit {
           this.recentProjects.push({
             path: projectPath,
             name: fallbackName,
-            lastAccessed: new Date(),
+            lastAccessed: lastAccessed,
             exists: false
           });
         }
       }
     } catch (error) {
-      console.error('Failed to load recent projects:', error);
+      this.logger.error('Failed to load recent projects:', error);
     }
   }
 
@@ -134,7 +135,7 @@ export class ProjectSelectorComponent implements OnInit {
       }
     } catch (error) {
       this.error = `Failed to load project: ${error}`;
-      console.error('Project loading error:', error);
+      this.logger.error('Project loading error:', error);
     } finally {
       this.isLoading = false;
     }
@@ -159,7 +160,7 @@ export class ProjectSelectorComponent implements OnInit {
       }
     } catch (error) {
       this.error = `Failed to select project folder: ${error}`;
-      console.error('Project selection error:', error);
+      this.logger.error('Project selection error:', error);
     } finally {
       this.isLoading = false;
     }
@@ -196,7 +197,7 @@ export class ProjectSelectorComponent implements OnInit {
       }
     } catch (error) {
       this.error = `Failed to select folder: ${error}`;
-      console.error('Folder selection error:', error);
+      this.logger.error('Folder selection error:', error);
     }
   }
 
@@ -230,7 +231,7 @@ export class ProjectSelectorComponent implements OnInit {
       }
     } catch (error) {
       this.error = `Failed to create project: ${error}`;
-      console.error('Project creation error:', error);
+      this.logger.error('Project creation error:', error);
     } finally {
       this.isLoading = false;
     }

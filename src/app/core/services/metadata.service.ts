@@ -10,6 +10,7 @@ import { COLOR_PALETTE } from '../utils/color-palette.utils';
 import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
 import { CastService } from './cast.service';
+import { LoggingService } from './logging.service';
 
 @Injectable({
   providedIn: 'root',
@@ -22,7 +23,8 @@ export class MetadataService {
   constructor(
     private electronService: ElectronService,
     private projectService: ProjectService,
-    private castService: CastService
+    private castService: CastService,
+    private logger: LoggingService
   ) {
     // Subscribe to project changes to keep metadata in sync
     this.projectService.currentProject$.subscribe((project) => {
@@ -68,7 +70,7 @@ export class MetadataService {
       this.metadataSubject.next(metadata);
       return metadata;
     } catch (error) {
-      console.error('Failed to load metadata:', error);
+      this.logger.error('Failed to load metadata', error);
       throw new Error(`Failed to load metadata: ${error}`);
     }
   }
@@ -94,7 +96,7 @@ export class MetadataService {
 
       this.metadataSubject.next(metadata);
     } catch (error) {
-      console.error('Failed to save metadata:', error);
+      this.logger.error('Failed to save metadata', error);
       throw new Error(`Failed to save metadata: ${error}`);
     }
   }
@@ -849,7 +851,7 @@ export class MetadataService {
         }
       }
     } catch (error) {
-      console.error('Failed to cleanup book references from characters:', error);
+      this.logger.error('Failed to cleanup book references from characters', error);
       // Don't throw here as we still want to remove the book from metadata
     }
   }

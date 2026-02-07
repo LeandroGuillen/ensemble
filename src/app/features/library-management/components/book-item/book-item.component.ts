@@ -1,6 +1,7 @@
 import { CommonModule } from "@angular/common";
 import { Component, EventEmitter, Input, Output } from "@angular/core";
 import { Book } from "@app/core";
+import { LoggingService } from "@app/core/services/logging.service";
 
 @Component({
   selector: "app-book-item",
@@ -19,6 +20,8 @@ export class BookItemComponent {
   @Output() bookDelete = new EventEmitter<Book>();
   @Output() dragStart = new EventEmitter<DragEvent>();
   @Output() dragEndEvent = new EventEmitter<void>();
+
+  constructor(private logger: LoggingService) {}
 
   onBookClick(): void {
     // Prevent click during drag
@@ -102,7 +105,7 @@ export class BookItemComponent {
       .padStart(2, "0")}${newB.toString(16).padStart(2, "0")}`;
   }
   onDragStart(event: DragEvent): void {
-    console.log("Book drag start triggered!", this.book.name);
+    this.logger.log("Book drag start triggered!", this.book.name);
     this.dragStart.emit(event);
   }
 

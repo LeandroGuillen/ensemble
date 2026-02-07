@@ -30,6 +30,7 @@ import {
   AiService,
   CharacterService,
   ElectronService,
+  LoggingService,
   MetadataService,
   ProjectService,
 } from "../../core/services";
@@ -101,7 +102,8 @@ export class CharacterDetailComponent
     private electronService: ElectronService,
     private metadataService: MetadataService,
     private aiService: AiService,
-    private modalService: ModalService
+    private modalService: ModalService,
+    private logger: LoggingService
   ) {
     this.characterForm = this.createForm();
   }
@@ -146,20 +148,29 @@ export class CharacterDetailComponent
         this.aiEnabled = settings?.enabled || false;
       });
 
-    const characterId = this.route.snapshot.paramMap.get("id");
-    if (characterId && characterId !== "new") {
-      this.isEditing = true;
-      this.loadCharacter(characterId);
-    } else {
-      // Check for query params (e.g., from Backstage)
-      this.route.queryParams
-        .pipe(takeUntil(this.destroy$))
-        .subscribe((params) => {
-          if (params["name"]) {
-            this.characterForm.patchValue({ name: params["name"] });
-          }
-        });
-    }
+    // Subscribe to route parameter changes (not just snapshot)
+    this.route.paramMap
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((params) => {
+        const characterId = params.get("id");
+        if (characterId && characterId !== "new") {
+          this.isEditing = true;
+          this.loadCharacter(characterId);
+        } else {
+          this.isEditing = false;
+          this.character = null;
+          this.characterForm.reset();
+        }
+      });
+
+    // Check for query params (e.g., from Backstage)
+    this.route.queryParams
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((params) => {
+        if (params["name"] && !this.isEditing) {
+          this.characterForm.patchValue({ name: params["name"] });
+        }
+      });
   }
 
   ngOnDestroy(): void {
@@ -216,6 +227,22 @@ export class CharacterDetailComponent
     this.error = null;
 
     try {
+      // First check if character exists in memory
+      let character = this.characterService.getCharacterById(id);
+      
+      // If not found, ensure characters are loaded first
+      if (!character && this.currentProject) {
+        await this.characterService.loadCharacters(this.currentProject.path);
+        character = this.characterService.getCharacterById(id);
+      }
+
+      // If still not found, character doesn't exist
+      if (!character) {
+        this.error = "Character not found";
+        this.isLoading = false;
+        return;
+      }
+
       // Refresh character from disk to get latest changes
       const refreshedCharacter = await this.characterService.refreshCharacter(
         id
@@ -265,7 +292,7 @@ export class CharacterDetailComponent
       }
     } catch (error) {
       this.error = `Failed to load character: ${error}`;
-      console.error("Load character error:", error);
+      this.logger.error("Load character error:", error);
     } finally {
       this.isLoading = false;
     }
@@ -312,7 +339,7 @@ export class CharacterDetailComponent
       this.router.navigate(["/characters"]);
     } catch (error) {
       this.error = `Failed to save character: ${error}`;
-      console.error("Save error:", error);
+      this.logger.error("Save error:", error);
     } finally {
       this.isSaving = false;
     }
@@ -331,12 +358,26 @@ export class CharacterDetailComponent
   }
 
   private navigateBack(): void {
-    // Use browser history to go back to previous page
-    // This will take the user back to wherever they came from (pinboard, character list, etc.)
-    if (window.history.length > 1) {
+    // Check if we have a valid previous route within the app
+    // The issue: when opening directly to a character page, there's no in-app history
+    // Solution: check referrer to see if we came from within the app
+    
+    const referrer = document.referrer;
+    const currentOrigin = window.location.origin;
+    
+    // Check if referrer is from our app (same origin)
+    const isFromApp = referrer && (
+      referrer.startsWith(currentOrigin) ||
+      referrer.includes('localhost:4200') ||
+      referrer.startsWith('file://')
+    );
+
+    // If we have a referrer from within the app, try to go back
+    // Otherwise, navigate to characters list (safe fallback)
+    if (isFromApp && window.history.length > 1) {
       this.location.back();
     } else {
-      // Fallback: if no history, go to characters list
+      // No valid in-app history, navigate to characters list
       this.router.navigate(["/characters"]);
     }
   }
@@ -388,7 +429,7 @@ export class CharacterDetailComponent
         this.characterForm.markAsDirty();
       }
     } catch (error) {
-      console.error("Failed to select thumbnail:", error);
+      this.logger.error("Failed to select thumbnail:", error);
       this.error = "Failed to select thumbnail";
     }
   }
@@ -398,7 +439,7 @@ export class CharacterDetailComponent
       const dataUrl = await this.electronService.getImageAsDataUrl(imagePath);
       this.thumbnailPreview = dataUrl;
     } catch (error) {
-      console.error("Failed to load thumbnail preview:", error);
+      this.logger.error("Failed to load thumbnail preview:", error);
       this.thumbnailPreview = null;
     }
   }
@@ -564,7 +605,7 @@ export class CharacterDetailComponent
         this.characterForm.markAsDirty();
       }
     } catch (error) {
-      console.error("Failed to generate name:", error);
+      this.logger.error("Failed to generate name:", error);
       this.error =
         error instanceof Error ? error.message : "Failed to generate name";
     } finally {
@@ -626,7 +667,7 @@ export class CharacterDetailComponent
       this.router.navigate(["/characters"]);
     } catch (error) {
       this.error = `Failed to delete character: ${error}`;
-      console.error("Delete error:", error);
+      this.logger.error("Delete error:", error);
     }
   }
 }

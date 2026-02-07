@@ -8,3 +8,5 @@ export { MetadataService } from "./metadata.service";
 export { AiService } from "./ai.service";
 export { BackstageService } from "./backstage.service";
 export { ThemeService } from "./theme.service";
+export { LoggingService } from "./logging.service";
+export { NotificationService } from "./notification.service";

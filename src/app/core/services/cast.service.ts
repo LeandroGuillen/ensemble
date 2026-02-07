@@ -8,6 +8,7 @@ import { assertIpcSuccess } from '../utils/ipc.utils';
 import { requireProject } from '../utils/project.utils';
 import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
+import { LoggingService } from './logging.service';
 
 @Injectable({
   providedIn: 'root',
@@ -18,7 +19,11 @@ export class CastService {
   private hasLoadedForCurrentProject = false;
   private currentProjectPath: string | null = null;
 
-  constructor(private electronService: ElectronService, private projectService: ProjectService) {}
+  constructor(
+    private electronService: ElectronService,
+    private projectService: ProjectService,
+    private logger: LoggingService
+  ) {}
 
   getCasts(): Observable<Cast[]> {
     return this.casts$;
@@ -105,7 +110,7 @@ export class CastService {
       this.castsSubject.next(mergedCasts);
       this.hasLoadedForCurrentProject = true;
     } catch (error) {
-      console.error('Failed to load casts:', error);
+      this.logger.error('Failed to load casts:', error);
       throw new Error(`Failed to load casts: ${error}`);
     }
   }
@@ -200,7 +205,7 @@ export class CastService {
 
       return mergedCasts;
     } catch (error) {
-      console.error('Failed to merge casts with metadata:', error);
+      this.logger.error('Failed to merge casts with metadata:', error);
       // Return folder casts as fallback
       return folderCasts;
     }
@@ -266,7 +271,7 @@ export class CastService {
 
       return cast;
     } catch (error) {
-      console.error('Failed to create cast:', error);
+      this.logger.error('Failed to create cast:', error);
       throw new Error(`Failed to create cast: ${error}`);
     }
   }
@@ -340,7 +345,7 @@ export class CastService {
 
       return updatedCast;
     } catch (error) {
-      console.error('Failed to update cast:', error);
+      this.logger.error('Failed to update cast:', error);
       throw new Error(`Failed to update cast: ${error}`);
     }
   }
@@ -387,7 +392,7 @@ export class CastService {
 
       return true;
     } catch (error) {
-      console.error('Failed to delete cast:', error);
+      this.logger.error('Failed to delete cast:', error);
       throw new Error(`Failed to delete cast: ${error}`);
     }
   }
@@ -426,7 +431,7 @@ export class CastService {
 
       return thumbnailFilename;
     } catch (error) {
-      console.error('Failed to add thumbnail:', error);
+      this.logger.error('Failed to add thumbnail:', error);
       throw new Error(`Failed to add thumbnail: ${error}`);
     }
   }
@@ -468,7 +473,7 @@ export class CastService {
 
       return true;
     } catch (error) {
-      console.error('Failed to remove thumbnail:', error);
+      this.logger.error('Failed to remove thumbnail:', error);
       return false;
     }
   }
@@ -496,7 +501,7 @@ export class CastService {
       const firstImage = files.find((f) => f.match(/\.(png|jpg|jpeg|webp|gif)$/i));
       return firstImage || undefined;
     } catch (error) {
-      console.error('Failed to detect thumbnail:', error);
+      this.logger.error('Failed to detect thumbnail:', error);
       return undefined;
     }
   }
@@ -558,7 +563,7 @@ export class CastService {
 
       return cast;
     } catch (error) {
-      console.error(`Failed to load cast from ${folderPath}:`, error);
+      this.logger.error(`Failed to load cast from ${folderPath}:`, error);
       return null;
     }
   }

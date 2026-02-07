@@ -1,0 +1,39 @@
+<div class="modal-overlay" *ngIf="visible" (click)="onOverlayClick()">
+  <div class="modal-dialog" (click)="onDialogClick($event)">
+    <div class="modal-header">
+      <h3>Trash</h3>
+      <button class="close-btn" (click)="onClose()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div *ngIf="deletedCharacters.length === 0" class="empty-state">
+        <p>Trash is empty</p>
+      </div>
+      
+      <div *ngIf="deletedCharacters.length > 0" class="trash-list">
+        <div *ngFor="let character of deletedCharacters" class="trash-item">
+          <div class="trash-item-info">
+            <div class="trash-item-name">{{ character.name }}</div>
+            <div class="trash-item-date">Deleted {{ formatDate(character.deletedAt) }}</div>
+          </div>
+          <div class="trash-item-actions">
+            <button 
+              class="btn btn-secondary" 
+              (click)="onRestore(character.folderName)"
+              title="Restore character"
+            >
+              Restore
+            </button>
+            <button 
+              class="btn btn-danger" 
+              (click)="onDeletePermanently(character.folderName)"
+              title="Permanently delete"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+

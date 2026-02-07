@@ -6,6 +6,7 @@ import { pathJoin } from '../utils/path.utils';
 import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
 import { CharacterService } from './character.service';
+import { LoggingService } from './logging.service';
 
 @Injectable({
   providedIn: 'root'
@@ -21,7 +22,8 @@ export class PinboardService {
   constructor(
     private electronService: ElectronService,
     private projectService: ProjectService,
-    private characterService: CharacterService
+    private characterService: CharacterService,
+    private logger: LoggingService
   ) {
     // Subscribe to project changes to load pinboard data
     this.projectService.currentProject$.subscribe(project => {
@@ -776,7 +778,7 @@ export class PinboardService {
 
     // Ensure nodes array exists
     if (!currentData || !currentData.nodes) {
-      console.error('Invalid pinboard data structure:', currentData);
+      this.logger.error('Invalid pinboard data structure', currentData);
       throw new Error('Pinboard data is not properly initialized');
     }
 
@@ -845,7 +847,7 @@ export class PinboardService {
    */
   debugLogPinboardState(): void {
     const currentData = this.pinboardDataSubject.value;
-    console.log('Current pinboard state:', {
+    this.logger.log('Current pinboard state:', {
       pinCount: currentData.nodes.length,
       connectionCount: currentData.edges.length,
       pins: currentData.nodes.map(n => ({

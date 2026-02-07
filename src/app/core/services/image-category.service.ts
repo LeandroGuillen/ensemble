@@ -126,7 +126,12 @@ export class ImageCategoryService {
     await this.saveImageTags(updatedTags);
     this.imageTagsSubject.next(updatedTags);
 
-    // TODO: Update all characters that use this tag (future enhancement)
+    // FUTURE ENHANCEMENT: When a tag is renamed, update all characters that use this tag
+    // This would require:
+    // 1. Loading all characters
+    // 2. Finding characters with images that have the old tag
+    // 3. Updating those images to use the new tag name
+    // 4. Saving the updated character files
   }
 
   /**
@@ -145,7 +150,12 @@ export class ImageCategoryService {
     await this.saveImageTags(updatedTags);
     this.imageTagsSubject.next(updatedTags);
 
-    // TODO: Remove tag from all characters that use it (future enhancement)
+    // FUTURE ENHANCEMENT: When a tag is deleted, remove it from all characters that use it
+    // This would require:
+    // 1. Loading all characters
+    // 2. Finding characters with images that have this tag
+    // 3. Removing the tag from those images
+    // 4. Saving the updated character files
   }
 
   /**

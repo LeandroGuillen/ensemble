@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
 import { ElectronService } from './electron.service';
+import { LoggingService } from './logging.service';
 
 export interface FileChangeEvent {
   type: 'add' | 'change' | 'unlink';
@@ -18,7 +19,10 @@ export class FileWatcherService {
   private isWatching = false;
   private fileChangedCallback: ((event: any, data: { type: string; path: string; filename: string }) => void) | null = null;
 
-  constructor(private electronService: ElectronService) {}
+  constructor(
+    private electronService: ElectronService,
+    private logger: LoggingService
+  ) {}
 
   async startWatching(projectPath: string): Promise<void> {
     if (this.isWatching) {
@@ -26,7 +30,7 @@ export class FileWatcherService {
     }
 
     try {
-      console.log('Starting file watcher for:', projectPath);
+      this.logger.log('Starting file watcher for:', projectPath);
 
       // Create callback to handle file change events from main process
       this.fileChangedCallback = (_event: any, data: { type: string; path: string; filename: string }) => {
@@ -44,9 +48,9 @@ export class FileWatcherService {
       }
 
       this.isWatching = true;
-      console.log('File watcher started successfully');
+      this.logger.log('File watcher started successfully');
     } catch (error) {
-      console.error('Failed to start file watcher:', error);
+      this.logger.error('Failed to start file watcher', error);
       throw error;
     }
   }
@@ -57,7 +61,7 @@ export class FileWatcherService {
     }
 
     try {
-      console.log('Stopping file watcher');
+      this.logger.log('Stopping file watcher');
 
       // Remove event listener
       if (this.fileChangedCallback) {
@@ -69,9 +73,9 @@ export class FileWatcherService {
       await this.electronService.stopFileWatcher();
 
       this.isWatching = false;
-      console.log('File watcher stopped successfully');
+      this.logger.log('File watcher stopped successfully');
     } catch (error) {
-      console.error('Failed to stop file watcher:', error);
+      this.logger.error('Failed to stop file watcher', error);
       this.isWatching = false;
     }
   }

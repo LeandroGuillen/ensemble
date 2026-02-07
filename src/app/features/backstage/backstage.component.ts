@@ -7,6 +7,7 @@ import { Subject } from "rxjs";
 import { takeUntil } from "rxjs/operators";
 import { BackstageService } from "../../core/services/backstage.service";
 import { ElectronService } from "../../core/services/electron.service";
+import { LoggingService } from "../../core/services/logging.service";
 import {
   CharacterConcept,
   NameList,
@@ -66,7 +67,8 @@ export class BackstageComponent implements OnInit, OnDestroy {
     private backstageService: BackstageService,
     private router: Router,
     private electronService: ElectronService,
-    private sanitizer: DomSanitizer
+    private sanitizer: DomSanitizer,
+    private logger: LoggingService
   ) {}
 
   ngOnInit(): void {
@@ -560,7 +562,7 @@ export class BackstageComponent implements OnInit, OnDestroy {
       this.selectedConceptIndex = this.concepts.length - 1;
     } catch (error) {
       this.error = `Failed to add concept: ${error}`;
-      console.error("Failed to add concept:", error);
+      this.logger.error("Failed to add concept:", error);
     }
   }
 
@@ -572,7 +574,7 @@ export class BackstageComponent implements OnInit, OnDestroy {
       await this.backstageService.updateConcept(index, updates);
     } catch (error) {
       this.error = `Failed to update concept: ${error}`;
-      console.error("Failed to update concept:", error);
+      this.logger.error("Failed to update concept:", error);
     }
   }
 
@@ -588,7 +590,7 @@ export class BackstageComponent implements OnInit, OnDestroy {
         }
       } catch (error) {
         this.error = `Failed to delete concept: ${error}`;
-        console.error("Failed to delete concept:", error);
+        this.logger.error("Failed to delete concept:", error);
       }
     }
   }
@@ -610,7 +612,7 @@ export class BackstageComponent implements OnInit, OnDestroy {
       this.selectedNameListIndex = this.nameLists.length - 1;
     } catch (error) {
       this.error = `Failed to add name list: ${error}`;
-      console.error("Failed to add name list:", error);
+      this.logger.error("Failed to add name list:", error);
     }
   }
 
@@ -622,7 +624,7 @@ export class BackstageComponent implements OnInit, OnDestroy {
       await this.backstageService.updateNameList(index, updates);
     } catch (error) {
       this.error = `Failed to update name list: ${error}`;
-      console.error("Failed to update name list:", error);
+      this.logger.error("Failed to update name list:", error);
     }
   }
 
@@ -638,7 +640,7 @@ export class BackstageComponent implements OnInit, OnDestroy {
         }
       } catch (error) {
         this.error = `Failed to delete name list: ${error}`;
-        console.error("Failed to delete name list:", error);
+        this.logger.error("Failed to delete name list:", error);
       }
     }
   }
@@ -656,7 +658,7 @@ export class BackstageComponent implements OnInit, OnDestroy {
       await this.backstageService.loadBackstageData();
     } catch (error) {
       this.error = `Failed to reload: ${error}`;
-      console.error("Failed to reload backstage data:", error);
+      this.logger.error("Failed to reload backstage data:", error);
     } finally {
       this.isLoading = false;
     }
@@ -999,7 +1001,7 @@ export class BackstageComponent implements OnInit, OnDestroy {
       }
     } catch (error) {
       this.error = `Failed to open file: ${error}`;
-      console.error("Failed to open concepts file:", error);
+      this.logger.error("Failed to open concepts file:", error);
     }
   }
 
@@ -1017,7 +1019,7 @@ export class BackstageComponent implements OnInit, OnDestroy {
       }
     } catch (error) {
       this.error = `Failed to open file: ${error}`;
-      console.error("Failed to open names file:", error);
+      this.logger.error("Failed to open names file:", error);
     }
   }
 }

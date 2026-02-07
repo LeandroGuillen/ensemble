@@ -26,7 +26,9 @@ function createWindow() {
       contextIsolation: false,
       enableRemoteModule: true,
     },
-    // icon: path.join(__dirname, "assets/icon.png"), // TODO: Add app icon
+    icon: isDev 
+      ? path.join(__dirname, "build/icons/icon.png")
+      : path.join(process.resourcesPath, "icons", "icon.png"),
     show: false,
     autoHideMenuBar: true,
   });
@@ -112,7 +114,17 @@ const recentProjectsPath = path.join(app.getPath('userData'), 'recent-projects.j
 ipcMain.handle('get-recent-projects', async () => {
   try {
     const data = await fs.readFile(recentProjectsPath, 'utf-8');
-    return JSON.parse(data);
+    const projects = JSON.parse(data);
+    
+    // Handle backward compatibility: if array of strings, convert to new format
+    if (Array.isArray(projects) && projects.length > 0 && typeof projects[0] === 'string') {
+      return projects.map(path => ({
+        path,
+        lastAccessed: new Date().toISOString()
+      }));
+    }
+    
+    return projects;
   } catch (error) {
     // File doesn't exist or is invalid, return empty array
     return [];
