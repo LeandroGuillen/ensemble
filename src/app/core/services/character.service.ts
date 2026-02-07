@@ -34,6 +34,11 @@ export class CharacterService {
   public characters$ = this.charactersSubject.asObservable();
   private hasLoadedForCurrentProject = false;
   private currentProjectPath: string | null = null;
+  
+  // Persistent thumbnail cache (survives component destruction)
+  private thumbnailDataUrls: Map<string, string> = new Map();
+  private thumbnailModificationTimes: Map<string, string> = new Map();
+  private characterImagesDataUrls: Map<string, string[]> = new Map();
 
   constructor(
     private electronService: ElectronService,
@@ -231,11 +236,15 @@ export class CharacterService {
       return;
     }
 
-    // If this is a different project, reset the state
+    // If this is a different project, reset the state and clear thumbnail cache
     if (this.currentProjectPath !== projectPath) {
       this.currentProjectPath = projectPath;
       this.hasLoadedForCurrentProject = false;
       this.charactersSubject.next([]);
+      // Clear thumbnail cache when switching projects
+      this.thumbnailDataUrls.clear();
+      this.thumbnailModificationTimes.clear();
+      this.characterImagesDataUrls.clear();
     }
 
     try {
@@ -2076,5 +2085,57 @@ export class CharacterService {
 
     // Write back to file
     await this.electronService.writeFile(character.filePath, updatedContent);
+  }
+
+  /**
+   * Gets cached thumbnail data URL for a character
+   */
+  getCachedThumbnail(characterId: string): string | null {
+    return this.thumbnailDataUrls.get(characterId) || null;
+  }
+
+  /**
+   * Sets cached thumbnail data URL for a character
+   */
+  setCachedThumbnail(characterId: string, dataUrl: string, modificationTime: string): void {
+    this.thumbnailDataUrls.set(characterId, dataUrl);
+    this.thumbnailModificationTimes.set(characterId, modificationTime);
+  }
+
+  /**
+   * Gets cached modification time for a character thumbnail
+   */
+  getCachedThumbnailModTime(characterId: string): string | null {
+    return this.thumbnailModificationTimes.get(characterId) || null;
+  }
+
+  /**
+   * Removes cached thumbnail for a character
+   */
+  removeCachedThumbnail(characterId: string): void {
+    this.thumbnailDataUrls.delete(characterId);
+    this.thumbnailModificationTimes.delete(characterId);
+    this.characterImagesDataUrls.delete(characterId);
+  }
+
+  /**
+   * Gets cached images data URLs for a character (for slideshow)
+   */
+  getCachedCharacterImages(characterId: string): string[] | null {
+    return this.characterImagesDataUrls.get(characterId) || null;
+  }
+
+  /**
+   * Sets cached images data URLs for a character (for slideshow)
+   */
+  setCachedCharacterImages(characterId: string, imageUrls: string[]): void {
+    this.characterImagesDataUrls.set(characterId, imageUrls);
+  }
+
+  /**
+   * Gets all cached thumbnail data URLs (for passing to child components)
+   */
+  getAllCachedThumbnails(): Map<string, string> {
+    return this.thumbnailDataUrls;
   }
 }

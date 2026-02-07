@@ -172,6 +172,7 @@
 
   <!-- Loading State -->
   <div class="loading-state" *ngIf="isLoading">
+    <div class="spinner spinner-lg"></div>
     <p>Loading characters...</p>
   </div>
 
@@ -582,7 +583,7 @@
         ></app-character-gallery-view>
       </div>
 
-      <div class="empty-state" *ngIf="filteredCharacters.length === 0">
+      <div class="empty-state" *ngIf="filteredCharacters.length === 0 && !isLoading">
         <div class="empty-icon">
           <i class="icon-users"></i>
         </div>
@@ -631,19 +632,34 @@
         >
           Create your first character to get started with your project!
         </p>
-        <button
-          *ngIf="
-            !searchTerm &&
-            !selectedCategory &&
-            selectedTags.length === 0 &&
-            !selectedCast &&
-            !selectedBook
-          "
-          class="btn btn-primary"
-          (click)="createNewCharacter()"
-        >
-          Create Your First Character
-        </button>
+        <div class="empty-state-actions">
+          <button
+            *ngIf="
+              searchTerm ||
+              selectedCategory ||
+              selectedTags.length > 0 ||
+              selectedCast ||
+              selectedBook
+            "
+            class="btn btn-secondary"
+            (click)="clearFilters()"
+          >
+            Clear Filters
+          </button>
+          <button
+            *ngIf="
+              !searchTerm &&
+              !selectedCategory &&
+              selectedTags.length === 0 &&
+              !selectedCast &&
+              !selectedBook
+            "
+            class="btn btn-primary"
+            (click)="createNewCharacter()"
+          >
+            Create Your First Character
+          </button>
+        </div>
       </div>
     </div>
   </div>

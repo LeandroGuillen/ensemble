@@ -102,6 +102,10 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
   // Node hover state for delete functionality
   hoveredNodeId: string | null = null;
 
+  // Track if pinboard is empty
+  isEmpty = false;
+  networkInitialized = false;
+
   constructor(
     private pinboardService: PinboardService,
     private characterService: CharacterService,
@@ -304,11 +308,16 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
     };
 
     this.network = new Network(container, { nodes: this.nodes, edges: this.edges }, options);
+    this.networkInitialized = true;
 
     this.logger.log('Network initialized, setting up events...');
     this.setupNetworkEvents();
     this.setupDiscreteZoom();
     this.setupMiddleClickPan();
+    
+    // Check initial empty state
+    this.isEmpty = this.nodes.length === 0;
+    this.cdr.detectChanges();
   }
 
   private setupDiscreteZoom(): void {
@@ -793,6 +802,10 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
     // Update nodes
     this.nodes.clear();
     this.nodes.add(visData.nodes);
+    
+    // Update empty state
+    this.isEmpty = visData.nodes.length === 0;
+    this.cdr.detectChanges();
 
     // Update edges - remove and re-add to ensure arrows are properly updated
     // vis-network sometimes doesn't update arrows properly with just update()
