@@ -2,13 +2,15 @@ import { Component, OnInit } from '@angular/core';
 import { Router, NavigationEnd } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { ProjectService } from '../../core/services';
+import { KeyboardShortcutsService } from '../keyboard-shortcuts-dialog/keyboard-shortcuts.service';
 import { filter } from 'rxjs/operators';
 
 interface NavItem {
   icon: string;
   label: string;
-  route: string;
+  route?: string;
   title: string;
+  action?: () => void;
 }
 
 interface NavSection {
@@ -54,12 +56,20 @@ export class SidebarComponent implements OnInit {
         { icon: 'cpu', label: 'AI Settings', route: '/ai-settings', title: 'AI Settings' },
         { icon: 'settings', label: 'General', route: '/metadata', title: 'General Settings' }
       ]
+    },
+    {
+      id: 'help',
+      label: 'Help',
+      items: [
+        { icon: 'keyboard', label: 'Shortcuts', title: 'Keyboard Shortcuts', action: () => this.openShortcuts() }
+      ]
     }
   ];
 
   constructor(
     private projectService: ProjectService,
-    private router: Router
+    private router: Router,
+    private shortcutsService: KeyboardShortcutsService
   ) {}
 
   ngOnInit(): void {
@@ -88,6 +98,14 @@ export class SidebarComponent implements OnInit {
     this.router.navigate([route]);
   }
 
+  handleItemClick(item: NavItem): void {
+    if (item.action) {
+      item.action();
+    } else if (item.route) {
+      this.navigateTo(item.route);
+    }
+  }
+
   selectProject(): void {
     this.router.navigate(['/project-selector']);
   }
@@ -95,5 +113,9 @@ export class SidebarComponent implements OnInit {
   toggleCollapse(): void {
     this.isCollapsed = !this.isCollapsed;
     localStorage.setItem('sidebar-collapsed', String(this.isCollapsed));
+  }
+
+  openShortcuts(): void {
+    this.shortcutsService.open();
   }
 }

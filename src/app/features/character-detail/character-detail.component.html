@@ -132,6 +132,7 @@
                     (click)="generateName()"
                     [disabled]="!aiEnabled || isGeneratingName"
                     [title]="aiEnabled ? 'Generate name with AI' : 'Enable AI in settings to generate names'"
+                    [attr.aria-label]="aiEnabled ? 'Generate name with AI' : 'Enable AI in settings to generate names'"
                   >
                     <span *ngIf="!isGeneratingName">🎲</span>
                     <span *ngIf="isGeneratingName" class="spinner spinner-sm"></span>

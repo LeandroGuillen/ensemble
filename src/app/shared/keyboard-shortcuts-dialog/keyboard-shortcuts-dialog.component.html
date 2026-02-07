@@ -1,0 +1,35 @@
+<div class="shortcuts-backdrop" *ngIf="isOpen" (click)="onBackdropClick()">
+  <div class="shortcuts-dialog" (click)="onDialogClick($event)">
+    <div class="shortcuts-header">
+      <h2>Keyboard Shortcuts</h2>
+      <button class="close-btn" (click)="close()" aria-label="Close keyboard shortcuts dialog">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
+    <div class="shortcuts-content">
+      <div *ngFor="let category of getCategories()" class="shortcuts-category">
+        <h3 class="category-title">{{ category }}</h3>
+        <div class="shortcuts-list">
+          <div *ngFor="let shortcut of groupedShortcuts[category]" class="shortcut-item">
+            <div class="shortcut-description">{{ shortcut.description }}</div>
+            <div class="shortcut-keys">
+              <kbd *ngFor="let key of shortcut.keys; let last = last" class="shortcut-key">
+                {{ formatKey(key) }}
+                <span *ngIf="!last" class="key-separator">+</span>
+              </kbd>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="shortcuts-footer">
+      <span class="footer-hint">Press <kbd>ESC</kbd> to close</span>
+    </div>
+  </div>
+</div>
+

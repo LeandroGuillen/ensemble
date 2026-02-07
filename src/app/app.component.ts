@@ -10,12 +10,14 @@ import { CommandPaletteService } from "./shared/command-palette/command-palette.
 import { SidebarComponent } from "./shared/sidebar/sidebar.component";
 import { NotificationComponent } from "./shared/notification/notification.component";
 import { ConfirmationDialogComponent } from "./shared/confirmation-dialog/confirmation-dialog.component";
+import { KeyboardShortcutsDialogComponent } from "./shared/keyboard-shortcuts-dialog/keyboard-shortcuts-dialog.component";
+import { KeyboardShortcutsService } from "./shared/keyboard-shortcuts-dialog/keyboard-shortcuts.service";
 import { ModalService, ConfirmationRequest } from "./core/services/modal.service";
 
 @Component({
   selector: "app-root",
   standalone: true,
-  imports: [CommonModule, RouterOutlet, CommandPaletteComponent, SidebarComponent, NotificationComponent, ConfirmationDialogComponent],
+  imports: [CommonModule, RouterOutlet, CommandPaletteComponent, SidebarComponent, NotificationComponent, ConfirmationDialogComponent, KeyboardShortcutsDialogComponent],
   templateUrl: "./app.component.html",
   styleUrls: ["./app.component.scss"],
 })
@@ -34,6 +36,7 @@ export class AppComponent implements OnInit, OnDestroy {
     private projectService: ProjectService,
     private router: Router,
     private commandPaletteService: CommandPaletteService,
+    private shortcutsService: KeyboardShortcutsService,
     private titleService: Title,
     private electronService: ElectronService,
     private themeService: ThemeService,
@@ -121,6 +124,14 @@ export class AppComponent implements OnInit, OnDestroy {
 
   @HostListener('document:keydown', ['$event'])
   handleGlobalKeydown(event: KeyboardEvent): void {
+    // Handle keyboard shortcuts dialog (Ctrl+? or Cmd+?)
+    if ((event.ctrlKey || event.metaKey) && event.key === '?') {
+      event.preventDefault();
+      event.stopPropagation();
+      this.shortcutsService.open();
+      return;
+    }
+
     // Handle command palette shortcuts at the app level
     if ((event.ctrlKey && event.key === 'p') || 
         (event.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA')) {
@@ -156,6 +167,17 @@ export class AppComponent implements OnInit, OnDestroy {
         },
         group: 'Appearance'
       });
+    });
+
+    // Add keyboard shortcuts command
+    this.commandPaletteService.addCommand({
+      id: 'keyboard-shortcuts',
+      label: 'Show Keyboard Shortcuts',
+      keywords: ['shortcuts', 'keyboard', 'keys', 'help', '?'],
+      action: () => {
+        this.shortcutsService.open();
+      },
+      group: 'Help'
     });
   }
 

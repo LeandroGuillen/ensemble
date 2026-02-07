@@ -11,6 +11,8 @@
       class="icon-btn collapse-btn"
       (click)="toggleCollapse()"
       [title]="isCollapsed ? 'Expand' : 'Collapse'"
+      [attr.aria-label]="isCollapsed ? 'Expand name list' : 'Collapse name list'"
+      [attr.aria-expanded]="!isCollapsed"
     >
       {{ isCollapsed ? "▶" : "▼" }}
     </button>
@@ -25,7 +27,7 @@
     <span class="name-count" *ngIf="isCollapsed && nameList.names.length > 0">
       ({{ nameList.names.length }})
     </span>
-    <button class="icon-btn delete-btn" (click)="onDelete($event)" title="Delete list">
+    <button class="icon-btn delete-btn" (click)="onDelete($event)" title="Delete list" aria-label="Delete name list">
       🗑️
     </button>
   </div>
@@ -52,6 +54,7 @@
               class="icon-btn-sm"
               (click)="onTakeTheStage(nameItem.name, $event)"
               title="Take the Stage - Create character with this name"
+              aria-label="Take the Stage - Create character with this name"
             >
               ⭐
             </button>
@@ -60,6 +63,8 @@
               *ngIf="hasNotes(i) || true"
               (click)="toggleNotes(i)"
               [title]="isNotesExpanded(i) ? 'Hide notes' : 'Show notes'"
+              [attr.aria-label]="isNotesExpanded(i) ? 'Hide notes' : 'Show notes'"
+              [attr.aria-expanded]="isNotesExpanded(i)"
             >
               {{ isNotesExpanded(i) ? '▼' : '▶' }}
             </button>
@@ -67,6 +72,7 @@
               class="icon-btn-sm"
               (click)="onRemoveName(i)"
               title="Remove name"
+              aria-label="Remove name"
             >
               ×
             </button>

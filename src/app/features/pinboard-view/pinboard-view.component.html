@@ -2,7 +2,7 @@
   <div class="page-actions">
     <!-- Zoom controls -->
     <div class="zoom-controls">
-      <button class="zoom-btn" (click)="zoomOut()" [disabled]="currentZoomIndex === 0" title="Zoom out">
+      <button class="zoom-btn" (click)="zoomOut()" [disabled]="currentZoomIndex === 0" title="Zoom out" aria-label="Zoom out">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
         </svg>
@@ -13,6 +13,7 @@
         (click)="zoomIn()"
         [disabled]="currentZoomIndex === zoomLevels.length - 1"
         title="Zoom in"
+        aria-label="Zoom in"
       >
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
@@ -20,7 +21,7 @@
       </button>
     </div>
 
-    <button class="control-btn" (click)="onResetView()" title="Fit to view">
+    <button class="control-btn" (click)="onResetView()" title="Fit to view" aria-label="Fit to view">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path
           d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z"
@@ -37,6 +38,7 @@
       [class.active]="showGrid"
       (click)="onToggleGrid()"
       [title]="showGrid ? 'Hide Grid' : 'Show Grid'"
+      [attr.aria-label]="showGrid ? 'Hide Grid' : 'Show Grid'"
     >
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path
@@ -54,6 +56,7 @@
       [class.active]="snapToGrid"
       (click)="onToggleSnapToGrid()"
       [title]="snapToGrid ? 'Disable Snap to Grid' : 'Enable Snap to Grid'"
+      [attr.aria-label]="snapToGrid ? 'Disable Snap to Grid' : 'Enable Snap to Grid'"
     >
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <!-- Grid dots -->
