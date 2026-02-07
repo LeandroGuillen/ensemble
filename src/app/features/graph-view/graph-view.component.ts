@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Observable, Subscription } from 'rxjs';
 import { DataSet, Edge, Network, Node, Options } from 'vis-network/standalone';
 import { Character, GraphData, Relationship } from '../../core/interfaces';
-import { CharacterService, ProjectService, RelationshipService, ElectronService } from '../../core/services';
+import { CharacterService, ProjectService, RelationshipService, ElectronService, LoggingService } from '../../core/services';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 
 interface RelationshipFormData {
@@ -73,7 +73,8 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
     private relationshipService: RelationshipService,
     private characterService: CharacterService,
     private projectService: ProjectService,
-    private electronService: ElectronService
+    private electronService: ElectronService,
+    private logger: LoggingService
   ) {
     this.graphData$ = this.relationshipService.getGraphData();
     this.characters$ = this.characterService.getCharacters();
@@ -85,7 +86,7 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
     const project = this.projectService.getCurrentProject();
 
     if (!project) {
-      console.error('No project loaded in graph view!');
+      this.logger.error('No project loaded in graph view!');
       return;
     }
 
@@ -938,13 +939,13 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
 
   async addCharacterToGraph(character: Character): Promise<void> {
     try {
-      console.log('Adding character to graph:', character.name, 'gridSize:', this.gridSize);
+      this.logger.log('Adding character to graph:', character.name, 'gridSize:', this.gridSize);
       await this.relationshipService.addNode(character, this.gridSize);
-      console.log('Character added successfully');
+      this.logger.log('Character added successfully');
       this.closeDialogs();
     } catch (error) {
-      console.error('Failed to add character to graph:', error);
-      console.error('Error details:', error);
+      this.logger.error('Failed to add character to graph:', error);
+      this.logger.error('Error details:', error);
       alert(`Failed to add character to graph: ${error}`);
     }
   }
@@ -998,7 +999,7 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
             this.thumbnailDataUrls.set(character.id, dataUrl);
           }
         } catch (error) {
-          console.error(`Failed to load thumbnail for character ${character.name}:`, error);
+          this.logger.error(`Failed to load thumbnail for character ${character.name}:`, error);
         }
       }
     }

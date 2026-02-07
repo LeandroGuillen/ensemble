@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Subject, takeUntil } from 'rxjs';
 import { MetadataService } from '../../core/services/metadata.service';
+import { LoggingService } from '../../core/services/logging.service';
 import { ProjectService } from '../../core/services/project.service';
 import { CharacterService } from '../../core/services/character.service';
 import { ElectronService } from '../../core/services/electron.service';
@@ -87,7 +88,8 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
     private characterService: CharacterService,
     private themeService: ThemeService,
     private colorPaletteService: ColorPaletteService,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private logger: LoggingService
   ) {
     this.categoryForm = this.fb.group({
       name: ['', [Validators.required, Validators.maxLength(100)]],
@@ -163,7 +165,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
       
       await this.metadataService.loadMetadata(project.path);
     } catch (error) {
-      console.error('Failed to load metadata:', error);
+      this.logger.error('Failed to load metadata:', error);
       this.error = `Failed to load metadata: ${error}`;
     } finally {
       this.loading = false;
@@ -251,13 +253,13 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
       if (needsRelocation && categoryId) {
         const relocatedCount = await this.characterService.relocateCharactersForCategory(categoryId);
         if (relocatedCount > 0) {
-          console.log(`Relocated ${relocatedCount} character(s) due to folder mode change`);
+          this.logger.log(`Relocated ${relocatedCount} character(s) due to folder mode change`);
         }
       }
       
       this.cancelCategoryForm();
     } catch (error) {
-      console.error('Failed to save category:', error);
+      this.logger.error('Failed to save category:', error);
       this.error = `Failed to save category: ${error}`;
     } finally {
       this.saving = false;
@@ -275,7 +277,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
       
       await this.metadataService.removeCategory(category.id);
     } catch (error) {
-      console.error('Failed to delete category:', error);
+      this.logger.error('Failed to delete category:', error);
       this.error = `Failed to delete category: ${error}`;
     } finally {
       this.saving = false;
@@ -329,7 +331,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
       
       this.cancelTagForm();
     } catch (error) {
-      console.error('Failed to save tag:', error);
+      this.logger.error('Failed to save tag:', error);
       this.error = `Failed to save tag: ${error}`;
     } finally {
       this.saving = false;
@@ -347,7 +349,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
       
       await this.metadataService.removeTag(tag.id);
     } catch (error) {
-      console.error('Failed to delete tag:', error);
+      this.logger.error('Failed to delete tag:', error);
       this.error = `Failed to delete tag: ${error}`;
     } finally {
       this.saving = false;
@@ -375,7 +377,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
       
       await this.metadataService.updateSettings(formData);
     } catch (error) {
-      console.error('Failed to save settings:', error);
+      this.logger.error('Failed to save settings:', error);
       this.error = `Failed to save settings: ${error}`;
     } finally {
       this.saving = false;
@@ -513,7 +515,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
 
       await this.metadataService.saveMetadata(updatedMetadata);
     } catch (error) {
-      console.error('Failed to save reordered categories:', error);
+      this.logger.error('Failed to save reordered categories:', error);
       this.error = `Failed to save category order: ${error}`;
     } finally {
       this.saving = false;
@@ -608,7 +610,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
 
       await this.metadataService.saveMetadata(updatedMetadata);
     } catch (error) {
-      console.error('Failed to save reordered tags:', error);
+      this.logger.error('Failed to save reordered tags:', error);
       this.error = `Failed to save tag order: ${error}`;
     } finally {
       this.saving = false;
@@ -631,7 +633,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
       this.error = null;
       await this.colorPaletteService.updateBaseColor(index, color);
     } catch (error) {
-      console.error('Failed to update base color:', error);
+      this.logger.error('Failed to update base color:', error);
       this.error = `Failed to update color: ${error}`;
     } finally {
       this.saving = false;
@@ -664,7 +666,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
       this.error = null;
       await this.colorPaletteService.resetBaseColors();
     } catch (error) {
-      console.error('Failed to reset base colors:', error);
+      this.logger.error('Failed to reset base colors:', error);
       this.error = `Failed to reset colors: ${error}`;
     } finally {
       this.saving = false;
@@ -682,7 +684,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
       await this.colorPaletteService.addExtraColor(this.newExtraColor);
       this.newExtraColor = '';
     } catch (error) {
-      console.error('Failed to add extra color:', error);
+      this.logger.error('Failed to add extra color:', error);
       this.error = `Failed to add color: ${error}`;
     } finally {
       this.saving = false;
@@ -698,7 +700,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
       this.error = null;
       await this.colorPaletteService.removeExtraColor(color);
     } catch (error) {
-      console.error('Failed to remove extra color:', error);
+      this.logger.error('Failed to remove extra color:', error);
       this.error = `Failed to remove color: ${error}`;
     } finally {
       this.saving = false;
@@ -715,7 +717,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
       this.error = null;
       await this.colorPaletteService.setThemeOverrides(this.currentTheme.id, baseColors);
     } catch (error) {
-      console.error('Failed to set theme overrides:', error);
+      this.logger.error('Failed to set theme overrides:', error);
       this.error = `Failed to set theme overrides: ${error}`;
     } finally {
       this.saving = false;
@@ -734,7 +736,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
       this.error = null;
       await this.colorPaletteService.removeThemeOverrides(this.currentTheme.id);
     } catch (error) {
-      console.error('Failed to remove theme overrides:', error);
+      this.logger.error('Failed to remove theme overrides:', error);
       this.error = `Failed to remove theme overrides: ${error}`;
     } finally {
       this.saving = false;

@@ -6,7 +6,7 @@ import { Observable, Subscription } from 'rxjs';
 import { take } from 'rxjs/operators';
 import { DataSet, Edge, Network, Node, Options } from 'vis-network/standalone';
 import { Character, PinboardData, PinboardConnection, Pinboard } from '../../core/interfaces';
-import { CharacterService, ProjectService, PinboardService, ElectronService } from '../../core/services';
+import { CharacterService, ProjectService, PinboardService, ElectronService, LoggingService } from '../../core/services';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { ColorSelectorComponent } from '../../shared/color-selector/color-selector.component';
 import { PinboardSidebarComponent } from '../../shared/pinboard-sidebar/pinboard-sidebar.component';
@@ -109,7 +109,8 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
     private electronService: ElectronService,
     private router: Router,
     private route: ActivatedRoute,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private logger: LoggingService
   ) {
     this.pinboardData$ = this.pinboardService.getPinboardData();
     this.characters$ = this.characterService.getCharacters();
@@ -120,7 +121,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
     const project = this.projectService.getCurrentProject();
 
     if (!project) {
-      console.error('No project loaded in pinboard view!');
+      this.logger.error('No project loaded in pinboard view!');
       return;
     }
 
@@ -141,7 +142,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
     try {
       await this.characterService.loadCharacters(project.path);
     } catch (error) {
-      console.error('Failed to load characters:', error);
+      this.logger.error('Failed to load characters:', error);
     }
   }
 
@@ -303,7 +304,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
 
     this.network = new Network(container, { nodes: this.nodes, edges: this.edges }, options);
 
-    console.log('Network initialized, setting up events...');
+    this.logger.log('Network initialized, setting up events...');
     this.setupNetworkEvents();
     this.setupDiscreteZoom();
     this.setupMiddleClickPan();
@@ -1256,7 +1257,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
             this.openConnectionDialog(sourceId, targetId);
           }, 50);
         } else {
-          console.error('No characters available in observable');
+          this.logger.error('No characters available in observable');
           alert('Characters are not loaded. Please wait a moment and try again.');
         }
       });
@@ -1267,7 +1268,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
     const targetChar = currentCharacters.find((c) => c.id === targetId);
 
     if (!sourceChar || !targetChar) {
-      console.error('Invalid character selection:', {
+      this.logger.error('Invalid character selection:', {
         sourceId,
         targetId,
         charactersCount: currentCharacters.length,
@@ -1467,7 +1468,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
       await this.pinboardService.addPin(character, this.gridSize);
       this.closeDialogs();
     } catch (error) {
-      console.error('Failed to add character to pinboard:', error);
+      this.logger.error('Failed to add character to pinboard:', error);
       alert(`Failed to add character to pinboard: ${error}`);
     }
   }
@@ -1579,7 +1580,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
             }
           }
         } catch (error) {
-          console.error(`Failed to load image for character ${character.name}:`, error);
+          this.logger.error(`Failed to load image for character ${character.name}:`, error);
         }
       }
     }
@@ -1832,7 +1833,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
         y: canvasPos.y - deleteIconOffset + canvasOffsetY
       };
     } catch (error) {
-      console.error('Error calculating hovered node position:', error);
+      this.logger.error('Error calculating hovered node position:', error);
       return null;
     }
   }
@@ -1848,7 +1849,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
     try {
       await this.pinboardService.removePin(nodeId);
     } catch (error) {
-      console.error('Failed to remove pin:', error);
+      this.logger.error('Failed to remove pin:', error);
       alert('Failed to remove character from pinboard. Please try again.');
     }
   }

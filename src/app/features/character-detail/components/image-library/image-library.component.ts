@@ -5,6 +5,7 @@ import { Character, CharacterImage } from '../../../../core/interfaces/character
 import { CharacterService } from '../../../../core/services/character.service';
 import { ElectronService } from '../../../../core/services/electron.service';
 import { ImageCategoryService } from '../../../../core/services/image-category.service';
+import { LoggingService } from '../../../../core/services/logging.service';
 import { Subject, takeUntil } from 'rxjs';
 
 @Component({
@@ -35,7 +36,8 @@ export class ImageLibraryComponent implements OnInit, OnDestroy {
   constructor(
     private characterService: CharacterService,
     private electronService: ElectronService,
-    private imageCategoryService: ImageCategoryService
+    private imageCategoryService: ImageCategoryService,
+    private logger: LoggingService
   ) {}
 
   ngOnInit(): void {
@@ -110,7 +112,7 @@ export class ImageLibraryComponent implements OnInit, OnDestroy {
         await this.loadImages();
       }
     } catch (error) {
-      console.error('Failed to add images:', error);
+      this.logger.error('Failed to add images:', error);
       alert(`Failed to add images: ${error}`);
     } finally {
       this.isLoading = false;
@@ -144,7 +146,7 @@ export class ImageLibraryComponent implements OnInit, OnDestroy {
         await this.loadImages();
       }
     } catch (error) {
-      console.error('Failed to remove image:', error);
+      this.logger.error('Failed to remove image:', error);
       alert(`Failed to remove image: ${error}`);
     } finally {
       this.isLoading = false;
@@ -167,7 +169,7 @@ export class ImageLibraryComponent implements OnInit, OnDestroy {
         await this.loadImages();
       }
     } catch (error) {
-      console.error('Failed to set primary image:', error);
+      this.logger.error('Failed to set primary image:', error);
       alert(`Failed to set primary image: ${error}`);
     } finally {
       this.isLoading = false;
@@ -206,7 +208,7 @@ export class ImageLibraryComponent implements OnInit, OnDestroy {
       this.editingImageId = null;
       this.editingTags = [];
     } catch (error) {
-      console.error('Failed to save image tags:', error);
+      this.logger.error('Failed to save image tags:', error);
       alert(`Failed to save tags: ${error}`);
     } finally {
       this.isLoading = false;
@@ -393,7 +395,7 @@ export class ImageLibraryComponent implements OnInit, OnDestroy {
         await this.loadImages();
       }
     } catch (error) {
-      console.error('Failed to reorder images:', error);
+      this.logger.error('Failed to reorder images:', error);
       alert(`Failed to reorder images: ${error}`);
     } finally {
       this.isLoading = false;

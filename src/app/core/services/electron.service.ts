@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { LoggingService } from './logging.service';
 
 declare global {
   interface Window {
@@ -12,7 +13,7 @@ declare global {
 export class ElectronService {
   public ipcRenderer: any;
 
-  constructor() {
+  constructor(private logger: LoggingService) {
     if (this.isElectron()) {
       this.ipcRenderer = window.require('electron').ipcRenderer;
     }
@@ -171,7 +172,7 @@ export class ElectronService {
     try {
       return await this.ipcRenderer.invoke('get-image-data-url', filePath);
     } catch (error) {
-      console.error('Failed to get image as data URL:', error);
+      this.logger.error('Failed to get image as data URL', error);
       return null;
     }
   }
@@ -225,14 +226,14 @@ export class ElectronService {
   }
 
   // Recent projects storage (file-based, persists across restarts)
-  async getRecentProjects(): Promise<string[]> {
+  async getRecentProjects(): Promise<Array<{ path: string; lastAccessed: string }>> {
     if (!this.isElectron()) {
       return [];
     }
     return await this.ipcRenderer.invoke('get-recent-projects');
   }
 
-  async saveRecentProjects(projects: string[]): Promise<{ success: boolean; error?: string }> {
+  async saveRecentProjects(projects: Array<{ path: string; lastAccessed: string }>): Promise<{ success: boolean; error?: string }> {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }

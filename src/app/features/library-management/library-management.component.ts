@@ -10,6 +10,7 @@ import {
 import { Subject, takeUntil } from "rxjs";
 import { MetadataService } from "../../core/services/metadata.service";
 import { ProjectService } from "../../core/services/project.service";
+import { LoggingService } from "../../core/services/logging.service";
 import { Book } from "../../core/interfaces/project.interface";
 import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
 import { BookEditorComponent } from "./components/book-editor/book-editor.component";
@@ -95,7 +96,8 @@ export class LibraryManagementComponent implements OnInit, OnDestroy {
   constructor(
     private metadataService: MetadataService,
     private projectService: ProjectService,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private logger: LoggingService
   ) {
     this.bookForm = this.fb.group({
       name: ["", [Validators.required, Validators.maxLength(200)]],
@@ -141,7 +143,7 @@ export class LibraryManagementComponent implements OnInit, OnDestroy {
 
       await this.metadataService.loadMetadata(project.path);
     } catch (error) {
-      console.error("Failed to load metadata:", error);
+      this.logger.error("Failed to load metadata:", error);
       this.error = `Failed to load metadata: ${error}`;
     } finally {
       this.loading = false;
@@ -232,7 +234,7 @@ export class LibraryManagementComponent implements OnInit, OnDestroy {
 
       this.cancelBookForm();
     } catch (error) {
-      console.error("Failed to save book:", error);
+      this.logger.error("Failed to save book:", error);
       this.error = `Failed to save book: ${error}`;
     } finally {
       this.saving = false;
@@ -254,7 +256,7 @@ export class LibraryManagementComponent implements OnInit, OnDestroy {
 
       await this.metadataService.removeBook(book.id);
     } catch (error) {
-      console.error("Failed to delete book:", error);
+      this.logger.error("Failed to delete book:", error);
       this.error = `Failed to delete book: ${error}`;
     } finally {
       this.saving = false;
@@ -300,7 +302,7 @@ export class LibraryManagementComponent implements OnInit, OnDestroy {
 
   // Drag and Drop Methods for Books
   onDragStart(event: DragEvent, index: number): void {
-    console.log("Drag start:", index); // Debug log
+    this.logger.log("Drag start:", index); // Debug log
     this.draggedIndex = index;
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = "move";
@@ -321,7 +323,7 @@ export class LibraryManagementComponent implements OnInit, OnDestroy {
   onDragOver(event: DragEvent, index: number, side?: "left" | "right"): void {
     event.preventDefault();
     event.stopPropagation();
-    console.log("Drag over:", index, side); // Debug log
+    this.logger.log("Drag over:", index, side); // Debug log
     if (event.dataTransfer) {
       event.dataTransfer.dropEffect = "move";
     }
@@ -428,7 +430,7 @@ export class LibraryManagementComponent implements OnInit, OnDestroy {
 
       await this.metadataService.saveMetadata(updatedMetadata);
     } catch (error) {
-      console.error("Failed to save reordered books:", error);
+      this.logger.error("Failed to save reordered books:", error);
       this.error = `Failed to save book order: ${error}`;
     } finally {
       this.saving = false;

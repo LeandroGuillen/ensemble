@@ -4,6 +4,7 @@ import { Theme } from '../interfaces/theme.interface';
 import { themes, getThemeById, getDefaultTheme } from '../themes';
 import { MetadataService } from './metadata.service';
 import { ProjectService } from './project.service';
+import { LoggingService } from './logging.service';
 
 @Injectable({
   providedIn: 'root'
@@ -16,7 +17,8 @@ export class ThemeService {
 
   constructor(
     private metadataService: MetadataService,
-    private projectService: ProjectService
+    private projectService: ProjectService,
+    private logger: LoggingService
   ) {
     // Subscribe to project changes to reload theme
     this.projectService.currentProject$.subscribe(project => {
@@ -75,7 +77,7 @@ export class ThemeService {
     try {
       await this.metadataService.updateSettings({ theme: themeId });
     } catch (error) {
-      console.error('Failed to save theme preference:', error);
+      this.logger.error('Failed to save theme preference', error);
       // Theme is still applied, just not saved
     }
   }

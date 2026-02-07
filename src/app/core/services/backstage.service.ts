@@ -3,6 +3,7 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { BackstageData, CharacterConcept, NameList } from '../interfaces/backstage.interface';
 import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
+import { LoggingService } from './logging.service';
 
 @Injectable({
   providedIn: 'root',
@@ -15,7 +16,11 @@ export class BackstageService {
 
   private currentProjectPath: string | null = null;
 
-  constructor(private electronService: ElectronService, private projectService: ProjectService) {
+  constructor(
+    private electronService: ElectronService,
+    private projectService: ProjectService,
+    private logger: LoggingService
+  ) {
     // Subscribe to project changes
     this.projectService.currentProject$.subscribe((project) => {
       if (project) {
@@ -70,7 +75,7 @@ export class BackstageService {
 
       this.backstageData$.next({ concepts, nameLists });
     } catch (error) {
-      console.error('Failed to load backstage data:', error);
+      this.logger.error('Failed to load backstage data', error);
       this.backstageData$.next({ concepts: [], nameLists: [] });
     }
   }

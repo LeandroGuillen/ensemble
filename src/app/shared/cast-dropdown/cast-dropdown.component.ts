@@ -12,7 +12,7 @@ import {
 } from "@angular/core";
 import { Subject, takeUntil } from "rxjs";
 import { Cast, Character } from "../../core/interfaces";
-import { ElectronService } from "../../core/services";
+import { ElectronService, LoggingService } from "../../core/services";
 
 @Component({
   selector: "app-cast-dropdown",
@@ -39,7 +39,8 @@ export class CastDropdownComponent implements OnInit, OnDestroy {
   constructor(
     private electronService: ElectronService,
     private ngZone: NgZone,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private logger: LoggingService
   ) {}
 
   ngOnInit(): void {
@@ -121,8 +122,8 @@ export class CastDropdownComponent implements OnInit, OnDestroy {
               this.characterThumbnailDataUrls.set(character.id, dataUrl);
             }
           } catch (error) {
-            console.error(
-              `Failed to load thumbnail for character ${character.name}:`,
+            this.logger.error(
+              `Failed to load thumbnail for character ${character.name}`,
               error
             );
           }

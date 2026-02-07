@@ -11,6 +11,7 @@ import { requireProject } from '../utils/project.utils';
 import { ElectronService } from './electron.service';
 import { FileWatcherService } from './file-watcher.service';
 import { ProjectService } from './project.service';
+import { LoggingService } from './logging.service';
 
 interface CharacterFrontmatter {
   id?: string; // Character ID for consistent identification
@@ -37,7 +38,8 @@ export class CharacterService {
   constructor(
     private electronService: ElectronService,
     private projectService: ProjectService,
-    private fileWatcherService: FileWatcherService
+    private fileWatcherService: FileWatcherService,
+    private logger: LoggingService
   ) {
     // Subscribe to file changes to auto-reload characters
     this.fileWatcherService.fileChanges$.subscribe((event) => {
@@ -110,7 +112,7 @@ export class CharacterService {
 
     // Get the new folder path based on current category settings
     const newCategoryFolder = this.getCategoryFolderPath(categoryId);
-    console.log(`[relocateCharactersForCategory] New category folder: ${newCategoryFolder}`);
+    this.logger.log(`[relocateCharactersForCategory] New category folder: ${newCategoryFolder}`);
 
     let relocatedCount = 0;
 
@@ -144,7 +146,7 @@ export class CharacterService {
         );
 
         if (!moveResult.success) {
-          console.error(`Failed to move character ${character.name}: ${moveResult.error}`);
+          this.logger.error(`Failed to move character ${character.name}`, moveResult.error);
           continue;
         }
 
@@ -154,9 +156,9 @@ export class CharacterService {
         character.filePath = newFilePath;
         relocatedCount++;
 
-        console.log(`Relocated character ${character.name} to ${newFolderPath}`);
+        this.logger.log(`Relocated character ${character.name} to ${newFolderPath}`);
       } catch (error) {
-        console.error(`Failed to relocate character ${character.name}:`, error);
+        this.logger.error(`Failed to relocate character ${character.name}`, error);
       }
     }
 
@@ -294,7 +296,7 @@ export class CharacterService {
       this.charactersSubject.next(characters);
       this.hasLoadedForCurrentProject = true;
     } catch (error) {
-      console.error('Failed to load characters:', error);
+      this.logger.error('Failed to load characters', error);
       throw new Error(`Failed to load characters: ${error}`);
     }
   }
@@ -431,7 +433,7 @@ export class CharacterService {
 
       return character;
     } catch (error) {
-      console.error('Failed to create character:', error);
+      this.logger.error('Failed to create character', error);
       throw new Error(`Failed to create character: ${error}`);
     }
   }
@@ -587,7 +589,7 @@ export class CharacterService {
 
       return updatedCharacter;
     } catch (error) {
-      console.error('Failed to update character:', error);
+      this.logger.error('Failed to update character', error);
       throw new Error(`Failed to update character: ${error}`);
     }
   }
@@ -628,7 +630,7 @@ export class CharacterService {
 
       return true;
     } catch (error) {
-      console.error('Failed to delete character:', error);
+      this.logger.error('Failed to delete character', error);
       throw new Error(`Failed to delete character: ${error}`);
     }
   }
@@ -708,7 +710,7 @@ export class CharacterService {
 
       return true;
     } catch (error) {
-      console.error('Failed to restore character:', error);
+      this.logger.error('Failed to restore character', error);
       throw new Error(`Failed to restore character: ${error}`);
     }
   }
@@ -789,7 +791,7 @@ export class CharacterService {
 
       return deletedCharacters;
     } catch (error) {
-      console.error('Failed to get deleted characters:', error);
+      this.logger.error('Failed to get deleted characters', error);
       return [];
     }
   }
@@ -820,7 +822,7 @@ export class CharacterService {
 
       return true;
     } catch (error) {
-      console.error('Failed to empty trash:', error);
+      this.logger.error('Failed to empty trash', error);
       throw new Error(`Failed to empty trash: ${error}`);
     }
   }
@@ -849,7 +851,7 @@ export class CharacterService {
 
       return true;
     } catch (error) {
-      console.error('Failed to permanently delete character:', error);
+      this.logger.error('Failed to permanently delete character', error);
       throw new Error(`Failed to permanently delete character: ${error}`);
     }
   }
@@ -901,7 +903,7 @@ export class CharacterService {
 
       return refreshedCharacter;
     } catch (error) {
-      console.error('Failed to refresh character:', error);
+      this.logger.error('Failed to refresh character', error);
       return null;
     }
   }
@@ -993,19 +995,19 @@ export class CharacterService {
       if (imagesChanged) {
         const diff = images.length - originalImageCount;
         if (diff > 0) {
-          console.log(`Auto-detected ${diff} new image(s) for ${character.name}`);
+          this.logger.log(`Auto-detected ${diff} new image(s) for ${character.name}`);
         } else if (diff < 0) {
-          console.log(`Removed ${Math.abs(diff)} deleted image(s) from metadata for ${character.name}`);
+          this.logger.log(`Removed ${Math.abs(diff)} deleted image(s) from metadata for ${character.name}`);
         }
         // Save asynchronously without waiting (don't block loading)
         this.updateCharacterMetadata(character).catch((error) => {
-          console.error('Failed to save synced images:', error);
+          this.logger.error('Failed to save synced images', error);
         });
       }
 
       return character;
     } catch (error) {
-      console.error(`Failed to load character from ${folderPath}:`, error);
+      this.logger.error(`Failed to load character from ${folderPath}`, error);
       return null;
     }
   }
@@ -1127,7 +1129,7 @@ export class CharacterService {
       // Filter for markdown files only
       return (listResult.files || []).filter((file) => file.endsWith('.md'));
     } catch (error) {
-      console.error('Error getting character files:', error);
+      this.logger.error('Error getting character files', error);
       return [];
     }
   }
@@ -1400,7 +1402,7 @@ export class CharacterService {
       const updatedCharacters = characters.map((char) => (char.id === characterId ? character : char));
       this.charactersSubject.next(updatedCharacters);
     } catch (error) {
-      console.error('Failed to add image:', error);
+      this.logger.error('Failed to add image', error);
       throw new Error(`Failed to add image: ${error}`);
     }
   }
@@ -1453,7 +1455,7 @@ export class CharacterService {
       const updatedCharacters = characters.map((char) => (char.id === characterId ? character : char));
       this.charactersSubject.next(updatedCharacters);
     } catch (error) {
-      console.error('Failed to remove image:', error);
+      this.logger.error('Failed to remove image', error);
       throw new Error(`Failed to remove image: ${error}`);
     }
   }
@@ -1492,7 +1494,7 @@ export class CharacterService {
       const updatedCharacters = characters.map((char) => (char.id === characterId ? character : char));
       this.charactersSubject.next(updatedCharacters);
     } catch (error) {
-      console.error('Failed to update image metadata:', error);
+      this.logger.error('Failed to update image metadata', error);
       throw new Error(`Failed to update image metadata: ${error}`);
     }
   }
@@ -1530,7 +1532,7 @@ export class CharacterService {
       const updatedCharacters = characters.map((char) => (char.id === characterId ? character : char));
       this.charactersSubject.next(updatedCharacters);
     } catch (error) {
-      console.error('Failed to set primary image:', error);
+      this.logger.error('Failed to set primary image', error);
       throw new Error(`Failed to set primary image: ${error}`);
     }
   }
@@ -1571,7 +1573,7 @@ export class CharacterService {
       const updatedCharacters = characters.map((char) => (char.id === characterId ? character : char));
       this.charactersSubject.next(updatedCharacters);
     } catch (error) {
-      console.error('Failed to reorder images:', error);
+      this.logger.error('Failed to reorder images', error);
       throw new Error(`Failed to reorder images: ${error}`);
     }
   }
@@ -1626,7 +1628,7 @@ export class CharacterService {
    * Handles file change events from the file watcher
    */
   private async handleFileChange(event: { type: string; path: string; filename: string }): Promise<void> {
-    console.log('File change detected:', event);
+    this.logger.log('File change detected:', event);
 
     // If we haven't loaded characters yet, don't try to handle changes
     if (!this.currentProjectPath) {
@@ -1672,11 +1674,11 @@ export class CharacterService {
             // Entire folder was deleted, remove character
             const filteredCharacters = characters.filter((char) => char.folderPath !== folderPath);
             this.charactersSubject.next(filteredCharacters);
-            console.log(`Character removed due to folder deletion: ${character.name}`);
+            this.logger.log(`Character removed due to folder deletion: ${character.name}`);
           } else {
             // Just a file was deleted, reload the character
             await this.refreshCharacter(character.id);
-            console.log(`Character reloaded after file deletion: ${character.name}`);
+            this.logger.log(`Character reloaded after file deletion: ${character.name}`);
           }
         }
       } else if (event.type === 'change' || event.type === 'add') {
@@ -1684,16 +1686,16 @@ export class CharacterService {
         if (character) {
           // Existing character, reload it
           await this.refreshCharacter(character.id);
-          console.log(`Character reloaded: ${character.name}`);
+          this.logger.log(`Character reloaded: ${character.name}`);
         } else {
           // New character or file added to existing character
           // Force a full reload to detect new characters
           await this.forceReloadCharacters();
-          console.log('Characters reloaded due to new file');
+          this.logger.log('Characters reloaded due to new file');
         }
       }
     } catch (error) {
-      console.error('Error handling file change:', error);
+      this.logger.error('Error handling file change', error);
       // Don't throw - we don't want file watching errors to break the app
     }
   }
@@ -1755,15 +1757,15 @@ export class CharacterService {
       if (event.type === 'add') {
         // New image file added
         await this.autoAddImageToCharacter(character, event.path, relativePath);
-        console.log(`Auto-added image to character ${character.name}: ${event.filename}`);
+        this.logger.log(`Auto-added image to character ${character.name}: ${event.filename}`);
       } else if (event.type === 'unlink') {
         // Image file removed
         await this.autoRemoveImageFromCharacter(character, event.path);
-        console.log(`Auto-removed image from character ${character.name}: ${event.filename}`);
+        this.logger.log(`Auto-removed image from character ${character.name}: ${event.filename}`);
       }
       // We don't handle 'change' for images as it doesn't affect metadata
     } catch (error) {
-      console.error('Error handling image file change:', error);
+      this.logger.error('Error handling image file change', error);
     }
   }
 
@@ -1893,7 +1895,7 @@ export class CharacterService {
             hasPrimary = true;
           }
         } else {
-          console.log(`Removing deleted image from metadata: ${existingImage.filename}`);
+          this.logger.log(`Removing deleted image from metadata: ${existingImage.filename}`);
         }
       }
 
@@ -1932,7 +1934,7 @@ export class CharacterService {
 
       return syncedImages;
     } catch (error) {
-      console.error('Error syncing image files:', error);
+      this.logger.error('Error syncing image files', error);
       return existingImages; // Return existing images if scan fails
     }
   }
@@ -1978,7 +1980,7 @@ export class CharacterService {
 
       return results;
     } catch (error) {
-      console.error(`Error scanning directory ${currentPath}:`, error);
+      this.logger.error(`Error scanning directory ${currentPath}`, error);
       return results;
     }
   }

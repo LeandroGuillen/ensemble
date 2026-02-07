@@ -2,17 +2,18 @@ import { Component, OnInit, HostListener, OnDestroy } from "@angular/core";
 import { Router, RouterOutlet, NavigationEnd } from "@angular/router";
 import { CommonModule } from "@angular/common";
 import { Title } from "@angular/platform-browser";
-import { ProjectService, ElectronService, ThemeService } from "./core/services";
+import { ProjectService, ElectronService, ThemeService, LoggingService } from "./core/services";
 import { filter } from "rxjs/operators";
 import { Subject, takeUntil } from "rxjs";
 import { CommandPaletteComponent } from "./shared/command-palette/command-palette.component";
 import { CommandPaletteService } from "./shared/command-palette/command-palette.service";
 import { SidebarComponent } from "./shared/sidebar/sidebar.component";
+import { NotificationComponent } from "./shared/notification/notification.component";
 
 @Component({
   selector: "app-root",
   standalone: true,
-  imports: [CommonModule, RouterOutlet, CommandPaletteComponent, SidebarComponent],
+  imports: [CommonModule, RouterOutlet, CommandPaletteComponent, SidebarComponent, NotificationComponent],
   templateUrl: "./app.component.html",
   styleUrls: ["./app.component.scss"],
 })
@@ -29,7 +30,8 @@ export class AppComponent implements OnInit, OnDestroy {
     private commandPaletteService: CommandPaletteService,
     private titleService: Title,
     private electronService: ElectronService,
-    private themeService: ThemeService
+    private themeService: ThemeService,
+    private logger: LoggingService
   ) {}
 
   async ngOnInit() {
@@ -134,7 +136,7 @@ export class AppComponent implements OnInit, OnDestroy {
         keywords: ['theme', 'appearance', 'color', 'style', theme.name.toLowerCase(), theme.id],
         action: () => {
           this.themeService.setTheme(theme.id).catch(error => {
-            console.error('Failed to set theme:', error);
+            this.logger.error('Failed to set theme', error);
           });
         },
         group: 'Appearance'

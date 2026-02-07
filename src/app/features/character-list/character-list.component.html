@@ -648,3 +648,12 @@
     </div>
   </div>
 </div>
+
+<!-- Trash Dialog -->
+<app-trash-dialog
+  [visible]="showTrashDialog"
+  [deletedCharacters]="deletedCharacters"
+  (visibleChange)="onTrashDialogClose()"
+  (restore)="onTrashRestore($event)"
+  (deletePermanently)="onTrashDeletePermanently($event)"
+></app-trash-dialog>

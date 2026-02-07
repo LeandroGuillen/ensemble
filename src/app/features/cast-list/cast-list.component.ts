@@ -17,6 +17,7 @@ import {
   CastService,
   ElectronService,
   ProjectService,
+  LoggingService,
 } from "../../core/services";
 import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
 
@@ -51,7 +52,8 @@ export class CastListComponent implements OnInit, OnDestroy {
     private projectService: ProjectService,
     private router: Router,
     private ngZone: NgZone,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private logger: LoggingService
   ) {}
 
   ngOnInit(): void {
@@ -114,7 +116,7 @@ export class CastListComponent implements OnInit, OnDestroy {
     try {
       await this.characterService.loadCharacters(project.path);
     } catch (error) {
-      console.error("Failed to load characters:", error);
+      this.logger.error("Failed to load characters:", error);
     }
   }
 
@@ -127,7 +129,7 @@ export class CastListComponent implements OnInit, OnDestroy {
     try {
       await this.castService.loadCasts(project.path);
     } catch (error) {
-      console.error("Failed to load casts:", error);
+      this.logger.error("Failed to load casts:", error);
     }
   }
 
@@ -149,7 +151,7 @@ export class CastListComponent implements OnInit, OnDestroy {
               this.characterThumbnails.set(character.id, dataUrl);
             }
           } catch (error) {
-            console.error(
+            this.logger.error(
               `Failed to load thumbnail for character ${character.name}:`,
               error
             );
@@ -198,7 +200,7 @@ export class CastListComponent implements OnInit, OnDestroy {
 
       return null;
     } catch (error) {
-      console.error('Failed to load thumbnail as data URL:', error);
+      this.logger.error('Failed to load thumbnail as data URL:', error);
       return null;
     }
   }
@@ -225,7 +227,7 @@ export class CastListComponent implements OnInit, OnDestroy {
               this.castThumbnails.set(cast.id, dataUrl);
             }
           } catch (error) {
-            console.error(
+            this.logger.error(
               `Failed to load thumbnail for cast ${cast.name}:`,
               error
             );
@@ -295,7 +297,7 @@ export class CastListComponent implements OnInit, OnDestroy {
         await this.metadataService.removeCast(cast.id);
       } catch (error) {
         this.error = `Failed to delete cast: ${error}`;
-        console.error("Failed to delete cast:", error);
+        this.logger.error("Failed to delete cast:", error);
       }
     }
   }

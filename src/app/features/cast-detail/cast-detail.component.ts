@@ -23,6 +23,7 @@ import {
   ElectronService,
   ProjectService,
   CastService,
+  LoggingService,
 } from "../../core/services";
 import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
 
@@ -75,7 +76,8 @@ export class CastDetailComponent implements OnInit, OnDestroy {
     private electronService: ElectronService,
     private projectService: ProjectService,
     private ngZone: NgZone,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private logger: LoggingService
   ) {
     this.castForm = this.fb.group({
       name: ["", [Validators.required, Validators.maxLength(100)]],
@@ -129,7 +131,7 @@ export class CastDetailComponent implements OnInit, OnDestroy {
     try {
       await this.characterService.loadCharacters(project.path);
     } catch (error) {
-      console.error("Failed to load characters:", error);
+      this.logger.error("Failed to load characters:", error);
     }
   }
 
@@ -176,7 +178,7 @@ export class CastDetailComponent implements OnInit, OnDestroy {
               this.characterThumbnails.set(character.id, dataUrl);
             }
           } catch (error) {
-            console.error(
+            this.logger.error(
               `Failed to load thumbnail for character ${character.name}:`,
               error
             );
@@ -225,7 +227,7 @@ export class CastDetailComponent implements OnInit, OnDestroy {
 
       return null;
     } catch (error) {
-      console.error('Failed to load thumbnail as data URL:', error);
+      this.logger.error('Failed to load thumbnail as data URL:', error);
       return null;
     }
   }
@@ -246,7 +248,7 @@ export class CastDetailComponent implements OnInit, OnDestroy {
       );
       this.castThumbnail = dataUrl || null;
     } catch (error) {
-      console.error("Failed to load cast thumbnail:", error);
+      this.logger.error("Failed to load cast thumbnail:", error);
       this.castThumbnail = null;
     }
   }
@@ -454,7 +456,7 @@ export class CastDetailComponent implements OnInit, OnDestroy {
       this.router.navigate(["/casts"]);
     } catch (error) {
       this.error = `Failed to save cast: ${error}`;
-      console.error("Failed to save cast:", error);
+      this.logger.error("Failed to save cast:", error);
     } finally {
       this.isSaving = false;
     }
@@ -477,7 +479,7 @@ export class CastDetailComponent implements OnInit, OnDestroy {
         this.router.navigate(["/casts"]);
       } catch (error) {
         this.error = `Failed to delete cast: ${error}`;
-        console.error("Failed to delete cast:", error);
+        this.logger.error("Failed to delete cast:", error);
       }
     }
   }
@@ -521,7 +523,7 @@ export class CastDetailComponent implements OnInit, OnDestroy {
       }
     } catch (error) {
       this.error = `Failed to select thumbnail: ${error}`;
-      console.error("Failed to select thumbnail:", error);
+      this.logger.error("Failed to select thumbnail:", error);
     }
   }
 
@@ -539,7 +541,7 @@ export class CastDetailComponent implements OnInit, OnDestroy {
       }
     } catch (error) {
       this.error = `Failed to preview thumbnail: ${error}`;
-      console.error("Failed to preview thumbnail:", error);
+      this.logger.error("Failed to preview thumbnail:", error);
     } finally {
       this.isUploadingThumbnail = false;
     }
@@ -568,7 +570,7 @@ export class CastDetailComponent implements OnInit, OnDestroy {
       }
     } catch (error) {
       this.error = `Failed to upload thumbnail: ${error}`;
-      console.error("Failed to upload thumbnail:", error);
+      this.logger.error("Failed to upload thumbnail:", error);
     } finally {
       this.isUploadingThumbnail = false;
     }
@@ -603,7 +605,7 @@ export class CastDetailComponent implements OnInit, OnDestroy {
       }
     } catch (error) {
       this.error = `Failed to remove thumbnail: ${error}`;
-      console.error("Failed to remove thumbnail:", error);
+      this.logger.error("Failed to remove thumbnail:", error);
     }
   }
 }

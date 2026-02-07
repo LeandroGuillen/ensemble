@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 import { Observable, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { Book, Cast, Category, Character, Project, Tag } from '../../core/interfaces';
-import { CharacterService, ElectronService, MetadataService, ProjectService } from '../../core/services';
+import { CharacterService, ElectronService, MetadataService, ProjectService, LoggingService } from '../../core/services';
 import { MetadataHelperService } from '../../core/services/metadata-helper.service';
 import { ModalService } from '../../core/services/modal.service';
 import { PreferencesService } from '../../core/services/preferences.service';
@@ -20,6 +20,7 @@ import {
   CharacterGridViewComponent,
   CharacterListViewComponent,
 } from './views';
+import { TrashDialogComponent, DeletedCharacter } from '../../shared/trash-dialog/trash-dialog.component';
 
 @Component({
   selector: 'app-character-list',
@@ -33,6 +34,7 @@ import {
     CharacterListViewComponent,
     CharacterCompactViewComponent,
     CharacterGalleryViewComponent,
+    TrashDialogComponent,
   ],
   templateUrl: './character-list.component.html',
   styleUrls: ['./character-list.component.scss'],
@@ -72,6 +74,8 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   filterExpanded = false; // Track filter expanded state
   slideshowEnabled = true; // Toggle slideshow on/off
   galleryThumbnailSize: 'big' | 'medium' | 'small' = 'big'; // Gallery thumbnail size
+  showTrashDialog = false; // Track trash dialog visibility
+  deletedCharacters: DeletedCharacter[] = []; // Deleted characters for trash dialog
 
   constructor(
     private characterService: CharacterService,
@@ -84,7 +88,8 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     private router: Router,
     private commandPaletteService: CommandPaletteService,
     private ngZone: NgZone,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private logger: LoggingService
   ) {
     this.characters$ = this.characterService.getCharacters();
   }
@@ -299,7 +304,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       await this.characterService.loadCharacters(this.currentProject.path);
     } catch (error) {
       this.error = `Failed to load characters: ${error}`;
-      console.error('Failed to load characters:', error);
+      this.logger.error('Failed to load characters:', error);
     } finally {
       this.isLoading = false;
     }
@@ -314,7 +319,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       await this.characterService.forceReloadCharacters();
     } catch (error) {
       this.error = `Failed to refresh characters: ${error}`;
-      console.error('Failed to refresh characters:', error);
+      this.logger.error('Failed to refresh characters:', error);
     } finally {
       this.isLoading = false;
     }
@@ -331,7 +336,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       // Scan completed successfully
     } catch (error) {
       this.error = `Failed to scan for characters: ${error}`;
-      console.error('Failed to scan for characters:', error);
+      this.logger.error('Failed to scan for characters:', error);
     } finally {
       this.isLoading = false;
     }
@@ -356,7 +361,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       }
     } catch (error) {
       this.error = `Failed to load specific file: ${error}`;
-      console.error('Failed to load specific file:', error);
+      this.logger.error('Failed to load specific file:', error);
     } finally {
       this.isLoading = false;
     }
@@ -368,7 +373,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
 
   editCharacter(character: Character): void {
     if (!character || !character.id) {
-      console.error('Character or character.id is missing:', character);
+      this.logger.error('Character or character.id is missing:', character);
       return;
     }
     this.router.navigate(['/character', character.id]);
@@ -665,7 +670,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
 
       return null;
     } catch (error) {
-      console.error('Failed to load thumbnail as data URL:', error);
+      this.logger.error('Failed to load thumbnail as data URL:', error);
       return null;
     }
   }
@@ -711,7 +716,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
             await this.loadAllCharacterImages(character);
           }
         } catch (error) {
-          console.error(`Failed to load thumbnail for character ${character.name}:`, error);
+          this.logger.error(`Failed to load thumbnail for character ${character.name}:`, error);
         }
       });
 
@@ -748,7 +753,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
         this.characterImagesDataUrls.set(character.id, imageDataUrls);
       }
     } catch (error) {
-      console.error(`Failed to load images for character ${character.name}:`, error);
+      this.logger.error(`Failed to load images for character ${character.name}:`, error);
     }
   }
 
@@ -879,7 +884,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       this.casts = this.metadataService.getCasts();
     } catch (error) {
       this.error = `Failed to create cast: ${error}`;
-      console.error('Failed to create cast:', error);
+      this.logger.error('Failed to create cast:', error);
     }
   }
 
@@ -952,23 +957,24 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   // Trash management methods
   async viewTrash(): Promise<void> {
     try {
-      const deletedCharacters = await this.characterService.getDeletedCharacters();
-      console.log('Deleted characters:', deletedCharacters);
-      // TODO: Show trash UI/modal with deletedCharacters
-      // Each item has: folderName, name, deletedAt
+      const deleted = await this.characterService.getDeletedCharacters();
+      this.deletedCharacters = deleted;
+      this.showTrashDialog = true;
     } catch (error) {
       this.error = `Failed to load trash: ${error}`;
-      console.error('Failed to load trash:', error);
+      this.logger.error('Failed to load trash:', error);
     }
   }
 
   async restoreCharacter(folderName: string): Promise<void> {
     try {
       await this.characterService.restoreCharacter(folderName);
+      // Remove from deleted characters list
+      this.deletedCharacters = this.deletedCharacters.filter(c => c.folderName !== folderName);
       // Characters are automatically reloaded after restore
     } catch (error) {
       this.error = `Failed to restore character: ${error}`;
-      console.error('Failed to restore character:', error);
+      this.logger.error('Failed to restore character:', error);
     }
   }
 
@@ -983,7 +989,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       await this.characterService.emptyTrash();
     } catch (error) {
       this.error = `Failed to empty trash: ${error}`;
-      console.error('Failed to empty trash:', error);
+      this.logger.error('Failed to empty trash:', error);
     }
   }
 
@@ -994,10 +1000,24 @@ export class CharacterListComponent implements OnInit, OnDestroy {
 
     try {
       await this.characterService.permanentlyDeleteCharacter(folderName);
+      // Remove from deleted characters list
+      this.deletedCharacters = this.deletedCharacters.filter(c => c.folderName !== folderName);
     } catch (error) {
       this.error = `Failed to permanently delete character: ${error}`;
-      console.error('Failed to permanently delete character:', error);
+      this.logger.error('Failed to permanently delete character:', error);
     }
+  }
+
+  onTrashDialogClose(): void {
+    this.showTrashDialog = false;
+  }
+
+  onTrashRestore(folderName: string): void {
+    this.restoreCharacter(folderName);
+  }
+
+  onTrashDeletePermanently(folderName: string): void {
+    this.permanentlyDeleteCharacter(folderName);
   }
 
   getGroupedCharacters(): Array<{
