@@ -60,9 +60,10 @@ export class CharacterListComponent implements OnInit, OnDestroy {
 
   allCharacters: Character[] = [];
   filteredCharacters: Character[] = [];
+  // Use service cache - sync from service on init and after loading
   thumbnailDataUrls: Map<string, string> = new Map();
-  thumbnailModificationTimes: Map<string, string> = new Map(); // Track modification times
-  characterImagesDataUrls: Map<string, string[]> = new Map(); // All images per character for slideshow
+  thumbnailModificationTimes: Map<string, string> = new Map();
+  characterImagesDataUrls: Map<string, string[]> = new Map();
   isLoading = false;
   error: string | null = null;
   viewMode: 'grid' | 'list' | 'compact' | 'gallery' = 'grid'; // Toggle between grid (cards), list, compact, and gallery view
@@ -179,6 +180,8 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     this.characters$.pipe(takeUntil(this.destroy$)).subscribe((characters) => {
       this.allCharacters = characters;
       this.filteredCharacters = this.filterAndSortCharacters(characters);
+      // Sync cache from service first (to restore cached images)
+      this.syncCacheFromService();
       this.loadThumbnailDataUrls(characters).then(() => {
         // Update command palette after thumbnails are loaded
         this.updateCharacterCommands(characters);
@@ -681,6 +684,32 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     return this.thumbnailDataUrls.get(character.id) || null;
   }
 
+  /**
+   * Syncs local cache Maps from service cache (for child component Inputs)
+   */
+  private syncCacheFromService(): void {
+    // Sync thumbnails
+    this.thumbnailDataUrls = this.characterService.getAllCachedThumbnails();
+    
+    // Sync modification times
+    this.thumbnailModificationTimes.clear();
+    this.allCharacters.forEach(char => {
+      const modTime = this.characterService.getCachedThumbnailModTime(char.id);
+      if (modTime) {
+        this.thumbnailModificationTimes.set(char.id, modTime);
+      }
+    });
+    
+    // Sync character images
+    this.characterImagesDataUrls.clear();
+    this.allCharacters.forEach(char => {
+      const imageUrls = this.characterService.getCachedCharacterImages(char.id);
+      if (imageUrls) {
+        this.characterImagesDataUrls.set(char.id, imageUrls);
+      }
+    });
+  }
+
   private async loadThumbnailDataUrls(characters: Character[]): Promise<void> {
     // Load all thumbnails outside Angular's zone
     await this.ngZone.runOutsideAngular(async () => {
@@ -692,7 +721,9 @@ export class CharacterListComponent implements OnInit, OnDestroy {
 
           if (!hasThumbnail) {
             // No thumbnail, remove from cache if present
-            if (this.thumbnailDataUrls.has(character.id)) {
+            if (this.characterService.getCachedThumbnail(character.id)) {
+              this.characterService.removeCachedThumbnail(character.id);
+              // Update local cache for child components
               this.thumbnailDataUrls.delete(character.id);
               this.thumbnailModificationTimes.delete(character.id);
               this.characterImagesDataUrls.delete(character.id);
@@ -702,20 +733,33 @@ export class CharacterListComponent implements OnInit, OnDestroy {
 
           // Check if we need to reload the thumbnail
           // Reload if: not cached, or character was modified since last cache
-          const cachedModTime = this.thumbnailModificationTimes.get(character.id);
+          const cachedModTime = this.characterService.getCachedThumbnailModTime(character.id);
           const currentModTime = character.modified.toISOString();
           const needsReload =
-            !this.thumbnailDataUrls.has(character.id) || cachedModTime !== currentModTime;
+            !this.characterService.getCachedThumbnail(character.id) || cachedModTime !== currentModTime;
 
           if (needsReload) {
             const dataUrl = await this.getThumbnailDataUrl(character);
             if (dataUrl) {
+              this.characterService.setCachedThumbnail(character.id, dataUrl, currentModTime);
+              // Update local cache for child components
               this.thumbnailDataUrls.set(character.id, dataUrl);
               this.thumbnailModificationTimes.set(character.id, currentModTime);
             }
 
             // Load all images for slideshow
             await this.loadAllCharacterImages(character);
+          } else {
+            // Use cached data - sync to local Maps for child components
+            const cachedThumbnail = this.characterService.getCachedThumbnail(character.id);
+            if (cachedThumbnail) {
+              this.thumbnailDataUrls.set(character.id, cachedThumbnail);
+              this.thumbnailModificationTimes.set(character.id, currentModTime);
+            }
+            const cachedImages = this.characterService.getCachedCharacterImages(character.id);
+            if (cachedImages) {
+              this.characterImagesDataUrls.set(character.id, cachedImages);
+            }
           }
         } catch (error) {
           this.logger.error(`Failed to load thumbnail for character ${character.name}:`, error);
@@ -731,7 +775,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
 
   private async loadAllCharacterImages(character: Character): Promise<void> {
     if (!character.images || character.images.length === 0) {
-      this.characterImagesDataUrls.delete(character.id);
+      this.characterService.setCachedCharacterImages(character.id, []);
       return;
     }
 
@@ -752,7 +796,12 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       }
 
       if (imageDataUrls.length > 0) {
+        this.characterService.setCachedCharacterImages(character.id, imageDataUrls);
+        // Update local cache for child components
         this.characterImagesDataUrls.set(character.id, imageDataUrls);
+      } else {
+        this.characterService.setCachedCharacterImages(character.id, []);
+        this.characterImagesDataUrls.set(character.id, []);
       }
     } catch (error) {
       this.logger.error(`Failed to load images for character ${character.name}:`, error);

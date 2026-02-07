@@ -161,6 +161,27 @@
   }
 }
 
+// Loading State
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-3xl);
+  text-align: center;
+  color: var(--color-text-secondary);
+  min-height: 300px;
+
+  .spinner {
+    margin-bottom: var(--spacing-md);
+  }
+
+  p {
+    font-size: 0.9375rem;
+    margin: 0;
+  }
+}
+
 // Results Summary
 .results-summary {
   margin-bottom: var(--spacing-md);
@@ -190,6 +211,15 @@
 
 .empty-state p {
   margin-bottom: var(--spacing-xl);
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.empty-state-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: center;
 }
 
 // Grid View

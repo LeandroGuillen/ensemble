@@ -59,8 +59,14 @@
         </div>
       </div>
 
+      <!-- Loading State -->
+      <div *ngIf="isLoading" class="loading-state">
+        <div class="spinner spinner-lg"></div>
+        <p>Loading casts...</p>
+      </div>
+
       <!-- Error Display -->
-      <div *ngIf="error" class="error-banner">
+      <div *ngIf="error && !isLoading" class="error-banner">
         <div class="error-content">
           <span class="error-icon">⚠️</span>
           <span class="error-message">{{ error }}</span>
@@ -79,10 +85,15 @@
         <h3 *ngIf="!searchTerm">No Casts Yet</h3>
         <h3 *ngIf="searchTerm">No Casts Found</h3>
         <p *ngIf="!searchTerm">Create your first cast to organize groups of characters.</p>
-        <p *ngIf="searchTerm">Try a different search term.</p>
-        <button *ngIf="!searchTerm" class="btn btn-primary" (click)="createNewCast()">
-          Create First Cast
-        </button>
+        <p *ngIf="searchTerm">Try a different search term or clear your search to see all casts.</p>
+        <div class="empty-state-actions">
+          <button *ngIf="searchTerm" class="btn btn-secondary" (click)="clearSearchTerm()">
+            Clear Search
+          </button>
+          <button *ngIf="!searchTerm" class="btn btn-primary" (click)="createNewCast()">
+            Create First Cast
+          </button>
+        </div>
       </div>
 
       <!-- Grid View -->

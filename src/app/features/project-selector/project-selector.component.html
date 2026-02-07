@@ -13,15 +13,22 @@
     </div>
 
     <!-- Recent Projects Section -->
-    <div class="recent-projects-section" *ngIf="recentProjects.length > 0 && !showCreateForm">
-      <div class="section-header">
+    <div class="recent-projects-section" *ngIf="!showCreateForm">
+      <div class="section-header" *ngIf="recentProjects.length > 0">
         <h2>Recent Projects</h2>
         <button class="btn btn-link clear-btn" (click)="clearRecentProjects()">
           Clear All
         </button>
       </div>
       
-      <div class="recent-projects-list">
+      <!-- Empty State for No Recent Projects -->
+      <div class="empty-state" *ngIf="recentProjects.length === 0 && !isLoading">
+        <div class="empty-icon">📁</div>
+        <h3>No Recent Projects</h3>
+        <p>You haven't opened any projects yet. Create a new project or open an existing one to get started.</p>
+      </div>
+      
+      <div class="recent-projects-list" *ngIf="recentProjects.length > 0">
         <div
           class="recent-project-item"
           *ngFor="let project of recentProjects; let i = index"
@@ -49,8 +56,14 @@
       </div>
     </div>
 
+    <!-- Loading State -->
+    <div class="loading-state" *ngIf="isLoading && !showCreateForm">
+      <div class="spinner"></div>
+      <p>Loading...</p>
+    </div>
+
     <!-- Main Actions -->
-    <div class="main-actions" *ngIf="!showCreateForm">
+    <div class="main-actions" *ngIf="!showCreateForm && !isLoading">
       <div class="action-card">
         <h3>Open Existing Project</h3>
         <p>Browse for a folder containing an existing Ensemble project</p>

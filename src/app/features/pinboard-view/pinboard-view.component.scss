@@ -268,6 +268,51 @@
   }
 }
 
+// Empty State
+.pinboard-empty-state {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--spacing-3xl);
+  z-index: 10;
+  pointer-events: none;
+
+  .empty-icon {
+    font-size: 4rem;
+    margin-bottom: var(--spacing-lg);
+    opacity: 0.3;
+  }
+
+  h3 {
+    font-size: 1.375rem;
+    font-weight: 600;
+    margin-bottom: var(--spacing-sm);
+    color: var(--color-text-primary);
+  }
+
+  p {
+    font-size: 0.9375rem;
+    color: var(--color-text-muted);
+    margin-bottom: var(--spacing-xl);
+    max-width: 400px;
+    line-height: 1.6;
+  }
+
+  .btn {
+    pointer-events: auto;
+  }
+}
+
+.pinboard-canvas.hidden {
+  display: none;
+}
+
 // Connection mode indicator
 .connection-mode-indicator {
   position: absolute;

@@ -243,6 +243,12 @@ app-character-filter {
     margin-bottom: var(--spacing-xl);
     max-width: 380px;
   }
+
+  .empty-state-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    justify-content: center;
+  }
 }
 
 // Cast Filter
