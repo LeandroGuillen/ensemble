@@ -7,4 +7,15 @@
 
   <app-command-palette></app-command-palette>
   <app-notification></app-notification>
+  <app-confirmation-dialog
+    [visible]="confirmationVisible"
+    [title]="currentConfirmation?.title || 'Confirm'"
+    [message]="currentConfirmation?.message || ''"
+    [confirmText]="currentConfirmation?.confirmText || 'Confirm'"
+    [cancelText]="currentConfirmation?.cancelText || 'Cancel'"
+    [danger]="currentConfirmation?.danger || false"
+    (confirm)="onConfirmationConfirm()"
+    (cancel)="onConfirmationCancel()"
+    (visibleChange)="confirmationVisible = $event"
+  ></app-confirmation-dialog>
 </div>

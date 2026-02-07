@@ -10,3 +10,4 @@ export { BackstageService } from "./backstage.service";
 export { ThemeService } from "./theme.service";
 export { LoggingService } from "./logging.service";
 export { NotificationService } from "./notification.service";
+export { ModalService } from "./modal.service";

@@ -30,17 +30,6 @@
             <div class="action-buttons">
               <button
                 type="button"
-                class="btn btn-danger"
-                *ngIf="isEditing"
-                (click)="deleteCharacter()"
-                [disabled]="isSaving"
-                title="Delete character"
-              >
-                🗑️
-                Delete
-              </button>
-              <button
-                type="button"
                 class="btn btn-secondary"
                 (click)="onCancel()"
                 [disabled]="isSaving"
@@ -53,7 +42,7 @@
               <button
                 type="submit"
                 class="btn btn-primary"
-                [disabled]="characterForm.invalid || isSaving"
+                [disabled]="isSaving"
                 title="Save (Ctrl+Enter)"
               >
                 <i class="icon-save" *ngIf="!isSaving"></i>
@@ -133,6 +122,9 @@
                     formControlName="name"
                     placeholder="Enter character name"
                     [class.error]="getFieldError('name')"
+                    (blur)="onFieldBlur('name')"
+                    aria-describedby="name-error"
+                    [attr.aria-invalid]="getFieldError('name') ? 'true' : 'false'"
                   />
                   <button
                     type="button"
@@ -145,25 +137,38 @@
                     <span *ngIf="isGeneratingName" class="spinner spinner-sm"></span>
                   </button>
                 </div>
-                <div class="error-text" *ngIf="getFieldError('name')">
+                <div class="error-text" *ngIf="getFieldError('name')" id="name-error" role="alert" aria-live="polite">
                   {{ getFieldError('name') }}
                 </div>
               </div>
             </div>
           </div>
 
+          <!-- Delete Character Link -->
+          <div class="delete-section" *ngIf="isEditing">
+            <button
+              type="button"
+              class="delete-link"
+              (click)="deleteCharacter()"
+              [disabled]="isSaving"
+              title="Delete character"
+            >
+              Delete character
+            </button>
+          </div>
+
           <div class="form-section" *ngIf="categories.length > 0">
             <!-- Category -->
-            <div class="form-group form-group-category">
+            <div class="form-group form-group-category" [class.field-highlight]="characterForm.get('category')?.invalid && characterForm.get('category')?.touched">
               <label class="form-label"> Category * </label>
               <app-category-toggle
                 [options]="getCategoryToggleOptions()"
                 [selectedValue]="getSelectedCategory()"
                 [emptyLabel]="'None'"
                 [error]="!!getFieldError('category')"
-                (valueChange)="onCategorySelect($event)"
+                (valueChange)="onCategorySelect($event); onFieldBlur('category')"
               ></app-category-toggle>
-              <div class="error-text" *ngIf="getFieldError('category')">
+              <div class="error-text" *ngIf="getFieldError('category')" id="category-error" role="alert" aria-live="polite">
                 {{ getFieldError('category') }}
               </div>
             </div>
@@ -206,9 +211,12 @@
                 rows="6"
                 placeholder="E.g. 1girl, child, poga, pointy ears, light brown hair, ..."
                 [class.error]="getFieldError('mangamaster')"
+                (blur)="onFieldBlur('mangamaster')"
+                aria-describedby="mangamaster-error"
+                [attr.aria-invalid]="getFieldError('mangamaster') ? 'true' : 'false'"
               ></textarea>
               <div class="char-count">{{ characterForm.get('mangamaster')?.value?.length || 0 }}/20000</div>
-              <div class="error-text" *ngIf="getFieldError('mangamaster')">
+              <div class="error-text" *ngIf="getFieldError('mangamaster')" id="mangamaster-error" role="alert" aria-live="polite">
                 {{ getFieldError('mangamaster') }}
               </div>
             </div>
@@ -225,9 +233,12 @@
                 rows="4"
                 placeholder="Describe the character's physical appearance, clothing, distinctive features..."
                 [class.error]="getFieldError('description')"
+                (blur)="onFieldBlur('description')"
+                aria-describedby="description-error"
+                [attr.aria-invalid]="getFieldError('description') ? 'true' : 'false'"
               ></textarea>
               <div class="char-count">{{ characterForm.get('description')?.value?.length || 0 }}/1000</div>
-              <div class="error-text" *ngIf="getFieldError('description')">
+              <div class="error-text" *ngIf="getFieldError('description')" id="description-error" role="alert" aria-live="polite">
                 {{ getFieldError('description') }}
               </div>
             </div>
@@ -244,9 +255,12 @@
                 rows="8"
                 placeholder="Character development notes, personality traits, backstory, relationships, goals, motivations..."
                 [class.error]="getFieldError('notes')"
+                (blur)="onFieldBlur('notes')"
+                aria-describedby="notes-error"
+                [attr.aria-invalid]="getFieldError('notes') ? 'true' : 'false'"
               ></textarea>
               <div class="char-count">{{ characterForm.get('notes')?.value?.length || 0 }}/5000</div>
-              <div class="error-text" *ngIf="getFieldError('notes')">
+              <div class="error-text" *ngIf="getFieldError('notes')" id="notes-error" role="alert" aria-live="polite">
                 {{ getFieldError('notes') }}
               </div>
             </div>

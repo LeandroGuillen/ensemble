@@ -1,0 +1,29 @@
+<div class="modal-overlay" *ngIf="visible" (click)="onOverlayClick()">
+  <div class="modal-dialog" (click)="onDialogClick($event)">
+    <div class="modal-header">
+      <h3>{{ title }}</h3>
+      <button class="close-btn" (click)="onClose()" type="button" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="confirmation-message">{{ message }}</p>
+      <div class="modal-actions">
+        <button 
+          type="button" 
+          class="btn btn-secondary" 
+          (click)="onCancel()"
+          autofocus
+        >
+          {{ cancelText }}
+        </button>
+        <button 
+          type="button" 
+          [class]="'btn ' + (danger ? 'btn-danger' : confirmButtonClass)" 
+          (click)="onConfirm()"
+        >
+          {{ confirmText }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+

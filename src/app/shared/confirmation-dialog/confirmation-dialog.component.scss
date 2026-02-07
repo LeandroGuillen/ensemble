@@ -1,0 +1,22 @@
+@import '../pinboard-create-dialog/pinboard-create-dialog.component.scss';
+
+.confirmation-message {
+  margin: 0 0 var(--spacing-lg) 0;
+  color: var(--color-text-primary);
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
+.btn-danger {
+  background: var(--color-error, #dc3545);
+  color: white;
+
+  &:hover {
+    background: var(--color-error-dark, #c82333);
+  }
+
+  &:focus {
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.25);
+  }
+}
+

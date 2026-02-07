@@ -9,11 +9,13 @@ import { CommandPaletteComponent } from "./shared/command-palette/command-palett
 import { CommandPaletteService } from "./shared/command-palette/command-palette.service";
 import { SidebarComponent } from "./shared/sidebar/sidebar.component";
 import { NotificationComponent } from "./shared/notification/notification.component";
+import { ConfirmationDialogComponent } from "./shared/confirmation-dialog/confirmation-dialog.component";
+import { ModalService, ConfirmationRequest } from "./core/services/modal.service";
 
 @Component({
   selector: "app-root",
   standalone: true,
-  imports: [CommonModule, RouterOutlet, CommandPaletteComponent, SidebarComponent, NotificationComponent],
+  imports: [CommonModule, RouterOutlet, CommandPaletteComponent, SidebarComponent, NotificationComponent, ConfirmationDialogComponent],
   templateUrl: "./app.component.html",
   styleUrls: ["./app.component.scss"],
 })
@@ -24,6 +26,10 @@ export class AppComponent implements OnInit, OnDestroy {
   private projectLoadedAndReady = false;
   private destroy$ = new Subject<void>();
 
+  // Confirmation dialog state
+  confirmationVisible = false;
+  currentConfirmation: ConfirmationRequest | null = null;
+
   constructor(
     private projectService: ProjectService,
     private router: Router,
@@ -31,7 +37,8 @@ export class AppComponent implements OnInit, OnDestroy {
     private titleService: Title,
     private electronService: ElectronService,
     private themeService: ThemeService,
-    private logger: LoggingService
+    private logger: LoggingService,
+    private modalService: ModalService
   ) {}
 
   async ngOnInit() {
@@ -102,6 +109,14 @@ export class AppComponent implements OnInit, OnDestroy {
           }, 500);
         }
       });
+
+    // Subscribe to confirmation requests
+    this.modalService.confirmation$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((request) => {
+        this.currentConfirmation = request;
+        this.confirmationVisible = true;
+      });
   }
 
   @HostListener('document:keydown', ['$event'])
@@ -142,6 +157,22 @@ export class AppComponent implements OnInit, OnDestroy {
         group: 'Appearance'
       });
     });
+  }
+
+  onConfirmationConfirm(): void {
+    if (this.currentConfirmation) {
+      this.currentConfirmation.resolve(true);
+      this.currentConfirmation = null;
+      this.confirmationVisible = false;
+    }
+  }
+
+  onConfirmationCancel(): void {
+    if (this.currentConfirmation) {
+      this.currentConfirmation.resolve(false);
+      this.currentConfirmation = null;
+      this.confirmationVisible = false;
+    }
   }
 
   ngOnDestroy(): void {

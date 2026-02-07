@@ -6,7 +6,7 @@ import { Observable, Subscription } from 'rxjs';
 import { take } from 'rxjs/operators';
 import { DataSet, Edge, Network, Node, Options } from 'vis-network/standalone';
 import { Character, PinboardData, PinboardConnection, Pinboard } from '../../core/interfaces';
-import { CharacterService, ProjectService, PinboardService, ElectronService, LoggingService, NotificationService } from '../../core/services';
+import { CharacterService, ProjectService, PinboardService, ElectronService, LoggingService, NotificationService, ModalService } from '../../core/services';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { ColorSelectorComponent } from '../../shared/color-selector/color-selector.component';
 import { PinboardSidebarComponent } from '../../shared/pinboard-sidebar/pinboard-sidebar.component';
@@ -115,7 +115,8 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
     private logger: LoggingService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private modalService: ModalService
   ) {
     this.pinboardData$ = this.pinboardService.getPinboardData();
     this.characters$ = this.characterService.getCharacters();
@@ -1756,7 +1757,17 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   async onDeletePinboard(id: string): Promise<void> {
-    if (!confirm('Are you sure you want to delete this pinboard? This action cannot be undone.')) {
+    const confirmed = await this.modalService.confirm(
+      'Are you sure you want to delete this pinboard? This action cannot be undone.',
+      'Delete Pinboard',
+      {
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+        danger: true
+      }
+    );
+
+    if (!confirmed) {
       return;
     }
 
