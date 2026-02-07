@@ -26,9 +26,10 @@
           <button
             *ngFor="let item of section.items"
             class="nav-item"
-            [class.active]="isActive(item.route)"
-            (click)="navigateTo(item.route)"
+            [class.active]="item.route && isActive(item.route)"
+            (click)="handleItemClick(item)"
             [title]="isCollapsed ? item.title : ''"
+            [attr.aria-label]="item.label"
           >
             <svg class="nav-icon" [attr.data-icon]="item.icon">
               <use [attr.href]="'#icon-' + item.icon"></use>
@@ -41,7 +42,7 @@
   </nav>
 
   <!-- Collapse Toggle -->
-  <button class="collapse-toggle" (click)="toggleCollapse()" [title]="isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'">
+  <button class="collapse-toggle" (click)="toggleCollapse()" [title]="isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'" [attr.aria-label]="isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'" [attr.aria-expanded]="!isCollapsed">
     <svg class="toggle-icon" [class.rotated]="!isCollapsed">
       <use href="#icon-chevrons-right"></use>
     </svg>
@@ -111,6 +112,17 @@
       <symbol id="icon-chevrons-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="13 17 18 12 13 7"/>
         <polyline points="6 17 11 12 6 7"/>
+      </symbol>
+
+      <!-- Keyboard -->
+      <symbol id="icon-keyboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="4" width="20" height="16" rx="2" ry="2"/>
+        <line x1="6" y1="8" x2="6" y2="8"/>
+        <line x1="10" y1="8" x2="10" y2="8"/>
+        <line x1="14" y1="8" x2="14" y2="8"/>
+        <line x1="18" y1="8" x2="18" y2="8"/>
+        <line x1="6" y1="12" x2="18" y2="12"/>
+        <line x1="6" y1="16" x2="16" y2="16"/>
       </symbol>
     </defs>
   </svg>

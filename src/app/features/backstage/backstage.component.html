@@ -9,12 +9,18 @@
           [(ngModel)]="searchQuery"
           (ngModelChange)="onSearchChange()"
           [placeholder]="activeTab === 'concepts' ? 'Search concepts...' : 'Search name lists...'"
+          aria-label="Search"
+          aria-describedby="search-results-count"
         />
+        <span id="search-results-count" class="sr-only" aria-live="polite" *ngIf="searchQuery">
+          {{ activeTab === 'concepts' ? filteredConcepts.length : filteredNameLists.length }} results
+        </span>
         <button
           class="btn-icon"
           *ngIf="searchQuery"
           (click)="clearSearch()"
           title="Clear search"
+          aria-label="Clear search"
         >
           ×
         </button>
@@ -40,15 +46,19 @@
         *ngIf="activeTab === 'nameLists'"
         class="btn btn-secondary"
         (click)="addNameList()"
+        title="New Name List (Ctrl+Shift+N)"
       >
         New Name List
+        <kbd class="shortcut-hint">Ctrl+Shift+N</kbd>
       </button>
       <button
         *ngIf="activeTab === 'concepts'"
         class="btn btn-primary"
         (click)="addConcept()"
+        title="New Concept (Ctrl+N)"
       >
         New Concept
+        <kbd class="shortcut-hint">Ctrl+N</kbd>
       </button>
     </div>
   </app-page-header>

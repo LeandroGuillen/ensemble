@@ -1,4 +1,4 @@
-<div class="notification-container">
+<div class="notification-container" role="region" aria-live="polite" aria-label="Notifications">
   <div
     *ngFor="let notification of notifications"
     class="notification"
@@ -6,6 +6,8 @@
     [class.notification-error]="notification.type === 'error'"
     [class.notification-warning]="notification.type === 'warning'"
     [class.notification-info]="notification.type === 'info'"
+    [attr.role]="notification.type === 'error' ? 'alert' : 'status'"
+    [attr.aria-live]="notification.type === 'error' ? 'assertive' : 'polite'"
   >
     <i [class]="getIconClass(notification.type)"></i>
     <span class="notification-message">{{ notification.message }}</span>
