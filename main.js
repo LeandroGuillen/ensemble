@@ -758,8 +758,14 @@ function initializeUpdater() {
       version: info.version,
       path: info.path,
       files: info.files,
-      releaseDate: info.releaseDate
+      releaseDate: info.releaseDate,
+      downloadedFile: info.downloadedFile,
+      downloadedPath: info.downloadedPath
     });
+    
+    // Log all properties of info to see what's available
+    console.log('[Update] Full info object keys:', Object.keys(info));
+    console.log('[Update] Full info object:', JSON.stringify(info, null, 2));
     
     // Get the actual file path - info.path might be relative or just a filename
     // For AppImage, we need to find the actual downloaded file
@@ -788,11 +794,36 @@ function initializeUpdater() {
     // If still not absolute, try to find the file in common cache locations
     if (actualPath && !path.isAbsolute(actualPath)) {
       const fileName = path.basename(actualPath);
+      
+      // Try to get cache directory from electron-updater
+      let electronUpdaterCache = null;
+      try {
+        // electron-updater stores files in different locations depending on platform
+        // For Linux, it's often in ~/.cache/electron-updater/ or similar
+        const os = require('os');
+        const homeDir = os.homedir();
+        electronUpdaterCache = path.join(homeDir, '.cache', 'electron-updater');
+      } catch (e) {
+        // Ignore
+      }
+      
       const possibleLocations = [
+        // electron-updater standard cache locations
+        electronUpdaterCache ? path.join(electronUpdaterCache, fileName) : null,
+        electronUpdaterCache ? path.join(electronUpdaterCache, 'pending', fileName) : null,
+        // App-specific cache locations
         path.join(app.getPath('userData'), 'pending', fileName),
+        path.join(app.getPath('userData'), 'updates', fileName),
+        path.join(app.getPath('userData'), 'downloaded', fileName),
         path.join(app.getPath('temp'), fileName),
-        path.join(app.getPath('cache'), 'ensemble', fileName)
-      ];
+        path.join(app.getPath('cache'), 'ensemble', fileName),
+        path.join(app.getPath('cache'), 'electron-updater', fileName),
+        // Try searching in userData subdirectories
+        path.join(app.getPath('userData'), 'cache', fileName),
+        path.join(app.getPath('userData'), 'updateCache', fileName)
+      ].filter(loc => loc !== null);
+      
+      console.log('[Update] Searching for file in locations:', possibleLocations);
       
       for (const loc of possibleLocations) {
         try {
@@ -804,6 +835,32 @@ function initializeUpdater() {
           }
         } catch (e) {
           // Continue searching
+        }
+      }
+      
+      // If still not found, try to search recursively in cache directories
+      if (!path.isAbsolute(actualPath)) {
+        const searchDirs = [
+          electronUpdaterCache,
+          path.join(app.getPath('userData'), 'pending'),
+          path.join(app.getPath('cache'), 'electron-updater'),
+          path.join(app.getPath('userData'), 'updates')
+        ].filter(dir => dir !== null);
+        
+        for (const searchDir of searchDirs) {
+          try {
+            const files = await fs.readdir(searchDir, { recursive: true, withFileTypes: true });
+            for (const file of files) {
+              if (file.isFile() && file.name === fileName) {
+                actualPath = path.join(file.path || searchDir, file.name);
+                console.log('[Update] Found file recursively at:', actualPath);
+                break;
+              }
+            }
+            if (path.isAbsolute(actualPath)) break;
+          } catch (e) {
+            // Directory doesn't exist or can't be read, continue
+          }
         }
       }
     }
@@ -977,9 +1034,15 @@ ipcMain.handle('download-update', async () => {
   }
   
   try {
-    await autoUpdater.downloadUpdate();
+    const result = await autoUpdater.downloadUpdate();
+    console.log('[Update] downloadUpdate result:', {
+      updateInfo: result?.updateInfo,
+      downloadPromise: result?.downloadPromise,
+      cancellationToken: result?.cancellationToken
+    });
     return { success: true };
   } catch (error) {
+    console.error('[Update] Error in downloadUpdate:', error);
     return { success: false, error: error.message };
   }
 });
@@ -1030,14 +1093,28 @@ ipcMain.handle('copy-update-to-downloads', async (event, updatePath) => {
     if (!path.isAbsolute(updatePath)) {
       // Try to find the file in common cache locations
       const fileName = path.basename(updatePath);
+      
+      // Try to get cache directory from electron-updater
+      const os = require('os');
+      const homeDir = os.homedir();
+      const electronUpdaterCache = path.join(homeDir, '.cache', 'electron-updater');
+      
       const possibleLocations = [
+        // electron-updater standard cache locations
+        path.join(electronUpdaterCache, fileName),
+        path.join(electronUpdaterCache, 'pending', fileName),
+        // App-specific cache locations
         path.join(app.getPath('userData'), 'pending', fileName),
+        path.join(app.getPath('userData'), 'updates', fileName),
+        path.join(app.getPath('userData'), 'downloaded', fileName),
         path.join(app.getPath('temp'), fileName),
         path.join(app.getPath('cache'), 'ensemble', fileName),
-        // electron-updater cache locations
-        path.join(app.getPath('userData'), 'updates', fileName),
-        path.join(app.getPath('userData'), 'downloaded', fileName)
+        path.join(app.getPath('cache'), 'electron-updater', fileName),
+        path.join(app.getPath('userData'), 'cache', fileName),
+        path.join(app.getPath('userData'), 'updateCache', fileName)
       ];
+      
+      console.log('[Update] Searching for file in locations:', possibleLocations);
       
       let found = false;
       for (const loc of possibleLocations) {
@@ -1052,21 +1129,51 @@ ipcMain.handle('copy-update-to-downloads', async (event, updatePath) => {
         }
       }
       
+      // If still not found, try recursive search
       if (!found) {
-        // Last resort: try to get from autoUpdater's cache
-        try {
-          const cacheDir = autoUpdater.downloadedUpdateHelper?.cacheDir;
-          if (cacheDir) {
-            const cachePath = path.join(cacheDir, fileName);
-            await fs.access(cachePath);
-            actualFilePath = cachePath;
-            console.log('[Update] Found file in cache:', actualFilePath);
-          } else {
-            throw new Error(`Could not find downloaded file. Searched: ${possibleLocations.join(', ')}`);
+        const searchDirs = [
+          electronUpdaterCache,
+          path.join(app.getPath('userData'), 'pending'),
+          path.join(app.getPath('cache'), 'electron-updater'),
+          path.join(app.getPath('userData'), 'updates')
+        ];
+        
+        for (const searchDir of searchDirs) {
+          try {
+            const entries = await fs.readdir(searchDir, { withFileTypes: true });
+            for (const entry of entries) {
+              if (entry.isFile() && entry.name === fileName) {
+                actualFilePath = path.join(searchDir, entry.name);
+                found = true;
+                console.log('[Update] Found file recursively at:', actualFilePath);
+                break;
+              } else if (entry.isDirectory()) {
+                // Check subdirectory
+                try {
+                  const subEntries = await fs.readdir(path.join(searchDir, entry.name), { withFileTypes: true });
+                  for (const subEntry of subEntries) {
+                    if (subEntry.isFile() && subEntry.name === fileName) {
+                      actualFilePath = path.join(searchDir, entry.name, subEntry.name);
+                      found = true;
+                      console.log('[Update] Found file in subdirectory at:', actualFilePath);
+                      break;
+                    }
+                  }
+                  if (found) break;
+                } catch (e) {
+                  // Can't read subdirectory, continue
+                }
+              }
+            }
+            if (found) break;
+          } catch (e) {
+            // Directory doesn't exist or can't be read, continue
           }
-        } catch (e) {
-          throw new Error(`Could not find downloaded file. Path provided: ${updatePath}. Searched: ${possibleLocations.join(', ')}`);
         }
+      }
+      
+      if (!found) {
+        throw new Error(`Could not find downloaded file. Path provided: ${updatePath}. Searched: ${possibleLocations.join(', ')}`);
       }
     } else {
       // Verify the absolute path exists
