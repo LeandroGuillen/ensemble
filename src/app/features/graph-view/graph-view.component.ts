@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { AfterViewInit, Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { Observable, Subscription } from 'rxjs';
 import { DataSet, Edge, Network, Node, Options } from 'vis-network/standalone';
 import { Character, GraphData, Relationship } from '../../core/interfaces';
@@ -75,7 +76,8 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
     private projectService: ProjectService,
     private electronService: ElectronService,
     private logger: LoggingService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private router: Router
   ) {
     this.graphData$ = this.relationshipService.getGraphData();
     this.characters$ = this.characterService.getCharacters();
@@ -318,9 +320,11 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
       }
     });
 
-    // Handle double-click on canvas for relationship creation
+    // Handle double-click on canvas: single node = open character edit, two nodes = create relationship
     this.network.on('doubleClick', (params) => {
-      if (params.nodes.length === 2) {
+      if (params.nodes.length === 1) {
+        this.router.navigate(['/character', params.nodes[0]]);
+      } else if (params.nodes.length === 2) {
         this.openRelationshipDialog(params.nodes[0], params.nodes[1]);
       }
     });
