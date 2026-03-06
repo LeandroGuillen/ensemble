@@ -7,13 +7,6 @@
     [attr.data-index]="i"
     (click)="onCharacterClick(character)"
   >
-    <input
-      type="checkbox"
-      class="character-checkbox"
-      [checked]="isCharacterSelected(character.id)"
-      (click)="$event.stopPropagation()"
-      (change)="onCharacterSelectionToggle(character.id)"
-    />
     <div class="list-item-thumbnail">
       <img
         *ngIf="getCharacterThumbnailDataUrl(character)"
