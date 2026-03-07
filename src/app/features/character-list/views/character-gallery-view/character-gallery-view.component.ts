@@ -1,11 +1,12 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, OnChanges, SimpleChanges, NgZone } from "@angular/core";
 import { CommonModule } from "@angular/common";
+import { RouterLink } from "@angular/router";
 import { Character, Tag } from "../../../../core/interfaces";
 
 @Component({
   selector: "app-character-gallery-view",
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   templateUrl: "./character-gallery-view.component.html",
   styleUrls: ["./character-gallery-view.component.scss"],
 })
@@ -131,6 +132,10 @@ export class CharacterGalleryViewComponent implements OnInit, OnDestroy, OnChang
 
   getCharacterThumbnailDataUrl(character: Character): string | null {
     return this.thumbnailDataUrls.get(character.id) || null;
+  }
+
+  getCharacterLink(character: Character): string[] {
+    return ['/character', encodeURIComponent(character.id)];
   }
 
   onCharacterClick(character: Character): void {

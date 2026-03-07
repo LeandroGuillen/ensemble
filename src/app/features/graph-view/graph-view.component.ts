@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, HostListener, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Observable, Subscription } from 'rxjs';
@@ -77,7 +77,8 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
     private electronService: ElectronService,
     private logger: LoggingService,
     private notificationService: NotificationService,
-    private router: Router
+    private router: Router,
+    private ngZone: NgZone
   ) {
     this.graphData$ = this.relationshipService.getGraphData();
     this.characters$ = this.characterService.getCharacters();
@@ -323,9 +324,14 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
     // Handle double-click on canvas: single node = open character edit, two nodes = create relationship
     this.network.on('doubleClick', (params) => {
       if (params.nodes.length === 1) {
-        this.router.navigate(['/character', params.nodes[0]]);
+        const characterId = params.nodes[0];
+        this.ngZone.run(() => {
+          this.router.navigate(['/character', encodeURIComponent(characterId)]);
+        });
       } else if (params.nodes.length === 2) {
-        this.openRelationshipDialog(params.nodes[0], params.nodes[1]);
+        this.ngZone.run(() => {
+          this.openRelationshipDialog(params.nodes[0], params.nodes[1]);
+        });
       }
     });
 
@@ -994,20 +1000,9 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private async loadThumbnailDataUrls(characters: Character[]): Promise<void> {
-    for (const character of characters) {
-      if (character.thumbnail && !this.thumbnailDataUrls.has(character.id)) {
-        try {
-          // Thumbnails are stored in each character's folder
-          const thumbnailPath = `${character.folderPath}/${character.thumbnail}`;
-          const dataUrl = await this.electronService.getImageAsDataUrl(thumbnailPath);
-          if (dataUrl) {
-            this.thumbnailDataUrls.set(character.id, dataUrl);
-          }
-        } catch (error) {
-          this.logger.error(`Failed to load thumbnail for character ${character.name}:`, error);
-        }
-      }
-    }
+    await this.characterService.loadThumbnailsForCharacters(characters);
+    const cached = this.characterService.getAllCachedThumbnails();
+    cached.forEach((dataUrl, id) => this.thumbnailDataUrls.set(id, dataUrl));
   }
 
   // Helper methods

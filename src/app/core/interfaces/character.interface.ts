@@ -1,28 +1,14 @@
-export interface CharacterImage {
-  id: string;              // Unique ID for the image
-  filename: string;        // Filename in the images/ folder (e.g., "portrait.png")
-  tags: string[];          // Image tags/categories (e.g., ["portrait", "reference-art"])
-  isPrimary: boolean;      // Whether this is the primary/thumbnail image
-  order: number;           // Display order (0-indexed)
-}
-
 export interface Character {
-  id: string;
+  id: string; // Derived at runtime from relative file path (e.g., "_dessir.md" or "subdir/_dessir.md")
   name: string;
   category: string;
   tags: string[];
   books: string[];
-  thumbnail?: string;      // DEPRECATED: For backward compatibility only
-  images: CharacterImage[]; // Image library with tags and metadata
-  mangamaster: string;
-  description: string;
-  notes: string;
+  thumbnail?: string; // Opaque string (e.g., wiki-link [[path/to/image.jpg]])
+  content: string; // Full markdown body below frontmatter
   created: Date;
   modified: Date;
   filePath: string;
-  folderPath: string; // Path to character's folder (characters/<category>/<slug>/)
-  additionalFields: Record<string, string>; // Additional markdown files: { "Field Name": "content" }
-  additionalFieldsFilenames: Record<string, string>; // Maps field names to original filenames: { "Field Name": "original-file.md" }
 }
 
 export interface CharacterFormData {
@@ -30,9 +16,16 @@ export interface CharacterFormData {
   category: string;
   tags: string[];
   books: string[];
-  thumbnail?: string;        // DEPRECATED: For backward compatibility only
-  images: CharacterImage[];  // Image library
-  mangamaster: string;
-  description: string;
-  notes: string;
+  thumbnail?: string;
+  content: string;
+}
+
+export interface CharacterFrontmatter {
+  name: string;
+  category: string;
+  tags: string[];
+  books: string[];
+  thumbnail?: string;
+  created?: string;
+  modified?: string;
 }

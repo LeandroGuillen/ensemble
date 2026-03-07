@@ -473,8 +473,47 @@ ipcMain.handle('read-directory-files', async (event, dirPath) => {
   }
 });
 
+// Recursively find all files matching a pattern under dirPath
+// pattern: glob-like string, e.g. '_*.md' (files starting with _ and ending with .md)
+// Returns: { success, files: [{ relativePath, absolutePath }], error? }
+ipcMain.handle('read-directory-recursive', async (event, dirPath, pattern) => {
+  try {
+    const results = [];
+
+    async function scan(currentDir, baseDir) {
+      const entries = await fs.readdir(currentDir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = pathModule.join(currentDir, entry.name);
+        if (entry.isDirectory()) {
+          await scan(fullPath, baseDir);
+        } else if (entry.isFile()) {
+          const relativePath = pathModule.relative(baseDir, fullPath);
+          // Pattern '_*.md' means: starts with _, ends with .md
+          if (pattern === '_*.md') {
+            if (entry.name.startsWith('_') && entry.name.endsWith('.md')) {
+              results.push({ relativePath, absolutePath: fullPath });
+            }
+          } else {
+            // Fallback: simple glob (e.g. *.md)
+            const match = pattern.replace(/\*/g, '.*');
+            const regex = new RegExp('^' + match + '$');
+            if (regex.test(entry.name)) {
+              results.push({ relativePath, absolutePath: fullPath });
+            }
+          }
+        }
+      }
+    }
+
+    await scan(dirPath, dirPath);
+    return { success: true, files: results };
+  } catch (error) {
+    return { success: false, error: error.message, files: [] };
+  }
+});
+
 // File watching
-ipcMain.handle('start-file-watcher', async (event, projectPath) => {
+ipcMain.handle('start-file-watcher', async (event, projectPath, charactersFolder = 'characters') => {
   try {
     // Stop existing watcher if any
     if (fileWatcher) {
@@ -482,8 +521,9 @@ ipcMain.handle('start-file-watcher', async (event, projectPath) => {
       fileWatcher = null;
     }
 
-    // Watch the characters directory recursively
-    const charactersPath = pathModule.join(projectPath, 'characters');
+    // Watch the characters directory recursively (configurable path)
+    const normalized = (charactersFolder || 'characters').replace(/^\/+|\/+$/g, '').replace(/\/+/g, '/') || 'characters';
+    const charactersPath = pathModule.join(projectPath, normalized);
 
     fileWatcher = chokidar.watch(charactersPath, {
       ignored: /(^|[\/\\])\../, // Ignore dotfiles

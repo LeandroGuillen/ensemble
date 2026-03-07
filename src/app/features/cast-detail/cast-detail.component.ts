@@ -194,44 +194,11 @@ export class CastDetailComponent implements OnInit, OnDestroy {
   }
 
   private async getThumbnailDataUrl(character: Character): Promise<string | null> {
-    try {
-      // Try to get primary image from images array first
-      const primaryImage = this.characterService.getPrimaryImage(character);
-
-      if (primaryImage) {
-        // Try new location first (images/ subfolder), then old location (root)
-        let thumbnailPath: string;
-
-        if (primaryImage.filename.includes('/')) {
-          // Filename includes path, use as-is
-          thumbnailPath = `${character.folderPath}/${primaryImage.filename}`;
-        } else {
-          // Try images/ folder first
-          const newPath = `${character.folderPath}/images/${primaryImage.filename}`;
-          const existsInNew = await this.electronService.fileExists(newPath);
-
-          if (existsInNew) {
-            thumbnailPath = newPath;
-          } else {
-            // Fall back to root folder
-            thumbnailPath = `${character.folderPath}/${primaryImage.filename}`;
-          }
-        }
-
-        return await this.electronService.getImageAsDataUrl(thumbnailPath);
-      }
-
-      // Fallback to old thumbnail field
-      if (character.thumbnail) {
-        const thumbnailPath = `${character.folderPath}/${character.thumbnail}`;
-        return await this.electronService.getImageAsDataUrl(thumbnailPath);
-      }
-
-      return null;
-    } catch (error) {
-      this.logger.error('Failed to load thumbnail as data URL:', error);
-      return null;
+    const cached = this.characterService.getCachedThumbnail(character.id);
+    if (cached) {
+      return cached;
     }
+    return this.characterService.loadThumbnailForCharacter(character);
   }
 
   private async loadCastThumbnail(cast: Cast): Promise<void> {

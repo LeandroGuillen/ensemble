@@ -20,8 +20,6 @@ import {
   CharacterGridViewComponent,
   CharacterListViewComponent,
 } from './views';
-import { TrashDialogComponent, DeletedCharacter } from '../../shared/trash-dialog/trash-dialog.component';
-
 @Component({
   selector: 'app-character-list',
   standalone: true,
@@ -34,7 +32,6 @@ import { TrashDialogComponent, DeletedCharacter } from '../../shared/trash-dialo
     CharacterListViewComponent,
     CharacterCompactViewComponent,
     CharacterGalleryViewComponent,
-    TrashDialogComponent,
   ],
   templateUrl: './character-list.component.html',
   styleUrls: ['./character-list.component.scss'],
@@ -75,8 +72,6 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   filterExpanded = false; // Track filter expanded state
   slideshowEnabled = true; // Toggle slideshow on/off
   galleryThumbnailSize: 'big' | 'medium' | 'small' = 'big'; // Gallery thumbnail size
-  showTrashDialog = false; // Track trash dialog visibility
-  deletedCharacters: DeletedCharacter[] = []; // Deleted characters for trash dialog
 
   constructor(
     private characterService: CharacterService,
@@ -380,7 +375,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       this.logger.error('Character or character.id is missing:', character);
       return;
     }
-    this.router.navigate(['/character', character.id]);
+    this.router.navigate(['/character', encodeURIComponent(character.id)]);
   }
 
   async deleteCharacter(character: Character, event: Event): Promise<void> {
@@ -608,76 +603,14 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     return this.tags.filter((tag) => character.tags.includes(tag.id));
   }
 
-  getThumbnailPath(character: Character): string | null {
-    if (!this.currentProject) {
-      return null;
-    }
-
-    // Try to get primary image from images array first
-    const primaryImage = this.characterService.getPrimaryImage(character);
-    if (primaryImage) {
-      // Check both new (images/) and old (root) locations
-      // The character service's getImagePath handles this, but we need a sync path here
-      // So we'll try the most likely location first
-      if (primaryImage.filename.includes('/')) {
-        return `${character.folderPath}/${primaryImage.filename}`;
-      } else {
-        // Could be in images/ or root - try images/ first as that's the new standard
-        return `${character.folderPath}/images/${primaryImage.filename}`;
-      }
-    }
-
-    // Fallback to old thumbnail field for backward compatibility
-    if (character.thumbnail) {
-      return `${character.folderPath}/${character.thumbnail}`;
-    }
-
+  getThumbnailPath(_character: Character): string | null {
+    // Thumbnail is now an opaque string (wiki-link), not resolved to file path
     return null;
   }
 
-  async getThumbnailDataUrl(character: Character): Promise<string | null> {
-    if (!this.currentProject) {
-      return null;
-    }
-
-    try {
-      // Try to get primary image from images array first
-      const primaryImage = this.characterService.getPrimaryImage(character);
-
-      if (primaryImage) {
-        // Try new location first (images/ subfolder), then old location (root)
-        let thumbnailPath: string;
-
-        if (primaryImage.filename.includes('/')) {
-          // Filename includes path, use as-is
-          thumbnailPath = `${character.folderPath}/${primaryImage.filename}`;
-        } else {
-          // Try images/ folder first
-          const newPath = `${character.folderPath}/images/${primaryImage.filename}`;
-          const existsInNew = await this.electronService.fileExists(newPath);
-
-          if (existsInNew) {
-            thumbnailPath = newPath;
-          } else {
-            // Fall back to root folder
-            thumbnailPath = `${character.folderPath}/${primaryImage.filename}`;
-          }
-        }
-
-        return await this.electronService.getImageAsDataUrl(thumbnailPath);
-      }
-
-      // Fallback to old thumbnail field
-      if (character.thumbnail) {
-        const thumbnailPath = `${character.folderPath}/${character.thumbnail}`;
-        return await this.electronService.getImageAsDataUrl(thumbnailPath);
-      }
-
-      return null;
-    } catch (error) {
-      this.logger.error('Failed to load thumbnail as data URL:', error);
-      return null;
-    }
+  async getThumbnailDataUrl(_character: Character): Promise<string | null> {
+    // Thumbnail is now an opaque string (wiki-link), not resolved to file path
+    return null;
   }
 
   getCharacterThumbnailDataUrl(character: Character): string | null {
@@ -688,10 +621,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
    * Syncs local cache Maps from service cache (for child component Inputs)
    */
   private syncCacheFromService(): void {
-    // Sync thumbnails
     this.thumbnailDataUrls = this.characterService.getAllCachedThumbnails();
-    
-    // Sync modification times
     this.thumbnailModificationTimes.clear();
     this.allCharacters.forEach(char => {
       const modTime = this.characterService.getCachedThumbnailModTime(char.id);
@@ -699,117 +629,16 @@ export class CharacterListComponent implements OnInit, OnDestroy {
         this.thumbnailModificationTimes.set(char.id, modTime);
       }
     });
-    
-    // Sync character images
-    this.characterImagesDataUrls.clear();
-    this.allCharacters.forEach(char => {
-      const imageUrls = this.characterService.getCachedCharacterImages(char.id);
-      if (imageUrls) {
-        this.characterImagesDataUrls.set(char.id, imageUrls);
-      }
-    });
   }
 
   private async loadThumbnailDataUrls(characters: Character[]): Promise<void> {
-    // Load all thumbnails outside Angular's zone
-    await this.ngZone.runOutsideAngular(async () => {
-      const thumbnailPromises = characters.map(async (character) => {
-        try {
-          // Check if character has a primary image or thumbnail
-          const primaryImage = this.characterService.getPrimaryImage(character);
-          const hasThumbnail = primaryImage || character.thumbnail;
-
-          if (!hasThumbnail) {
-            // No thumbnail, remove from cache if present
-            if (this.characterService.getCachedThumbnail(character.id)) {
-              this.characterService.removeCachedThumbnail(character.id);
-              // Update local cache for child components
-              this.thumbnailDataUrls.delete(character.id);
-              this.thumbnailModificationTimes.delete(character.id);
-              this.characterImagesDataUrls.delete(character.id);
-            }
-            return;
-          }
-
-          // Check if we need to reload the thumbnail
-          // Reload if: not cached, or character was modified since last cache
-          const cachedModTime = this.characterService.getCachedThumbnailModTime(character.id);
-          const currentModTime = character.modified.toISOString();
-          const needsReload =
-            !this.characterService.getCachedThumbnail(character.id) || cachedModTime !== currentModTime;
-
-          if (needsReload) {
-            const dataUrl = await this.getThumbnailDataUrl(character);
-            if (dataUrl) {
-              this.characterService.setCachedThumbnail(character.id, dataUrl, currentModTime);
-              // Update local cache for child components
-              this.thumbnailDataUrls.set(character.id, dataUrl);
-              this.thumbnailModificationTimes.set(character.id, currentModTime);
-            }
-
-            // Load all images for slideshow
-            await this.loadAllCharacterImages(character);
-          } else {
-            // Use cached data - sync to local Maps for child components
-            const cachedThumbnail = this.characterService.getCachedThumbnail(character.id);
-            if (cachedThumbnail) {
-              this.thumbnailDataUrls.set(character.id, cachedThumbnail);
-              this.thumbnailModificationTimes.set(character.id, currentModTime);
-            }
-            const cachedImages = this.characterService.getCachedCharacterImages(character.id);
-            if (cachedImages) {
-              this.characterImagesDataUrls.set(character.id, cachedImages);
-            }
-          }
-        } catch (error) {
-          this.logger.error(`Failed to load thumbnail for character ${character.name}:`, error);
-        }
-      });
-
-      await Promise.all(thumbnailPromises);
-    });
-
-    // Trigger a single change detection after all thumbnails are loaded
+    await this.characterService.loadThumbnailsForCharacters(characters);
+    this.syncCacheFromService();
     this.cdr.detectChanges();
   }
 
-  private async loadAllCharacterImages(character: Character): Promise<void> {
-    if (!character.images || character.images.length === 0) {
-      this.characterService.setCachedCharacterImages(character.id, []);
-      return;
-    }
-
-    try {
-      const imageDataUrls: string[] = [];
-
-      // Load all images (sorted by order)
-      const sortedImages = [...character.images].sort((a, b) => a.order - b.order);
-
-      for (const image of sortedImages) {
-        const imagePath = await this.characterService.getImagePath(character.id, image.id);
-        if (imagePath) {
-          const dataUrl = await this.electronService.getImageAsDataUrl(imagePath);
-          if (dataUrl) {
-            imageDataUrls.push(dataUrl);
-          }
-        }
-      }
-
-      if (imageDataUrls.length > 0) {
-        this.characterService.setCachedCharacterImages(character.id, imageDataUrls);
-        // Update local cache for child components
-        this.characterImagesDataUrls.set(character.id, imageDataUrls);
-      } else {
-        this.characterService.setCachedCharacterImages(character.id, []);
-        this.characterImagesDataUrls.set(character.id, []);
-      }
-    } catch (error) {
-      this.logger.error(`Failed to load images for character ${character.name}:`, error);
-    }
-  }
-
   getCharacterImages(character: Character): string[] {
-    return this.characterImagesDataUrls.get(character.id) || [];
+    return [];
   }
 
   getFilterSummary(): string {
@@ -1003,72 +832,6 @@ export class CharacterListComponent implements OnInit, OnDestroy {
 
   onViewCharacterSelectionToggle(characterId: string): void {
     this.toggleCharacterSelection(characterId);
-  }
-
-  // Trash management methods
-  async viewTrash(): Promise<void> {
-    try {
-      const deleted = await this.characterService.getDeletedCharacters();
-      this.deletedCharacters = deleted;
-      this.showTrashDialog = true;
-    } catch (error) {
-      this.error = `Failed to load trash: ${error}`;
-      this.logger.error('Failed to load trash:', error);
-    }
-  }
-
-  async restoreCharacter(folderName: string): Promise<void> {
-    try {
-      await this.characterService.restoreCharacter(folderName);
-      // Remove from deleted characters list
-      this.deletedCharacters = this.deletedCharacters.filter(c => c.folderName !== folderName);
-      // Characters are automatically reloaded after restore
-    } catch (error) {
-      this.error = `Failed to restore character: ${error}`;
-      this.logger.error('Failed to restore character:', error);
-    }
-  }
-
-  async emptyTrash(): Promise<void> {
-    if (
-      !(await this.modalService.confirm('Are you sure you want to permanently delete all characters in trash?\n\nThis action cannot be undone.'))
-    ) {
-      return;
-    }
-
-    try {
-      await this.characterService.emptyTrash();
-    } catch (error) {
-      this.error = `Failed to empty trash: ${error}`;
-      this.logger.error('Failed to empty trash:', error);
-    }
-  }
-
-  async permanentlyDeleteCharacter(folderName: string): Promise<void> {
-    if (!(await this.modalService.confirm('Are you sure you want to permanently delete this character?\n\nThis action cannot be undone.'))) {
-      return;
-    }
-
-    try {
-      await this.characterService.permanentlyDeleteCharacter(folderName);
-      // Remove from deleted characters list
-      this.deletedCharacters = this.deletedCharacters.filter(c => c.folderName !== folderName);
-    } catch (error) {
-      this.error = `Failed to permanently delete character: ${error}`;
-      this.logger.error('Failed to permanently delete character:', error);
-    }
-  }
-
-  onTrashDialogClose(): void {
-    this.showTrashDialog = false;
-  }
-
-  onTrashRestore(folderName: string): void {
-    this.restoreCharacter(folderName);
-  }
-
-  onTrashDeletePermanently(folderName: string): void {
-    this.permanentlyDeleteCharacter(folderName);
   }
 
   getGroupedCharacters(): Array<{

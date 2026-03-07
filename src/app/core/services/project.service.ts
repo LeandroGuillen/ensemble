@@ -62,6 +62,42 @@ export class ProjectService {
   }
 
   /**
+   * Returns the absolute path to the characters folder for the current project.
+   * Uses settings.charactersFolder if set, otherwise defaults to 'characters'.
+   */
+  getCharactersFolderPath(): string {
+    const project = this.currentProjectSubject.value;
+    if (!project?.path) {
+      throw new Error('No project loaded');
+    }
+    const folder = project.metadata?.settings?.charactersFolder?.trim() || 'characters';
+    const normalized = folder.replace(/^\/+|\/+$/g, '').replace(/\/+/g, '/') || 'characters';
+    return pathJoin(project.path, normalized);
+  }
+
+  /**
+   * Returns the absolute path to the casts folder for the current project.
+   * Default: charactersFolder/casts (e.g. characters/casts or personas/casts)
+   */
+  getCastsFolderPath(): string {
+    const charactersPath = this.getCharactersFolderPath();
+    const folder = this.currentProjectSubject.value?.metadata?.settings?.castsFolder?.trim() || 'casts';
+    const normalized = folder.replace(/^\/+|\/+$/g, '').replace(/\/+/g, '/') || 'casts';
+    return pathJoin(charactersPath, normalized);
+  }
+
+  /**
+   * Returns the relative characters folder name from project settings (e.g. 'characters' or 'personas').
+   */
+  getCharactersFolderName(): string {
+    const project = this.currentProjectSubject.value;
+    const folder = project?.metadata?.settings?.charactersFolder?.trim();
+    if (!folder) return 'characters';
+    const normalized = folder.replace(/^\/+|\/+$/g, '').replace(/\/+/g, '/');
+    return normalized || 'characters';
+  }
+
+  /**
    * Opens Electron folder selection dialog
    */
   async selectProject(): Promise<string | null> {
@@ -151,7 +187,8 @@ export class ProjectService {
       }
 
       // Ensure required directories exist
-      await this.ensureProjectStructure(projectPath);
+      const charactersFolder = metadata.settings?.charactersFolder?.trim() || 'characters';
+      await this.ensureProjectStructure(projectPath, charactersFolder);
 
       // Migrate legacy pinboard to new structure if needed
       await this.migrateLegacyPinboard(metadata);
@@ -197,8 +234,8 @@ export class ProjectService {
         }
       }
 
-      // Create directory structure
-      await this.ensureProjectStructure(projectPath);
+      // Create directory structure (use default 'characters' for new projects)
+      await this.ensureProjectStructure(projectPath, 'characters');
 
       // Create default metadata with empty relationships
       const metadata = this.createDefaultMetadata(projectName);
@@ -313,7 +350,7 @@ export class ProjectService {
   /**
    * Ensures the project directory structure exists
    */
-  private async ensureProjectStructure(projectPath: string): Promise<void> {
+  private async ensureProjectStructure(projectPath: string, charactersFolder = 'characters'): Promise<void> {
     try {
       // Create main project directory
       assertIpcSuccess(
@@ -321,8 +358,9 @@ export class ProjectService {
         'Create main directory'
       );
 
-      // Create characters subdirectory
-      const charactersPath = pathJoin(projectPath, 'characters');
+      // Create characters subdirectory (configurable path)
+      const normalized = charactersFolder.replace(/^\/+|\/+$/g, '').replace(/\/+/g, '/') || 'characters';
+      const charactersPath = pathJoin(projectPath, normalized);
       assertIpcSuccess(
         await this.electronService.createDirectory(charactersPath),
         'Create characters directory'
@@ -360,6 +398,8 @@ export class ProjectService {
         defaultCategory: 'main-character',
         autoSave: true,
         fileWatchEnabled: true,
+        charactersFolder: 'characters',
+        castsFolder: 'casts',
       },
       pinboards: [
         {
@@ -937,10 +977,6 @@ export class ProjectService {
     }
 
     const pinboards = project.metadata.pinboards || [];
-    
-    if (pinboards.length <= 1) {
-      throw new Error('Cannot delete the last pinboard. At least one pinboard must exist.');
-    }
 
     const pinboardIndex = pinboards.findIndex(p => p.id === id);
     if (pinboardIndex === -1) {

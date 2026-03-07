@@ -684,6 +684,38 @@
           </div>
 
           <div class="form-group">
+            <label for="charactersFolder">Characters Folder</label>
+            <input
+              type="text"
+              id="charactersFolder"
+              formControlName="charactersFolder"
+              class="form-control"
+              placeholder="characters"
+              [class.error]="getFieldError(settingsForm, 'charactersFolder')"
+            />
+            <div *ngIf="getFieldError(settingsForm, 'charactersFolder')" class="field-error">
+              {{ getFieldError(settingsForm, 'charactersFolder') }}
+            </div>
+            <small class="form-help">Relative path from project root where character files are stored (default: characters).</small>
+          </div>
+
+          <div class="form-group">
+            <label for="castsFolder">Casts Folder</label>
+            <input
+              type="text"
+              id="castsFolder"
+              formControlName="castsFolder"
+              class="form-control"
+              placeholder="casts"
+              [class.error]="getFieldError(settingsForm, 'castsFolder')"
+            />
+            <div *ngIf="getFieldError(settingsForm, 'castsFolder')" class="field-error">
+              {{ getFieldError(settingsForm, 'castsFolder') }}
+            </div>
+            <small class="form-help">Subfolder under the characters folder where casts are stored (default: casts). Full path: characters/casts.</small>
+          </div>
+
+          <div class="form-group">
             <label for="theme">Theme</label>
             <select 
               id="theme"

@@ -43,10 +43,7 @@ describe('CharacterService', () => {
     category: 'main-character',
     tags: ['magic-user'],
     books: [],
-    images: [],
-    mangamaster: '',
-    description: 'Test description',
-    notes: 'Test notes'
+    content: 'Test content'
   });
 
   beforeEach(() => {
@@ -55,6 +52,7 @@ describe('CharacterService', () => {
       'fileExists',
       'createDirectory',
       'readDirectoryFiles',
+      'readDirectoryRecursive',
       'readFile',
       'writeFileAtomic',
       'moveDirectory',
@@ -62,7 +60,7 @@ describe('CharacterService', () => {
       'deleteFile',
       'deleteDirectoryRecursive'
     ]);
-    const projectSpy = jasmine.createSpyObj('ProjectService', ['getCurrentProject'], {
+    const projectSpy = jasmine.createSpyObj('ProjectService', ['getCurrentProject', 'getCharactersFolderPath'], {
       currentProject$: new BehaviorSubject<Project | null>(null)
     });
     const fileWatcherSpy = jasmine.createSpyObj('FileWatcherService', [], {
@@ -90,6 +88,7 @@ describe('CharacterService', () => {
     notificationService = TestBed.inject(NotificationService) as jasmine.SpyObj<NotificationService>;
 
     electronService.isElectron.and.returnValue(true);
+    projectService.getCharactersFolderPath.and.returnValue('/test/project/characters');
   });
 
   it('should be created', () => {
@@ -108,27 +107,20 @@ describe('CharacterService', () => {
   describe('getCharacterById', () => {
     it('should return character by id', () => {
       const character: Character = {
-        id: 'char-1',
+        id: '_char-1.md',
         name: 'Test Character',
         category: 'main-character',
         tags: [],
         books: [],
-        images: [],
-        mangamaster: '',
-        description: '',
-        notes: '',
+        content: '',
         created: new Date(),
         modified: new Date(),
-        filePath: '/path/to/char.md',
-        folderPath: '/path/to/char',
-        additionalFields: {},
-        additionalFieldsFilenames: {}
+        filePath: '/path/to/char/_char-1.md',
       };
 
-      // Manually set characters in subject for testing
       (service as any).charactersSubject.next([character]);
 
-      const found = service.getCharacterById('char-1');
+      const found = service.getCharacterById('_char-1.md');
       expect(found).toBeTruthy();
       expect(found?.name).toBe('Test Character');
     });
@@ -167,20 +159,19 @@ describe('CharacterService', () => {
       await expectAsync(service.createCharacter(formData)).toBeRejected();
     });
 
-    it('should create character folder in flat mode', async () => {
+    it('should create character file in flat mode', async () => {
       const project = createValidProject();
       project.metadata.categories[0].folderMode = 'flat';
       projectService.getCurrentProject.and.returnValue(project);
       (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
 
-      electronService.createDirectory.and.returnValue(Promise.resolve({ success: true }));
       electronService.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));
 
       const formData = createValidCharacterFormData();
       await service.createCharacter(formData);
 
-      // Should create character folder directly under characters/
-      expect(electronService.createDirectory).toHaveBeenCalled();
+      // Should write character file directly under characters/
+      expect(electronService.writeFileAtomic).toHaveBeenCalled();
     });
 
     it('should create character folder in category folder for auto mode', async () => {
@@ -207,41 +198,29 @@ describe('CharacterService', () => {
       (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
 
       const existingCharacter: Character = {
-        id: 'char-1',
+        id: 'main-character/_original-name.md',
         name: 'Original Name',
         category: 'main-character',
         tags: [],
         books: [],
-        images: [],
-        mangamaster: '',
-        description: '',
-        notes: '',
+        content: '',
         created: new Date(),
         modified: new Date(),
-        filePath: '/test/project/characters/main-character/original-name/original-name.md',
-        folderPath: '/test/project/characters/main-character/original-name',
-        additionalFields: {},
-        additionalFieldsFilenames: {}
+        filePath: '/test/project/characters/main-character/_original-name.md',
       };
 
       (service as any).charactersSubject.next([existingCharacter]);
 
-      // Mock file operations for update (no name change, so no file rename needed)
       electronService.fileExists.and.returnValue(Promise.resolve(true));
       electronService.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));
-      electronService.readDirectoryFiles.and.returnValue(Promise.resolve({
-        success: true,
-        files: ['original-name.md'],
-        directories: []
-      }));
 
-      const updated = await service.updateCharacter('char-1', {
-        description: 'Updated description'
+      const updated = await service.updateCharacter('main-character/_original-name.md', {
+        content: 'Updated content'
       });
 
       expect(updated).toBeTruthy();
       expect(updated?.name).toBe('Original Name');
-      expect(updated?.description).toBe('Updated description');
+      expect(updated?.content).toBe('Updated content');
       expect(electronService.writeFileAtomic).toHaveBeenCalled();
     });
 
@@ -266,21 +245,15 @@ describe('CharacterService', () => {
       (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
 
       const existingCharacter: Character = {
-        id: 'char-1',
+        id: 'main-character/_test-character.md',
         name: 'Test Character',
         category: 'main-character',
         tags: [],
         books: [],
-        images: [],
-        mangamaster: '',
-        description: '',
-        notes: '',
+        content: '',
         created: new Date(),
         modified: new Date(),
-        filePath: '/test/project/characters/main-character/test-character/test-character.md',
-        folderPath: '/test/project/characters/main-character/test-character',
-        additionalFields: {},
-        additionalFieldsFilenames: {}
+        filePath: '/test/project/characters/main-character/_test-character.md',
       };
 
       (service as any).charactersSubject.next([existingCharacter]);
@@ -290,7 +263,7 @@ describe('CharacterService', () => {
       electronService.moveDirectory.and.returnValue(Promise.resolve({ success: true }));
       electronService.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));
 
-      const updated = await service.updateCharacter('char-1', {
+      const updated = await service.updateCharacter('main-character/_test-character.md', {
         category: 'supporting'
       });
 
@@ -307,34 +280,26 @@ describe('CharacterService', () => {
       (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
 
       const character: Character = {
-        id: 'char-1',
+        id: 'main-character/_test-character.md',
         name: 'Test Character',
         category: 'main-character',
         tags: [],
         books: [],
-        images: [],
-        mangamaster: '',
-        description: '',
-        notes: '',
+        content: '',
         created: new Date(),
         modified: new Date(),
-        filePath: '/test/project/characters/main-character/test-character/test-character.md',
-        folderPath: '/test/project/characters/main-character/test-character',
-        additionalFields: {},
-        additionalFieldsFilenames: {}
+        filePath: '/test/project/characters/main-character/_test-character.md',
       };
 
       (service as any).charactersSubject.next([character]);
 
-      electronService.fileExists.and.returnValue(Promise.resolve(true));
-      electronService.createDirectory.and.returnValue(Promise.resolve({ success: true }));
-      electronService.moveDirectory.and.returnValue(Promise.resolve({ success: true }));
+      electronService.deleteFile.and.returnValue(Promise.resolve({ success: true }));
 
-      await service.deleteCharacter('char-1');
+      await service.deleteCharacter('main-character/_test-character.md');
 
       const characters = (service as any).charactersSubject.value;
-      expect(characters.find((c: Character) => c.id === 'char-1')).toBeUndefined();
-      expect(electronService.moveDirectory).toHaveBeenCalled();
+      expect(characters.find((c: Character) => c.id === 'main-character/_test-character.md')).toBeUndefined();
+      expect(electronService.deleteFile).toHaveBeenCalled();
     });
 
     it('should return false when character does not exist', async () => {
@@ -410,15 +375,14 @@ describe('CharacterService', () => {
       (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
 
       electronService.fileExists.and.returnValue(Promise.resolve(true));
-      electronService.readDirectoryFiles.and.returnValue(Promise.resolve({
+      electronService.readDirectoryRecursive.and.returnValue(Promise.resolve({
         success: true,
-        directories: [],
         files: []
       }));
 
       await service.forceReloadCharacters();
 
-      expect(electronService.readDirectoryFiles).toHaveBeenCalled();
+      expect(electronService.readDirectoryRecursive).toHaveBeenCalled();
     });
   });
 });

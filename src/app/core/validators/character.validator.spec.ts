@@ -5,21 +5,15 @@ import { ProjectMetadata } from '../interfaces/project.interface';
 describe('CharacterValidator', () => {
   describe('validateCharacter', () => {
     const createValidCharacter = (): Character => ({
-      id: 'test-character-1',
+      id: '_test-character.md',
       name: 'Test Character',
       category: 'main-character',
       tags: ['magic-user'],
       books: [],
-      images: [],
-      mangamaster: '',
-      description: 'Test description',
-      notes: 'Test notes',
+      content: 'Test content',
       created: new Date('2024-01-01'),
       modified: new Date('2024-01-02'),
-      filePath: '/path/to/character.md',
-      folderPath: '/path/to/character',
-      additionalFields: {},
-      additionalFieldsFilenames: {}
+      filePath: '/path/to/character/_test-character.md',
     });
 
     it('should validate a valid character', () => {
@@ -50,13 +44,11 @@ describe('CharacterValidator', () => {
       expect(result.errors.some(e => e.field === 'name' && e.code === 'REQUIRED_FIELD')).toBe(true);
     });
 
-    it('should fail validation when id is missing', () => {
+    it('should pass validation when id is present (derived from file path)', () => {
       const character = createValidCharacter();
-      character.id = '';
       const result = CharacterValidator.validateCharacter(character);
       
-      expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.field === 'id' && e.code === 'REQUIRED_FIELD')).toBe(true);
+      expect(result.isValid).toBe(true);
     });
 
     it('should fail validation when category is missing', () => {
@@ -128,10 +120,7 @@ describe('CharacterValidator', () => {
       category: 'main-character',
       tags: ['magic-user'],
       books: [],
-      images: [],
-      mangamaster: '',
-      description: 'Test description',
-      notes: 'Test notes'
+      content: 'Test content'
     });
 
     it('should validate valid form data', () => {
@@ -178,27 +167,18 @@ describe('CharacterValidator', () => {
       expect(result.errors.some(e => e.field === 'name' && e.code === 'MAX_LENGTH_EXCEEDED')).toBe(true);
     });
 
-    it('should fail validation when description exceeds 10000 characters', () => {
+    it('should fail validation when content exceeds 100000 characters', () => {
       const formData = createValidFormData();
-      formData.description = 'a'.repeat(10001);
+      formData.content = 'a'.repeat(100001);
       const result = CharacterValidator.validateCharacterFormData(formData);
       
       expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.field === 'description' && e.code === 'MAX_LENGTH_EXCEEDED')).toBe(true);
+      expect(result.errors.some(e => e.field === 'content' && e.code === 'MAX_LENGTH_EXCEEDED')).toBe(true);
     });
 
-    it('should fail validation when notes exceeds 50000 characters', () => {
+    it('should pass validation when content is exactly 100000 characters', () => {
       const formData = createValidFormData();
-      formData.notes = 'a'.repeat(50001);
-      const result = CharacterValidator.validateCharacterFormData(formData);
-      
-      expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.field === 'notes' && e.code === 'MAX_LENGTH_EXCEEDED')).toBe(true);
-    });
-
-    it('should pass validation when description is exactly 10000 characters', () => {
-      const formData = createValidFormData();
-      formData.description = 'a'.repeat(10000);
+      formData.content = 'a'.repeat(100000);
       const result = CharacterValidator.validateCharacterFormData(formData);
       
       expect(result.isValid).toBe(true);
@@ -227,21 +207,15 @@ describe('CharacterValidator', () => {
     });
 
     const createValidCharacter = (): Character => ({
-      id: 'test-character-1',
+      id: '_test-character.md',
       name: 'Test Character',
       category: 'main-character',
       tags: ['magic-user'],
       books: [],
-      images: [],
-      mangamaster: '',
-      description: '',
-      notes: '',
+      content: '',
       created: new Date(),
       modified: new Date(),
-      filePath: '/path/to/character.md',
-      folderPath: '/path/to/character',
-      additionalFields: {},
-      additionalFieldsFilenames: {}
+      filePath: '/path/to/character/_test-character.md',
     });
 
     it('should validate character with valid category and tags', () => {

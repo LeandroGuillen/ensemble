@@ -1,11 +1,12 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { Character, Tag, Category } from '../../../../core/interfaces';
 
 @Component({
   selector: 'app-character-list-view',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   templateUrl: './character-list-view.component.html',
   styleUrls: ['./character-list-view.component.scss']
 })
@@ -21,6 +22,10 @@ export class CharacterListViewComponent {
   @Output() characterClick = new EventEmitter<Character>();
   @Output() characterDelete = new EventEmitter<{ character: Character; event: Event }>();
   @Output() characterSelectionToggle = new EventEmitter<string>();
+
+  getCharacterLink(character: Character): string[] {
+    return ['/character', encodeURIComponent(character.id)];
+  }
 
   getCategoryName(categoryId: string): string {
     const category = this.categories.find((cat) => cat.id === categoryId);

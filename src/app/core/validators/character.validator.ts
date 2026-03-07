@@ -15,13 +15,7 @@ export class CharacterValidator {
       });
     }
 
-    if (!character.id || character.id.trim().length === 0) {
-      errors.push({
-        field: 'id',
-        message: 'Character ID is required',
-        code: 'REQUIRED_FIELD'
-      });
-    }
+    // id is derived from file path at runtime, not validated
 
     if (!character.category || character.category.trim().length === 0) {
       errors.push({
@@ -119,18 +113,10 @@ export class CharacterValidator {
 
 
 
-    if (formData.description && formData.description.length > 10000) {
+    if (formData.content && formData.content.length > 100000) {
       errors.push({
-        field: 'description',
-        message: 'Description must be 10,000 characters or less',
-        code: 'MAX_LENGTH_EXCEEDED'
-      });
-    }
-
-    if (formData.notes && formData.notes.length > 50000) {
-      errors.push({
-        field: 'notes',
-        message: 'Notes must be 50,000 characters or less',
+        field: 'content',
+        message: 'Content must be 100,000 characters or less',
         code: 'MAX_LENGTH_EXCEEDED'
       });
     }

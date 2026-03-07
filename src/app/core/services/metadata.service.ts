@@ -126,6 +126,8 @@ export class MetadataService {
         defaultCategory: 'main-character',
         autoSave: true,
         fileWatchEnabled: true,
+        charactersFolder: 'characters',
+        castsFolder: 'casts',
       },
     };
   }
@@ -812,24 +814,19 @@ export class MetadataService {
     }
 
     try {
-      const charactersPath = pathJoin(this.currentProjectPath, 'characters');
-      const listResult = await this.electronService.listDirectory(charactersPath);
+      const charactersPath = this.projectService.getCharactersFolderPath();
+      const scanResult = await this.electronService.readDirectoryRecursive(charactersPath, '_*.md');
       
-      if (!listResult.success || !listResult.files) {
-        console.warn('Failed to list character files:', listResult.error);
+      if (!scanResult.success || !scanResult.files) {
+        console.warn('Failed to list character files:', scanResult.error);
         return;
       }
       
-      for (const filename of listResult.files) {
-        if (!filename.endsWith('.md')) {
-          continue;
-        }
-
-        const filePath = pathJoin(charactersPath, filename);
+      for (const { absolutePath: filePath } of scanResult.files) {
         const readResult = await this.electronService.readFile(filePath);
         
         if (!readResult.success || !readResult.content) {
-          console.warn(`Failed to read character file ${filename}:`, readResult.error);
+          console.warn(`Failed to read character file ${filePath}:`, readResult.error);
           continue;
         }
         
@@ -846,7 +843,7 @@ export class MetadataService {
           const writeResult = await this.electronService.writeFile(filePath, updatedContent);
           
           if (!writeResult.success) {
-            console.warn(`Failed to update character file ${filename}:`, writeResult.error);
+            console.warn(`Failed to update character file ${filePath}:`, writeResult.error);
           }
         }
       }

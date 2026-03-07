@@ -1,11 +1,12 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, OnChanges, SimpleChanges, NgZone } from "@angular/core";
 import { CommonModule } from "@angular/common";
+import { RouterLink } from "@angular/router";
 import { Character, Tag, Category } from "../../../../core/interfaces";
 
 @Component({
   selector: "app-character-grid-view",
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   templateUrl: "./character-grid-view.component.html",
   styleUrls: ["./character-grid-view.component.scss"],
 })
@@ -150,6 +151,10 @@ export class CharacterGridViewComponent implements OnInit, OnDestroy, OnChanges 
 
   getCharacterThumbnailDataUrl(character: Character): string | null {
     return this.thumbnailDataUrls.get(character.id) || null;
+  }
+
+  getCharacterLink(character: Character): string[] {
+    return ['/character', encodeURIComponent(character.id)];
   }
 
   onCharacterClick(character: Character): void {

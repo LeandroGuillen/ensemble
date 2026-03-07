@@ -2,7 +2,7 @@
   <div
     *ngFor="let character of characters; let i = index"
     class="gallery-item"
-    (click)="onCharacterClick(character)"
+    [routerLink]="getCharacterLink(character)"
   >
     <div class="gallery-thumbnail">
       <img

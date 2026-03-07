@@ -59,57 +59,10 @@
             {{ error }}
           </div>
 
-          <!-- Tabs -->
-          <div class="tabs">
-            <button
-              type="button"
-              class="tab"
-              [class.active]="activeTab === 'basic'"
-              (click)="setActiveTab('basic')"
-            >
-              Basic Info
-            </button>
-            <button
-              type="button"
-              class="tab"
-              [class.active]="activeTab === 'images'"
-              (click)="setActiveTab('images')"
-            >
-              Images
-            </button>
-            <button
-              type="button"
-              class="tab"
-              [class.active]="activeTab === 'additional'"
-              (click)="setActiveTab('additional')"
-            >
-              Additional Fields
-            </button>
-          </div>
-
-          <!-- Basic Info Tab -->
+          <!-- Basic Info -->
           <div class="tab-content" *ngIf="activeTab === 'basic'">
           <div class="form-section">
             <div class="basic-info-row">
-              <!-- Thumbnail -->
-              <div class="thumbnail-upload" (click)="selectThumbnail()" title="Click to select image">
-                <div class="thumbnail-preview-inline" *ngIf="thumbnailPreview">
-                  <img [src]="thumbnailPreview" alt="Character thumbnail" />
-                  <button
-                    type="button"
-                    class="thumbnail-remove-inline"
-                    (click)="removeThumbnail(); $event.stopPropagation()"
-                    title="Remove thumbnail"
-                  >
-                    ✕
-                  </button>
-                </div>
-                <div class="thumbnail-placeholder-inline" *ngIf="!thumbnailPreview">
-                  <span class="upload-icon">📷</span>
-                  <span class="upload-text">Add Photo</span>
-                </div>
-              </div>
-
               <!-- Name -->
               <div class="form-group form-group-flex">
                 <label class="form-label" for="name"> Name * </label>
@@ -199,115 +152,49 @@
 
           <div class="form-section">
             <div class="form-group">
-              <label class="form-label" for="mangamaster">
-                Mangamaster prompt
-                <span class="field-hint">
-                  AI description to be used by Mangamaster image generator (max 20000 characters)
-                </span>
+              <label class="form-label" for="thumbnail">
+                Thumbnail
+                <span class="field-hint">Wiki-link path, e.g. [[img/path/to/image.jpg]]</span>
               </label>
-              <textarea
-                id="mangamaster"
-                class="form-control"
-                formControlName="mangamaster"
-                rows="6"
-                placeholder="E.g. 1girl, child, poga, pointy ears, light brown hair, ..."
-                [class.error]="getFieldError('mangamaster')"
-                (blur)="onFieldBlur('mangamaster')"
-                aria-describedby="mangamaster-error"
-                [attr.aria-invalid]="getFieldError('mangamaster') ? 'true' : 'false'"
-              ></textarea>
-              <div class="char-count">{{ characterForm.get('mangamaster')?.value?.length || 0 }}/20000</div>
-              <div class="error-text" *ngIf="getFieldError('mangamaster')" id="mangamaster-error" role="alert" aria-live="polite">
-                {{ getFieldError('mangamaster') }}
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label" for="description">
-                Description
-                <span class="field-hint">Physical appearance and characteristics (max 1000 characters)</span>
-              </label>
-              <textarea
-                id="description"
-                class="form-control"
-                formControlName="description"
-                rows="4"
-                placeholder="Describe the character's physical appearance, clothing, distinctive features..."
-                [class.error]="getFieldError('description')"
-                (blur)="onFieldBlur('description')"
-                aria-describedby="description-error"
-                [attr.aria-invalid]="getFieldError('description') ? 'true' : 'false'"
-              ></textarea>
-              <div class="char-count">{{ characterForm.get('description')?.value?.length || 0 }}/1000</div>
-              <div class="error-text" *ngIf="getFieldError('description')" id="description-error" role="alert" aria-live="polite">
-                {{ getFieldError('description') }}
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label" for="notes">
-                Notes
-                <span class="field-hint">Character development, personality, backstory (max 5000 characters)</span>
-              </label>
-              <textarea
-                id="notes"
-                class="form-control"
-                formControlName="notes"
-                rows="8"
-                placeholder="Character development notes, personality traits, backstory, relationships, goals, motivations..."
-                [class.error]="getFieldError('notes')"
-                (blur)="onFieldBlur('notes')"
-                aria-describedby="notes-error"
-                [attr.aria-invalid]="getFieldError('notes') ? 'true' : 'false'"
-              ></textarea>
-              <div class="char-count">{{ characterForm.get('notes')?.value?.length || 0 }}/5000</div>
-              <div class="error-text" *ngIf="getFieldError('notes')" id="notes-error" role="alert" aria-live="polite">
-                {{ getFieldError('notes') }}
-              </div>
-            </div>
-          </div>
-          </div>
-          <!-- End Basic Info Tab -->
-
-          <!-- Images Tab -->
-          <div class="tab-content" *ngIf="activeTab === 'images'">
-            <app-image-library *ngIf="character" [character]="character"></app-image-library>
-            <div *ngIf="!character" class="empty-state">
-              <p>Save the character first to add images.</p>
-            </div>
-          </div>
-          <!-- End Images Tab -->
-
-          <!-- Additional Fields Tab -->
-          <div class="tab-content" *ngIf="activeTab === 'additional'">
-            <div class="form-section" *ngIf="character && getAdditionalFieldNames().length > 0">
-              <div class="section-header">
-                <h3>Additional Fields</h3>
-                <span class="field-hint">Extra markdown files in character folder</span>
-              </div>
-
-              <div class="form-group" *ngFor="let fieldName of getAdditionalFieldNames()">
-                <label class="form-label" [for]="'field-' + fieldName">
-                  {{ fieldName }}
-                  <span class="field-hint">{{ getFieldFileName(fieldName) }}</span>
-                </label>
-                <textarea
-                  [id]="'field-' + fieldName"
+              <div class="thumbnail-input-row">
+                <input
+                  type="text"
+                  id="thumbnail"
                   class="form-control"
-                  [value]="getAdditionalFieldValue(fieldName)"
-                  (input)="onAdditionalFieldChange(fieldName, $event)"
-                  rows="6"
-                  placeholder="Content for {{ fieldName }}..."
-                ></textarea>
-                <div class="char-count">{{ getAdditionalFieldValue(fieldName).length }} characters</div>
+                  formControlName="thumbnail"
+                  placeholder="[[img/path/to/image.jpg]]"
+                  [class.error]="getFieldError('thumbnail')"
+                  (blur)="onFieldBlur('thumbnail')"
+                />
+                <div class="thumbnail-preview" *ngIf="thumbnailPreviewUrl">
+                  <img [src]="thumbnailPreviewUrl" alt="Thumbnail preview" />
+                </div>
               </div>
             </div>
-            <div *ngIf="!character || getAdditionalFieldNames().length === 0" class="empty-state">
-              <p *ngIf="!character">Save the character first to add additional fields.</p>
-              <p *ngIf="character && getAdditionalFieldNames().length === 0">No additional fields yet. Create .md files in the character folder to add custom fields.</p>
+
+            <div class="form-group">
+              <label class="form-label" for="content">
+                Content
+                <span class="field-hint">Markdown body (max 100,000 characters)</span>
+              </label>
+              <textarea
+                id="content"
+                class="form-control"
+                formControlName="content"
+                rows="12"
+                placeholder="Character description, notes, backstory..."
+                [class.error]="getFieldError('content')"
+                (blur)="onFieldBlur('content')"
+                aria-describedby="content-error"
+                [attr.aria-invalid]="getFieldError('content') ? 'true' : 'false'"
+              ></textarea>
+              <div class="char-count">{{ characterForm.get('content')?.value?.length || 0 }}/100000</div>
+              <div class="error-text" *ngIf="getFieldError('content')" id="content-error" role="alert" aria-live="polite">
+                {{ getFieldError('content') }}
+              </div>
             </div>
           </div>
-          <!-- End Additional Fields Tab -->
+          </div>
         </form>
       </div>
     </div>

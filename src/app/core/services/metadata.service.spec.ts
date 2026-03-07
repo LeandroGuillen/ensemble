@@ -41,8 +41,8 @@ describe('MetadataService', () => {
   });
 
   beforeEach(() => {
-    const electronSpy = jasmine.createSpyObj('ElectronService', ['isElectron']);
-    const projectSpy = jasmine.createSpyObj('ProjectService', ['getCurrentProject', 'updateMetadata'], {
+    const electronSpy = jasmine.createSpyObj('ElectronService', ['isElectron', 'readDirectoryRecursive', 'readFile', 'writeFile']);
+    const projectSpy = jasmine.createSpyObj('ProjectService', ['getCurrentProject', 'updateMetadata', 'getCharactersFolderPath'], {
       currentProject$: new BehaviorSubject<Project | null>(null)
     });
     const castSpy = jasmine.createSpyObj('CastService', ['createCast', 'updateCast', 'deleteCast']);
@@ -69,6 +69,8 @@ describe('MetadataService', () => {
 
     projectService.getCurrentProject.and.returnValue(createValidProject());
     projectService.updateMetadata.and.returnValue(Promise.resolve());
+    projectService.getCharactersFolderPath.and.returnValue('/test/project/characters');
+    electronService.readDirectoryRecursive.and.returnValue(Promise.resolve({ success: true, files: [] }));
   });
 
   it('should be created', () => {
@@ -371,21 +373,15 @@ describe('MetadataService', () => {
 
     it('should validate character against metadata', () => {
       const character: Character = {
-        id: 'char-1',
+        id: '_char-1.md',
         name: 'Test Character',
         category: 'main-character',
         tags: ['magic-user'],
         books: [],
-        images: [],
-        mangamaster: '',
-        description: '',
-        notes: '',
+        content: '',
         created: new Date(),
         modified: new Date(),
-        filePath: '/path/to/char.md',
-        folderPath: '/path/to/char',
-        additionalFields: {},
-        additionalFieldsFilenames: {}
+        filePath: '/path/to/char/_char-1.md',
       };
 
       const result = service.validateCharacterAgainstMetadata(character);
@@ -394,21 +390,15 @@ describe('MetadataService', () => {
 
     it('should return invalid when category does not exist', () => {
       const character: Character = {
-        id: 'char-1',
+        id: '_char-1.md',
         name: 'Test Character',
         category: 'non-existent',
         tags: [],
         books: [],
-        images: [],
-        mangamaster: '',
-        description: '',
-        notes: '',
+        content: '',
         created: new Date(),
         modified: new Date(),
-        filePath: '/path/to/char.md',
-        folderPath: '/path/to/char',
-        additionalFields: {},
-        additionalFieldsFilenames: {}
+        filePath: '/path/to/char/_char-1.md',
       };
 
       const result = service.validateCharacterAgainstMetadata(character);
@@ -421,10 +411,7 @@ describe('MetadataService', () => {
         category: 'main-character',
         tags: ['magic-user'],
         books: [],
-        images: [],
-        mangamaster: '',
-        description: '',
-        notes: ''
+        content: ''
       };
 
       const result = service.validateCharacterFormDataAgainstMetadata(formData);
@@ -435,21 +422,15 @@ describe('MetadataService', () => {
       (projectService.currentProject$ as BehaviorSubject<Project | null>).next(null);
 
       const character: Character = {
-        id: 'char-1',
+        id: '_char-1.md',
         name: 'Test Character',
         category: 'main-character',
         tags: [],
         books: [],
-        images: [],
-        mangamaster: '',
-        description: '',
-        notes: '',
+        content: '',
         created: new Date(),
         modified: new Date(),
-        filePath: '/path/to/char.md',
-        folderPath: '/path/to/char',
-        additionalFields: {},
-        additionalFieldsFilenames: {}
+        filePath: '/path/to/char/_char-1.md',
       };
 
       const result = service.validateCharacterAgainstMetadata(character);

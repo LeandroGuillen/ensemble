@@ -500,41 +500,17 @@ export class PinboardService {
         physics: false // Disable physics for this node
       };
 
-      // Try to load character image
+      // Load character thumbnail from img/ folder (Obsidian wiki-link format)
       let imageDataUrl: string | null = null;
-      
-      if (character) {
-        try {
-          // Get primary image from character's image library
-          const primaryImage = this.characterService.getPrimaryImage(character);
-          
-          if (primaryImage && character.folderPath) {
-            // Try new location first (images/ subfolder), then old location (root)
-            let imagePath: string;
-            
-            if (primaryImage.filename.includes('/')) {
-              // Filename includes path, use as-is
-              imagePath = pathJoin(character.folderPath, primaryImage.filename);
-            } else {
-              // Try images/ folder first
-              const newPath = pathJoin(character.folderPath, 'images', primaryImage.filename);
-              const existsInNew = await this.electronService.fileExists(newPath);
-              
-              if (existsInNew) {
-                imagePath = newPath;
-              } else {
-                // Fall back to root folder
-                imagePath = pathJoin(character.folderPath, primaryImage.filename);
-              }
-            }
-            
-            imageDataUrl = await this.electronService.getImageAsDataUrl(imagePath);
-          }
-        } catch (error) {
-          console.warn(`Failed to load image for character ${node.id}:`, error);
+      if (character?.thumbnail) {
+        const cached = this.characterService.getCachedThumbnail(node.id);
+        if (cached) {
+          imageDataUrl = cached;
+        } else {
+          imageDataUrl = await this.characterService.loadThumbnailForCharacter(character);
         }
       }
-      
+
       // Use image if available, otherwise use neutral circle
       if (imageDataUrl) {
         baseNode.shape = 'circularImage';

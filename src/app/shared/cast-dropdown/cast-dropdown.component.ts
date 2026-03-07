@@ -104,34 +104,7 @@ export class CastDropdownComponent implements OnInit, OnDestroy {
   }
 
   private async loadCharacterThumbnails(): Promise<void> {
-    await this.ngZone.runOutsideAngular(async () => {
-      const thumbnailPromises = this.characters
-        .filter(
-          (char) =>
-            char.thumbnail &&
-            char.folderPath &&
-            !this.characterThumbnailDataUrls.has(char.id)
-        )
-        .map(async (character) => {
-          try {
-            const thumbnailPath = `${character.folderPath}/${character.thumbnail}`;
-            const dataUrl = await this.electronService.getImageAsDataUrl(
-              thumbnailPath
-            );
-            if (dataUrl) {
-              this.characterThumbnailDataUrls.set(character.id, dataUrl);
-            }
-          } catch (error) {
-            this.logger.error(
-              `Failed to load thumbnail for character ${character.name}`,
-              error
-            );
-          }
-        });
-
-      await Promise.all(thumbnailPromises);
-    });
-
+    // Thumbnail is now an opaque string (wiki-link), not resolved to file path
     this.ngZone.run(() => {
       this.cdr.detectChanges();
     });

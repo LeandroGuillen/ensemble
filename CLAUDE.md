@@ -28,7 +28,7 @@ Located in `src/app/core/services/`:
 
 - **ElectronService**: IPC bridge to Electron main process for all file system operations (including directory operations)
 - **ProjectService**: Manages work folder selection and `ensemble.json` (categories, tags, settings, relationships)
-- **CharacterService**: CRUD operations for character folders, handles folder-based structure, trash management, and additional fields
+- **CharacterService**: CRUD operations for character files (`_*.md`), recursive scan under `characters/`, flat-file format
 - **RelationshipService**: Manages relationship data (nodes/edges) and provides data for vis.js graph
 - **MetadataService**: Validates characters against project metadata (categories/tags)
 - **FileWatcherService**: Monitors work folder for external file changes (using chokidar)
@@ -104,54 +104,43 @@ Each project has this structure:
 ```
 project-folder/
 ├── ensemble.json           # Project metadata: categories, tags, settings, relationships
-└── characters/             # Character folders organized by category
-    ├── <category-slug>/    # Category folder (e.g., "main-character")
-    │   └── <character-slug>/  # Character folder (e.g., "john-doe")
-    │       ├── <character-slug>.md    # Main character file
-    │       ├── thumbnail.png          # Character thumbnail (any filename)
-    │       ├── additional-field.md    # Additional markdown files become fields
-    │       └── img/                   # Folder for other images
-    └── _deleted/           # Trash folder for deleted characters
-        └── <character-slug>-<timestamp>/  # Deleted character (timestamped)
+└── characters/             # Character files (recursively scanned)
+    ├── _<slug>.md          # Character file (e.g., "_dessir.md")
+    └── <category-slug>/    # Optional subfolders
+        └── _<slug>.md      # Character in subfolder
 ```
-
-### Trash Management
-
-Deleted characters are moved to `characters/_deleted/` instead of being permanently deleted:
-- Each deleted character folder is timestamped: `<slug>-<timestamp>`
-- Characters can be restored from trash
-- Trash can be emptied to permanently delete all characters
-- Individual characters can be permanently deleted from trash
 
 ### Character File Format
 
-Main character file (`<character-slug>.md`):
+Character files match the pattern `_*.md` and can live in any subfolder under `characters/`:
 
 ```markdown
 ---
-name: "Character Name"
-category: "main-character"
-tags: ["protagonist", "magic-user"]
-books: ["book-id-1"]
-thumbnail: "thumbnail.png"  # Filename in character folder
-mangamaster: "url-to-image"
+name: Dessir Galsea
+category: main-character
+tags:
+  - magic-user
+  - pogo
+books:
+  - n23
+  - n26
+thumbnail: "[[img/_pjs/zzz_all_cast/dessir.jpg]]"  # Opaque wiki-link string
 created: "2024-01-15T10:30:00Z"
 modified: "2024-01-20T14:45:00Z"
 ---
 
-## Description
-Physical description...
-
-## Notes
-Personality, backstory...
+(single markdown body, no required section headers)
 ```
 
-### Additional Fields
+Character ID is the relative file path from `characters/` (e.g., `_dessir.md` or `main-character/_dessir.md`).
 
-Any `.md` file in the character folder (except the main file) becomes an additional field:
-- `backstory.md` → "Backstory" field
-- `character-arc.md` → "Character Arc" field
-- Field names are auto-generated from filenames
+### Removed Features
+
+- Trash system (`_deleted/` folder, restore, empty trash)
+- Folder-based character storage (each character was a folder)
+- Images library (multiple images per character)
+- Additional fields (extra `.md` files in character folders)
+- `mangamaster` field
 
 ## Key Implementation Details
 
@@ -231,9 +220,9 @@ All fs operations are **atomic** where possible:
 
 ### Adding a New Character Field
 
-1. Update `Character` interface in `src/app/core/interfaces/character.interface.ts`
-2. Update frontmatter parsing in `CharacterService.loadCharacters()`
-3. Update frontmatter generation in `CharacterService.createCharacter()` and `updateCharacter()`
+1. Update `Character` and `CharacterFrontmatter` in `src/app/core/interfaces/character.interface.ts`
+2. Update frontmatter parsing in `CharacterService.loadCharacterFromFile()`
+3. Update frontmatter in `CharacterService.saveCharacterToFile()`
 4. Update form in `CharacterDetailComponent`
 
 ### Adding a New IPC Handler

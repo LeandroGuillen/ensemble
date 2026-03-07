@@ -6,6 +6,7 @@ import { MetadataService } from '../../core/services/metadata.service';
 import { LoggingService } from '../../core/services/logging.service';
 import { ProjectService } from '../../core/services/project.service';
 import { CharacterService } from '../../core/services/character.service';
+import { CastService } from '../../core/services/cast.service';
 import { ElectronService } from '../../core/services/electron.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { ColorPaletteService } from '../../core/services/color-palette.service';
@@ -91,6 +92,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
     private metadataService: MetadataService,
     private projectService: ProjectService,
     private characterService: CharacterService,
+    private castService: CastService,
     private themeService: ThemeService,
     private colorPaletteService: ColorPaletteService,
     private updateService: UpdateService,
@@ -114,6 +116,8 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
       defaultCategory: ['', Validators.required],
       autoSave: [true],
       fileWatchEnabled: [true],
+      charactersFolder: ['', [Validators.maxLength(200)]],
+      castsFolder: ['', [Validators.maxLength(200)]],
       theme: ['']
     });
   }
@@ -195,6 +199,8 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
         defaultCategory: this.settings.defaultCategory,
         autoSave: this.settings.autoSave,
         fileWatchEnabled: this.settings.fileWatchEnabled,
+        charactersFolder: this.settings.charactersFolder ?? 'characters',
+        castsFolder: this.settings.castsFolder ?? 'casts',
         theme: this.settings.theme || 'blue-gold'
       });
     }
@@ -386,13 +392,34 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
       this.error = null;
       
       const formData = this.settingsForm.value;
-      
+
+      // Normalize charactersFolder: empty or whitespace = default 'characters'
+      const charactersFolder = formData.charactersFolder?.trim() || 'characters';
+      // Normalize castsFolder: empty or whitespace = default 'casts' (under characters folder)
+      const castsFolder = formData.castsFolder?.trim() || 'casts';
+      const settingsUpdate = {
+        ...formData,
+        charactersFolder,
+        castsFolder
+      };
+
       // If theme changed, apply it immediately
       if (formData.theme) {
         await this.themeService.setTheme(formData.theme);
       }
-      
-      await this.metadataService.updateSettings(formData);
+
+      const previousCharactersFolder = this.settings?.charactersFolder?.trim() || 'characters';
+      const previousCastsFolder = this.settings?.castsFolder?.trim() || 'casts';
+      await this.metadataService.updateSettings(settingsUpdate);
+
+      // Reload characters if folder path changed
+      if (charactersFolder !== previousCharactersFolder) {
+        await this.characterService.forceReloadCharacters();
+      }
+      // Reload casts if folder path changed (casts path depends on both characters and casts folder)
+      if (castsFolder !== previousCastsFolder || charactersFolder !== previousCharactersFolder) {
+        await this.castService.forceReloadCasts();
+      }
     } catch (error) {
       this.logger.error('Failed to save settings:', error);
       this.error = `Failed to save settings: ${error}`;

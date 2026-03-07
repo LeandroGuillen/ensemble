@@ -94,9 +94,5 @@ export class PinboardSidebarComponent implements OnInit, OnDestroy {
   isCurrentPinboard(id: string): boolean {
     return id === this.currentPinboardId;
   }
-
-  canDelete(id: string): boolean {
-    return this.pinboards.length > 1;
-  }
 }
 

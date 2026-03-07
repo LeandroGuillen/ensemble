@@ -440,6 +440,52 @@ export class ProjectValidator {
       });
     }
 
+    // charactersFolder: optional string, no parent path traversal
+    if (settings.charactersFolder !== undefined && settings.charactersFolder !== null) {
+      if (typeof settings.charactersFolder !== 'string') {
+        errors.push({
+          field: 'charactersFolder',
+          message: 'Characters folder must be a string',
+          code: 'INVALID_TYPE'
+        });
+      } else if (settings.charactersFolder.includes('..')) {
+        errors.push({
+          field: 'charactersFolder',
+          message: 'Characters folder cannot contain parent path (..)',
+          code: 'INVALID_VALUE'
+        });
+      } else if (/[<>:"|?*]/.test(settings.charactersFolder)) {
+        errors.push({
+          field: 'charactersFolder',
+          message: 'Characters folder contains invalid characters',
+          code: 'INVALID_VALUE'
+        });
+      }
+    }
+
+    // castsFolder: optional string, subfolder under characters, no parent path traversal
+    if (settings.castsFolder !== undefined && settings.castsFolder !== null) {
+      if (typeof settings.castsFolder !== 'string') {
+        errors.push({
+          field: 'castsFolder',
+          message: 'Casts folder must be a string',
+          code: 'INVALID_TYPE'
+        });
+      } else if (settings.castsFolder.includes('..')) {
+        errors.push({
+          field: 'castsFolder',
+          message: 'Casts folder cannot contain parent path (..)',
+          code: 'INVALID_VALUE'
+        });
+      } else if (/[<>:"|?*]/.test(settings.castsFolder)) {
+        errors.push({
+          field: 'castsFolder',
+          message: 'Casts folder contains invalid characters',
+          code: 'INVALID_VALUE'
+        });
+      }
+    }
+
     return {
       isValid: errors.length === 0,
       errors

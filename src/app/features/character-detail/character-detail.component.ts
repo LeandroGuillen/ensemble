@@ -1,6 +1,7 @@
 import { CommonModule } from "@angular/common";
 import {
   AfterViewInit,
+  ChangeDetectorRef,
   Component,
   ElementRef,
   HostListener,
@@ -17,7 +18,7 @@ import {
 import { ActivatedRoute, Router } from "@angular/router";
 import { Location } from "@angular/common";
 import { Subject } from "rxjs";
-import { takeUntil } from "rxjs/operators";
+import { debounceTime, takeUntil } from "rxjs/operators";
 import {
   Book,
   Category,
@@ -36,6 +37,7 @@ import {
   ProjectService,
 } from "../../core/services";
 import { ModalService } from "../../core/services/modal.service";
+import { parseThumbnailReference, resolveThumbnailPath } from "../../core/utils/thumbnail.utils";
 import {
   CategoryToggleComponent,
   ToggleOption,
@@ -44,8 +46,6 @@ import {
   MultiSelectButtonsComponent,
   SelectableItem,
 } from "../../shared/multi-select-buttons/multi-select-buttons.component";
-import { ImageLibraryComponent } from "./components/image-library/image-library.component";
-
 @Component({
   selector: "app-character-detail",
   standalone: true,
@@ -54,7 +54,6 @@ import { ImageLibraryComponent } from "./components/image-library/image-library.
     ReactiveFormsModule,
     CategoryToggleComponent,
     MultiSelectButtonsComponent,
-    ImageLibraryComponent,
   ],
   templateUrl: "./character-detail.component.html",
   styleUrls: ["./character-detail.component.scss"],
@@ -79,25 +78,25 @@ export class CharacterDetailComponent
 
   isEditing = false;
   isLoading = false;
-  activeTab: 'basic' | 'images' | 'additional' = 'basic';
+  activeTab: 'basic' = 'basic';
   isSaving = false;
   error: string | null = null;
 
-  selectedThumbnailPath: string | null = null;
-  thumbnailPreview: string | null = null;
 
-  // Additional fields tracking
-  additionalFieldsChanges: Record<string, string> = {};
 
   // AI features
   isGeneratingName = false;
   aiEnabled = false;
+
+  // Thumbnail preview (resolved from img/ path)
+  thumbnailPreviewUrl: string | null = null;
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private location: Location,
     private fb: FormBuilder,
+    private cdr: ChangeDetectorRef,
     private characterService: CharacterService,
     private projectService: ProjectService,
     private electronService: ElectronService,
@@ -132,13 +131,18 @@ export class CharacterDetailComponent
           color: book.color,
         }));
 
-        // Set default category if available
+        // Set default category only when form has no valid selection (don't overwrite user's choice)
         if (this.categories.length > 0 && !this.isEditing) {
-          const defaultCategory =
-            this.categories.find(
-              (cat) => cat.id === project?.metadata.settings.defaultCategory
-            ) || this.categories[0];
-          this.characterForm.patchValue({ category: defaultCategory.id });
+          const currentValue = this.characterForm.get('category')?.value;
+          const hasValidSelection =
+            currentValue && this.categories.some((c) => c.id === currentValue);
+          if (!hasValidSelection) {
+            const defaultCategory =
+              this.categories.find(
+                (cat) => cat.id === project?.metadata.settings.defaultCategory
+              ) || this.categories[0];
+            this.characterForm.patchValue({ category: defaultCategory.id });
+          }
         }
       });
 
@@ -157,7 +161,7 @@ export class CharacterDetailComponent
         const characterId = params.get("id");
         if (characterId && characterId !== "new") {
           this.isEditing = true;
-          this.loadCharacter(characterId);
+          this.loadCharacter(decodeURIComponent(characterId));
         } else {
           this.isEditing = false;
           this.character = null;
@@ -171,6 +175,36 @@ export class CharacterDetailComponent
       .subscribe((params) => {
         if (params["name"] && !this.isEditing) {
           this.characterForm.patchValue({ name: params["name"] });
+        }
+      });
+
+    // Thumbnail preview: resolve path and load image when thumbnail field changes
+    this.characterForm
+      .get("thumbnail")
+      ?.valueChanges.pipe(
+        debounceTime(300),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(async (value) => {
+        this.thumbnailPreviewUrl = null;
+        if (!value?.trim() || !this.currentProject?.path) {
+          return;
+        }
+        const parsed = parseThumbnailReference(value);
+        if (!parsed) {
+          return;
+        }
+        const absolutePath = resolveThumbnailPath(
+          this.currentProject.path,
+          parsed
+        );
+        try {
+          const dataUrl =
+            await this.electronService.getImageAsDataUrl(absolutePath);
+          this.thumbnailPreviewUrl = dataUrl;
+          this.cdr.markForCheck();
+        } catch {
+          // Ignore - file may not exist yet
         }
       });
   }
@@ -224,27 +258,13 @@ export class CharacterDetailComponent
           updateOn: 'change' // Validate immediately on change
         }
       ],
-      mangamaster: [
-        "",
-        {
-          validators: [Validators.maxLength(20000)],
-          updateOn: 'blur'
-        }
-      ],
       tags: [[]],
       books: [[]],
       thumbnail: [""],
-      description: [
+      content: [
         "",
         {
-          validators: [Validators.maxLength(1000)],
-          updateOn: 'blur'
-        }
-      ],
-      notes: [
-        "",
-        {
-          validators: [Validators.maxLength(5000)],
+          validators: [Validators.maxLength(100000)],
           updateOn: 'blur'
         }
       ],
@@ -285,37 +305,9 @@ export class CharacterDetailComponent
           category: this.character.category,
           tags: this.character.tags,
           books: this.character.books,
-          thumbnail: this.character.thumbnail,
-          description: this.character.description,
-          notes: this.character.notes,
+          thumbnail: this.character.thumbnail || '',
+          content: this.character.content || '',
         });
-
-        // Set thumbnail preview
-        // First check for primary image in images array, fallback to old thumbnail field
-        const primaryImage = this.characterService.getPrimaryImage(this.character);
-        if (primaryImage && this.character.folderPath) {
-          // Try new location first (images/ subfolder), then old location (root)
-          const newPath = `${this.character.folderPath}/images/${primaryImage.filename}`;
-          const oldPath = `${this.character.folderPath}/${primaryImage.filename}`;
-
-          // Check if file exists in new location
-          this.electronService.fileExists(newPath).then(async (exists) => {
-            if (exists) {
-              await this.loadThumbnailPreview(newPath);
-            } else {
-              // Fall back to old location for migrated characters
-              await this.loadThumbnailPreview(oldPath);
-            }
-          });
-        } else if (this.character.thumbnail && this.character.folderPath) {
-          // Fallback for backward compatibility with completely unmigrated characters
-          this.loadThumbnailPreview(
-            `${this.character.folderPath}/${this.character.thumbnail}`
-          );
-        }
-
-        // Initialize additional fields tracking
-        this.additionalFieldsChanges = {};
       } else {
         this.error = "Character not found";
       }
@@ -345,20 +337,18 @@ export class CharacterDetailComponent
 
     try {
       const formData: CharacterFormData = {
-        ...this.characterForm.value,
-        thumbnail:
-          this.selectedThumbnailPath || this.characterForm.value.thumbnail,
-        images: this.character?.images || [], // Initialize images array
+        name: this.characterForm.value.name,
+        category: this.characterForm.value.category,
+        tags: this.characterForm.value.tags || [],
+        books: this.characterForm.value.books || [],
+        thumbnail: this.characterForm.value.thumbnail || undefined,
+        content: this.characterForm.value.content || '',
       };
 
       if (this.isEditing && this.character) {
-        // Pass additional fields changes if any
         const updatedCharacter = await this.characterService.updateCharacter(
           this.character.id,
-          formData,
-          Object.keys(this.additionalFieldsChanges).length > 0
-            ? this.additionalFieldsChanges
-            : undefined
+          formData
         );
         if (!updatedCharacter) {
           throw new Error("Character not found");
@@ -460,37 +450,6 @@ export class CharacterDetailComponent
     return selectedBooks.includes(bookId);
   }
 
-  async selectThumbnail(): Promise<void> {
-    try {
-      const imagePath = await this.electronService.selectImage();
-      if (imagePath) {
-        this.selectedThumbnailPath = imagePath;
-        await this.loadThumbnailPreview(imagePath);
-        this.characterForm.markAsDirty();
-      }
-    } catch (error) {
-      this.logger.error("Failed to select thumbnail:", error);
-      this.error = "Failed to select thumbnail";
-    }
-  }
-
-  private async loadThumbnailPreview(imagePath: string): Promise<void> {
-    try {
-      const dataUrl = await this.electronService.getImageAsDataUrl(imagePath);
-      this.thumbnailPreview = dataUrl;
-    } catch (error) {
-      this.logger.error("Failed to load thumbnail preview:", error);
-      this.thumbnailPreview = null;
-    }
-  }
-
-  removeThumbnail(): void {
-    this.selectedThumbnailPath = null;
-    this.thumbnailPreview = null;
-    this.characterForm.patchValue({ thumbnail: "" });
-    this.characterForm.markAsDirty();
-  }
-
   getCategoryName(categoryId: string): string {
     const category = this.categories.find((cat) => cat.id === categoryId);
     return category?.name || categoryId;
@@ -575,9 +534,8 @@ export class CharacterDetailComponent
     const labels: Record<string, string> = {
       name: 'Character name',
       category: 'Category',
-      mangamaster: 'Mangamaster prompt',
-      description: 'Description',
-      notes: 'Notes'
+      thumbnail: 'Thumbnail',
+      content: 'Content'
     };
     return labels[fieldName] || fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
   }
@@ -724,42 +682,6 @@ export class CharacterDetailComponent
     } finally {
       this.isGeneratingName = false;
     }
-  }
-
-  // Additional fields methods
-  getAdditionalFieldNames(): string[] {
-    if (!this.character || !this.character.additionalFields) {
-      return [];
-    }
-    return Object.keys(this.character.additionalFields).sort();
-  }
-
-  getAdditionalFieldValue(fieldName: string): string {
-    // Check if there are pending changes first
-    if (this.additionalFieldsChanges[fieldName] !== undefined) {
-      return this.additionalFieldsChanges[fieldName];
-    }
-    // Otherwise return the original value
-    return this.character?.additionalFields[fieldName] || "";
-  }
-
-  getFieldFileName(fieldName: string): string {
-    // Return the original filename if available
-    if (this.character?.additionalFieldsFilenames[fieldName]) {
-      return this.character.additionalFieldsFilenames[fieldName];
-    }
-    // Fallback to converting field name to filename
-    return fieldName.toLowerCase().replace(/\s+/g, "-") + ".md";
-  }
-
-  onAdditionalFieldChange(fieldName: string, event: Event): void {
-    const textarea = event.target as HTMLTextAreaElement;
-    this.additionalFieldsChanges[fieldName] = textarea.value;
-    this.characterForm.markAsDirty();
-  }
-
-  setActiveTab(tab: 'basic' | 'images' | 'additional'): void {
-    this.activeTab = tab;
   }
 
   async deleteCharacter(): Promise<void> {

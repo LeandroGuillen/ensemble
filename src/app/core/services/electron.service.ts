@@ -205,12 +205,22 @@ export class ElectronService {
     return await this.ipcRenderer.invoke('read-directory-files', dirPath);
   }
 
+  async readDirectoryRecursive(
+    dirPath: string,
+    pattern: string
+  ): Promise<{ success: boolean; files?: Array<{ relativePath: string; absolutePath: string }>; error?: string }> {
+    if (!this.isElectron()) {
+      return { success: false, error: 'Not running in Electron', files: [] };
+    }
+    return await this.ipcRenderer.invoke('read-directory-recursive', dirPath, pattern);
+  }
+
   // File watching
-  async startFileWatcher(projectPath: string): Promise<{ success: boolean; error?: string }> {
+  async startFileWatcher(projectPath: string, charactersFolder = 'characters'): Promise<{ success: boolean; error?: string }> {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
-    return await this.ipcRenderer.invoke('start-file-watcher', projectPath);
+    return await this.ipcRenderer.invoke('start-file-watcher', projectPath, charactersFolder);
   }
 
   async stopFileWatcher(): Promise<{ success: boolean; error?: string }> {

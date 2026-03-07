@@ -42,10 +42,7 @@ export class BackstageService {
   }
 
   private getCharactersFolderPath(): string {
-    if (!this.currentProjectPath) {
-      throw new Error('No project loaded');
-    }
-    return `${this.currentProjectPath}/characters`;
+    return this.projectService.getCharactersFolderPath();
   }
 
   private getConceptsFilePath(): string {

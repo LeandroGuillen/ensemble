@@ -104,6 +104,10 @@ export interface ProjectSettings {
   defaultCategory: string;
   autoSave: boolean;
   fileWatchEnabled: boolean;
+  /** Relative path from project root for character files (default: 'characters') */
+  charactersFolder?: string;
+  /** Subfolder name under characters folder for casts (default: 'casts') */
+  castsFolder?: string;
   lastRoute?: string;
   graphView?: PinboardViewState; // Legacy name for backward compatibility
   pinboardView?: PinboardViewState;

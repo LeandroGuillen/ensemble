@@ -5,7 +5,7 @@
     [class.selected]="selectedCharacterIndex === i"
     [class.multi-selected]="isCharacterSelected(character.id)"
     [attr.data-index]="i"
-    (click)="onCharacterClick(character)"
+    [routerLink]="getCharacterLink(character)"
   >
     <div class="list-item-thumbnail">
       <img
@@ -41,11 +41,11 @@
         </span>
       </div>
 
-      <p class="list-item-description" *ngIf="character.description">
+      <p class="list-item-description" *ngIf="character.content">
         {{
-          character.description.length > 150
-            ? character.description.substring(0, 150) + '...'
-            : character.description
+          character.content.length > 150
+            ? character.content.substring(0, 150) + '...'
+            : character.content
         }}
       </p>
     </div>

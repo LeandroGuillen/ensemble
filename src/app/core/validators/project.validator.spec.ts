@@ -372,10 +372,11 @@ describe('ProjectValidator', () => {
       const settings: ProjectSettings = {
         defaultCategory: 'main-character',
         autoSave: true,
-        fileWatchEnabled: true
+        fileWatchEnabled: true,
+        charactersFolder: 'personas'
       };
       const result = ProjectValidator.validateProjectSettings(settings);
-      
+
       expect(result.isValid).toBe(true);
       expect(result.errors.length).toBe(0);
     });

@@ -4,7 +4,7 @@
     class="character-card card character-item"
     [class.selected]="selectedCharacterIndex === i"
     [attr.data-index]="i"
-    (click)="onCharacterClick(character)"
+    [routerLink]="getCharacterLink(character)"
   >
     <div class="character-thumbnail">
       <img
@@ -48,11 +48,11 @@
         </span>
       </div>
 
-      <p class="character-description" *ngIf="character.description">
+      <p class="character-description" *ngIf="character.content">
         {{
-          character.description.length > 120
-            ? character.description.substring(0, 120) + "..."
-            : character.description
+          character.content.length > 120
+            ? character.content.substring(0, 120) + "..."
+            : character.content
         }}
       </p>
     </div>

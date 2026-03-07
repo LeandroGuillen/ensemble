@@ -5,7 +5,7 @@
     [class.selected]="selectedCharacterIndex === i"
     [class.multi-selected]="isCharacterSelected(character.id)"
     [attr.data-index]="i"
-    (click)="onCharacterClick(character)"
+    [routerLink]="getCharacterLink(character)"
   >
     <div class="compact-item-thumbnail">
       <img

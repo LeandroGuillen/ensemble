@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, HostListener, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Observable, Subscription } from 'rxjs';
@@ -113,6 +113,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
     private electronService: ElectronService,
     private router: Router,
     private route: ActivatedRoute,
+    private ngZone: NgZone,
     private cdr: ChangeDetectorRef,
     private logger: LoggingService,
     private notificationService: NotificationService,
@@ -1563,42 +1564,9 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private async loadThumbnailDataUrls(characters: Character[]): Promise<void> {
-    for (const character of characters) {
-      if (!this.thumbnailDataUrls.has(character.id)) {
-        try {
-          // Get primary image from character's image library
-          const primaryImage = this.characterService.getPrimaryImage(character);
-          
-          if (primaryImage && character.folderPath) {
-            // Try new location first (images/ subfolder), then old location (root)
-            let imagePath: string;
-            
-            if (primaryImage.filename.includes('/')) {
-              // Filename includes path, use as-is
-              imagePath = `${character.folderPath}/${primaryImage.filename}`;
-            } else {
-              // Try images/ folder first
-              const newPath = `${character.folderPath}/images/${primaryImage.filename}`;
-              const existsInNew = await this.electronService.fileExists(newPath);
-              
-              if (existsInNew) {
-                imagePath = newPath;
-              } else {
-                // Fall back to root folder
-                imagePath = `${character.folderPath}/${primaryImage.filename}`;
-              }
-            }
-            
-            const dataUrl = await this.electronService.getImageAsDataUrl(imagePath);
-            if (dataUrl) {
-              this.thumbnailDataUrls.set(character.id, dataUrl);
-            }
-          }
-        } catch (error) {
-          this.logger.error(`Failed to load image for character ${character.name}:`, error);
-        }
-      }
-    }
+    await this.characterService.loadThumbnailsForCharacters(characters);
+    const cached = this.characterService.getAllCachedThumbnails();
+    cached.forEach((dataUrl, id) => this.thumbnailDataUrls.set(id, dataUrl));
   }
 
   // Helper methods
@@ -1612,10 +1580,13 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
-   * Opens the character detail view for the given character ID
+   * Opens the character detail view for the given character ID.
+   * Wrapped in NgZone because vis.js double-click runs outside Angular's zone.
    */
   openCharacterDetail(characterId: string): void {
-    this.router.navigate(['/character', characterId]);
+    this.ngZone.run(() => {
+      this.router.navigate(['/character', encodeURIComponent(characterId)]);
+    });
   }
 
 

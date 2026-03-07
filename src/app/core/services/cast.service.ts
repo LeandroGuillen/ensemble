@@ -62,7 +62,7 @@ export class CastService {
     }
 
     try {
-      const castsPath = pathJoin(projectPath, 'casts');
+      const castsPath = this.projectService.getCastsFolderPath();
 
       // Check if casts directory exists
       const dirExists = await this.electronService.fileExists(castsPath);
@@ -223,8 +223,8 @@ export class CastService {
       const id = generateId();
       const slug = slugify(castData.name);
 
-      // Create folder structure: casts/<slug>/
-      const castsPath = pathJoin(project.path, 'casts');
+      // Create folder structure: charactersFolder/castsFolder/<slug>/
+      const castsPath = this.projectService.getCastsFolderPath();
       const castFolderPath = pathJoin(castsPath, slug);
 
       // Ensure casts folder exists
@@ -298,7 +298,7 @@ export class CastService {
 
       if (nameChanged && updates.name) {
         const newSlug = slugify(updates.name);
-        const castsPath = pathJoin(project.path, 'casts');
+        const castsPath = this.projectService.getCastsFolderPath();
         const newCastFolderPath = pathJoin(castsPath, newSlug);
 
         // Move the entire cast folder
@@ -369,7 +369,8 @@ export class CastService {
       // If cast has a folder, move it to trash
       if (cast.folderPath) {
         // Create trash folder if it doesn't exist
-        const trashPath = pathJoin(project.path, 'casts', '_deleted');
+        const castsPath = this.projectService.getCastsFolderPath();
+        const trashPath = pathJoin(castsPath, '_deleted');
         await this.electronService.createDirectory(trashPath);
 
         // Generate unique trash folder name with timestamp
