@@ -12,6 +12,7 @@ import {
 import {
   FormBuilder,
   FormGroup,
+  FormsModule,
   ReactiveFormsModule,
   Validators,
 } from "@angular/forms";
@@ -51,6 +52,7 @@ import {
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     ReactiveFormsModule,
     CategoryToggleComponent,
     MultiSelectButtonsComponent,
@@ -79,10 +81,17 @@ export class CharacterDetailComponent
   isEditing = false;
   isLoading = false;
   activeTab: 'basic' = 'basic';
+  /** 'main' or bookId; which content tab is active */
+  activeContentTab: 'main' | string = 'main';
   isSaving = false;
+  /** When saving a book page, the bookId being saved */
+  savingBookPageId: string | null = null;
   error: string | null = null;
 
-
+  /** Book page state: exists (file on disk) and content. Key = bookId. */
+  bookPageData: Record<string, { exists: boolean; content: string }> = {};
+  /** Last saved content per book (for dirty check). Key = bookId. */
+  bookPageOriginalContent: Record<string, string> = {};
 
   // AI features
   isGeneratingName = false;
@@ -233,7 +242,11 @@ export class CharacterDetailComponent
     // Ctrl+Enter to save
     if (event.ctrlKey && event.key === "Enter") {
       event.preventDefault();
-      this.onSubmit();
+      if (this.activeContentTab === 'main') {
+        this.onSubmit();
+      } else if (this.activeContentTab && this.character) {
+        this.onSaveBookPage(this.activeContentTab);
+      }
       return;
     }
   }
@@ -308,6 +321,9 @@ export class CharacterDetailComponent
           thumbnail: this.character.thumbnail || '',
           content: this.character.content || '',
         });
+
+        this.activeContentTab = 'main';
+        await this.loadBookPages();
       } else {
         this.error = "Character not found";
       }
@@ -316,6 +332,119 @@ export class CharacterDetailComponent
       this.logger.error("Load character error:", error);
     } finally {
       this.isLoading = false;
+    }
+  }
+
+  private async loadBookPages(): Promise<void> {
+    if (!this.character) return;
+    this.bookPageData = {};
+    this.bookPageOriginalContent = {};
+    const bookIds = this.character.books || [];
+    for (const bookId of bookIds) {
+      const content = await this.characterService.getBookPageContent(
+        this.character.id,
+        bookId
+      );
+      const exists = content !== null;
+      const text = content ?? '';
+      this.bookPageData[bookId] = { exists, content: text };
+      this.bookPageOriginalContent[bookId] = text;
+    }
+    this.cdr.markForCheck();
+  }
+
+  /** Ensure book page state is loaded for a book (e.g. when user adds book to character). */
+  async ensureBookPageData(bookId: string): Promise<void> {
+    if (this.bookPageData[bookId] !== undefined) return;
+    if (!this.character) return;
+    const content = await this.characterService.getBookPageContent(
+      this.character.id,
+      bookId
+    );
+    const exists = content !== null;
+    const text = content ?? '';
+    this.bookPageData[bookId] = { exists, content: text };
+    this.bookPageOriginalContent[bookId] = text;
+    this.cdr.markForCheck();
+  }
+
+  getContentTabs(): { id: string; label: string }[] {
+    const tabs: { id: string; label: string }[] = [{ id: 'main', label: 'Main' }];
+    if (!this.character) return tabs;
+    const bookIds = this.characterForm.get('books')?.value ?? this.character.books ?? [];
+    for (const bookId of bookIds) {
+      tabs.push({ id: bookId, label: this.getBookName(bookId) });
+    }
+    return tabs;
+  }
+
+  getBookName(bookId: string): string {
+    const book = this.books.find((b) => b.id === bookId);
+    return book?.name ?? bookId;
+  }
+
+  getBookPageContent(bookId: string): string {
+    const data = this.bookPageData[bookId];
+    return data?.content ?? '';
+  }
+
+  setBookPageContent(bookId: string, content: string): void {
+    const data = this.bookPageData[bookId];
+    if (data) {
+      data.content = content;
+    }
+  }
+
+  setActiveContentTab(tabId: string): void {
+    this.activeContentTab = tabId;
+    if (tabId !== 'main') {
+      this.ensureBookPageData(tabId);
+    }
+  }
+
+  isBookPageDirty(bookId: string): boolean {
+    const data = this.bookPageData[bookId];
+    const original = this.bookPageOriginalContent[bookId] ?? '';
+    return data ? data.content !== original : false;
+  }
+
+  hasAnyBookPageDirty(): boolean {
+    return Object.keys(this.bookPageData).some((id) => this.isBookPageDirty(id));
+  }
+
+  async onCreateBookPage(bookId: string): Promise<void> {
+    if (!this.character) return;
+    this.savingBookPageId = bookId;
+    this.error = null;
+    try {
+      await this.characterService.createBookPage(this.character.id, bookId);
+      this.bookPageData[bookId] = { exists: true, content: '' };
+      this.bookPageOriginalContent[bookId] = '';
+      this.activeContentTab = bookId;
+      this.notificationService.showSuccess('Book page created');
+      this.cdr.markForCheck();
+    } catch (err) {
+      this.error = err instanceof Error ? err.message : 'Failed to create book page';
+    } finally {
+      this.savingBookPageId = null;
+    }
+  }
+
+  async onSaveBookPage(bookId: string): Promise<void> {
+    if (!this.character) return;
+    this.savingBookPageId = bookId;
+    this.error = null;
+    try {
+      const data = this.bookPageData[bookId];
+      const content = data?.content ?? '';
+      await this.characterService.saveBookPage(this.character.id, bookId, content);
+      this.bookPageOriginalContent[bookId] = content;
+      this.notificationService.showSuccess('Character saved successfully');
+      this.router.navigate(['/characters']);
+    } catch (err) {
+      this.error = err instanceof Error ? err.message : 'Failed to save book page';
+    } finally {
+      this.savingBookPageId = null;
     }
   }
 
@@ -369,7 +498,9 @@ export class CharacterDetailComponent
   }
 
   async onCancel(): Promise<void> {
-    if (this.characterForm.dirty) {
+    const mainDirty = this.characterForm.dirty;
+    const bookDirty = this.hasAnyBookPageDirty();
+    if (mainDirty || bookDirty) {
       const confirmed = await this.modalService.confirm(
         "You have unsaved changes. Are you sure you want to leave?",
         "Discard Changes",

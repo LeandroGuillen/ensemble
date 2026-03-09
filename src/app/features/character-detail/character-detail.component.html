@@ -22,7 +22,7 @@
           <!-- Form Actions at Top -->
           <div class="form-actions-top">
             <!-- Form Status in Button Row -->
-            <div class="form-status-inline" *ngIf="characterForm.dirty && !error">
+            <div class="form-status-inline" *ngIf="!error && ((activeContentTab === 'main' && characterForm.dirty) || (activeContentTab !== 'main' && activeContentTab && isBookPageDirty(activeContentTab)))">
               <i class="icon-info"></i>
               You have unsaved changes
             </div>
@@ -32,24 +32,40 @@
                 type="button"
                 class="btn btn-secondary"
                 (click)="onCancel()"
-                [disabled]="isSaving"
+                [disabled]="isSaving || savingBookPageId"
                 title="Cancel (ESC)"
               >
                 <i class="icon-x"></i>
                 Cancel
                 <kbd class="shortcut-hint">ESC</kbd>
               </button>
-              <button
-                type="submit"
-                class="btn btn-primary"
-                [disabled]="isSaving"
-                title="Save (Ctrl+Enter)"
-              >
-                <i class="icon-save" *ngIf="!isSaving"></i>
-                <span *ngIf="isSaving" class="spinner spinner-sm"></span>
-                {{ isSaving ? 'Saving...' : isEditing ? 'Update Character' : 'Create Character' }}
-                <kbd class="shortcut-hint" *ngIf="!isSaving">Ctrl+Enter</kbd>
-              </button>
+              <ng-container *ngIf="activeContentTab === 'main'">
+                <button
+                  type="submit"
+                  class="btn btn-primary"
+                  [disabled]="isSaving"
+                  title="Save (Ctrl+Enter)"
+                >
+                  <i class="icon-save" *ngIf="!isSaving"></i>
+                  <span *ngIf="isSaving" class="spinner spinner-sm"></span>
+                  {{ isSaving ? 'Saving...' : isEditing ? 'Update Character' : 'Create Character' }}
+                  <kbd class="shortcut-hint" *ngIf="!isSaving">Ctrl+Enter</kbd>
+                </button>
+              </ng-container>
+              <ng-container *ngIf="activeContentTab !== 'main'">
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  [disabled]="savingBookPageId || !bookPageData[activeContentTab]?.exists"
+                  (click)="onSaveBookPage(activeContentTab)"
+                  title="Update Character (Ctrl+Enter)"
+                >
+                  <i class="icon-save" *ngIf="!savingBookPageId"></i>
+                  <span *ngIf="savingBookPageId" class="spinner spinner-sm"></span>
+                  {{ savingBookPageId ? 'Saving...' : 'Update Character' }}
+                  <kbd class="shortcut-hint" *ngIf="!savingBookPageId">Ctrl+Enter</kbd>
+                </button>
+              </ng-container>
             </div>
           </div>
 
@@ -59,6 +75,21 @@
             {{ error }}
           </div>
 
+          <!-- Content tabs (Main + book pages) when editing a character with books -->
+          <nav class="content-tabs" *ngIf="isEditing && getContentTabs().length > 1" aria-label="Content sections">
+            <button
+              type="button"
+              *ngFor="let tab of getContentTabs()"
+              class="content-tab"
+              [class.active]="activeContentTab === tab.id"
+              (click)="setActiveContentTab(tab.id)"
+            >
+              {{ tab.label }}
+            </button>
+          </nav>
+
+          <!-- Main tab: full character form -->
+          <div class="tab-content main-tab-content" *ngIf="activeContentTab === 'main'">
           <!-- Basic Info -->
           <div class="tab-content" *ngIf="activeTab === 'basic'">
           <div class="form-section">
@@ -194,6 +225,43 @@
               </div>
             </div>
           </div>
+          </div>
+          </div>
+
+          <!-- Book tab: loading, create CTA, or editor -->
+          <div class="tab-content book-tab-content" *ngIf="activeContentTab !== 'main' && isEditing">
+            <div class="book-page-loading" *ngIf="!bookPageData[activeContentTab]">
+              <p>Loading...</p>
+            </div>
+            <div class="book-page-cta" *ngIf="bookPageData[activeContentTab] && !bookPageData[activeContentTab].exists">
+              <p>No page for this book yet.</p>
+              <button
+                type="button"
+                class="btn btn-primary"
+                [disabled]="savingBookPageId"
+                (click)="onCreateBookPage(activeContentTab)"
+              >
+                <span *ngIf="!savingBookPageId">Create page for {{ getBookName(activeContentTab) }}</span>
+                <span *ngIf="savingBookPageId" class="spinner spinner-sm"></span>
+                <span *ngIf="savingBookPageId">Creating...</span>
+              </button>
+            </div>
+            <div class="book-page-editor" *ngIf="bookPageData[activeContentTab]?.exists">
+              <label class="form-label" [attr.for]="'book-content-' + activeContentTab">
+                Content for {{ getBookName(activeContentTab) }}
+                <span class="field-hint">Markdown (max 100,000 characters)</span>
+              </label>
+              <textarea
+                [id]="'book-content-' + activeContentTab"
+                class="form-control"
+                rows="12"
+                placeholder="Book-specific plot, developments, journey..."
+                [ngModel]="getBookPageContent(activeContentTab)"
+                (ngModelChange)="setBookPageContent(activeContentTab, $event)"
+                [ngModelOptions]="{standalone: true}"
+              ></textarea>
+              <div class="char-count">{{ (getBookPageContent(activeContentTab) || '').length }}/100000</div>
+            </div>
           </div>
         </form>
       </div>

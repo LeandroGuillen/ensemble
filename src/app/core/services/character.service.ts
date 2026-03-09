@@ -4,7 +4,7 @@ import { Character, CharacterFormData, CharacterFrontmatter } from '../interface
 import { Category } from '../interfaces/project.interface';
 import { MarkdownUtils } from '../utils/markdown.utils';
 import { slugify } from '../utils/slug.utils';
-import { pathJoin } from '../utils/path.utils';
+import { pathJoin, pathBasename, pathDirname } from '../utils/path.utils';
 import { parseThumbnailReference, resolveThumbnailPath } from '../utils/thumbnail.utils';
 import { assertIpcSuccess, withIpcError } from '../utils/ipc.utils';
 import { requireProject } from '../utils/project.utils';
@@ -169,6 +169,64 @@ export class CharacterService {
   }
 
   /**
+   * Returns the absolute file path for a character's book page (_<base>-<bookId>.md).
+   */
+  getBookPageFilePath(character: Character, bookId: string): string {
+    const normalizedPath = character.filePath.replace(/\\/g, '/');
+    const dir = pathDirname(normalizedPath);
+    const base = pathBasename(normalizedPath, '.md');
+    return pathJoin(dir, `${base}-${bookId}.md`);
+  }
+
+  /**
+   * Checks if a book page file exists for the given character and book.
+   */
+  async bookPageExists(characterId: string, bookId: string): Promise<boolean> {
+    const character = this.getCharacterById(characterId);
+    if (!character) return false;
+    const filePath = this.getBookPageFilePath(character, bookId);
+    const result = await this.electronService.fileExists(filePath);
+    return result;
+  }
+
+  /**
+   * Loads the content of a character's book page. Returns null if the file does not exist.
+   * Book pages are plain markdown (no frontmatter).
+   */
+  async getBookPageContent(characterId: string, bookId: string): Promise<string | null> {
+    const character = this.getCharacterById(characterId);
+    if (!character) return null;
+    const filePath = this.getBookPageFilePath(character, bookId);
+    const exists = await this.electronService.fileExists(filePath);
+    if (!exists) return null;
+    const result = await this.electronService.readFile(filePath);
+    if (!result.success || result.content == null) return null;
+    return result.content;
+  }
+
+  /**
+   * Saves content to a character's book page file. Creates the file if it does not exist.
+   */
+  async saveBookPage(characterId: string, bookId: string, content: string): Promise<void> {
+    const character = this.getCharacterById(characterId);
+    if (!character) {
+      throw new Error(`Character not found: ${characterId}`);
+    }
+    const filePath = this.getBookPageFilePath(character, bookId);
+    const writeResult = await this.electronService.writeFileAtomic(filePath, content ?? '');
+    if (!writeResult.success) {
+      throw new Error(writeResult.error ?? 'Failed to save book page');
+    }
+  }
+
+  /**
+   * Creates a new book page file for the character with empty content.
+   */
+  async createBookPage(characterId: string, bookId: string): Promise<void> {
+    await this.saveBookPage(characterId, bookId, '');
+  }
+
+  /**
    * Forces a reload of characters from disk (useful for testing or external changes)
    */
   async forceReloadCharacters(): Promise<void> {
@@ -253,10 +311,22 @@ export class CharacterService {
         return;
       }
 
+      // Exclude book-page files (_<base>-<bookId>.md) so they are not treated as characters
+      const project = this.projectService.getCurrentProject();
+      const bookIds = new Set((project?.metadata?.books ?? []).map((b) => b.id));
+
       const characters: Character[] = [];
 
       for (const { relativePath, absolutePath } of scanResult.files) {
         try {
+          const base = pathBasename(relativePath, '.md');
+          const lastDash = base.lastIndexOf('-');
+          if (lastDash !== -1) {
+            const suffix = base.slice(lastDash + 1);
+            if (bookIds.has(suffix)) {
+              continue; // Book page file, skip
+            }
+          }
           const character = await this.loadCharacterFromFile(absolutePath, relativePath);
           if (character) {
             characters.push(character);
