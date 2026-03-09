@@ -174,14 +174,6 @@ export class LibraryManagementComponent implements OnInit, OnDestroy {
     this.showEditBookForm(book);
   }
 
-  onBookEdit(book: Book): void {
-    this.showEditBookForm(book);
-  }
-
-  onBookDelete(book: Book): void {
-    this.deleteBook(book);
-  }
-
   onEditorSave(formData: any): void {
     this.bookForm.patchValue(formData);
     this.saveBook();

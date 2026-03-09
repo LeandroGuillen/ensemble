@@ -44,6 +44,7 @@
               <ng-container *ngFor="let book of books; let i = index">
                 <div
                   class="book-slot"
+                  [class.drag-active]="draggedIndex !== null"
                   [class.drag-over-left]="
                     dragOverIndex === i &&
                     dragOverSide === 'left' &&
@@ -80,8 +81,6 @@
                     [isDragging]="draggedIndex === i"
                     [dragIndex]="i"
                     (bookClick)="onBookClick($event)"
-                    (bookEdit)="onBookEdit($event)"
-                    (bookDelete)="onBookDelete($event)"
                     (dragStart)="onDragStart($event, i)"
                     (dragEndEvent)="onDragEnd()"
                   >

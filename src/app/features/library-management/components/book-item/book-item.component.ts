@@ -16,8 +16,6 @@ export class BookItemComponent {
   @Input() isDragging = false;
   @Input() dragIndex!: number;
   @Output() bookClick = new EventEmitter<Book>();
-  @Output() bookEdit = new EventEmitter<Book>();
-  @Output() bookDelete = new EventEmitter<Book>();
   @Output() dragStart = new EventEmitter<DragEvent>();
   @Output() dragEndEvent = new EventEmitter<void>();
 
@@ -28,16 +26,6 @@ export class BookItemComponent {
     if (!this.isDragging) {
       this.bookClick.emit(this.book);
     }
-  }
-
-  onEditClick(event: Event): void {
-    event.stopPropagation();
-    this.bookEdit.emit(this.book);
-  }
-
-  onDeleteClick(event: Event): void {
-    event.stopPropagation();
-    this.bookDelete.emit(this.book);
   }
 
   getBookTitle(): string {

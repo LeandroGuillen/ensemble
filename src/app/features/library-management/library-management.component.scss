@@ -186,11 +186,18 @@
     width: 50%;
     height: 100%;
     z-index: 5;
-    pointer-events: auto;
+    pointer-events: none;
   }
 
   .drop-zone-left { left: -25%; }
   .drop-zone-right { right: -25%; }
+
+  &.drag-active {
+    .drop-zone-left,
+    .drop-zone-right {
+      pointer-events: auto;
+    }
+  }
 
   &.drag-over-left::before,
   &.drag-over-right::after {

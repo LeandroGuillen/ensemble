@@ -143,18 +143,6 @@
   background: #f3f1e9;
 }
 
-.book-actions {
-  position: absolute;
-  top: -15px;
-  right: -15px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  opacity: 0;
-  transform: translateY(10px);
-  transition: all 0.3s ease;
-  z-index: 3;
-}
 // Drag and Drop States
 .book-container.dragging {
   opacity: 0.5;
@@ -166,16 +154,6 @@
   }
 }
 
-// Show actions on hover (but not when dragging)
-.book-container:hover:not(.dragging) .book-actions {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-// Hide actions when dragging
-.book-container.dragging .book-actions {
-  display: none;
-}
 // Ensure dragging works properly with child elements
 .book-container[draggable="true"] {
   .book-cover,
@@ -188,14 +166,5 @@
   .spine-text,
   .page-layer {
     pointer-events: none;
-  }
-}
-
-// Re-enable pointer events for action buttons
-.book-actions {
-  pointer-events: auto;
-
-  .action-btn {
-    pointer-events: auto;
   }
 }
