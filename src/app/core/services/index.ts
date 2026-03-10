@@ -12,3 +12,4 @@ export { LoggingService } from "./logging.service";
 export { NotificationService } from "./notification.service";
 export { ModalService } from "./modal.service";
 export { UpdateService } from "./update.service";
+export { ZoomService } from "./zoom.service";

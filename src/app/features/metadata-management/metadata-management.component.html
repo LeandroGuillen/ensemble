@@ -745,6 +745,17 @@
             <small class="form-help">Choose the color theme for this project.</small>
           </div>
 
+          <div class="form-group" *ngIf="zoomService.isElectron()">
+            <label>Interface zoom</label>
+            <div class="zoom-controls-inline">
+              <button type="button" class="btn btn-secondary btn-zoom" (click)="zoomService.zoomOut()" [disabled]="!zoomService.canZoomOut()" title="Zoom out">−</button>
+              <span class="zoom-value">{{ zoomPercent }}%</span>
+              <button type="button" class="btn btn-secondary btn-zoom" (click)="zoomService.zoomIn()" [disabled]="!zoomService.canZoomIn()" title="Zoom in">+</button>
+              <button type="button" class="btn btn-ghost btn-zoom-reset" (click)="zoomService.resetZoom()" [disabled]="zoomService.zoomLevel === 0" title="Reset to 100%">Reset</button>
+            </div>
+            <small class="form-help">Zoom the entire application interface. Preference is saved automatically.</small>
+          </div>
+
           <div class="form-group">
             <label>Application Updates</label>
             <div class="update-check-section">

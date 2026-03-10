@@ -275,6 +275,34 @@
     min-height: 80px;
   }
 
+  .zoom-controls-inline {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+
+    .btn-zoom {
+      min-width: 2.25rem;
+      padding: var(--spacing-xs) var(--spacing-sm);
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    .zoom-value {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--color-text-secondary);
+      min-width: 2.5rem;
+      text-align: center;
+    }
+
+    .btn-zoom-reset {
+      margin-left: var(--spacing-xs);
+      padding: var(--spacing-xs) var(--spacing-sm);
+      font-size: 0.8125rem;
+    }
+  }
+
   .update-check-section {
     display: flex;
     flex-direction: column;

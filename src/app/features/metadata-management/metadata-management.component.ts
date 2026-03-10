@@ -12,6 +12,7 @@ import { ElectronService } from '../../core/services/electron.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { ColorPaletteService } from '../../core/services/color-palette.service';
 import { UpdateService, UpdateStatus } from '../../core/services/update.service';
+import { ZoomService } from '../../core/services/zoom.service';
 import { Category, Tag, ProjectSettings, CategoryFolderMode } from '../../core/interfaces/project.interface';
 import { Character } from '../../core/interfaces/character.interface';
 import { Theme } from '../../core/interfaces/theme.interface';
@@ -78,6 +79,8 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
   updateStatus: UpdateStatus = { status: 'idle' };
   checkingForUpdates = false;
 
+  zoomPercent = 100;
+
   // Drag and drop state for categories
   draggedIndex: number | null = null;
   dragOverIndex: number | null = null;
@@ -98,6 +101,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
     private themeService: ThemeService,
     private colorPaletteService: ColorPaletteService,
     private updateService: UpdateService,
+    public zoomService: ZoomService,
     private fb: FormBuilder,
     private logger: LoggingService
   ) {
@@ -146,6 +150,14 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
         }
       });
     
+    // Subscribe to zoom level (for display in General settings)
+    this.zoomService.zoomLevel$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.zoomPercent = this.zoomService.getZoomPercent();
+      });
+    this.zoomPercent = this.zoomService.getZoomPercent();
+
     // Subscribe to update status changes
     this.updateService.updateStatus$
       .pipe(takeUntil(this.destroy$))

@@ -88,6 +88,7 @@ export class SidebarComponent implements OnInit {
     if (saved !== null) {
       this.isCollapsed = saved === 'true';
     }
+
   }
 
   isActive(route: string): boolean {
