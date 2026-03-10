@@ -50,7 +50,12 @@ export class BackstageService {
   }
 
   private getNameListsFilePath(): string {
-    return `${this.getCharactersFolderPath()}/names.md`;
+    return this.projectService.getNamesFilePath();
+  }
+
+  /** Absolute path to the names file (for opening in external editor, etc.). */
+  getNamesFilePath(): string {
+    return this.projectService.getNamesFilePath();
   }
 
   async loadBackstageData(): Promise<void> {

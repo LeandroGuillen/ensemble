@@ -127,7 +127,7 @@ export class MetadataService {
         autoSave: true,
         fileWatchEnabled: true,
         charactersFolder: 'characters',
-        castsFolder: 'casts',
+        castsFolder: 'characters/casts',
       },
     };
   }

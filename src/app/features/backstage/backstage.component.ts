@@ -1007,12 +1007,11 @@ export class BackstageComponent implements OnInit, OnDestroy {
 
   async openNamesInEditor(): Promise<void> {
     try {
-      const projectPath = this.backstageService.getCurrentProjectPath();
-      if (!projectPath) {
+      if (!this.backstageService.getCurrentProjectPath()) {
         this.error = "No project loaded";
         return;
       }
-      const filePath = `${projectPath}/characters/names.md`;
+      const filePath = this.backstageService.getNamesFilePath();
       const result = await this.electronService.openFileInEditor(filePath);
       if (!result.success) {
         this.error = `Failed to open file: ${result.error}`;

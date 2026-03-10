@@ -77,13 +77,33 @@ export class ProjectService {
 
   /**
    * Returns the absolute path to the casts folder for the current project.
-   * Default: charactersFolder/casts (e.g. characters/casts or personas/casts)
+   * Uses settings.castsFolder relative to project root (default: 'characters/casts').
+   * Legacy: stored value 'casts' (no path separators) is treated as 'characters/casts'.
    */
   getCastsFolderPath(): string {
-    const charactersPath = this.getCharactersFolderPath();
-    const folder = this.currentProjectSubject.value?.metadata?.settings?.castsFolder?.trim() || 'casts';
-    const normalized = folder.replace(/^\/+|\/+$/g, '').replace(/\/+/g, '/') || 'casts';
-    return pathJoin(charactersPath, normalized);
+    const project = this.currentProjectSubject.value;
+    if (!project?.path) {
+      throw new Error('No project loaded');
+    }
+    const raw = project.metadata?.settings?.castsFolder?.trim() || 'characters/casts';
+    // Legacy: "casts" alone meant "under characters folder"
+    const relative = raw.includes('/') ? raw : `characters/${raw}`;
+    const normalized = relative.replace(/^\/+|\/+$/g, '').replace(/\/+/g, '/') || 'characters/casts';
+    return pathJoin(project.path, normalized);
+  }
+
+  /**
+   * Returns the absolute path to the names file for the current project.
+   * Uses settings.namesFile if set (relative to project root), otherwise defaults to 'characters/names.md'.
+   */
+  getNamesFilePath(): string {
+    const project = this.currentProjectSubject.value;
+    if (!project?.path) {
+      throw new Error('No project loaded');
+    }
+    const relative = project.metadata?.settings?.namesFile?.trim() || 'characters/names.md';
+    const normalized = relative.replace(/^\/+|\/+$/g, '').replace(/\/+/g, '/') || 'characters/names.md';
+    return pathJoin(project.path, normalized);
   }
 
   /**
@@ -399,7 +419,7 @@ export class ProjectService {
         autoSave: true,
         fileWatchEnabled: true,
         charactersFolder: 'characters',
-        castsFolder: 'casts',
+        castsFolder: 'characters/casts',
       },
       pinboards: [
         {

@@ -463,7 +463,7 @@ export class ProjectValidator {
       }
     }
 
-    // castsFolder: optional string, subfolder under characters, no parent path traversal
+    // castsFolder: optional string, relative to project root, no parent path traversal
     if (settings.castsFolder !== undefined && settings.castsFolder !== null) {
       if (typeof settings.castsFolder !== 'string') {
         errors.push({

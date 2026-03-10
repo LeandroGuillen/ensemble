@@ -706,13 +706,29 @@
               id="castsFolder"
               formControlName="castsFolder"
               class="form-control"
-              placeholder="casts"
+              placeholder="characters/casts"
               [class.error]="getFieldError(settingsForm, 'castsFolder')"
             />
             <div *ngIf="getFieldError(settingsForm, 'castsFolder')" class="field-error">
               {{ getFieldError(settingsForm, 'castsFolder') }}
             </div>
-            <small class="form-help">Subfolder under the characters folder where casts are stored (default: casts). Full path: characters/casts.</small>
+            <small class="form-help">Relative path from project root where cast folders are stored (default: characters/casts). Can be any path, e.g. writing/casts.</small>
+          </div>
+
+          <div class="form-group">
+            <label for="namesFile">Names File</label>
+            <input
+              type="text"
+              id="namesFile"
+              formControlName="namesFile"
+              class="form-control"
+              placeholder="characters/names.md"
+              [class.error]="getFieldError(settingsForm, 'namesFile')"
+            />
+            <div *ngIf="getFieldError(settingsForm, 'namesFile')" class="field-error">
+              {{ getFieldError(settingsForm, 'namesFile') }}
+            </div>
+            <small class="form-help">Relative path from project root for the backstage names list file (default: characters/names.md). Can be any path, e.g. notes/names.md.</small>
           </div>
 
           <div class="form-group">

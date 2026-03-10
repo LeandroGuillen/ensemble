@@ -106,8 +106,10 @@ export interface ProjectSettings {
   fileWatchEnabled: boolean;
   /** Relative path from project root for character files (default: 'characters') */
   charactersFolder?: string;
-  /** Subfolder name under characters folder for casts (default: 'casts') */
+  /** Relative path from project root for the casts folder (default: 'characters/casts') */
   castsFolder?: string;
+  /** Relative path from project root for the names/list file (default: 'characters/names.md') */
+  namesFile?: string;
   lastRoute?: string;
   graphView?: PinboardViewState; // Legacy name for backward compatibility
   pinboardView?: PinboardViewState;
