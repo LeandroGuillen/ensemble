@@ -3,6 +3,15 @@
     <div class="detail-inner">
       <div class="detail-header">
         <h2>{{ isEditing ? 'Edit Character' : 'Create New Character' }}</h2>
+        <button
+          *ngIf="isEditing && character"
+          type="button"
+          class="character-file-path"
+          (click)="openCharacterFolder()"
+          [title]="'Open folder in file explorer'"
+        >
+          characters/{{ character.id }}
+        </button>
       </div>
 
       <!-- Loading State -->

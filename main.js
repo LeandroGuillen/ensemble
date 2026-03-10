@@ -662,6 +662,16 @@ ipcMain.handle('open-file-in-editor', async (event, filePath) => {
   }
 });
 
+// Open file manager with the file's folder (and select the file when supported)
+ipcMain.handle('show-item-in-folder', async (event, filePath) => {
+  try {
+    shell.showItemInFolder(filePath);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 // Cleanup watcher on app quit
 app.on('before-quit', async () => {
   if (fileWatcher) {

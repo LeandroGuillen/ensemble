@@ -815,6 +815,12 @@ export class CharacterDetailComponent
     }
   }
 
+  /** Open the folder containing the character file in the system file manager. */
+  async openCharacterFolder(): Promise<void> {
+    if (!this.character?.filePath || !this.electronService.isElectron()) return;
+    await this.electronService.showItemInFolder(this.character.filePath);
+  }
+
   async deleteCharacter(): Promise<void> {
     if (!this.character || !this.isEditing) {
       return;
