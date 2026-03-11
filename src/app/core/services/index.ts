@@ -11,5 +11,6 @@ export { ThemeService } from "./theme.service";
 export { LoggingService } from "./logging.service";
 export { NotificationService } from "./notification.service";
 export { ModalService } from "./modal.service";
+export { CharacterEditDialogService } from "./character-edit-dialog.service";
 export { UpdateService } from "./update.service";
 export { ZoomService } from "./zoom.service";

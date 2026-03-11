@@ -4,7 +4,11 @@
     class="character-card card character-item"
     [class.selected]="selectedCharacterIndex === i"
     [attr.data-index]="i"
-    [routerLink]="getCharacterLink(character)"
+    (click)="onCharacterClick(character)"
+    role="button"
+    tabindex="0"
+    (keydown.enter)="onCharacterClick(character)"
+    (keydown.space)="onCharacterClick(character); $event.preventDefault()"
   >
     <div class="character-thumbnail">
       <img

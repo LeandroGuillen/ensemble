@@ -3,7 +3,7 @@ import { BehaviorSubject } from 'rxjs';
 
 const STORAGE_KEY = 'app-zoom-level';
 const MIN_LEVEL = -3;
-const MAX_LEVEL = 3;
+const MAX_LEVEL = 4; // 0=100%, 1=120%, 2=144%, 3=173%, 4=207% (covers 200%)
 const DEFAULT_LEVEL = 0;
 
 @Injectable({

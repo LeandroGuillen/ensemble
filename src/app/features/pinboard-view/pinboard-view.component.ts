@@ -6,7 +6,7 @@ import { Observable, Subscription } from 'rxjs';
 import { take } from 'rxjs/operators';
 import { DataSet, Edge, Network, Node, Options } from 'vis-network/standalone';
 import { Character, PinboardData, PinboardConnection, Pinboard } from '../../core/interfaces';
-import { CharacterService, ProjectService, PinboardService, ElectronService, LoggingService, NotificationService, ModalService } from '../../core/services';
+import { CharacterService, ProjectService, PinboardService, ElectronService, LoggingService, NotificationService, ModalService, CharacterEditDialogService } from '../../core/services';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { ColorSelectorComponent } from '../../shared/color-selector/color-selector.component';
 import { PinboardSidebarComponent } from '../../shared/pinboard-sidebar/pinboard-sidebar.component';
@@ -117,7 +117,8 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
     private cdr: ChangeDetectorRef,
     private logger: LoggingService,
     private notificationService: NotificationService,
-    private modalService: ModalService
+    private modalService: ModalService,
+    private characterEditDialog: CharacterEditDialogService
   ) {
     this.pinboardData$ = this.pinboardService.getPinboardData();
     this.characters$ = this.characterService.getCharacters();
@@ -1585,7 +1586,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
    */
   openCharacterDetail(characterId: string): void {
     this.ngZone.run(() => {
-      this.router.navigate(['/character', encodeURIComponent(characterId)]);
+      this.characterEditDialog.openEdit(characterId);
     });
   }
 

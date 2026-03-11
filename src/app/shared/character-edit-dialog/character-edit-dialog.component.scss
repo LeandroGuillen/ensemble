@@ -1,0 +1,53 @@
+// Encapsulation.None: these classes are global so they always apply.
+// Backdrop: full viewport, dimmed, catches clicks to close
+.character-edit-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 10000;
+  backdrop-filter: blur(4px);
+}
+
+// Panel: centered, fixed size, above backdrop
+.character-edit-dialog-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10001;
+  width: min(900px, calc(100vw - 4rem));
+  height: min(85vh, calc(100vh - 4rem));
+  max-height: 85vh;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+// Inner character-detail: fill panel and scroll
+.character-edit-dialog-panel app-character-detail {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.character-edit-dialog-panel .character-detail {
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.character-edit-dialog-panel .detail-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--spacing-xl);
+}

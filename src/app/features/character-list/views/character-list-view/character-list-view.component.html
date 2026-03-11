@@ -5,7 +5,11 @@
     [class.selected]="selectedCharacterIndex === i"
     [class.multi-selected]="isCharacterSelected(character.id)"
     [attr.data-index]="i"
-    [routerLink]="getCharacterLink(character)"
+    (click)="onCharacterClick(character)"
+    role="button"
+    tabindex="0"
+    (keydown.enter)="onCharacterClick(character)"
+    (keydown.space)="onCharacterClick(character); $event.preventDefault()"
   >
     <div class="list-item-thumbnail">
       <img

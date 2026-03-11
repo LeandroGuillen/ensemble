@@ -1,12 +1,11 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
 import { Character, Tag, Category } from '../../../../core/interfaces';
 
 @Component({
   selector: 'app-character-list-view',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule],
   templateUrl: './character-list-view.component.html',
   styleUrls: ['./character-list-view.component.scss']
 })

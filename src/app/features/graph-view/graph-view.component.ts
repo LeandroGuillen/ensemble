@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 import { Observable, Subscription } from 'rxjs';
 import { DataSet, Edge, Network, Node, Options } from 'vis-network/standalone';
 import { Character, GraphData, Relationship } from '../../core/interfaces';
-import { CharacterService, ProjectService, RelationshipService, ElectronService, LoggingService, NotificationService } from '../../core/services';
+import { CharacterService, ProjectService, RelationshipService, ElectronService, LoggingService, NotificationService, CharacterEditDialogService } from '../../core/services';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 
 interface RelationshipFormData {
@@ -78,7 +78,8 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
     private logger: LoggingService,
     private notificationService: NotificationService,
     private router: Router,
-    private ngZone: NgZone
+    private ngZone: NgZone,
+    private characterEditDialog: CharacterEditDialogService
   ) {
     this.graphData$ = this.relationshipService.getGraphData();
     this.characters$ = this.characterService.getCharacters();
@@ -326,7 +327,7 @@ export class GraphViewComponent implements OnInit, OnDestroy, AfterViewInit {
       if (params.nodes.length === 1) {
         const characterId = params.nodes[0];
         this.ngZone.run(() => {
-          this.router.navigate(['/character', encodeURIComponent(characterId)]);
+          this.characterEditDialog.openEdit(characterId);
         });
       } else if (params.nodes.length === 2) {
         this.ngZone.run(() => {

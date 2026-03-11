@@ -6,6 +6,7 @@ import { DomSanitizer, SafeHtml } from "@angular/platform-browser";
 import { Subject } from "rxjs";
 import { takeUntil } from "rxjs/operators";
 import { BackstageService } from "../../core/services/backstage.service";
+import { CharacterEditDialogService } from "../../core/services/character-edit-dialog.service";
 import { ElectronService } from "../../core/services/electron.service";
 import { LoggingService } from "../../core/services/logging.service";
 import {
@@ -68,7 +69,8 @@ export class BackstageComponent implements OnInit, OnDestroy {
     private router: Router,
     private electronService: ElectronService,
     private sanitizer: DomSanitizer,
-    private logger: LoggingService
+    private logger: LoggingService,
+    private characterEditDialog: CharacterEditDialogService
   ) {}
 
   ngOnInit(): void {
@@ -597,9 +599,7 @@ export class BackstageComponent implements OnInit, OnDestroy {
 
   async takeTheStage(concept: CharacterConcept): Promise<void> {
     const name = concept.title || "";
-    this.router.navigate(["/character/new"], {
-      queryParams: { name: name },
-    });
+    this.characterEditDialog.openCreate(name);
   }
 
   async addNameList(): Promise<void> {
@@ -646,9 +646,7 @@ export class BackstageComponent implements OnInit, OnDestroy {
   }
 
   async takeTheStageWithName(name: string): Promise<void> {
-    this.router.navigate(["/character/new"], {
-      queryParams: { name: name },
-    });
+    this.characterEditDialog.openCreate(name);
   }
 
   async reload(): Promise<void> {

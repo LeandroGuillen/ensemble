@@ -2,7 +2,11 @@
   <div
     *ngFor="let character of characters; let i = index"
     class="gallery-item"
-    [routerLink]="getCharacterLink(character)"
+    (click)="onCharacterClick(character)"
+    role="button"
+    tabindex="0"
+    (keydown.enter)="onCharacterClick(character)"
+    (keydown.space)="onCharacterClick(character); $event.preventDefault()"
   >
     <div class="gallery-thumbnail">
       <img

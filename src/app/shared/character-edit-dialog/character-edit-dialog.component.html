@@ -1,0 +1,16 @@
+<ng-container *ngIf="state">
+  <!-- Backdrop: full viewport, receives clicks to close -->
+  <div
+    class="character-edit-dialog-backdrop"
+    (click)="onOverlayClick()"
+    role="presentation"
+  ></div>
+  <!-- Panel: centered box, stops propagation so backdrop doesn't close when clicking inside -->
+  <div class="character-edit-dialog-panel" (click)="onDialogClick($event)">
+    <app-character-detail
+      [dialogCharacterId]="state.characterId"
+      [dialogInitialName]="state.initialName"
+      (closed)="onCharacterClosed()"
+    ></app-character-detail>
+  </div>
+</ng-container>

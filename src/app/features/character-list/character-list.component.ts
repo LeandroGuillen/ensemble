@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 import { Observable, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { Book, Cast, Category, Character, Project, Tag } from '../../core/interfaces';
-import { CharacterService, ElectronService, MetadataService, NotificationService, ProjectService, LoggingService } from '../../core/services';
+import { CharacterService, ElectronService, MetadataService, NotificationService, ProjectService, LoggingService, CharacterEditDialogService } from '../../core/services';
 import { MetadataHelperService } from '../../core/services/metadata-helper.service';
 import { ModalService } from '../../core/services/modal.service';
 import { PreferencesService } from '../../core/services/preferences.service';
@@ -82,6 +82,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     private modalService: ModalService,
     private preferences: PreferencesService,
     private router: Router,
+    private characterEditDialog: CharacterEditDialogService,
     private commandPaletteService: CommandPaletteService,
     private ngZone: NgZone,
     private cdr: ChangeDetectorRef,
@@ -367,7 +368,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   }
 
   createNewCharacter(): void {
-    this.router.navigate(['/character/new']);
+    this.characterEditDialog.openCreate();
   }
 
   editCharacter(character: Character): void {
@@ -375,7 +376,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       this.logger.error('Character or character.id is missing:', character);
       return;
     }
-    this.router.navigate(['/character', encodeURIComponent(character.id)]);
+    this.characterEditDialog.openEdit(character.id);
   }
 
   async deleteCharacter(character: Character, event: Event): Promise<void> {

@@ -2,13 +2,14 @@ import { Component, OnInit, HostListener, OnDestroy } from "@angular/core";
 import { Router, RouterOutlet, NavigationEnd } from "@angular/router";
 import { CommonModule } from "@angular/common";
 import { Title } from "@angular/platform-browser";
-import { ProjectService, ElectronService, ThemeService, LoggingService } from "./core/services";
+import { ProjectService, ElectronService, ThemeService, LoggingService, ZoomService } from "./core/services";
 import { filter } from "rxjs/operators";
 import { Subject, takeUntil } from "rxjs";
 import { CommandPaletteComponent } from "./shared/command-palette/command-palette.component";
 import { CommandPaletteService } from "./shared/command-palette/command-palette.service";
 import { SidebarComponent } from "./shared/sidebar/sidebar.component";
 import { NotificationComponent } from "./shared/notification/notification.component";
+import { CharacterEditDialogComponent } from "./shared/character-edit-dialog/character-edit-dialog.component";
 import { ConfirmationDialogComponent } from "./shared/confirmation-dialog/confirmation-dialog.component";
 import { KeyboardShortcutsDialogComponent } from "./shared/keyboard-shortcuts-dialog/keyboard-shortcuts-dialog.component";
 import { KeyboardShortcutsService } from "./shared/keyboard-shortcuts-dialog/keyboard-shortcuts.service";
@@ -18,7 +19,7 @@ import { ModalService, ConfirmationRequest } from "./core/services/modal.service
 @Component({
   selector: "app-root",
   standalone: true,
-  imports: [CommonModule, RouterOutlet, CommandPaletteComponent, SidebarComponent, NotificationComponent, ConfirmationDialogComponent, KeyboardShortcutsDialogComponent, UpdateNotificationComponent],
+  imports: [CommonModule, RouterOutlet, CommandPaletteComponent, SidebarComponent, NotificationComponent, CharacterEditDialogComponent, ConfirmationDialogComponent, KeyboardShortcutsDialogComponent, UpdateNotificationComponent],
   templateUrl: "./app.component.html",
   styleUrls: ["./app.component.scss"],
 })
@@ -42,7 +43,8 @@ export class AppComponent implements OnInit, OnDestroy {
     private electronService: ElectronService,
     private themeService: ThemeService,
     private logger: LoggingService,
-    private modalService: ModalService
+    private modalService: ModalService,
+    private zoomService: ZoomService
   ) {}
 
   async ngOnInit() {
