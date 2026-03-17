@@ -221,7 +221,7 @@
     border-radius: var(--radius-lg);
     padding: var(--spacing-lg);
     box-shadow: var(--shadow-card);
-    transition: all var(--transition-base);
+    transition: border-color var(--transition-base), box-shadow var(--transition-base);
 
     &:hover {
       border-color: var(--color-border-light);
@@ -263,7 +263,7 @@
     font-weight: 500;
     white-space: nowrap;
     text-decoration: none;
-    transition: all var(--transition-fast);
+    transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast), opacity var(--transition-fast), transform var(--transition-fast);
     position: relative;
     overflow: hidden;
 
@@ -356,7 +356,7 @@
     border-radius: var(--radius-md);
     color: var(--color-text-muted);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: background var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
 
     &:hover {
       background: var(--color-bg-tertiary);
@@ -392,7 +392,7 @@
     color: var(--color-text-primary);
     font-family: inherit;
     font-size: 0.9375rem;
-    transition: all var(--transition-fast);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 
     &::placeholder {
       color: var(--color-text-muted);
@@ -454,7 +454,7 @@
     font-size: 0.75rem;
     font-weight: 500;
     color: var(--color-text-secondary);
-    transition: all var(--transition-fast);
+    transition: border-color var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
 
     &:hover {
       border-color: var(--color-border-light);
@@ -571,7 +571,7 @@
     cursor: pointer;
     font-size: 0.8125rem;
     font-weight: 500;
-    transition: all var(--transition-fast);
+    transition: background var(--transition-fast), color var(--transition-fast);
 
     svg {
       width: 16px;

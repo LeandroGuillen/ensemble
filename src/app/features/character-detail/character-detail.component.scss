@@ -127,7 +127,7 @@
   text-decoration: underline;
   text-decoration-color: transparent;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: color var(--transition-fast), text-decoration-color var(--transition-fast);
   font-family: inherit;
 
   &:hover:not(:disabled) {
@@ -194,7 +194,7 @@
   border-radius: var(--radius-md);
   color: var(--color-text-primary);
   font-size: 0.9375rem;
-  transition: all var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
   font-family: inherit;
 
   &:hover {
@@ -286,7 +286,7 @@ textarea.form-control {
   align-items: center;
   justify-content: center;
   font-size: 1.25rem;
-  transition: all var(--transition-fast);
+  transition: background var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
 
   &:hover:not(:disabled) {
     background: var(--color-accent-primary);
@@ -356,7 +356,7 @@ textarea.form-control {
   height: 88px;
   cursor: pointer;
   border-radius: var(--radius-lg);
-  transition: all var(--transition-fast);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 
   &:hover {
     transform: scale(1.03);
@@ -400,7 +400,7 @@ textarea.form-control {
   justify-content: center;
   font-size: 12px;
   font-weight: bold;
-  transition: all var(--transition-fast);
+  transition: background var(--transition-fast), transform var(--transition-fast);
   line-height: 1;
   padding: 0;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
@@ -424,7 +424,7 @@ textarea.form-control {
   font-size: 0.75rem;
   gap: 6px;
   background: var(--color-bg-tertiary);
-  transition: all var(--transition-fast);
+  transition: border-color var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
 
   .upload-icon {
     font-size: 26px;
@@ -471,7 +471,6 @@ textarea.form-control {
   padding: var(--spacing-md) var(--spacing-xl);
   border-bottom: 1px solid var(--color-border-subtle);
   background: var(--color-bg-secondary);
-  backdrop-filter: blur(8px);
 
   .btn {
     position: relative;
@@ -544,7 +543,7 @@ textarea.form-control {
   font-size: 0.9375rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: color var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast);
   position: relative;
   margin-bottom: -1px;
 
@@ -577,7 +576,7 @@ textarea.form-control {
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: color var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast);
   position: relative;
   margin-bottom: -1px;
   font-family: inherit;

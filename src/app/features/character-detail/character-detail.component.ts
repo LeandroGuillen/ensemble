@@ -5,8 +5,8 @@ import {
   Component,
   ElementRef,
   EventEmitter,
-  HostListener,
   Input,
+  NgZone,
   OnChanges,
   OnDestroy,
   OnInit,
@@ -25,6 +25,7 @@ import { ActivatedRoute, Router } from "@angular/router";
 import { Location } from "@angular/common";
 import { Subject } from "rxjs";
 import { debounceTime, takeUntil } from "rxjs/operators";
+import { merge } from "rxjs";
 import {
   Book,
   Category,
@@ -94,6 +95,13 @@ export class CharacterDetailComponent
   private tagsSelectableItems: SelectableItem[] = [];
   private booksSelectableItems: SelectableItem[] = [];
 
+  /** Cached content tabs (Main + book pages) — updated when character or books change. */
+  contentTabs: { id: string; label: string }[] = [];
+  /** Cached category options for the toggle — updated when categories change. */
+  categoryToggleOptions: ToggleOption[] = [];
+  /** Cached field errors — updated on form changes (debounced) and on blur. */
+  fieldErrors: Record<string, string | null> = {};
+
   isEditing = false;
   isLoading = false;
   activeTab: 'basic' = 'basic';
@@ -116,6 +124,15 @@ export class CharacterDetailComponent
   // Thumbnail preview (resolved from img/ path)
   thumbnailPreviewUrl: string | null = null;
 
+  /** True while a text input/textarea in this form has focus — CD is detached to avoid wasted work. */
+  private textInputFocused = false;
+  private focusedElement: HTMLElement | null = null;
+  /**
+   * Stops input/beforeinput events from bubbling into zone.js while a text field is focused.
+   * Registered in the capture phase on the focused element so it fires before zone's listener.
+   */
+  private inputEventStopper = (e: Event) => e.stopPropagation();
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -129,7 +146,8 @@ export class CharacterDetailComponent
     private aiService: AiService,
     private modalService: ModalService,
     private logger: LoggingService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private ngZone: NgZone
   ) {
     this.characterForm = this.createForm();
   }
@@ -143,6 +161,13 @@ export class CharacterDetailComponent
         this.categories = this.projectService.getCategories();
         this.tags = this.projectService.getTags();
         this.books = this.metadataService.getBooks();
+
+        // Update cached category options (avoids creating new array on every CD)
+        this.categoryToggleOptions = this.categories.map((cat) => ({
+          id: cat.id,
+          name: cat.name,
+          tooltip: cat.description || cat.name,
+        }));
 
         // Update cached selectable items
         this.tagsSelectableItems = this.tags.map((tag) => ({
@@ -175,6 +200,7 @@ export class CharacterDetailComponent
           this.pendingDialogLoadId = null;
           this.loadCharacter(id);
         }
+        this.cdr.markForCheck();
       });
 
     // Subscribe to AI settings
@@ -183,6 +209,7 @@ export class CharacterDetailComponent
       .pipe(takeUntil(this.destroy$))
       .subscribe((settings) => {
         this.aiEnabled = settings?.enabled || false;
+        this.cdr.markForCheck();
       });
 
     // Subscribe to route parameter changes (not just snapshot) — skipped in dialog mode
@@ -198,6 +225,8 @@ export class CharacterDetailComponent
           this.isEditing = false;
           this.character = null;
           this.characterForm.reset();
+          this.contentTabs = [{ id: 'main', label: 'Main' }];
+          this.cdr.markForCheck();
         }
       });
 
@@ -208,6 +237,7 @@ export class CharacterDetailComponent
         if (this.isDialogMode) return;
         if (params["name"] && !this.isEditing) {
           this.characterForm.patchValue({ name: params["name"] });
+          this.cdr.markForCheck();
         }
       });
 
@@ -240,6 +270,29 @@ export class CharacterDetailComponent
           // Ignore - file may not exist yet
         }
       });
+
+    // Update cached field errors when form value/status changes (debounced to avoid work on every keystroke)
+    merge(
+      this.characterForm.valueChanges,
+      this.characterForm.statusChanges
+    )
+      .pipe(debounceTime(0), takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.updateFieldErrors();
+        this.cdr.markForCheck();
+      });
+
+    // Update content tabs when books selection changes
+    this.characterForm
+      .get("books")
+      ?.valueChanges.pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.updateContentTabs();
+        this.cdr.markForCheck();
+      });
+
+    // Initial field errors (e.g. for create form)
+    this.updateFieldErrors();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -255,6 +308,7 @@ export class CharacterDetailComponent
           this.isEditing = false;
           this.character = null;
           this.characterForm.reset();
+          this.contentTabs = [{ id: 'main', label: 'Main' }];
           if (this.dialogInitialName) {
             this.characterForm.patchValue({ name: this.dialogInitialName });
           }
@@ -268,35 +322,60 @@ export class CharacterDetailComponent
   }
 
   ngOnDestroy(): void {
+    document.removeEventListener('keydown', this.keydownListener);
+    if (this.focusedElement) {
+      this.focusedElement.removeEventListener('input', this.inputEventStopper, true);
+      this.focusedElement.removeEventListener('beforeinput', this.inputEventStopper, true);
+      this.focusedElement = null;
+    }
+    if (this.textInputFocused) {
+      this.cdr.reattach();
+    }
     this.destroy$.next();
     this.destroy$.complete();
   }
+
+  private keydownListener = (event: KeyboardEvent) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      this.ngZone.run(() => {
+        this.reattachIfDetached();
+        this.onCancel();
+      });
+      return;
+    }
+    if (event.ctrlKey && event.key === "Enter") {
+      event.preventDefault();
+      this.ngZone.run(() => {
+        this.reattachIfDetached();
+        if (this.activeContentTab === 'main') {
+          this.onSubmit();
+        } else if (this.activeContentTab && this.character) {
+          this.onSaveBookPage(this.activeContentTab);
+        }
+      });
+      return;
+    }
+    // All other keys: do nothing and DON'T enter zone — avoids CD on every keystroke
+  };
 
   ngAfterViewInit(): void {
     // Focus the name input after view is initialized
     setTimeout(() => {
       this.nameInput?.nativeElement.focus();
     }, 0);
+
+    // Register keydown outside zone so regular typing doesn't trigger CD
+    this.ngZone.runOutsideAngular(() => {
+      document.addEventListener('keydown', this.keydownListener);
+    });
   }
 
-  @HostListener("document:keydown", ["$event"])
-  handleKeyboardEvent(event: KeyboardEvent): void {
-    // Escape to cancel
-    if (event.key === "Escape") {
-      event.preventDefault();
-      this.onCancel();
-      return;
-    }
-
-    // Ctrl+Enter to save
-    if (event.ctrlKey && event.key === "Enter") {
-      event.preventDefault();
-      if (this.activeContentTab === 'main') {
-        this.onSubmit();
-      } else if (this.activeContentTab && this.character) {
-        this.onSaveBookPage(this.activeContentTab);
-      }
-      return;
+  private reattachIfDetached(): void {
+    if (this.textInputFocused) {
+      this.textInputFocused = false;
+      this.cdr.reattach();
+      this.cdr.detectChanges();
     }
   }
 
@@ -351,6 +430,7 @@ export class CharacterDetailComponent
       if (!character) {
         this.error = "Character not found";
         this.isLoading = false;
+        this.cdr.markForCheck();
         return;
       }
 
@@ -372,6 +452,7 @@ export class CharacterDetailComponent
         });
 
         this.activeContentTab = 'main';
+        this.updateContentTabs();
         await this.loadBookPages();
       } else {
         this.error = "Character not found";
@@ -381,6 +462,7 @@ export class CharacterDetailComponent
       this.logger.error("Load character error:", error);
     } finally {
       this.isLoading = false;
+      this.cdr.markForCheck();
     }
   }
 
@@ -417,14 +499,16 @@ export class CharacterDetailComponent
     this.cdr.markForCheck();
   }
 
-  getContentTabs(): { id: string; label: string }[] {
+  /** Updates cached contentTabs (call when character or books form value changes). */
+  private updateContentTabs(): void {
     const tabs: { id: string; label: string }[] = [{ id: 'main', label: 'Main' }];
-    if (!this.character) return tabs;
-    const bookIds = this.characterForm.get('books')?.value ?? this.character.books ?? [];
-    for (const bookId of bookIds) {
-      tabs.push({ id: bookId, label: this.getBookName(bookId) });
+    if (this.character) {
+      const bookIds = this.characterForm.get('books')?.value ?? this.character.books ?? [];
+      for (const bookId of bookIds) {
+        tabs.push({ id: bookId, label: this.getBookName(bookId) });
+      }
     }
-    return tabs;
+    this.contentTabs = tabs;
   }
 
   getBookName(bookId: string): string {
@@ -474,8 +558,10 @@ export class CharacterDetailComponent
       this.cdr.markForCheck();
     } catch (err) {
       this.error = err instanceof Error ? err.message : 'Failed to create book page';
+      this.cdr.markForCheck();
     } finally {
       this.savingBookPageId = null;
+      this.cdr.markForCheck();
     }
   }
 
@@ -496,8 +582,10 @@ export class CharacterDetailComponent
       }
     } catch (err) {
       this.error = err instanceof Error ? err.message : 'Failed to save book page';
+      this.cdr.markForCheck();
     } finally {
       this.savingBookPageId = null;
+      this.cdr.markForCheck();
     }
   }
 
@@ -511,11 +599,13 @@ export class CharacterDetailComponent
 
     if (!this.currentProject) {
       this.error = "No project loaded";
+      this.cdr.markForCheck();
       return;
     }
 
     this.isSaving = true;
     this.error = null;
+    this.cdr.markForCheck();
 
     try {
       const formData: CharacterFormData = {
@@ -549,8 +639,10 @@ export class CharacterDetailComponent
     } catch (error) {
       this.error = `Failed to save character: ${error}`;
       this.logger.error("Save error:", error);
+      this.cdr.markForCheck();
     } finally {
       this.isSaving = false;
+      this.cdr.markForCheck();
     }
   }
 
@@ -691,7 +783,19 @@ export class CharacterDetailComponent
     return tag?.color || "#95a5a6";
   }
 
+  /** Recomputes all field errors and updates cache (used by template via fieldErrors). */
+  private updateFieldErrors(): void {
+    const fields = ['name', 'category', 'thumbnail', 'content'];
+    for (const name of fields) {
+      this.fieldErrors[name] = this.computeFieldError(name);
+    }
+  }
+
   getFieldError(fieldName: string): string | null {
+    return this.fieldErrors[fieldName] ?? this.computeFieldError(fieldName);
+  }
+
+  private computeFieldError(fieldName: string): string | null {
     const field = this.characterForm.get(fieldName);
     if (field && field.invalid && (field.touched || field.dirty)) {
       // Show errors if field has been touched or modified
@@ -725,11 +829,45 @@ export class CharacterDetailComponent
     return labels[fieldName] || fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
   }
 
+  /**
+   * Detach CD while a text input is focused. Since name/content use updateOn:'blur',
+   * form values don't change during typing — running CD on every keystroke is wasted work
+   * (~114ms per key in production, ~190ms in dev mode).
+   */
+  onTextInputFocus(event: FocusEvent): void {
+    this.textInputFocused = true;
+    this.cdr.detach();
+
+    // Prevent input events from reaching zone.js while this field is focused.
+    // With updateOn:'blur', the form value doesn't change during typing,
+    // so input events inside zone are pure waste.
+    const el = event.target as HTMLElement;
+    this.focusedElement = el;
+    this.ngZone.runOutsideAngular(() => {
+      el.addEventListener('input', this.inputEventStopper, true);
+      el.addEventListener('beforeinput', this.inputEventStopper, true);
+    });
+  }
+
+  onTextInputBlur(fieldName: string): void {
+    if (this.focusedElement) {
+      this.focusedElement.removeEventListener('input', this.inputEventStopper, true);
+      this.focusedElement.removeEventListener('beforeinput', this.inputEventStopper, true);
+      this.focusedElement = null;
+    }
+    this.textInputFocused = false;
+    this.cdr.reattach();
+    this.onFieldBlur(fieldName);
+    this.cdr.detectChanges();
+  }
+
   // Mark field as touched on blur for better validation feedback
   onFieldBlur(fieldName: string): void {
     const field = this.characterForm.get(fieldName);
     if (field) {
       field.markAsTouched();
+      this.fieldErrors[fieldName] = this.computeFieldError(fieldName);
+      this.cdr.markForCheck();
     }
   }
 
@@ -828,11 +966,13 @@ export class CharacterDetailComponent
   async generateName(): Promise<void> {
     if (!this.aiEnabled) {
       this.error = "AI is not enabled. Please configure AI settings first.";
+      this.cdr.markForCheck();
       return;
     }
 
     this.isGeneratingName = true;
     this.error = null;
+    this.cdr.markForCheck();
 
     try {
       // Build context for name generation
@@ -859,13 +999,16 @@ export class CharacterDetailComponent
       if (generatedName) {
         this.characterForm.patchValue({ name: generatedName });
         this.characterForm.markAsDirty();
+        this.cdr.markForCheck();
       }
     } catch (error) {
       this.logger.error("Failed to generate name:", error);
       this.error =
         error instanceof Error ? error.message : "Failed to generate name";
+      this.cdr.markForCheck();
     } finally {
       this.isGeneratingName = false;
+      this.cdr.markForCheck();
     }
   }
 
@@ -899,6 +1042,7 @@ export class CharacterDetailComponent
     } catch (error) {
       this.error = `Failed to delete character: ${error}`;
       this.logger.error("Delete error:", error);
+      this.cdr.markForCheck();
     }
   }
 }

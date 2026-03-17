@@ -85,10 +85,10 @@
           </div>
 
           <!-- Content tabs (Main + book pages) when editing a character with books -->
-          <nav class="content-tabs" *ngIf="isEditing && getContentTabs().length > 1" aria-label="Content sections">
+          <nav class="content-tabs" *ngIf="isEditing && contentTabs.length > 1" aria-label="Content sections">
             <button
               type="button"
-              *ngFor="let tab of getContentTabs()"
+              *ngFor="let tab of contentTabs"
               class="content-tab"
               [class.active]="activeContentTab === tab.id"
               (click)="setActiveContentTab(tab.id)"
@@ -114,10 +114,11 @@
                     class="form-control"
                     formControlName="name"
                     placeholder="Enter character name"
-                    [class.error]="getFieldError('name')"
-                    (blur)="onFieldBlur('name')"
+                    [class.error]="fieldErrors['name']"
+                    (focus)="onTextInputFocus($event)"
+                    (blur)="onTextInputBlur('name')"
                     aria-describedby="name-error"
-                    [attr.aria-invalid]="getFieldError('name') ? 'true' : 'false'"
+                    [attr.aria-invalid]="fieldErrors['name'] ? 'true' : 'false'"
                   />
                   <button
                     type="button"
@@ -131,8 +132,8 @@
                     <span *ngIf="isGeneratingName" class="spinner spinner-sm"></span>
                   </button>
                 </div>
-                <div class="error-text" *ngIf="getFieldError('name')" id="name-error" role="alert" aria-live="polite">
-                  {{ getFieldError('name') }}
+                <div class="error-text" *ngIf="fieldErrors['name']" id="name-error" role="alert" aria-live="polite">
+                  {{ fieldErrors['name'] }}
                 </div>
               </div>
             </div>
@@ -156,14 +157,14 @@
             <div class="form-group form-group-category" [class.field-highlight]="characterForm.get('category')?.invalid && characterForm.get('category')?.touched">
               <label class="form-label"> Category * </label>
               <app-category-toggle
-                [options]="getCategoryToggleOptions()"
+                [options]="categoryToggleOptions"
                 [selectedValue]="getSelectedCategory()"
                 [emptyLabel]="'None'"
-                [error]="!!getFieldError('category')"
+                [error]="!!fieldErrors['category']"
                 (valueChange)="onCategorySelect($event); onFieldBlur('category')"
               ></app-category-toggle>
-              <div class="error-text" *ngIf="getFieldError('category')" id="category-error" role="alert" aria-live="polite">
-                {{ getFieldError('category') }}
+              <div class="error-text" *ngIf="fieldErrors['category']" id="category-error" role="alert" aria-live="polite">
+                {{ fieldErrors['category'] }}
               </div>
             </div>
           </div>
@@ -203,8 +204,9 @@
                   class="form-control"
                   formControlName="thumbnail"
                   placeholder="[[img/path/to/image.jpg]]"
-                  [class.error]="getFieldError('thumbnail')"
-                  (blur)="onFieldBlur('thumbnail')"
+                  [class.error]="fieldErrors['thumbnail']"
+                  (focus)="onTextInputFocus($event)"
+                  (blur)="onTextInputBlur('thumbnail')"
                 />
                 <div class="thumbnail-preview" *ngIf="thumbnailPreviewUrl">
                   <img [src]="thumbnailPreviewUrl" alt="Thumbnail preview" />
@@ -223,14 +225,15 @@
                 formControlName="content"
                 rows="12"
                 placeholder="Character description, notes, backstory..."
-                [class.error]="getFieldError('content')"
-                (blur)="onFieldBlur('content')"
+                [class.error]="fieldErrors['content']"
+                (focus)="onTextInputFocus($event)"
+                (blur)="onTextInputBlur('content')"
                 aria-describedby="content-error"
-                [attr.aria-invalid]="getFieldError('content') ? 'true' : 'false'"
+                [attr.aria-invalid]="fieldErrors['content'] ? 'true' : 'false'"
               ></textarea>
               <div class="char-count">{{ characterForm.get('content')?.value?.length || 0 }}/100000</div>
-              <div class="error-text" *ngIf="getFieldError('content')" id="content-error" role="alert" aria-live="polite">
-                {{ getFieldError('content') }}
+              <div class="error-text" *ngIf="fieldErrors['content']" id="content-error" role="alert" aria-live="polite">
+                {{ fieldErrors['content'] }}
               </div>
             </div>
           </div>
@@ -268,6 +271,8 @@
                 [ngModel]="getBookPageContent(activeContentTab)"
                 (ngModelChange)="setBookPageContent(activeContentTab, $event)"
                 [ngModelOptions]="{standalone: true}"
+                (focus)="onTextInputFocus($event)"
+                (blur)="onTextInputBlur('')"
               ></textarea>
               <div class="char-count">{{ (getBookPageContent(activeContentTab) || '').length }}/100000</div>
             </div>
