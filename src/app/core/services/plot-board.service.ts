@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { PlotBoard, PlotBoardFrontmatter, PlotThread } from '../interfaces/plot-board.interface';
+import { PlotBoard, PlotBoardFrontmatter, PlotCellMeta, PlotRow, PlotThread } from '../interfaces/plot-board.interface';
 import { MarkdownUtils } from '../utils/markdown.utils';
 import { pathJoin } from '../utils/path.utils';
 import { slugify } from '../utils/slug.utils';
@@ -39,7 +39,7 @@ export class PlotBoardService {
 
     const exists = await this.electronService.fileExists(filePath);
     if (!exists) {
-      const empty: PlotBoard = { threads: [], rows: [], cells: {} };
+      const empty: PlotBoard = { threads: [], rows: [], cells: {}, cellMeta: {} };
       this.plotBoardSubject.next(empty);
       return;
     }
@@ -82,13 +82,30 @@ export class PlotBoardService {
       ? parseResult.data.frontmatter.threads
       : [];
 
+    const cellMeta: Record<string, Record<string, PlotCellMeta>> =
+      parseResult.success && parseResult.data?.frontmatter?.cellMeta
+        ? parseResult.data.frontmatter.cellMeta
+        : {};
+
+    const rowsMeta: PlotRow[] | undefined =
+      parseResult.success && parseResult.data?.frontmatter?.rows
+        ? parseResult.data.frontmatter.rows
+        : undefined;
+
     const tableContent = parseResult.success && parseResult.data
       ? parseResult.data.content
       : raw;
 
-    const { rows, cells } = this.parseTable(tableContent, threads);
+    const { rows: rowNames, cells } = this.parseTable(tableContent, threads);
 
-    return { threads, rows, cells };
+    const rows: PlotRow[] = rowNames.map((name, i) => {
+      if (rowsMeta && rowsMeta[i]) {
+        return { name, icon: rowsMeta[i].icon };
+      }
+      return { name };
+    });
+
+    return { threads, rows, cells, cellMeta };
   }
 
   private parseTable(
@@ -100,18 +117,15 @@ export class PlotBoardService {
 
     const lines = tableContent.split('\n').filter((l) => l.trim().length > 0);
 
-    // Need at least a header row and a separator row
     if (lines.length < 2) return { rows, cells };
 
-    // Parse header row to map column positions to thread IDs
     const headerCells = this.splitTableRow(lines[0]);
     const threadIds: (string | null)[] = headerCells.map((headerName, i) => {
-      if (i === 0) return null; // first column is row labels
+      if (i === 0) return null;
       const match = threads.find((t) => t.name === headerName);
       return match?.id ?? null;
     });
 
-    // Skip separator row (line index 1), parse data rows
     for (let i = 2; i < lines.length; i++) {
       const rowCells = this.splitTableRow(lines[i]);
       if (rowCells.length === 0) continue;
@@ -136,31 +150,47 @@ export class PlotBoardService {
     const trimmed = line.trim();
     const stripped = trimmed.startsWith('|') ? trimmed.slice(1) : trimmed;
     const end = stripped.endsWith('|') ? stripped.slice(0, -1) : stripped;
-    return end.split('|').map((s) => s.trim());
+    return end.split('|').map((s) => this.unescapeCell(s.trim()));
+  }
+
+  private escapeCell(value: string): string {
+    return value
+      .replace(/\\/g, '\\\\')
+      .replace(/\|/g, '\\|')
+      .replace(/\n/g, '<br>');
+  }
+
+  private unescapeCell(value: string): string {
+    return value
+      .replace(/<br>/g, '\n')
+      .replace(/\\\|/g, '|')
+      .replace(/\\\\/g, '\\');
   }
 
   generateFile(board: PlotBoard): string {
+    const cleanedMeta = this.cleanCellMeta(board.cellMeta);
+    const rowsMeta = this.cleanRowsMeta(board.rows);
+
     const frontmatter: PlotBoardFrontmatter = {
       threads: board.threads,
+      ...(rowsMeta.length > 0 ? { rows: rowsMeta } : {}),
+      ...(Object.keys(cleanedMeta).length > 0 ? { cellMeta: cleanedMeta } : {}),
     };
 
     const tableLines: string[] = [];
 
-    // Header row
-    const headerParts = [''].concat(board.threads.map((t) => ` ${t.name} `));
+    const headerParts = [''].concat(board.threads.map((t) => ` ${this.escapeCell(t.name)} `));
     tableLines.push('|' + headerParts.join('|') + '|');
 
-    // Separator row
     const sepParts = ['---'].concat(board.threads.map(() => '---'));
     tableLines.push('|' + sepParts.join('|') + '|');
 
-    // Data rows
     for (let r = 0; r < board.rows.length; r++) {
       const rowKey = String(r);
-      const dataParts = [` ${board.rows[r]} `].concat(
+      const dataParts = [` ${this.escapeCell(board.rows[r].name)} `].concat(
         board.threads.map((t) => {
           const val = board.cells[rowKey]?.[t.id] ?? '';
-          return val ? ` ${val} ` : ' ';
+          return val ? ` ${this.escapeCell(val)} ` : ' ';
         })
       );
       tableLines.push('|' + dataParts.join('|') + '|');
@@ -170,14 +200,64 @@ export class PlotBoardService {
     return MarkdownUtils.generateMarkdown(frontmatter, tableStr);
   }
 
-  generateThreadId(name: string, currentThreads?: PlotThread[]): string {
+  private cleanCellMeta(
+    meta: Record<string, Record<string, PlotCellMeta>>
+  ): Record<string, Record<string, PlotCellMeta>> {
+    const result: Record<string, Record<string, PlotCellMeta>> = {};
+    for (const rowKey of Object.keys(meta)) {
+      const row = meta[rowKey];
+      const cleanedRow: Record<string, PlotCellMeta> = {};
+      for (const threadId of Object.keys(row)) {
+        const entry = row[threadId];
+        if (entry.icon || entry.color) {
+          cleanedRow[threadId] = entry;
+        }
+      }
+      if (Object.keys(cleanedRow).length > 0) {
+        result[rowKey] = cleanedRow;
+      }
+    }
+    return result;
+  }
+
+  private cleanRowsMeta(rows: PlotRow[]): PlotRow[] {
+    const hasAnyIcon = rows.some((r) => r.icon);
+    if (!hasAnyIcon) return [];
+    return rows.map((r) => (r.icon ? { name: r.name, icon: r.icon } : { name: r.name }));
+  }
+
+  generateThreadId(name: string, currentThreads?: PlotThread[], excludeId?: string): string {
     const base = slugify(name) || 'thread';
-    const existing = (currentThreads ?? this.plotBoardSubject.value?.threads ?? []).map((t) => t.id);
+    const existing = (currentThreads ?? this.plotBoardSubject.value?.threads ?? [])
+      .filter((t) => t.id !== excludeId)
+      .map((t) => t.id);
     let id = base;
     let counter = 1;
     while (existing.includes(id)) {
       id = `${base}-${counter++}`;
     }
     return id;
+  }
+
+  renameThreadId(
+    board: PlotBoard,
+    oldId: string,
+    newId: string
+  ): void {
+    if (oldId === newId) return;
+
+    for (const rowKey of Object.keys(board.cells)) {
+      if (board.cells[rowKey][oldId] !== undefined) {
+        board.cells[rowKey][newId] = board.cells[rowKey][oldId];
+        delete board.cells[rowKey][oldId];
+      }
+    }
+
+    for (const rowKey of Object.keys(board.cellMeta)) {
+      if (board.cellMeta[rowKey][oldId] !== undefined) {
+        board.cellMeta[rowKey][newId] = board.cellMeta[rowKey][oldId];
+        delete board.cellMeta[rowKey][oldId];
+      }
+    }
   }
 }

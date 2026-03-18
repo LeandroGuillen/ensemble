@@ -115,6 +115,7 @@ export interface ProjectSettings {
   pinboardView?: PinboardViewState;
   ai?: AiSettings;
   filterExpanded?: boolean;
+  plotBoardZoom?: number;
   theme?: string; // Theme ID (e.g., "blue-gold")
   colorPalette?: import('./color-palette.interface').ColorPaletteConfig;
 }

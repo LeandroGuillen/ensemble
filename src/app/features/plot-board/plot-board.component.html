@@ -1,5 +1,31 @@
-<div class="plot-board-container">
+<div class="plot-board-container" [class]="zoomClass">
   <app-page-header title="Plot Board">
+    <div class="zoom-controls">
+      <button
+        class="btn-zoom"
+        [class.active]="zoomLevel === 1"
+        (click)="setZoom(1)"
+        title="Compact view"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      </button>
+      <button
+        class="btn-zoom"
+        [class.active]="zoomLevel === 2"
+        (click)="setZoom(2)"
+        title="Medium view"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="7" rx="1"/><rect x="3" y="14" width="18" height="7" rx="1"/></svg>
+      </button>
+      <button
+        class="btn-zoom"
+        [class.active]="zoomLevel === 3"
+        (click)="setZoom(3)"
+        title="Full view"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+      </button>
+    </div>
     <button class="btn-action" (click)="addThread()" title="Add Thread">
       + Thread
     </button>
@@ -18,145 +44,359 @@
       </div>
     </div>
 
-    <!-- Grid table -->
-    <div class="table-wrapper" *ngIf="board.threads.length > 0 || board.rows.length > 0">
-      <table class="plot-table">
-        <thead>
-          <tr>
-            <th class="corner-cell"></th>
-            <th *ngFor="let thread of board.threads" class="thread-header">
-              <div class="thread-header-content">
-                <!-- Thread name (display) -->
-                <span
-                  *ngIf="editingThreadName !== thread.id"
-                  class="thread-name"
-                  (dblclick)="startEditThreadName(thread.id)"
-                  title="Double-click to rename"
-                >
-                  {{ thread.name }}
-                </span>
-                <!-- Thread name (editing) -->
-                <input
-                  *ngIf="editingThreadName === thread.id"
-                  class="thread-name-input"
-                  [(ngModel)]="editingNameValue"
-                  (blur)="finishEditThreadName()"
-                  (keydown.enter)="finishEditThreadName()"
-                  (keydown.escape)="editingThreadName = null"
-                />
+    <!-- Timeline grid -->
+    <div
+      class="board-grid"
+      *ngIf="board.threads.length > 0 || board.rows.length > 0"
+      [style.gridTemplateColumns]="gridTemplateColumns"
+    >
+      <!-- Header row: corner + thread headers -->
+      <div class="corner-cell"></div>
 
-                <div class="thread-actions">
+      <div
+        *ngFor="let thread of board.threads"
+        class="thread-header"
+      >
+        <div class="thread-header-content">
+          <!-- Thread icon -->
+          <span
+            class="thread-icon-btn thread-icon-picker-area"
+            (click)="toggleThreadIconPicker(thread.id); $event.stopPropagation()"
+            [title]="thread.icon ? 'Change icon' : 'Add icon'"
+          >
+            <span *ngIf="thread.icon">{{ thread.icon }}</span>
+            <span *ngIf="!thread.icon" class="icon-placeholder">☺</span>
+          </span>
+
+          <!-- Thread name (display) -->
+          <span
+            *ngIf="editingThreadName !== thread.id"
+            class="thread-name"
+            (dblclick)="startEditThreadName(thread.id)"
+            title="Double-click to rename"
+          >
+            {{ thread.name }}
+          </span>
+          <!-- Thread name (editing) -->
+          <input
+            *ngIf="editingThreadName === thread.id"
+            class="thread-name-input"
+            [(ngModel)]="editingNameValue"
+            (blur)="finishEditThreadName()"
+            (keydown.enter)="finishEditThreadName()"
+            (keydown.escape)="editingThreadName = null"
+          />
+
+          <!-- Action buttons (appear on hover) -->
+          <div class="thread-hover-toolbar">
+            <button
+              class="btn-icon-sm thread-color-picker-area"
+              [style.color]="thread.color || null"
+              (click)="toggleThreadColorPicker(thread.id); $event.stopPropagation()"
+              title="Thread color"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                <circle cx="12" cy="12" r="5"/>
+              </svg>
+            </button>
+            <button
+              class="btn-icon-sm"
+              (click)="addCharacterToThread(thread.id); $event.stopPropagation()"
+              title="Link character"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <line x1="20" y1="8" x2="20" y2="14"/>
+                <line x1="17" y1="11" x2="23" y2="11"/>
+              </svg>
+            </button>
+            <button
+              *ngIf="confirmDeleteThreadId !== thread.id"
+              class="btn-icon-sm btn-danger"
+              (click)="requestDeleteThread(thread.id); $event.stopPropagation()"
+              title="Remove thread"
+            >
+              &times;
+            </button>
+            <button
+              *ngIf="confirmDeleteThreadId === thread.id"
+              class="confirm-delete-btn"
+              (click)="confirmDeleteThread(thread.id); $event.stopPropagation()"
+            >
+              Confirm
+            </button>
+          </div>
+        </div>
+
+        <!-- Linked characters (thumbnails) -->
+        <div class="linked-characters" *ngIf="getThreadCharacters(thread.id).length > 0">
+          <span
+            class="character-thumb"
+            [class.pending-removal]="isCharacterPendingRemoval(thread.id, char.id)"
+            *ngFor="let char of getThreadCharacters(thread.id)"
+            [title]="isCharacterPendingRemoval(thread.id, char.id) ? 'Click again to remove ' + char.name : char.name"
+            (click)="onCharacterThumbClick(thread.id, char.id); $event.stopPropagation()"
+          >
+            <img
+              *ngIf="getCharacterThumbnail(char.id)"
+              [src]="getCharacterThumbnail(char.id)"
+              [alt]="char.name"
+              class="thumb-img"
+            />
+            <span *ngIf="!getCharacterThumbnail(char.id)" class="thumb-fallback">
+              {{ char.name.charAt(0) }}
+            </span>
+            <span class="thumb-remove-badge" *ngIf="isCharacterPendingRemoval(thread.id, char.id)">×</span>
+          </span>
+        </div>
+
+        <!-- Thread icon picker dropdown -->
+        <div class="icon-picker-dropdown thread-icon-picker-area" *ngIf="showThreadIconPicker === thread.id">
+          <div *ngFor="let group of emojiGroups" class="emoji-group">
+            <div class="emoji-group-label">{{ group.label }}</div>
+            <div class="emoji-group-grid">
+              <button
+                *ngFor="let emoji of group.emojis"
+                class="emoji-btn"
+                [class.active]="thread.icon === emoji"
+                (click)="selectThreadIcon(thread.id, emoji); $event.stopPropagation()"
+              >
+                {{ emoji }}
+              </button>
+            </div>
+          </div>
+          <button
+            *ngIf="thread.icon"
+            class="icon-clear-btn"
+            (click)="clearThreadIcon(thread.id); $event.stopPropagation()"
+          >
+            Clear icon
+          </button>
+        </div>
+
+        <!-- Thread color picker dropdown -->
+        <div class="thread-color-dropdown thread-color-picker-area" *ngIf="showThreadColorPicker === thread.id">
+          <div class="thread-color-swatches">
+            <button
+              *ngFor="let color of paletteColors"
+              class="color-swatch"
+              [style.backgroundColor]="color"
+              [class.active]="thread.color === color"
+              (click)="selectThreadColor(thread.id, color); $event.stopPropagation()"
+              title="Set thread color"
+            ></button>
+          </div>
+          <button
+            *ngIf="thread.color"
+            class="icon-clear-btn"
+            (click)="clearThreadColor(thread.id); $event.stopPropagation()"
+          >
+            Clear color
+          </button>
+        </div>
+
+        <!-- Thread line start (stub coming down from header) -->
+        <div class="thread-line-stub" [style.backgroundColor]="thread.color || null"></div>
+      </div>
+
+      <!-- Data rows -->
+      <ng-container *ngFor="let row of board.rows; let rowIdx = index; let isLast = last">
+        <!-- Row label -->
+        <div class="row-label">
+          <div class="row-label-content">
+            <!-- Row icon -->
+            <span
+              class="row-icon-btn row-icon-picker-area"
+              (click)="toggleRowIconPicker(rowIdx); $event.stopPropagation()"
+              [title]="row.icon ? 'Change icon' : 'Add icon'"
+            >
+              <span *ngIf="row.icon">{{ row.icon }}</span>
+              <span *ngIf="!row.icon" class="icon-placeholder-sm">·</span>
+            </span>
+
+            <span
+              *ngIf="editingRowName !== rowIdx"
+              class="row-name"
+              (dblclick)="startEditRowName(rowIdx)"
+              title="Double-click to rename"
+            >
+              {{ row.name }}
+            </span>
+            <input
+              *ngIf="editingRowName === rowIdx"
+              class="row-name-input"
+              [(ngModel)]="editingNameValue"
+              (blur)="finishEditRowName()"
+              (keydown.enter)="finishEditRowName()"
+              (keydown.escape)="editingRowName = null"
+            />
+            <button
+              *ngIf="confirmDeleteRowIndex !== rowIdx"
+              class="btn-icon-sm btn-danger row-remove"
+              (click)="requestDeleteRow(rowIdx); $event.stopPropagation()"
+              title="Remove row"
+            >
+              &times;
+            </button>
+            <button
+              *ngIf="confirmDeleteRowIndex === rowIdx"
+              class="confirm-delete-btn"
+              (click)="confirmDeleteRow(rowIdx); $event.stopPropagation()"
+            >
+              Confirm delete
+            </button>
+          </div>
+
+          <!-- Row icon picker dropdown -->
+          <div class="icon-picker-dropdown row-icon-picker-area" *ngIf="showRowIconPicker === rowIdx">
+            <div *ngFor="let group of emojiGroups" class="emoji-group">
+              <div class="emoji-group-label">{{ group.label }}</div>
+              <div class="emoji-group-grid">
+                <button
+                  *ngFor="let emoji of group.emojis"
+                  class="emoji-btn"
+                  [class.active]="row.icon === emoji"
+                  (click)="selectRowIcon(rowIdx, emoji); $event.stopPropagation()"
+                >
+                  {{ emoji }}
+                </button>
+              </div>
+            </div>
+            <button
+              *ngIf="row.icon"
+              class="icon-clear-btn"
+              (click)="clearRowIcon(rowIdx); $event.stopPropagation()"
+            >
+              Clear icon
+            </button>
+          </div>
+        </div>
+
+        <!-- Thread cells -->
+        <div
+          *ngFor="let thread of board.threads"
+          class="thread-cell"
+          [class.drag-over]="isDragOver(rowIdx, thread.id)"
+          [class.is-last-row]="isLast"
+          (dragover)="onCellDragOver($event, rowIdx, thread.id)"
+          (dragleave)="onCellDragLeave($event, rowIdx, thread.id)"
+          (drop)="onCellDrop($event, rowIdx, thread.id)"
+        >
+          <!-- Vertical thread line -->
+          <div class="thread-line" [style.backgroundColor]="thread.color || null"></div>
+
+          <!-- Event box (when cell has content and not being edited) -->
+          <div
+            class="event-box"
+            *ngIf="hasCellContent(rowIdx, thread.id) && !isEditingCell(rowIdx, thread.id)"
+            draggable="true"
+            (dragstart)="onBoxDragStart($event, rowIdx, thread.id)"
+            (dragend)="onBoxDragEnd($event)"
+            [style.borderColor]="getBoxBorderColor(rowIdx, thread.id)"
+            (dblclick)="startEditCell(rowIdx, thread.id)"
+            title="Double-click to edit, drag to move"
+          >
+            <span class="event-icon" *ngIf="getCellMeta(rowIdx, thread.id)?.icon">
+              {{ getCellMeta(rowIdx, thread.id)?.icon }}
+            </span>
+            <span class="event-text" *ngIf="getCellValue(rowIdx, thread.id)">{{ getCellValue(rowIdx, thread.id) }}</span>
+          </div>
+
+          <!-- Edit popover (inline, replaces the box during editing) -->
+          <div
+            class="cell-edit-popover"
+            *ngIf="isEditingCell(rowIdx, thread.id)"
+          >
+            <div class="popover-toolbar">
+              <!-- Emoji toggle -->
+              <button
+                class="toolbar-btn"
+                [class.active]="editingCellIcon"
+                (click)="toggleEmojiPicker(); $event.stopPropagation()"
+                title="Set icon"
+              >
+                <span *ngIf="editingCellIcon">{{ editingCellIcon }}</span>
+                <span *ngIf="!editingCellIcon" class="toolbar-icon-placeholder">☺</span>
+              </button>
+
+              <!-- Clear icon -->
+              <button
+                class="toolbar-btn btn-clear"
+                *ngIf="editingCellIcon"
+                (click)="clearIcon(); $event.stopPropagation()"
+                title="Remove icon"
+              >
+                &times;
+              </button>
+
+              <span class="toolbar-spacer"></span>
+
+              <!-- Color swatches -->
+              <div class="color-swatches">
+                <button
+                  *ngFor="let color of paletteColors"
+                  class="color-swatch"
+                  [style.backgroundColor]="color"
+                  [class.active]="editingCellColor === color"
+                  (click)="selectColor(color); $event.stopPropagation()"
+                  title="Set outline color"
+                ></button>
+              </div>
+            </div>
+
+            <!-- Emoji picker dropdown -->
+            <div class="emoji-picker" *ngIf="showEmojiPicker">
+              <div *ngFor="let group of emojiGroups" class="emoji-group">
+                <div class="emoji-group-label">{{ group.label }}</div>
+                <div class="emoji-group-grid">
                   <button
-                    class="btn-icon-sm"
-                    (click)="addCharacterToThread(thread.id); $event.stopPropagation()"
-                    title="Link character"
+                    *ngFor="let emoji of group.emojis"
+                    class="emoji-btn"
+                    [class.active]="editingCellIcon === emoji"
+                    (click)="selectEmoji(emoji); $event.stopPropagation()"
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                      <circle cx="9" cy="7" r="4"/>
-                      <line x1="20" y1="8" x2="20" y2="14"/>
-                      <line x1="17" y1="11" x2="23" y2="11"/>
-                    </svg>
-                  </button>
-                  <button
-                    *ngIf="confirmDeleteThreadId !== thread.id"
-                    class="btn-icon-sm btn-danger"
-                    (click)="requestDeleteThread(thread.id); $event.stopPropagation()"
-                    title="Remove thread"
-                  >
-                    &times;
-                  </button>
-                  <button
-                    *ngIf="confirmDeleteThreadId === thread.id"
-                    class="confirm-delete-btn"
-                    (click)="confirmDeleteThread(thread.id); $event.stopPropagation()"
-                  >
-                    Confirm delete
+                    {{ emoji }}
                   </button>
                 </div>
               </div>
+            </div>
 
-              <!-- Linked characters badges -->
-              <div class="linked-characters" *ngIf="getThreadCharacters(thread.id).length > 0">
-                <span
-                  class="character-badge"
-                  *ngFor="let char of getThreadCharacters(thread.id)"
-                  title="Click to remove"
-                  (click)="removeCharacterFromThread(thread.id, char.id)"
-                >
-                  {{ char.name }} <span class="badge-remove">&times;</span>
-                </span>
-              </div>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let rowName of board.rows; let rowIdx = index">
-            <!-- Row label -->
-            <td class="row-label">
-              <div class="row-label-content">
-                <span
-                  *ngIf="editingRowName !== rowIdx"
-                  class="row-name"
-                  (dblclick)="startEditRowName(rowIdx)"
-                  title="Double-click to rename"
-                >
-                  {{ rowName }}
-                </span>
-                <input
-                  *ngIf="editingRowName === rowIdx"
-                  class="row-name-input"
-                  [(ngModel)]="editingNameValue"
-                  (blur)="finishEditRowName()"
-                  (keydown.enter)="finishEditRowName()"
-                  (keydown.escape)="editingRowName = null"
-                />
-                <button
-                  *ngIf="confirmDeleteRowIndex !== rowIdx"
-                  class="btn-icon-sm btn-danger row-remove"
-                  (click)="requestDeleteRow(rowIdx); $event.stopPropagation()"
-                  title="Remove row"
-                >
-                  &times;
-                </button>
-                <button
-                  *ngIf="confirmDeleteRowIndex === rowIdx"
-                  class="confirm-delete-btn"
-                  (click)="confirmDeleteRow(rowIdx); $event.stopPropagation()"
-                >
-                  Confirm delete
-                </button>
-              </div>
-            </td>
-            <!-- Data cells -->
-            <td
-              *ngFor="let thread of board.threads"
-              class="data-cell"
-              [class.editing]="isEditingCell(rowIdx, thread.id)"
-              (dblclick)="startEditCell(rowIdx, thread.id)"
-            >
-              <!-- Display mode -->
-              <span
-                *ngIf="!isEditingCell(rowIdx, thread.id)"
-                class="cell-text"
-                [class.empty]="!getCellValue(rowIdx, thread.id)"
-                [title]="getCellValue(rowIdx, thread.id) || 'Double-click to edit'"
+            <textarea
+              class="cell-edit-textarea"
+              [(ngModel)]="editingCellValue"
+              (keydown.escape)="cancelEditCell()"
+              placeholder="Event description (optional)..."
+              rows="2"
+            ></textarea>
+
+            <div class="popover-footer">
+              <button
+                *ngIf="!confirmDeleteCell && (getCellValue(editingCell!.row, editingCell!.threadId) || getCellMeta(editingCell!.row, editingCell!.threadId)?.icon)"
+                class="btn-delete-cell"
+                (click)="requestDeleteCell(); $event.stopPropagation()"
               >
-                {{ getCellValue(rowIdx, thread.id) || '' }}
-              </span>
-              <!-- Edit mode -->
-              <textarea
-                *ngIf="isEditingCell(rowIdx, thread.id)"
-                class="cell-input"
-                [(ngModel)]="editingCellValue"
-                (blur)="finishEditCell()"
-                (keydown.escape)="cancelEditCell()"
-                rows="3"
-              ></textarea>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+                Delete
+              </button>
+              <button
+                *ngIf="confirmDeleteCell"
+                class="btn-delete-cell btn-delete-confirm"
+                (click)="confirmDeleteCellAction(); $event.stopPropagation()"
+              >
+                Confirm delete
+              </button>
+            </div>
+          </div>
+
+          <!-- Empty cell drop target -->
+          <div
+            class="empty-cell-target"
+            *ngIf="!hasCellContent(rowIdx, thread.id) && !isEditingCell(rowIdx, thread.id)"
+            (dblclick)="startEditCell(rowIdx, thread.id)"
+            title="Double-click to add event"
+          ></div>
+        </div>
+      </ng-container>
     </div>
   </div>
 

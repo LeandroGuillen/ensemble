@@ -768,6 +768,19 @@ export class ProjectService {
     return project?.metadata.settings.filterExpanded ?? false;
   }
 
+  async saveplotBoardZoom(zoom: number): Promise<void> {
+    const project = this.currentProjectSubject.value;
+    if (!project) return;
+    if (project.metadata.settings.plotBoardZoom === zoom) return;
+    project.metadata.settings.plotBoardZoom = zoom;
+    await this.saveMetadata(project.path, project.metadata);
+  }
+
+  getPlotBoardZoom(): number | null {
+    const project = this.currentProjectSubject.value;
+    return project?.metadata.settings.plotBoardZoom ?? null;
+  }
+
   /**
    * Migrates legacy single pinboard to new multiple pinboards structure
    */
