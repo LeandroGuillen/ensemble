@@ -1,0 +1,166 @@
+<div class="plot-board-container">
+  <app-page-header title="Plot Board">
+    <button class="btn-action" (click)="addThread()" title="Add Thread">
+      + Thread
+    </button>
+    <button class="btn-action" (click)="addRow()" title="Add Row">
+      + Row
+    </button>
+  </app-page-header>
+
+  <div class="board-content" *ngIf="!isLoading">
+    <!-- Empty state -->
+    <div class="empty-state" *ngIf="board.threads.length === 0 && board.rows.length === 0">
+      <p class="empty-title">No plot threads yet</p>
+      <p class="empty-subtitle">Add a thread (column) and a row to start building your plot board.</p>
+      <div class="empty-actions">
+        <button class="btn-primary" (click)="addThread()">Add First Thread</button>
+      </div>
+    </div>
+
+    <!-- Grid table -->
+    <div class="table-wrapper" *ngIf="board.threads.length > 0 || board.rows.length > 0">
+      <table class="plot-table">
+        <thead>
+          <tr>
+            <th class="corner-cell"></th>
+            <th *ngFor="let thread of board.threads" class="thread-header">
+              <div class="thread-header-content">
+                <!-- Thread name (display) -->
+                <span
+                  *ngIf="editingThreadName !== thread.id"
+                  class="thread-name"
+                  (dblclick)="startEditThreadName(thread.id)"
+                  title="Double-click to rename"
+                >
+                  {{ thread.name }}
+                </span>
+                <!-- Thread name (editing) -->
+                <input
+                  *ngIf="editingThreadName === thread.id"
+                  class="thread-name-input"
+                  [(ngModel)]="editingNameValue"
+                  (blur)="finishEditThreadName()"
+                  (keydown.enter)="finishEditThreadName()"
+                  (keydown.escape)="editingThreadName = null"
+                />
+
+                <div class="thread-actions">
+                  <button
+                    class="btn-icon-sm"
+                    (click)="addCharacterToThread(thread.id); $event.stopPropagation()"
+                    title="Link character"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                      <circle cx="9" cy="7" r="4"/>
+                      <line x1="20" y1="8" x2="20" y2="14"/>
+                      <line x1="17" y1="11" x2="23" y2="11"/>
+                    </svg>
+                  </button>
+                  <button
+                    *ngIf="confirmDeleteThreadId !== thread.id"
+                    class="btn-icon-sm btn-danger"
+                    (click)="requestDeleteThread(thread.id); $event.stopPropagation()"
+                    title="Remove thread"
+                  >
+                    &times;
+                  </button>
+                  <button
+                    *ngIf="confirmDeleteThreadId === thread.id"
+                    class="confirm-delete-btn"
+                    (click)="confirmDeleteThread(thread.id); $event.stopPropagation()"
+                  >
+                    Confirm delete
+                  </button>
+                </div>
+              </div>
+
+              <!-- Linked characters badges -->
+              <div class="linked-characters" *ngIf="getThreadCharacters(thread.id).length > 0">
+                <span
+                  class="character-badge"
+                  *ngFor="let char of getThreadCharacters(thread.id)"
+                  title="Click to remove"
+                  (click)="removeCharacterFromThread(thread.id, char.id)"
+                >
+                  {{ char.name }} <span class="badge-remove">&times;</span>
+                </span>
+              </div>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let rowName of board.rows; let rowIdx = index">
+            <!-- Row label -->
+            <td class="row-label">
+              <div class="row-label-content">
+                <span
+                  *ngIf="editingRowName !== rowIdx"
+                  class="row-name"
+                  (dblclick)="startEditRowName(rowIdx)"
+                  title="Double-click to rename"
+                >
+                  {{ rowName }}
+                </span>
+                <input
+                  *ngIf="editingRowName === rowIdx"
+                  class="row-name-input"
+                  [(ngModel)]="editingNameValue"
+                  (blur)="finishEditRowName()"
+                  (keydown.enter)="finishEditRowName()"
+                  (keydown.escape)="editingRowName = null"
+                />
+                <button
+                  *ngIf="confirmDeleteRowIndex !== rowIdx"
+                  class="btn-icon-sm btn-danger row-remove"
+                  (click)="requestDeleteRow(rowIdx); $event.stopPropagation()"
+                  title="Remove row"
+                >
+                  &times;
+                </button>
+                <button
+                  *ngIf="confirmDeleteRowIndex === rowIdx"
+                  class="confirm-delete-btn"
+                  (click)="confirmDeleteRow(rowIdx); $event.stopPropagation()"
+                >
+                  Confirm delete
+                </button>
+              </div>
+            </td>
+            <!-- Data cells -->
+            <td
+              *ngFor="let thread of board.threads"
+              class="data-cell"
+              [class.editing]="isEditingCell(rowIdx, thread.id)"
+              (dblclick)="startEditCell(rowIdx, thread.id)"
+            >
+              <!-- Display mode -->
+              <span
+                *ngIf="!isEditingCell(rowIdx, thread.id)"
+                class="cell-text"
+                [class.empty]="!getCellValue(rowIdx, thread.id)"
+                [title]="getCellValue(rowIdx, thread.id) || 'Double-click to edit'"
+              >
+                {{ getCellValue(rowIdx, thread.id) || '' }}
+              </span>
+              <!-- Edit mode -->
+              <textarea
+                *ngIf="isEditingCell(rowIdx, thread.id)"
+                class="cell-input"
+                [(ngModel)]="editingCellValue"
+                (blur)="finishEditCell()"
+                (keydown.escape)="cancelEditCell()"
+                rows="3"
+              ></textarea>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="loading-state" *ngIf="isLoading">
+    <p>Loading plot board...</p>
+  </div>
+</div>

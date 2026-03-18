@@ -76,6 +76,14 @@ export const routes: Routes = [
     canActivate: [projectGuard],
   },
   {
+    path: "plot-board",
+    loadComponent: () =>
+      import("./features/plot-board/plot-board.component").then(
+        (m) => m.PlotBoardComponent
+      ),
+    canActivate: [projectGuard],
+  },
+  {
     path: "casts",
     loadComponent: () =>
       import("./features/cast-list/cast-list.component").then(

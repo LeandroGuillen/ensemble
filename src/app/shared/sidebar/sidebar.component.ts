@@ -46,7 +46,8 @@ export class SidebarComponent implements OnInit {
       label: 'References',
       items: [
         { icon: 'book', label: 'Books', route: '/library', title: 'Books' },
-        { icon: 'layout', label: 'Backstage', route: '/backstage', title: 'Backstage' }
+        { icon: 'layout', label: 'Backstage', route: '/backstage', title: 'Backstage' },
+        { icon: 'plot-board', label: 'Plot Board', route: '/plot-board', title: 'Plot Board' }
       ]
     },
     {

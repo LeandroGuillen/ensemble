@@ -19,6 +19,8 @@ export class CommandPaletteComponent implements OnInit, OnDestroy {
   commands: Command[] = [];
   filteredCommands: Command[] = [];
   selectedIndex = 0;
+  placeholder = 'Type a command or search...';
+  enterLabel = 'Execute';
 
   private destroy$ = new Subject<void>();
 
@@ -43,6 +45,14 @@ export class CommandPaletteComponent implements OnInit, OnDestroy {
         this.commands = commands;
         this.filterCommands();
       });
+
+    this.commandPaletteService.placeholder$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(p => this.placeholder = p);
+
+    this.commandPaletteService.enterLabel$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(l => this.enterLabel = l);
   }
 
   ngOnDestroy(): void {
@@ -89,11 +99,23 @@ export class CommandPaletteComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.filteredCommands = this.commands.filter(cmd => {
-      const labelMatch = cmd.label.toLowerCase().includes(query);
-      const keywordMatch = cmd.keywords?.some(keyword => keyword.toLowerCase().includes(query));
-      return labelMatch || keywordMatch;
-    });
+    this.filteredCommands = this.commands
+      .filter(cmd => {
+        const labelMatch = cmd.label.toLowerCase().includes(query);
+        const keywordMatch = cmd.keywords?.some(kw => kw.toLowerCase().includes(query));
+        return labelMatch || keywordMatch;
+      })
+      .sort((a, b) => {
+        const aLabel = a.label.toLowerCase();
+        const bLabel = b.label.toLowerCase();
+        const aStarts = aLabel.startsWith(query);
+        const bStarts = bLabel.startsWith(query);
+        if (aStarts !== bStarts) return aStarts ? -1 : 1;
+        const aInLabel = aLabel.includes(query);
+        const bInLabel = bLabel.includes(query);
+        if (aInLabel !== bInLabel) return aInLabel ? -1 : 1;
+        return aLabel.localeCompare(bLabel);
+      });
   }
 
   executeCommand(command: Command): void {

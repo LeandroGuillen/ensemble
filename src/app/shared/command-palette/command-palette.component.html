@@ -5,7 +5,7 @@
         #searchInput
         type="text"
         class="command-search-input"
-        placeholder="Type a command or search..."
+        [placeholder]="placeholder"
         [(ngModel)]="searchQuery"
         (input)="onSearchChange()"
         autocomplete="off">
@@ -22,6 +22,9 @@
         <div class="command-thumbnail" *ngIf="command.thumbnail">
           <img [src]="command.thumbnail" [alt]="command.label">
         </div>
+        <div class="command-thumbnail-placeholder" *ngIf="!command.thumbnail && !command.icon && command.metadata">
+          {{ command.label.charAt(0) }}
+        </div>
         <span class="command-icon" *ngIf="command.icon && !command.thumbnail">{{ command.icon }}</span>
         <div class="command-content">
           <span class="command-label">{{ command.label }}</span>
@@ -37,7 +40,7 @@
     <div class="command-footer">
       <div class="command-shortcuts">
         <span class="shortcut-item"><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
-        <span class="shortcut-item"><kbd>Enter</kbd> Execute</span>
+        <span class="shortcut-item"><kbd>Enter</kbd> {{ enterLabel }}</span>
         <span class="shortcut-item"><kbd>ESC</kbd> Close</span>
       </div>
     </div>
