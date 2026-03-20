@@ -157,6 +157,13 @@ export class ElectronService {
     return await this.ipcRenderer.invoke('copy-file', sourcePath, destPath);
   }
 
+  async moveFile(sourcePath: string, destPath: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.isElectron()) {
+      return { success: false, error: 'Not running in Electron' };
+    }
+    return await this.ipcRenderer.invoke('move-file', sourcePath, destPath);
+  }
+
   async getFileStats(filePath: string): Promise<{ success: boolean; stats?: any; error?: string }> {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };

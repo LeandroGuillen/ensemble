@@ -77,11 +77,24 @@ export const routes: Routes = [
   },
   {
     path: "plot-board",
-    loadComponent: () =>
-      import("./features/plot-board/plot-board.component").then(
-        (m) => m.PlotBoardComponent
-      ),
     canActivate: [projectGuard],
+    children: [
+      {
+        path: "",
+        pathMatch: "full",
+        loadComponent: () =>
+          import("./features/plot-board/plot-board.component").then(
+            (m) => m.PlotBoardComponent
+          ),
+      },
+      {
+        path: "**",
+        loadComponent: () =>
+          import("./features/plot-board/plot-board.component").then(
+            (m) => m.PlotBoardComponent
+          ),
+      },
+    ],
   },
   {
     path: "casts",

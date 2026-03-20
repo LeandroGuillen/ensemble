@@ -156,6 +156,7 @@ export class AppComponent implements OnInit, OnDestroy {
     themes.forEach(theme => {
       this.commandPaletteService.removeCommand(`theme-${theme.id}`);
     });
+    this.commandPaletteService.removeCommand('keyboard-shortcuts');
 
     // Add commands for each theme
     themes.forEach(theme => {

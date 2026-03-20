@@ -104,11 +104,14 @@ Each project has this structure:
 ```
 project-folder/
 ├── ensemble.json           # Project metadata: categories, tags, settings, relationships
-└── characters/             # Character files (recursively scanned)
-    ├── _<slug>.md          # Character file (e.g., "_dessir.md")
-    └── <category-slug>/    # Optional subfolders
-        └── _<slug>.md      # Character in subfolder
+├── characters/             # Character files (recursively scanned)
+│   ├── _<slug>.md          # Character file (e.g., "_dessir.md")
+│   └── <category-slug>/    # Optional subfolders
+│       └── _<slug>.md      # Character in subfolder
+└── **/*.plotboard.md   # Plot boards (any subfolder; identity = path from project root)
 ```
+
+Plot boards are Markdown files matching `*.plotboard.md` anywhere under the project. The app discovers them at startup and via Refresh; which file is open is stored in `ensemble.json` as `settings.lastPlotboardPath` (relative path) and in the URL under `/plot-board/...`. New boards created in-app are written at the project root as `<slug>.plotboard.md`. Duplicate (sidebar) copies the file beside the original with an auto-generated stem: increment a trailing `-123` or digit suffix, otherwise append `-2`.
 
 ### Character File Format
 

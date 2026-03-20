@@ -3,12 +3,24 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { PlotBoard, PlotBoardFrontmatter, PlotCellMeta, PlotRow, PlotThread } from '../interfaces/plot-board.interface';
 import { MarkdownUtils } from '../utils/markdown.utils';
 import { pathJoin } from '../utils/path.utils';
-import { slugify } from '../utils/slug.utils';
+import { nextPlotBoardDuplicateStem, slugify } from '../utils/slug.utils';
 import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
 import { LoggingService } from './logging.service';
 
-const PLOT_BOARD_FILENAME = 'plot-board.md';
+/** Primary glob for new files; legacy/alternate: `*.plotboard.md` */
+export const PLOTBOARD_FILE_GLOB = '*.pinboard.md';
+export const PLOTBOARD_ALT_FILE_GLOB = '*.plotboard.md';
+
+/** Empty = create new plot boards at project root */
+const DEFAULT_NEW_RELATIVE_DIR = '';
+
+export function plotBoardFileSuffix(filename: string): '.pinboard.md' | '.plotboard.md' | null {
+  const lower = filename.toLowerCase();
+  if (lower.endsWith('.pinboard.md')) return '.pinboard.md';
+  if (lower.endsWith('.plotboard.md')) return '.plotboard.md';
+  return null;
+}
 
 @Injectable({
   providedIn: 'root',
@@ -16,6 +28,9 @@ const PLOT_BOARD_FILENAME = 'plot-board.md';
 export class PlotBoardService {
   private plotBoardSubject = new BehaviorSubject<PlotBoard | null>(null);
   public plotBoard$ = this.plotBoardSubject.asObservable();
+
+  private currentRelativePathSubject = new BehaviorSubject<string | null>(null);
+  public currentRelativePath$ = this.currentRelativePathSubject.asObservable();
 
   constructor(
     private electronService: ElectronService,
@@ -27,14 +42,58 @@ export class PlotBoardService {
     return this.plotBoardSubject.value;
   }
 
-  private getFilePath(): string | null {
-    const project = this.projectService.getCurrentProject();
-    if (!project?.path) return null;
-    return pathJoin(project.path, PLOT_BOARD_FILENAME);
+  getCurrentRelativePath(): string | null {
+    return this.currentRelativePathSubject.value;
   }
 
-  async loadPlotBoard(): Promise<void> {
-    const filePath = this.getFilePath();
+  setCurrentRelativePath(relativePath: string | null): void {
+    this.currentRelativePathSubject.next(relativePath);
+  }
+
+  normalizeRelativePath(relativePath: string): string {
+    return relativePath.replace(/\\/g, '/').replace(/^\/+/, '');
+  }
+
+  private getAbsolutePath(relativePath: string): string | null {
+    const project = this.projectService.getCurrentProject();
+    if (!project?.path) return null;
+    return pathJoin(project.path, this.normalizeRelativePath(relativePath));
+  }
+
+  /**
+   * Recursively find all plot board files (*.pinboard.md and *.plotboard.md).
+   */
+  async discoverPlotboardFiles(): Promise<string[]> {
+    const project = this.projectService.getCurrentProject();
+    if (!project?.path) return [];
+
+    const [a, b] = await Promise.all([
+      this.electronService.readDirectoryRecursive(project.path, PLOTBOARD_FILE_GLOB),
+      this.electronService.readDirectoryRecursive(project.path, PLOTBOARD_ALT_FILE_GLOB),
+    ]);
+
+    const merged = new Set<string>();
+    for (const res of [a, b]) {
+      if (res.success && res.files) {
+        for (const f of res.files) {
+          merged.add(this.normalizeRelativePath(f.relativePath));
+        }
+      }
+    }
+
+    return [...merged].sort((x, y) => x.localeCompare(y, undefined, { sensitivity: 'base' }));
+  }
+
+  async loadPlotBoard(relativePath: string | null): Promise<void> {
+    this.setCurrentRelativePath(relativePath);
+
+    if (!relativePath) {
+      const empty: PlotBoard = { threads: [], rows: [], cells: {}, cellMeta: {} };
+      this.plotBoardSubject.next(empty);
+      return;
+    }
+
+    const filePath = this.getAbsolutePath(relativePath);
     if (!filePath) return;
 
     const exists = await this.electronService.fileExists(filePath);
@@ -59,7 +118,12 @@ export class PlotBoardService {
   }
 
   async savePlotBoard(board: PlotBoard): Promise<void> {
-    const filePath = this.getFilePath();
+    const relativePath = this.getCurrentRelativePath();
+    if (!relativePath) {
+      throw new Error('No plot board file is open');
+    }
+
+    const filePath = this.getAbsolutePath(relativePath);
     if (!filePath) return;
 
     try {
@@ -73,6 +137,156 @@ export class PlotBoardService {
       this.logger.error('Failed to save plot board', error);
       throw error;
     }
+  }
+
+  async createPlotBoardFile(nameHint: string): Promise<{ success: boolean; relativePath?: string; error?: string }> {
+    const project = this.projectService.getCurrentProject();
+    if (!project?.path) {
+      return { success: false, error: 'No project loaded' };
+    }
+
+    const base = slugify(nameHint.trim()) || 'plot-board';
+    const dirRel = DEFAULT_NEW_RELATIVE_DIR;
+    let stem = base;
+    let counter = 1;
+
+    const tryPath = (s: string): string =>
+      dirRel ? pathJoin(dirRel, `${s}.pinboard.md`) : `${s}.pinboard.md`;
+
+    let relativePath = tryPath(stem);
+    let absCheck = await this.electronService.pathJoin(project.path, relativePath);
+    while (await this.electronService.fileExists(absCheck)) {
+      stem = `${base}-${counter++}`;
+      relativePath = tryPath(stem);
+      absCheck = await this.electronService.pathJoin(project.path, relativePath);
+    }
+
+    if (dirRel) {
+      const dirAbs = await this.electronService.pathJoin(project.path, dirRel);
+      const mkdir = await this.electronService.createDirectory(dirAbs);
+      if (!mkdir.success) {
+        return { success: false, error: mkdir.error || 'Could not create folder' };
+      }
+    }
+
+    const empty: PlotBoard = { threads: [], rows: [], cells: {}, cellMeta: {} };
+    const content = this.generateFile(empty);
+    const fileAbs = await this.electronService.pathJoin(project.path, relativePath);
+    const write = await this.electronService.writeFileAtomic(fileAbs, content);
+    if (!write.success) {
+      return { success: false, error: write.error || 'Could not create file' };
+    }
+
+    return { success: true, relativePath: this.normalizeRelativePath(relativePath) };
+  }
+
+  private getAbsolutePathForProject(projectPath: string, relativePath: string): string {
+    return pathJoin(projectPath, this.normalizeRelativePath(relativePath));
+  }
+
+  async deletePlotBoardFile(relativePath: string): Promise<{ success: boolean; error?: string }> {
+    const abs = this.getAbsolutePath(relativePath);
+    if (!abs) return { success: false, error: 'No project' };
+    return this.electronService.deleteFile(abs);
+  }
+
+  /**
+   * Copy a plot board file beside the original with an auto-generated stem (increment trailing number or add `-2`).
+   */
+  async duplicatePlotBoardFile(
+    oldRelative: string
+  ): Promise<{ success: boolean; newRelative?: string; error?: string }> {
+    const project = this.projectService.getCurrentProject();
+    if (!project?.path) {
+      return { success: false, error: 'No project loaded' };
+    }
+
+    const normOld = this.normalizeRelativePath(oldRelative);
+    const parts = normOld.split('/');
+    const oldFile = parts.pop()!;
+    const parentRel = parts.join('/');
+
+    const suffix = plotBoardFileSuffix(oldFile);
+    if (!suffix) {
+      return { success: false, error: 'Not a plot board file' };
+    }
+
+    const oldStem = oldFile.slice(0, -suffix.length);
+    let newStem = nextPlotBoardDuplicateStem(oldStem);
+    let newFileName = `${newStem}${suffix}`;
+    let newRelative = parentRel ? `${parentRel}/${newFileName}` : newFileName;
+
+    const destAbs = (rel: string) => this.getAbsolutePathForProject(project.path, rel);
+    while (await this.electronService.fileExists(destAbs(newRelative))) {
+      newStem = nextPlotBoardDuplicateStem(newStem);
+      newFileName = `${newStem}${suffix}`;
+      newRelative = parentRel ? `${parentRel}/${newFileName}` : newFileName;
+    }
+
+    const srcAbs = this.getAbsolutePathForProject(project.path, normOld);
+    const result = await this.electronService.copyFile(srcAbs, destAbs(newRelative));
+    if (!result.success) {
+      return { success: false, error: result.error || 'Duplicate failed' };
+    }
+
+    return { success: true, newRelative };
+  }
+
+  /**
+   * Rename plot board file by changing the filename stem (directory unchanged). newStem must slugify to no spaces.
+   */
+  async renamePlotBoardFile(
+    oldRelative: string,
+    newDisplayName: string
+  ): Promise<{ success: boolean; newRelative?: string; error?: string }> {
+    const project = this.projectService.getCurrentProject();
+    if (!project?.path) {
+      return { success: false, error: 'No project loaded' };
+    }
+
+    const newStem = slugify(newDisplayName.trim());
+    if (!newStem) {
+      return { success: false, error: 'Invalid name' };
+    }
+
+    const normOld = this.normalizeRelativePath(oldRelative);
+    const parts = normOld.split('/');
+    const oldFile = parts.pop()!;
+    const parentRel = parts.join('/');
+
+    const suffix = plotBoardFileSuffix(oldFile);
+    if (!suffix) {
+      return { success: false, error: 'Not a plot board file' };
+    }
+
+    const newFileName = `${newStem}${suffix}`;
+    const newRelative = parentRel ? `${parentRel}/${newFileName}` : newFileName;
+
+    if (normOld === newRelative) {
+      return { success: true, newRelative };
+    }
+
+    const destAbs = this.getAbsolutePathForProject(project.path, newRelative);
+    if (await this.electronService.fileExists(destAbs)) {
+      return {
+        success: false,
+        error: `A file already exists at "${newRelative}". Choose a different name.`,
+      };
+    }
+
+    const srcAbs = this.getAbsolutePathForProject(project.path, normOld);
+    const result = await this.electronService.moveFile(srcAbs, destAbs);
+    if (!result.success) {
+      return { success: false, error: result.error || 'Rename failed' };
+    }
+
+    // Keep in sync with disk so saves (including debounced) never recreate the old path.
+    const cur = this.getCurrentRelativePath();
+    if (cur && this.normalizeRelativePath(cur) === normOld) {
+      this.setCurrentRelativePath(this.normalizeRelativePath(newRelative));
+    }
+
+    return { success: true, newRelative };
   }
 
   parseFile(raw: string): PlotBoard {

@@ -345,6 +345,18 @@ ipcMain.handle('copy-file', async (event, sourcePath, destPath) => {
   }
 });
 
+// Rename/move a file (same as fs.rename)
+ipcMain.handle('move-file', async (event, sourcePath, destPath) => {
+  try {
+    const destDir = pathModule.dirname(destPath);
+    await fs.mkdir(destDir, { recursive: true });
+    await fs.rename(sourcePath, destPath);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 // Handle file stats
 ipcMain.handle('get-file-stats', async (event, filePath) => {
   try {

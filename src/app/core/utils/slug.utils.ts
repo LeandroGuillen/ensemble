@@ -64,3 +64,20 @@ export function slugifyWithTimestamp(slug: string): string {
   const timestamp = Date.now();
   return `${slug}-${timestamp}`;
 }
+
+/**
+ * Next filename stem when duplicating a plot board file: increment a trailing `-123` or final digit run, else append `-2`.
+ */
+export function nextPlotBoardDuplicateStem(stem: string): string {
+  const hyphenNumber = stem.match(/^(.+)-(\d+)$/);
+  if (hyphenNumber) {
+    const n = parseInt(hyphenNumber[2], 10) + 1;
+    return `${hyphenNumber[1]}-${n}`;
+  }
+  const trailingDigits = stem.match(/^(.+?)(\d+)$/);
+  if (trailingDigits && trailingDigits[1].length > 0) {
+    const n = parseInt(trailingDigits[2], 10) + 1;
+    return `${trailingDigits[1]}${n}`;
+  }
+  return `${stem}-2`;
+}

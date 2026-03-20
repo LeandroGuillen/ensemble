@@ -116,6 +116,8 @@ export interface ProjectSettings {
   ai?: AiSettings;
   filterExpanded?: boolean;
   plotBoardZoom?: number;
+  /** Project-relative path to the open plot board file (*.pinboard.md) */
+  lastPlotboardPath?: string;
   theme?: string; // Theme ID (e.g., "blue-gold")
   colorPalette?: import('./color-palette.interface').ColorPaletteConfig;
 }

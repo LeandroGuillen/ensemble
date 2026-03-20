@@ -1,6 +1,19 @@
-import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  HostListener,
+  Injector,
+  NgZone,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+  afterNextRender,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { animate, state, style, transition, trigger } from '@angular/animations';
+import { ActivatedRoute, Router, RouterLink, UrlSegment } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil, debounceTime } from 'rxjs/operators';
 import { PlotBoardService } from '../../core/services/plot-board.service';
@@ -12,6 +25,7 @@ import { ColorPaletteService } from '../../core/services/color-palette.service';
 import { PlotBoard, PlotCellMeta, PlotRow } from '../../core/interfaces/plot-board.interface';
 import { Character } from '../../core/interfaces/character.interface';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+import { pathBasename } from '../../core/utils/path.utils';
 
 const EMOJI_GROUPS: { label: string; emojis: string[] }[] = [
   { label: 'Story', emojis: ['⚔️', '🛡️', '💀', '👑', '🏰', '🗡️', '🔮', '📜', '🏴', '🎭'] },
@@ -26,17 +40,45 @@ export type ZoomLevel = 1 | 2 | 3;
 @Component({
   selector: 'app-plot-board',
   standalone: true,
-  imports: [CommonModule, FormsModule, PageHeaderComponent],
+  imports: [CommonModule, FormsModule, RouterLink, PageHeaderComponent],
   templateUrl: './plot-board.component.html',
   styleUrls: ['./plot-board.component.scss'],
+  animations: [
+    trigger('plotBoardContent', [
+      transition('* => *', [
+        style({ opacity: 0 }),
+        animate('260ms cubic-bezier(0.25, 0.46, 0.45, 0.94)', style({ opacity: 1 })),
+      ]),
+    ]),
+    trigger('plotBoardSidebar', [
+      state(
+        'open',
+        style({
+          width: '240px',
+        })
+      ),
+      state(
+        'closed',
+        style({
+          width: '0',
+          overflow: 'hidden',
+        })
+      ),
+      transition('open <=> closed', [
+        animate('240ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'),
+      ]),
+    ]),
+  ],
 })
-export class PlotBoardComponent implements OnInit, OnDestroy {
+export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   private destroy$ = new Subject<void>();
   private saveRequest$ = new Subject<void>();
 
   board: PlotBoard = { threads: [], rows: [], cells: {}, cellMeta: {} };
   characters: Character[] = [];
   isLoading = false;
+  /** Drives fade animation after a board finishes loading (avoids animating stale data) */
+  displayedBoardPath: string | null = null;
   zoomLevel: ZoomLevel = 3;
 
   editingCell: { row: number; threadId: string } | null = null;
@@ -58,13 +100,62 @@ export class PlotBoardComponent implements OnInit, OnDestroy {
   confirmDeleteRowIndex: number | null = null;
   confirmDeleteCell = false;
 
-  dragSource: { row: number; threadId: string } | null = null;
+  dragSource:
+    | { kind: 'cell'; row: number; threadId: string }
+    | { kind: 'row'; fromIndex: number }
+    | { kind: 'thread'; fromIndex: number }
+    | null = null;
   dragOverTarget: { row: number; threadId: string } | null = null;
+  /** Drop target index while reordering threads (column headers). */
+  dragOverThreadIndex: number | null = null;
+  /** Drop target index while reordering rows (row labels). */
+  dragOverRowIndex: number | null = null;
 
   paletteColors: string[] = [];
   emojiGroups = EMOJI_GROUPS;
 
   thumbnailCache: Map<string, string> = new Map();
+
+  /** Sorted project-relative paths to plot board files */
+  plotboardPaths: string[] = [];
+  renameError = '';
+  showRenameDialog = false;
+  renameValue = '';
+  showNewPlotBoardDialog = false;
+  newPlotBoardName = '';
+  newPlotBoardError = '';
+  showDeletePlotBoardDialog = false;
+  deletePlotBoardError = '';
+  /** Shown when duplicate fails (e.g. disk error) */
+  duplicateError = '';
+  /** File being renamed or deleted from the sidebar (when not the open file) */
+  renameTargetPath: string | null = null;
+  deleteTargetPath: string | null = null;
+  private resolvingEmptyRoute = false;
+
+  @ViewChild('boardContent') boardContent?: ElementRef<HTMLElement>;
+  @ViewChild('cellEditTextarea') cellEditTextarea?: ElementRef<HTMLTextAreaElement>;
+  @ViewChild('threadNameInput') threadNameInput?: ElementRef<HTMLInputElement>;
+  @ViewChild('rowNameInput') rowNameInput?: ElementRef<HTMLInputElement>;
+
+  /** Viewport coords for fixed thread toolbars (escapes page-header stacking context). */
+  threadToolbarFixedPos: Record<string, { top: number; left: number }> = {};
+  /** Hovered row or toolbar; confirm-delete keeps toolbar without hover. */
+  activeThreadToolbarRowId: string | null = null;
+  private threadToolbarLeaveTimer: ReturnType<typeof setTimeout> | null = null;
+  private threadToolbarPointerInsideToolbar = false;
+  private threadToolbarAnchorById = new Map<string, HTMLElement>();
+
+  private static readonly THREAD_TOOLBAR_APPROX_HEIGHT = 36;
+  private static readonly THREAD_TOOLBAR_GAP = 6;
+
+  private static readonly PLOTBOARD_SIDEBAR_STORAGE_KEY = 'ensemble.plotBoard.sidebarOpen';
+
+  /** Plot board file list panel (left column) */
+  plotboardSidebarOpen = true;
+
+  /** Keyboard grid cursor (arrow keys); not used while editingCell. */
+  keyboardFocusCell: { row: number; threadId: string } | null = null;
 
   constructor(
     private plotBoardService: PlotBoardService,
@@ -72,10 +163,26 @@ export class PlotBoardComponent implements OnInit, OnDestroy {
     private characterPickerService: CharacterPickerService,
     private projectService: ProjectService,
     private logger: LoggingService,
-    private colorPaletteService: ColorPaletteService
+    private colorPaletteService: ColorPaletteService,
+    private route: ActivatedRoute,
+    private router: Router,
+    private ngZone: NgZone,
+    private injector: Injector
   ) {}
 
+  private readonly onBoardContentScroll = (): void => {
+    this.ngZone.run(() => this.refreshActiveThreadToolbarLayout());
+  };
+
   ngOnInit(): void {
+    try {
+      const v = localStorage.getItem(PlotBoardComponent.PLOTBOARD_SIDEBAR_STORAGE_KEY);
+      if (v === '0') this.plotboardSidebarOpen = false;
+      else if (v === '1') this.plotboardSidebarOpen = true;
+    } catch {
+      /* ignore */
+    }
+
     this.saveRequest$
       .pipe(debounceTime(500), takeUntil(this.destroy$))
       .subscribe(() => this.persistBoard());
@@ -93,12 +200,131 @@ export class PlotBoardComponent implements OnInit, OnDestroy {
         this.paletteColors = this.colorPaletteService.getAllColors();
       });
 
-    this.load();
+    this.route.url.pipe(takeUntil(this.destroy$)).subscribe((segments) => {
+      void this.onRouteSegments(segments);
+    });
+  }
+
+  ngAfterViewInit(): void {
+    const el = this.boardContent?.nativeElement;
+    if (el) {
+      el.addEventListener('scroll', this.onBoardContentScroll, { passive: true });
+    }
   }
 
   ngOnDestroy(): void {
+    const el = this.boardContent?.nativeElement;
+    if (el) {
+      el.removeEventListener('scroll', this.onBoardContentScroll);
+    }
+    this.clearThreadToolbarLeaveTimer();
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  private clearThreadToolbarLeaveTimer(): void {
+    if (this.threadToolbarLeaveTimer) {
+      clearTimeout(this.threadToolbarLeaveTimer);
+      this.threadToolbarLeaveTimer = null;
+    }
+  }
+
+  onThreadNameRowEnter(threadId: string, anchor: HTMLElement): void {
+    if (
+      this.showThreadColorPicker !== null &&
+      this.showThreadColorPicker !== threadId
+    ) {
+      this.showThreadColorPicker = null;
+    }
+    this.clearThreadToolbarLeaveTimer();
+    this.threadToolbarPointerInsideToolbar = false;
+    this.activeThreadToolbarRowId = threadId;
+    this.threadToolbarAnchorById.set(threadId, anchor);
+    this.layoutThreadToolbar(threadId, anchor);
+  }
+
+  onThreadNameRowLeave(threadId: string): void {
+    if (
+      this.confirmDeleteThreadId === threadId ||
+      this.showThreadColorPicker === threadId
+    ) {
+      return;
+    }
+    this.threadToolbarLeaveTimer = setTimeout(() => {
+      if (
+        !this.threadToolbarPointerInsideToolbar &&
+        this.activeThreadToolbarRowId === threadId
+      ) {
+        this.activeThreadToolbarRowId = null;
+        // Keep threadToolbarFixedPos until next hover — clearing top/left caused a one-frame
+        // jump (static layout position) before opacity hid the bar.
+        this.threadToolbarAnchorById.delete(threadId);
+      }
+      this.threadToolbarLeaveTimer = null;
+    }, 200);
+  }
+
+  onThreadToolbarMouseEnter(threadId: string): void {
+    if (
+      this.showThreadColorPicker !== null &&
+      this.showThreadColorPicker !== threadId
+    ) {
+      this.showThreadColorPicker = null;
+    }
+    this.clearThreadToolbarLeaveTimer();
+    this.threadToolbarPointerInsideToolbar = true;
+    this.activeThreadToolbarRowId = threadId;
+    const anchor = this.threadToolbarAnchorById.get(threadId);
+    if (anchor) {
+      this.layoutThreadToolbar(threadId, anchor);
+    }
+  }
+
+  onThreadToolbarMouseLeave(threadId: string): void {
+    this.threadToolbarPointerInsideToolbar = false;
+    if (
+      this.confirmDeleteThreadId === threadId ||
+      this.showThreadColorPicker === threadId
+    ) {
+      return;
+    }
+    this.onThreadNameRowLeave(threadId);
+  }
+
+  isThreadToolbarVisible(threadId: string): boolean {
+    return (
+      this.activeThreadToolbarRowId === threadId ||
+      this.confirmDeleteThreadId === threadId ||
+      this.showThreadColorPicker === threadId
+    );
+  }
+
+  private layoutThreadToolbar(threadId: string, anchor: HTMLElement): void {
+    const rect = anchor.getBoundingClientRect();
+    const h = PlotBoardComponent.THREAD_TOOLBAR_APPROX_HEIGHT;
+    const gap = PlotBoardComponent.THREAD_TOOLBAR_GAP;
+    // Always above the icon+name row. Fixed + z-index stacks above the page header; do not move
+    // below the row (that covered thumbnails).
+    const top = rect.top - h - gap;
+    const left = rect.left + rect.width / 2;
+    this.threadToolbarFixedPos[threadId] = { top, left };
+  }
+
+  private refreshActiveThreadToolbarLayout(): void {
+    const id =
+      this.activeThreadToolbarRowId ??
+      this.confirmDeleteThreadId ??
+      this.showThreadColorPicker;
+    if (!id) return;
+    const anchor = this.threadToolbarAnchorById.get(id);
+    if (anchor) {
+      this.layoutThreadToolbar(id, anchor);
+    }
+  }
+
+  @HostListener('window:resize')
+  onWindowResizeForThreadToolbar(): void {
+    this.refreshActiveThreadToolbarLayout();
   }
 
   get gridTemplateColumns(): string {
@@ -115,7 +341,60 @@ export class PlotBoardComponent implements OnInit, OnDestroy {
     this.projectService.saveplotBoardZoom(level);
   }
 
-  private async load(): Promise<void> {
+  get hasOpenFile(): boolean {
+    return this.plotBoardService.getCurrentRelativePath() !== null;
+  }
+
+  /** Path shown in delete confirmation */
+  get deleteDialogPath(): string | null {
+    return this.deleteTargetPath;
+  }
+
+  get boardContentKey(): string {
+    return this.displayedBoardPath ?? '__none__';
+  }
+
+  get pageTitle(): string {
+    const p = this.plotBoardService.getCurrentRelativePath();
+    if (!p) return 'Plot Board';
+    return this.displayStem(p);
+  }
+
+  togglePlotboardSidebar(): void {
+    this.plotboardSidebarOpen = !this.plotboardSidebarOpen;
+    try {
+      localStorage.setItem(
+        PlotBoardComponent.PLOTBOARD_SIDEBAR_STORAGE_KEY,
+        this.plotboardSidebarOpen ? '1' : '0'
+      );
+    } catch {
+      /* ignore */
+    }
+  }
+
+  displayStem(relativePath: string): string {
+    const base = pathBasename(relativePath);
+    return base
+      .replace(/\.pinboard\.md$/i, '')
+      .replace(/\.plotboard\.md$/i, '')
+      .replace(/-/g, ' ');
+  }
+
+  pathSegmentsForRouter(relativePath: string): string[] {
+    return relativePath.split('/').filter((s) => s.length > 0);
+  }
+
+  routerLinkForPlotboard(relativePath: string): string[] {
+    return ['/plot-board', ...this.pathSegmentsForRouter(relativePath)];
+  }
+
+  isCurrentPath(relativePath: string): boolean {
+    const cur = this.plotBoardService.getCurrentRelativePath();
+    if (!cur) return false;
+    return this.plotBoardService.normalizeRelativePath(cur) === this.plotBoardService.normalizeRelativePath(relativePath);
+  }
+
+  private async onRouteSegments(segments: UrlSegment[]): Promise<void> {
     this.isLoading = true;
     try {
       const savedZoom = this.projectService.getPlotBoardZoom();
@@ -123,21 +402,205 @@ export class PlotBoardComponent implements OnInit, OnDestroy {
         this.zoomLevel = savedZoom as ZoomLevel;
       }
 
-      await this.plotBoardService.loadPlotBoard();
-      const loaded = this.plotBoardService.getPlotBoard();
-      if (loaded) {
-        this.board = loaded;
+      const path = segments.length === 0 ? null : segments.map((s) => s.path).join('/');
+
+      if (path === null) {
+        await this.flushSaveIfNeeded();
+        await this.handleEmptyPlotBoardRoute();
+      } else {
+        await this.flushSaveIfNeeded();
+        await this.plotBoardService.loadPlotBoard(path);
+        const loaded = this.plotBoardService.getPlotBoard();
+        if (loaded) {
+          this.board = loaded;
+        }
+        await this.projectService.saveLastPlotboardPath(path);
       }
 
       const project = this.projectService.getCurrentProject();
       if (project?.path) {
         await this.characterService.loadCharacters(project.path);
       }
+      await this.refreshPlotboardList();
       await this.refreshThumbnails();
     } catch (error) {
       this.logger.error('Failed to load plot board', error);
     } finally {
+      this.displayedBoardPath = this.plotBoardService.getCurrentRelativePath();
       this.isLoading = false;
+      this.keyboardFocusCell = null;
+    }
+  }
+
+  private async handleEmptyPlotBoardRoute(): Promise<void> {
+    if (this.resolvingEmptyRoute) return;
+    this.resolvingEmptyRoute = true;
+    try {
+      await this.refreshPlotboardList();
+      const last = this.projectService.getLastPlotboardPath();
+      const norm = last ? this.plotBoardService.normalizeRelativePath(last) : null;
+      const target =
+        norm && this.plotboardPaths.includes(norm)
+          ? norm
+          : this.plotboardPaths[0] ?? null;
+      if (target) {
+        await this.router.navigate(['/plot-board', ...this.pathSegmentsForRouter(target)], {
+          replaceUrl: true,
+        });
+      } else {
+        await this.plotBoardService.loadPlotBoard(null);
+        this.board = { threads: [], rows: [], cells: {}, cellMeta: {} };
+      }
+    } finally {
+      this.resolvingEmptyRoute = false;
+    }
+  }
+
+  async refreshPlotboardList(): Promise<void> {
+    this.plotboardPaths = await this.plotBoardService.discoverPlotboardFiles();
+  }
+
+  async refreshPlotboards(): Promise<void> {
+    await this.refreshPlotboardList();
+  }
+
+  openNewPlotBoardDialog(): void {
+    this.newPlotBoardName = '';
+    this.newPlotBoardError = '';
+    this.showNewPlotBoardDialog = true;
+  }
+
+  cancelNewPlotBoard(): void {
+    this.showNewPlotBoardDialog = false;
+    this.newPlotBoardError = '';
+  }
+
+  async applyNewPlotBoard(): Promise<void> {
+    const trimmed = this.newPlotBoardName.trim();
+    if (!trimmed) {
+      this.newPlotBoardError = 'Enter a name';
+      return;
+    }
+    this.newPlotBoardError = '';
+    await this.flushSaveIfNeeded();
+    const result = await this.plotBoardService.createPlotBoardFile(trimmed);
+    if (!result.success || !result.relativePath) {
+      this.newPlotBoardError = result.error || 'Could not create plot board';
+      return;
+    }
+    this.showNewPlotBoardDialog = false;
+    await this.router.navigate(['/plot-board', ...this.pathSegmentsForRouter(result.relativePath)]);
+    await this.refreshPlotboardList();
+  }
+
+  openDeletePlotBoardDialogForPath(rel: string): void {
+    this.deleteTargetPath = this.plotBoardService.normalizeRelativePath(rel);
+    this.deletePlotBoardError = '';
+    this.showDeletePlotBoardDialog = true;
+  }
+
+  cancelDeletePlotBoard(): void {
+    this.showDeletePlotBoardDialog = false;
+    this.deletePlotBoardError = '';
+    this.deleteTargetPath = null;
+  }
+
+  async confirmDeletePlotBoard(): Promise<void> {
+    const p = this.deleteTargetPath;
+    if (!p) return;
+    const cur = this.plotBoardService.getCurrentRelativePath();
+    const isDeletingOpen =
+      !!cur && this.plotBoardService.normalizeRelativePath(p) === this.plotBoardService.normalizeRelativePath(cur);
+    if (isDeletingOpen) {
+      await this.flushSaveIfNeeded();
+    }
+    const del = await this.plotBoardService.deletePlotBoardFile(p);
+    if (!del.success) {
+      this.deletePlotBoardError = del.error || 'Could not delete file';
+      return;
+    }
+    this.showDeletePlotBoardDialog = false;
+    this.deleteTargetPath = null;
+    await this.refreshPlotboardList();
+    if (isDeletingOpen) {
+      const next = this.plotboardPaths[0] ?? null;
+      if (next) {
+        await this.router.navigate(['/plot-board', ...this.pathSegmentsForRouter(next)]);
+      } else {
+        await this.router.navigate(['/plot-board'], { replaceUrl: true });
+      }
+    }
+  }
+
+  openRenameDialogForPath(rel: string): void {
+    this.renameTargetPath = this.plotBoardService.normalizeRelativePath(rel);
+    this.renameValue = pathBasename(rel)
+      .replace(/\.pinboard\.md$/i, '')
+      .replace(/\.plotboard\.md$/i, '')
+      .replace(/-/g, ' ');
+    this.renameError = '';
+    this.showRenameDialog = true;
+  }
+
+  cancelRename(): void {
+    this.showRenameDialog = false;
+    this.renameError = '';
+    this.renameTargetPath = null;
+  }
+
+  async applyRename(): Promise<void> {
+    const target = this.renameTargetPath ?? this.plotBoardService.getCurrentRelativePath();
+    if (!target) return;
+    const current = this.plotBoardService.getCurrentRelativePath();
+    const isRenamingOpen =
+      !!current &&
+      this.plotBoardService.normalizeRelativePath(target) === this.plotBoardService.normalizeRelativePath(current);
+    if (isRenamingOpen) {
+      await this.flushSaveIfNeeded();
+    }
+    const result = await this.plotBoardService.renamePlotBoardFile(target, this.renameValue);
+    if (!result.success) {
+      this.renameError = result.error || 'Rename failed';
+      return;
+    }
+    this.renameError = '';
+    this.showRenameDialog = false;
+    this.renameTargetPath = null;
+    await this.refreshPlotboardList();
+    if (result.newRelative && isRenamingOpen) {
+      await this.router.navigate(['/plot-board', ...this.pathSegmentsForRouter(result.newRelative)], {
+        replaceUrl: true,
+      });
+      await this.projectService.saveLastPlotboardPath(result.newRelative);
+    }
+  }
+
+  async duplicatePlotBoardForPath(rel: string): Promise<void> {
+    this.duplicateError = '';
+    const norm = this.plotBoardService.normalizeRelativePath(rel);
+    const cur = this.plotBoardService.getCurrentRelativePath();
+    const isDuplicatingOpen =
+      !!cur && this.plotBoardService.normalizeRelativePath(cur) === norm;
+    if (isDuplicatingOpen) {
+      await this.flushSaveIfNeeded();
+    }
+    const result = await this.plotBoardService.duplicatePlotBoardFile(norm);
+    if (!result.success || !result.newRelative) {
+      this.duplicateError = result.error || 'Could not duplicate file';
+      return;
+    }
+    await this.refreshPlotboardList();
+    await this.router.navigate(['/plot-board', ...this.pathSegmentsForRouter(result.newRelative)]);
+    await this.projectService.saveLastPlotboardPath(result.newRelative);
+  }
+
+  private async flushSaveIfNeeded(): Promise<void> {
+    const path = this.plotBoardService.getCurrentRelativePath();
+    if (!path) return;
+    try {
+      await this.plotBoardService.savePlotBoard({ ...this.board });
+    } catch (error) {
+      this.logger.error('Failed to save plot board before switching', error);
     }
   }
 
@@ -146,6 +609,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy {
   }
 
   private async persistBoard(): Promise<void> {
+    if (!this.plotBoardService.getCurrentRelativePath()) return;
     try {
       await this.plotBoardService.savePlotBoard({ ...this.board });
     } catch (error) {
@@ -198,7 +662,11 @@ export class PlotBoardComponent implements OnInit, OnDestroy {
     if (this.editingRowName !== null && !target.closest('.row-label')) {
       this.finishEditRowName();
     }
-    if (this.editingThreadName !== null && !target.closest('.thread-header')) {
+    if (
+      this.editingThreadName !== null &&
+      !target.closest('.thread-header') &&
+      !target.closest('.thread-hover-toolbar')
+    ) {
       this.finishEditThreadName();
     }
 
@@ -250,11 +718,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy {
     if (!thread) return;
     this.editingThreadName = threadId;
     this.editingNameValue = thread.name;
-    setTimeout(() => {
-      const input = document.querySelector('.thread-name-input') as HTMLInputElement;
-      input?.focus();
-      input?.select();
-    }, 0);
+    this.focusNameInputAfterRender('thread');
   }
 
   finishEditThreadName(): void {
@@ -299,7 +763,16 @@ export class PlotBoardComponent implements OnInit, OnDestroy {
   // --- Thread color ---
 
   toggleThreadColorPicker(threadId: string): void {
-    this.showThreadColorPicker = this.showThreadColorPicker === threadId ? null : threadId;
+    if (this.showThreadColorPicker === threadId) {
+      this.showThreadColorPicker = null;
+      return;
+    }
+    this.showThreadColorPicker = threadId;
+    this.activeThreadToolbarRowId = threadId;
+    const anchor = this.threadToolbarAnchorById.get(threadId);
+    if (anchor) {
+      this.layoutThreadToolbar(threadId, anchor);
+    }
   }
 
   selectThreadColor(threadId: string, color: string): void {
@@ -331,9 +804,37 @@ export class PlotBoardComponent implements OnInit, OnDestroy {
 
   // --- Row management ---
 
+  /**
+   * If `lastName` ends with digits, same prefix + incremented number (preserves simple leading zeros).
+   * Otherwise `Row ${fallbackIndex}`.
+   */
+  private nextRowNameAfter(lastName: string, fallbackIndex: number): string {
+    const trimmed = lastName.trim();
+    const m = trimmed.match(/^(.*?)(\d+)$/);
+    if (!m) {
+      return `Row ${fallbackIndex}`;
+    }
+    const prefix = m[1];
+    const numPart = m[2];
+    const n = parseInt(numPart, 10) + 1;
+    if (!Number.isFinite(n)) {
+      return `Row ${fallbackIndex}`;
+    }
+    let numOut = String(n);
+    if (numPart.length > 1 && numPart.startsWith('0')) {
+      const width = Math.max(numPart.length, numOut.length);
+      numOut = numOut.padStart(width, '0');
+    }
+    return prefix + numOut;
+  }
+
   addRow(): void {
     const nextNum = this.board.rows.length + 1;
-    this.board.rows = [...this.board.rows, { name: `Row ${nextNum}` }];
+    const name =
+      this.board.rows.length === 0
+        ? 'Row 1'
+        : this.nextRowNameAfter(this.board.rows[this.board.rows.length - 1].name, nextNum);
+    this.board.rows = [...this.board.rows, { name }];
     this.board.cells[String(this.board.rows.length - 1)] = {};
     this.queueSave();
   }
@@ -366,11 +867,25 @@ export class PlotBoardComponent implements OnInit, OnDestroy {
   startEditRowName(rowIndex: number): void {
     this.editingRowName = rowIndex;
     this.editingNameValue = this.board.rows[rowIndex].name;
-    setTimeout(() => {
-      const input = document.querySelector('.row-name-input') as HTMLInputElement;
-      input?.focus();
-      input?.select();
-    }, 0);
+    this.focusNameInputAfterRender('row');
+  }
+
+  private focusNameInputAfterRender(which: 'thread' | 'row'): void {
+    afterNextRender(() => {
+      requestAnimationFrame(() => {
+        const el =
+          (which === 'thread'
+            ? this.threadNameInput?.nativeElement
+            : this.rowNameInput?.nativeElement) ??
+          (document.querySelector(
+            which === 'thread' ? '.thread-name-input' : '.row-name-input'
+          ) as HTMLInputElement | null);
+        if (el) {
+          el.focus({ preventScroll: true });
+          el.select();
+        }
+      });
+    }, { injector: this.injector });
   }
 
   finishEditRowName(): void {
@@ -424,16 +939,23 @@ export class PlotBoardComponent implements OnInit, OnDestroy {
       this.finishEditCell();
     }
     this.editingCell = { row: rowIndex, threadId };
+    this.keyboardFocusCell = { row: rowIndex, threadId };
     this.editingCellValue = this.getCellValue(rowIndex, threadId);
     const meta = this.getCellMeta(rowIndex, threadId);
     this.editingCellIcon = meta?.icon ?? '';
     this.editingCellColor = meta?.color ?? '';
     this.showEmojiPicker = false;
     this.confirmDeleteCell = false;
-    setTimeout(() => {
-      const input = document.querySelector('.cell-edit-textarea') as HTMLTextAreaElement;
-      input?.focus();
-    }, 0);
+    afterNextRender(() => {
+      const ta =
+        this.cellEditTextarea?.nativeElement ??
+        (document.querySelector('.cell-edit-textarea') as HTMLTextAreaElement | null);
+      if (ta) {
+        ta.focus();
+        const len = ta.value.length;
+        ta.setSelectionRange(len, len);
+      }
+    }, { injector: this.injector });
   }
 
   finishEditCell(): void {
@@ -466,12 +988,14 @@ export class PlotBoardComponent implements OnInit, OnDestroy {
     this.editingCell = null;
     this.showEmojiPicker = false;
     this.queueSave();
+    this.focusBoardGridForKeyboard();
   }
 
   cancelEditCell(): void {
     this.editingCell = null;
     this.showEmojiPicker = false;
     this.confirmDeleteCell = false;
+    this.focusBoardGridForKeyboard();
   }
 
   isEditingCell(rowIndex: number, threadId: string): boolean {
@@ -515,12 +1039,192 @@ export class PlotBoardComponent implements OnInit, OnDestroy {
     this.showEmojiPicker = false;
     this.confirmDeleteCell = false;
     this.queueSave();
+    this.focusBoardGridForKeyboard();
+  }
+
+  private focusBoardGridForKeyboard(): void {
+    afterNextRender(() => {
+      this.boardContent?.nativeElement?.focus();
+    }, { injector: this.injector });
+  }
+
+  isKeyboardFocusCell(rowIndex: number, threadId: string): boolean {
+    return (
+      !this.editingCell &&
+      this.keyboardFocusCell?.row === rowIndex &&
+      this.keyboardFocusCell?.threadId === threadId
+    );
+  }
+
+  onThreadCellPointerDown(rowIndex: number, threadId: string): void {
+    this.keyboardFocusCell = { row: rowIndex, threadId: threadId };
+  }
+
+  private plotBoardModalsOpen(): boolean {
+    return (
+      this.showRenameDialog ||
+      this.showNewPlotBoardDialog ||
+      this.showDeletePlotBoardDialog
+    );
+  }
+
+  private scrollCellIntoView(row: number, threadId: string): void {
+    afterNextRender(() => {
+      const safe = (s: string) =>
+        typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
+          ? CSS.escape(s)
+          : s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      const el = document.querySelector(
+        `.thread-cell[data-nav-row="${row}"][data-nav-thread="${safe(threadId)}"]`
+      ) as HTMLElement | null;
+      el?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }, { injector: this.injector });
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  onDocumentKeydownNavigateCells(event: KeyboardEvent): void {
+    if (!this.hasOpenFile || this.plotBoardModalsOpen() || this.isLoading) {
+      return;
+    }
+
+    const target = event.target as HTMLElement | null;
+    const inTextField =
+      !!target &&
+      (!!(target as HTMLElement).closest('input, textarea, select') ||
+        !!(target as HTMLElement).isContentEditable);
+
+    // New thread (T) / new row (R): work from header focus too; not while editing text.
+    if (
+      !this.editingCell &&
+      this.editingThreadName === null &&
+      this.editingRowName === null &&
+      !target?.closest('.plot-board-sidebar') &&
+      !inTextField
+    ) {
+      const plainKey =
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey &&
+        event.key.length === 1;
+      if (plainKey) {
+        const k = event.key.toLowerCase();
+        if (k === 't') {
+          event.preventDefault();
+          this.addThread();
+          return;
+        }
+        if (k === 'r') {
+          event.preventDefault();
+          this.addRow();
+          return;
+        }
+      }
+    }
+
+    if (this.board.rows.length === 0 || this.board.threads.length === 0) {
+      return;
+    }
+    if (this.editingCell) {
+      return;
+    }
+    if (this.editingThreadName !== null || this.editingRowName !== null) {
+      return;
+    }
+
+    if (target?.closest('.plot-board-sidebar')) {
+      return;
+    }
+    if (target?.closest('app-page-header')) {
+      return;
+    }
+    if (inTextField) {
+      return;
+    }
+
+    const key = event.key;
+    if (
+      key !== 'ArrowUp' &&
+      key !== 'ArrowDown' &&
+      key !== 'ArrowLeft' &&
+      key !== 'ArrowRight' &&
+      key !== 'Enter'
+    ) {
+      return;
+    }
+
+    const threads = this.board.threads;
+    const rowCount = this.board.rows.length;
+    const current = this.keyboardFocusCell;
+
+    if (!current) {
+      if (key === 'Enter') {
+        event.preventDefault();
+        const tid = threads[0].id;
+        this.keyboardFocusCell = { row: 0, threadId: tid };
+        this.startEditCell(0, tid);
+        return;
+      }
+      if (
+        key === 'ArrowUp' ||
+        key === 'ArrowDown' ||
+        key === 'ArrowLeft' ||
+        key === 'ArrowRight'
+      ) {
+        event.preventDefault();
+        const tid = threads[0].id;
+        this.keyboardFocusCell = { row: 0, threadId: tid };
+        this.scrollCellIntoView(0, tid);
+      }
+      return;
+    }
+
+    let ti = threads.findIndex((t) => t.id === current.threadId);
+    if (ti < 0) {
+      this.keyboardFocusCell = null;
+      return;
+    }
+    let ri = current.row;
+
+    if (key === 'Enter') {
+      event.preventDefault();
+      this.startEditCell(ri, threads[ti].id);
+      return;
+    }
+
+    event.preventDefault();
+    let newTi = ti;
+    let newRi = ri;
+    switch (key) {
+      case 'ArrowUp':
+        newRi = Math.max(0, ri - 1);
+        break;
+      case 'ArrowDown':
+        newRi = Math.min(rowCount - 1, ri + 1);
+        break;
+      case 'ArrowLeft':
+        newTi = Math.max(0, ti - 1);
+        break;
+      case 'ArrowRight':
+        newTi = Math.min(threads.length - 1, ti + 1);
+        break;
+      default:
+        return;
+    }
+    this.keyboardFocusCell = { row: newRi, threadId: threads[newTi].id };
+    this.scrollCellIntoView(newRi, threads[newTi].id);
   }
 
   // --- Drag and drop ---
 
+  private clearDragState(): void {
+    this.dragSource = null;
+    this.dragOverTarget = null;
+    this.dragOverThreadIndex = null;
+    this.dragOverRowIndex = null;
+  }
+
   onBoxDragStart(event: DragEvent, row: number, threadId: string): void {
-    this.dragSource = { row, threadId };
+    this.dragSource = { kind: 'cell', row, threadId };
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = 'move';
       event.dataTransfer.setData('text/plain', `${row}:${threadId}`);
@@ -530,14 +1234,172 @@ export class PlotBoardComponent implements OnInit, OnDestroy {
   }
 
   onBoxDragEnd(event: DragEvent): void {
-    this.dragSource = null;
-    this.dragOverTarget = null;
+    this.clearDragState();
     const el = event.target as HTMLElement;
     el.classList.remove('dragging');
   }
 
+  onThreadNameDragStart(event: DragEvent, threadIndex: number): void {
+    if (this.editingThreadName !== null) {
+      event.preventDefault();
+      return;
+    }
+    this.dragSource = { kind: 'thread', fromIndex: threadIndex };
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('application/x-plotboard-thread', String(threadIndex));
+    }
+    (event.target as HTMLElement).classList.add('dragging');
+  }
+
+  onThreadNameDragEnd(event: DragEvent): void {
+    this.clearDragState();
+    (event.target as HTMLElement).classList.remove('dragging');
+  }
+
+  onThreadHeaderDragOver(event: DragEvent, threadIndex: number): void {
+    if (this.dragSource?.kind !== 'thread') return;
+    if (this.dragSource.fromIndex === threadIndex) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move';
+    }
+    this.dragOverThreadIndex = threadIndex;
+  }
+
+  onThreadHeaderDragLeave(event: DragEvent, threadIndex: number): void {
+    const rel = event.relatedTarget as Node | null;
+    const cur = event.currentTarget as HTMLElement;
+    if (rel && cur.contains(rel)) return;
+    if (this.dragOverThreadIndex === threadIndex) {
+      this.dragOverThreadIndex = null;
+    }
+  }
+
+  onThreadHeaderDrop(event: DragEvent, targetIndex: number): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (this.dragSource?.kind !== 'thread') return;
+    const from = this.dragSource.fromIndex;
+    this.clearDragState();
+    if (from === targetIndex) return;
+    this.moveThread(from, targetIndex);
+  }
+
+  isThreadHeaderDragOver(threadIndex: number): boolean {
+    return this.dragOverThreadIndex === threadIndex;
+  }
+
+  onRowNameDragStart(event: DragEvent, rowIndex: number): void {
+    if (this.editingRowName !== null) {
+      event.preventDefault();
+      return;
+    }
+    this.dragSource = { kind: 'row', fromIndex: rowIndex };
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('application/x-plotboard-row', String(rowIndex));
+    }
+    (event.target as HTMLElement).classList.add('dragging');
+  }
+
+  onRowNameDragEnd(event: DragEvent): void {
+    this.clearDragState();
+    (event.target as HTMLElement).classList.remove('dragging');
+  }
+
+  onRowLabelDragOver(event: DragEvent, rowIndex: number): void {
+    if (this.dragSource?.kind !== 'row') return;
+    if (this.dragSource.fromIndex === rowIndex) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move';
+    }
+    this.dragOverRowIndex = rowIndex;
+  }
+
+  onRowLabelDragLeave(event: DragEvent, rowIndex: number): void {
+    const rel = event.relatedTarget as Node | null;
+    const cur = event.currentTarget as HTMLElement;
+    if (rel && cur.contains(rel)) return;
+    if (this.dragOverRowIndex === rowIndex) {
+      this.dragOverRowIndex = null;
+    }
+  }
+
+  onRowLabelDrop(event: DragEvent, targetIndex: number): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (this.dragSource?.kind !== 'row') return;
+    const from = this.dragSource.fromIndex;
+    this.clearDragState();
+    if (from === targetIndex) return;
+    this.moveRow(from, targetIndex);
+  }
+
+  isRowLabelDragOver(rowIndex: number): boolean {
+    return this.dragOverRowIndex === rowIndex;
+  }
+
+  /** Reorder columns; cell keys stay thread ids — no cell data remap. */
+  private moveThread(from: number, to: number): void {
+    if (from === to) return;
+    const threads = [...this.board.threads];
+    const [moved] = threads.splice(from, 1);
+    // After removal, insert at `to` so the item lands on the dropped index (incl. last).
+    threads.splice(to, 0, moved);
+    this.board.threads = threads;
+    this.queueSave();
+  }
+
+  /** Reorder rows and remap `cells` / `cellMeta` row keys. */
+  private moveRow(from: number, to: number): void {
+    const n = this.board.rows.length;
+    if (from < 0 || from >= n || to < 0 || to >= n || from === to) return;
+    const tracked = this.board.rows.map((r, i) => ({ r, oldIdx: i }));
+    const [removed] = tracked.splice(from, 1);
+    tracked.splice(to, 0, removed);
+
+    this.board.rows = tracked.map((x) => x.r);
+    const newCells: Record<string, Record<string, string>> = {};
+    const newMeta: Record<string, Record<string, PlotCellMeta>> = {};
+    for (let ni = 0; ni < n; ni++) {
+      const oi = tracked[ni].oldIdx;
+      newCells[String(ni)] = { ...(this.board.cells[String(oi)] || {}) };
+      newMeta[String(ni)] = { ...(this.board.cellMeta[String(oi)] || {}) };
+    }
+    this.board.cells = newCells;
+    this.board.cellMeta = newMeta;
+
+    if (this.keyboardFocusCell) {
+      const newRow = tracked.findIndex((x) => x.oldIdx === this.keyboardFocusCell!.row);
+      if (newRow >= 0) {
+        this.keyboardFocusCell = { ...this.keyboardFocusCell, row: newRow };
+      }
+    }
+    if (this.editingRowName !== null) {
+      const cur = this.editingRowName;
+      const newIdx = tracked.findIndex((x) => x.oldIdx === cur);
+      this.editingRowName = newIdx >= 0 ? newIdx : null;
+    }
+    if (this.confirmDeleteRowIndex !== null) {
+      const cur = this.confirmDeleteRowIndex;
+      const newIdx = tracked.findIndex((x) => x.oldIdx === cur);
+      this.confirmDeleteRowIndex = newIdx >= 0 ? newIdx : null;
+    }
+    if (this.showRowIconPicker !== null) {
+      const cur = this.showRowIconPicker;
+      const newIdx = tracked.findIndex((x) => x.oldIdx === cur);
+      this.showRowIconPicker = newIdx >= 0 ? newIdx : null;
+    }
+
+    this.queueSave();
+  }
+
   onCellDragOver(event: DragEvent, row: number, threadId: string): void {
-    if (!this.dragSource) return;
+    if (this.dragSource?.kind !== 'cell') return;
     if (this.dragSource.row === row && this.dragSource.threadId === threadId) return;
     event.preventDefault();
     if (event.dataTransfer) {
@@ -557,12 +1419,11 @@ export class PlotBoardComponent implements OnInit, OnDestroy {
 
   onCellDrop(event: DragEvent, targetRow: number, targetThreadId: string): void {
     event.preventDefault();
-    if (!this.dragSource) return;
+    if (this.dragSource?.kind !== 'cell') return;
 
     const { row: srcRow, threadId: srcThreadId } = this.dragSource;
     if (srcRow === targetRow && srcThreadId === targetThreadId) {
-      this.dragSource = null;
-      this.dragOverTarget = null;
+      this.clearDragState();
       return;
     }
 
@@ -601,8 +1462,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy {
       delete this.board.cellMeta[srcRowKey][srcThreadId];
     }
 
-    this.dragSource = null;
-    this.dragOverTarget = null;
+    this.clearDragState();
     this.queueSave();
   }
 
