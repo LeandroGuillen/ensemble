@@ -44,7 +44,7 @@ npm run build-electron
 
 ```
 project-folder/
-├── ensemble.json           # Project metadata: categories, tags, settings, relationships
+├── ensemble.json           # Project metadata: categories, tags, settings, lastSession, relationships
 └── characters/             # Character folders organized by category
     ├── <category-slug>/    # Category folder (e.g., "main-characters")
     │   └── <character-slug>/  # Character folder (e.g., "john-doe")

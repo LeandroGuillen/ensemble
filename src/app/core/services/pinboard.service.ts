@@ -36,7 +36,7 @@ export class PinboardService {
         this.currentPinboardIdSubject.next(null);
       } else if (project) {
         // Project path unchanged, but check if pinboard changed
-        const currentPinboardId = project.metadata.currentPinboardId;
+        const currentPinboardId = project.metadata.lastSession?.lastPinboardId ?? null;
         const previousPinboardId = this.currentPinboardIdSubject.value;
         if (currentPinboardId !== previousPinboardId) {
           this.loadPinboardFromProject(project);
@@ -50,7 +50,7 @@ export class PinboardService {
    */
   private loadPinboardFromProject(project: any): void {
     const currentPinboard = this.projectService.getCurrentPinboard();
-    const currentPinboardId = project?.metadata?.currentPinboardId || null;
+    const currentPinboardId = project?.metadata?.lastSession?.lastPinboardId || null;
 
     // Ensure the data structure is valid
     const validPinboard = {

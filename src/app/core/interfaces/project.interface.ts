@@ -8,6 +8,17 @@ export interface Pinboard {
   updatedAt?: string;
 }
 
+/** Restored UI/session memory (routes, open boards, etc.); not user-facing settings. */
+export interface ProjectLastSession {
+  lastRoute?: string;
+  /** Project-relative path to the open plot board file (*.plotboard.md). */
+  lastPlotboardPath?: string;
+  lastCharacterListFilterExpanded?: boolean;
+  lastPlotBoardZoom?: number;
+  /** Pinboard (relationship graph) the user had selected. */
+  lastPinboardId?: string;
+}
+
 export interface ProjectMetadata {
   projectName: string;
   version: string;
@@ -18,7 +29,9 @@ export interface ProjectMetadata {
   imageTags?: string[]; // Image tags for character image library
   settings: ProjectSettings;
   pinboards?: Pinboard[];  // New: array of pinboards
-  currentPinboardId?: string;  // Track active pinboard
+  /** @deprecated Migrated to lastSession.lastPinboardId on load; do not write. */
+  currentPinboardId?: string;
+  lastSession?: ProjectLastSession;
   relationships?: {        // Deprecated: kept for migration
     nodes: PinboardPin[];
     edges: PinboardConnection[];
@@ -110,14 +123,9 @@ export interface ProjectSettings {
   castsFolder?: string;
   /** Relative path from project root for the names/list file (default: 'characters/names.md') */
   namesFile?: string;
-  lastRoute?: string;
   graphView?: PinboardViewState; // Legacy name for backward compatibility
   pinboardView?: PinboardViewState;
   ai?: AiSettings;
-  filterExpanded?: boolean;
-  plotBoardZoom?: number;
-  /** Project-relative path to the open plot board file (*.pinboard.md) */
-  lastPlotboardPath?: string;
   theme?: string; // Theme ID (e.g., "blue-gold")
   colorPalette?: import('./color-palette.interface').ColorPaletteConfig;
 }

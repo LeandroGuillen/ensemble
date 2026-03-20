@@ -218,6 +218,8 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
       el.removeEventListener('scroll', this.onBoardContentScroll);
     }
     this.clearThreadToolbarLeaveTimer();
+    // Save in-flight edits; prevents a remount (e.g. sidebar `/plot-board`) from flushing an empty `board` against a stale service path.
+    void this.flushSaveIfNeeded();
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -338,7 +340,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   setZoom(level: ZoomLevel): void {
     this.zoomLevel = level;
-    this.projectService.saveplotBoardZoom(level);
+    this.projectService.savePlotBoardZoom(level);
   }
 
   get hasOpenFile(): boolean {
@@ -594,9 +596,16 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
     await this.projectService.saveLastPlotboardPath(result.newRelative);
   }
 
-  private async flushSaveIfNeeded(): Promise<void> {
+  /** True when `board` was loaded for the file the service considers open (avoids saving default empty state or the wrong file mid-navigation). */
+  private isBoardSyncedToOpenFile(): boolean {
     const path = this.plotBoardService.getCurrentRelativePath();
-    if (!path) return;
+    if (!path || !this.displayedBoardPath) return false;
+    const norm = (p: string) => this.plotBoardService.normalizeRelativePath(p);
+    return norm(this.displayedBoardPath) === norm(path);
+  }
+
+  private async flushSaveIfNeeded(): Promise<void> {
+    if (!this.isBoardSyncedToOpenFile()) return;
     try {
       await this.plotBoardService.savePlotBoard({ ...this.board });
     } catch (error) {
@@ -609,7 +618,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private async persistBoard(): Promise<void> {
-    if (!this.plotBoardService.getCurrentRelativePath()) return;
+    if (!this.isBoardSyncedToOpenFile()) return;
     try {
       await this.plotBoardService.savePlotBoard({ ...this.board });
     } catch (error) {

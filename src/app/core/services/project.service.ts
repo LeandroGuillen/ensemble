@@ -11,6 +11,7 @@ import {
   PinboardViewState,
   Project,
   ProjectMetadata,
+  ProjectSettings,
   Relationship,
   Tag,
 } from '../interfaces/project.interface';
@@ -209,6 +210,8 @@ export class ProjectService {
       // Ensure required directories exist
       const charactersFolder = metadata.settings?.charactersFolder?.trim() || 'characters';
       await this.ensureProjectStructure(projectPath, charactersFolder);
+
+      this.migrateLastSessionFromLegacy(metadata);
 
       // Migrate legacy pinboard to new structure if needed
       await this.migrateLegacyPinboard(metadata);
@@ -430,7 +433,6 @@ export class ProjectService {
           createdAt: new Date().toISOString(),
         },
       ],
-      currentPinboardId: undefined, // Will be set to first pinboard
       relationships: {
         nodes: [],
         edges: [],
@@ -715,7 +717,7 @@ export class ProjectService {
   }
 
   /**
-   * Saves the last visited route to project settings
+   * Saves the last visited route to lastSession
    */
   async saveLastRoute(route: string): Promise<void> {
     const project = this.currentProjectSubject.value;
@@ -723,26 +725,26 @@ export class ProjectService {
       return; // Don't throw error if no project is loaded
     }
 
-    // Only save if the route has actually changed
-    if (project.metadata.settings.lastRoute === route) {
+    const ls = this.ensureLastSession(project.metadata);
+    if (ls.lastRoute === route) {
       return;
     }
 
-    project.metadata.settings.lastRoute = route;
+    ls.lastRoute = route;
     await this.saveMetadata(project.path, project.metadata);
     // Don't emit a new project update to avoid triggering unnecessary re-renders
   }
 
   /**
-   * Gets the last visited route from project settings
+   * Gets the last visited route from lastSession
    */
   getLastRoute(): string | null {
     const project = this.currentProjectSubject.value;
-    return project?.metadata.settings.lastRoute || null;
+    return project?.metadata.lastSession?.lastRoute || null;
   }
 
   /**
-   * Saves the filter expanded state to project settings
+   * Saves the character list filter panel expanded state to lastSession
    */
   async saveFilterExpandedState(expanded: boolean): Promise<void> {
     const project = this.currentProjectSubject.value;
@@ -750,49 +752,107 @@ export class ProjectService {
       return; // Don't throw error if no project is loaded
     }
 
-    // Only save if the state has actually changed
-    if (project.metadata.settings.filterExpanded === expanded) {
+    const ls = this.ensureLastSession(project.metadata);
+    if (ls.lastCharacterListFilterExpanded === expanded) {
       return;
     }
 
-    project.metadata.settings.filterExpanded = expanded;
+    ls.lastCharacterListFilterExpanded = expanded;
     await this.saveMetadata(project.path, project.metadata);
     // Don't emit a new project update to avoid triggering unnecessary re-renders
   }
 
   /**
-   * Gets the filter expanded state from project settings
+   * Gets the filter expanded state from lastSession
    */
   getFilterExpandedState(): boolean {
     const project = this.currentProjectSubject.value;
-    return project?.metadata.settings.filterExpanded ?? false;
+    return project?.metadata.lastSession?.lastCharacterListFilterExpanded ?? false;
   }
 
-  async saveplotBoardZoom(zoom: number): Promise<void> {
+  async savePlotBoardZoom(zoom: number): Promise<void> {
     const project = this.currentProjectSubject.value;
     if (!project) return;
-    if (project.metadata.settings.plotBoardZoom === zoom) return;
-    project.metadata.settings.plotBoardZoom = zoom;
+    const ls = this.ensureLastSession(project.metadata);
+    if (ls.lastPlotBoardZoom === zoom) return;
+    ls.lastPlotBoardZoom = zoom;
     await this.saveMetadata(project.path, project.metadata);
   }
 
   getPlotBoardZoom(): number | null {
     const project = this.currentProjectSubject.value;
-    return project?.metadata.settings.plotBoardZoom ?? null;
+    return project?.metadata.lastSession?.lastPlotBoardZoom ?? null;
   }
 
   async saveLastPlotboardPath(relativePath: string | null): Promise<void> {
     const project = this.currentProjectSubject.value;
     if (!project) return;
     const next = relativePath ?? undefined;
-    if (project.metadata.settings.lastPlotboardPath === next) return;
-    project.metadata.settings.lastPlotboardPath = next;
+    const ls = this.ensureLastSession(project.metadata);
+    if (ls.lastPlotboardPath === next) return;
+    ls.lastPlotboardPath = next;
     await this.saveMetadata(project.path, project.metadata);
   }
 
   getLastPlotboardPath(): string | null {
     const project = this.currentProjectSubject.value;
-    return project?.metadata.settings.lastPlotboardPath ?? null;
+    return project?.metadata.lastSession?.lastPlotboardPath ?? null;
+  }
+
+  private ensureLastSession(metadata: ProjectMetadata): NonNullable<ProjectMetadata['lastSession']> {
+    if (!metadata.lastSession) {
+      metadata.lastSession = {};
+    }
+    return metadata.lastSession;
+  }
+
+  /**
+   * Moves session memory out of settings (and root currentPinboardId) into lastSession.
+   */
+  private migrateLastSessionFromLegacy(metadata: ProjectMetadata): void {
+    type LegacySettings = ProjectSettings & {
+      lastRoute?: string;
+      lastPlotboardPath?: string;
+      filterExpanded?: boolean;
+      plotBoardZoom?: number;
+    };
+    const s = metadata.settings as LegacySettings;
+
+    if (metadata.currentPinboardId !== undefined) {
+      const ls = this.ensureLastSession(metadata);
+      if (ls.lastPinboardId === undefined) {
+        ls.lastPinboardId = metadata.currentPinboardId;
+      }
+      delete metadata.currentPinboardId;
+    }
+
+    let ls = metadata.lastSession;
+    if (s.lastRoute !== undefined) {
+      if (!ls) metadata.lastSession = ls = {};
+      if (ls.lastRoute === undefined) ls.lastRoute = s.lastRoute;
+      delete s.lastRoute;
+    }
+    if (s.lastPlotboardPath !== undefined) {
+      if (!ls) metadata.lastSession = ls = {};
+      if (ls.lastPlotboardPath === undefined) ls.lastPlotboardPath = s.lastPlotboardPath;
+      delete s.lastPlotboardPath;
+    }
+    if (s.filterExpanded !== undefined) {
+      if (!ls) metadata.lastSession = ls = {};
+      if (ls.lastCharacterListFilterExpanded === undefined) {
+        ls.lastCharacterListFilterExpanded = s.filterExpanded;
+      }
+      delete s.filterExpanded;
+    }
+    if (s.plotBoardZoom !== undefined) {
+      if (!ls) metadata.lastSession = ls = {};
+      if (ls.lastPlotBoardZoom === undefined) ls.lastPlotBoardZoom = s.plotBoardZoom;
+      delete s.plotBoardZoom;
+    }
+
+    if (metadata.lastSession && Object.keys(metadata.lastSession).length === 0) {
+      delete metadata.lastSession;
+    }
   }
 
   /**
@@ -801,9 +861,9 @@ export class ProjectService {
   private async migrateLegacyPinboard(metadata: ProjectMetadata): Promise<void> {
     // If pinboards array already exists, no migration needed
     if (metadata.pinboards && metadata.pinboards.length > 0) {
-      // Ensure currentPinboardId is set
-      if (!metadata.currentPinboardId && metadata.pinboards.length > 0) {
-        metadata.currentPinboardId = metadata.pinboards[0].id;
+      const ls = this.ensureLastSession(metadata);
+      if (!ls.lastPinboardId) {
+        ls.lastPinboardId = metadata.pinboards[0].id;
       }
       return;
     }
@@ -830,7 +890,7 @@ export class ProjectService {
       }
 
       metadata.pinboards = [defaultPinboard];
-      metadata.currentPinboardId = defaultPinboard.id;
+      this.ensureLastSession(metadata).lastPinboardId = defaultPinboard.id;
       
       // Keep relationships temporarily for rollback safety
       // Will be removed after stable period
@@ -845,7 +905,7 @@ export class ProjectService {
           createdAt: new Date().toISOString(),
         },
       ];
-      metadata.currentPinboardId = metadata.pinboards[0].id;
+      this.ensureLastSession(metadata).lastPinboardId = metadata.pinboards[0].id;
     }
   }
 
@@ -867,7 +927,7 @@ export class ProjectService {
     }
 
     const pinboards = project.metadata.pinboards || [];
-    const currentId = project.metadata.currentPinboardId;
+    const currentId = project.metadata.lastSession?.lastPinboardId;
 
     if (currentId) {
       const pinboard = pinboards.find(p => p.id === currentId);
@@ -899,7 +959,7 @@ export class ProjectService {
       throw new Error(`Pinboard with id ${id} not found`);
     }
 
-    project.metadata.currentPinboardId = id;
+    this.ensureLastSession(project.metadata).lastPinboardId = id;
     await this.saveMetadata(project.path, project.metadata);
     this.currentProjectSubject.next({ ...project });
   }
@@ -945,7 +1005,7 @@ export class ProjectService {
     
     // Set as current if it's the first pinboard
     if (pinboards.length === 1) {
-      project.metadata.currentPinboardId = newPinboard.id;
+      this.ensureLastSession(project.metadata).lastPinboardId = newPinboard.id;
     }
 
     await this.saveMetadata(project.path, project.metadata);
@@ -1035,8 +1095,9 @@ export class ProjectService {
     project.metadata.pinboards = pinboards;
 
     // If deleted pinboard was current, switch to first available
-    if (project.metadata.currentPinboardId === id) {
-      project.metadata.currentPinboardId = pinboards.length > 0 ? pinboards[0].id : undefined;
+    const ls = project.metadata.lastSession;
+    if (ls?.lastPinboardId === id) {
+      ls.lastPinboardId = pinboards.length > 0 ? pinboards[0].id : undefined;
     }
 
     await this.saveMetadata(project.path, project.metadata);

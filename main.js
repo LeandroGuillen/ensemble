@@ -271,8 +271,14 @@ ipcMain.handle('write-file-atomic', async (event, filePath, content) => {
     // Write to temporary file first
     await fs.writeFile(tempFilePath, content, 'utf8');
 
-    // Move temp file to target location (atomic on most filesystems)
-    await fs.rename(tempFilePath, filePath);
+    try {
+      await fs.rename(tempFilePath, filePath);
+    } catch (renameErr) {
+      // Dropbox / cloud sync: temp can disappear or rename can fail with ENOENT
+      // even after writeFile resolves. Fall back to a direct write of the same content.
+      await fs.unlink(tempFilePath).catch(() => {});
+      await fs.writeFile(filePath, content, 'utf8');
+    }
 
     return { success: true };
   } catch (error) {

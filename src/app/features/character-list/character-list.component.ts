@@ -167,7 +167,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
 
       if (project) {
         // Load filter expanded state from project settings
-        this.filterExpanded = project.metadata.settings.filterExpanded ?? false;
+        this.filterExpanded = project.metadata.lastSession?.lastCharacterListFilterExpanded ?? false;
         this.loadCharacters();
       }
     });
