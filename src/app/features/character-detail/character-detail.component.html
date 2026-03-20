@@ -65,7 +65,7 @@
                 <button
                   type="button"
                   class="btn btn-primary"
-                  [disabled]="savingBookPageId || !bookPageData[activeContentTab]?.exists"
+                  [disabled]="savingBookPageId || !bookPageData[activeContentTab].exists"
                   (click)="onSaveBookPage(activeContentTab)"
                   title="Update Character (Ctrl+Enter)"
                 >

@@ -230,11 +230,7 @@
                 (dragstart)="onThreadNameDragStart($event, ti)"
                 (dragend)="onThreadNameDragEnd($event)"
                 (dblclick)="startEditThreadName(thread.id); $event.preventDefault()"
-                [attr.title]="
-                  !thread.icon
-                    ? 'Drag to reorder · Double-click to rename · Hover left of the name to add an icon'
-                    : 'Drag to reorder · Double-click to rename'
-                "
+                [attr.title]="threadNameHoverTitle(thread)"
               >
                 {{ thread.name }}
               </span>
@@ -273,9 +269,6 @@
             <span class="thumb-remove-badge" *ngIf="isCharacterPendingRemoval(thread.id, char.id)">×</span>
           </span>
         </div>
-
-        <!-- Thread line start (stub coming down from header) -->
-        <div class="thread-line-stub" [style.backgroundColor]="thread.color || null"></div>
         </div>
       </div>
 
@@ -331,7 +324,7 @@
               (dragstart)="onRowNameDragStart($event, rowIdx)"
               (dragend)="onRowNameDragEnd($event)"
               (dblclick)="startEditRowName(rowIdx); $event.preventDefault()"
-              title="Drag to reorder · Double-click to rename"
+              [attr.title]="rowNameHoverTitle(row)"
             >
               {{ row.name }}
             </span>
@@ -388,7 +381,7 @@
             (dragend)="onBoxDragEnd($event)"
             [style.borderColor]="getBoxBorderColor(rowIdx, thread.id)"
             (dblclick)="startEditCell(rowIdx, thread.id)"
-            title="Double-click to edit, drag to move"
+            [attr.title]="cellHoverTitle(rowIdx, thread.id)"
           >
             <span class="event-icon" *ngIf="getCellMeta(rowIdx, thread.id)?.icon">
               {{ getCellMeta(rowIdx, thread.id)?.icon }}
@@ -400,6 +393,7 @@
           <div
             class="cell-edit-popover"
             *ngIf="isEditingCell(rowIdx, thread.id)"
+            (keydown.escape)="onCellEditPopoverEscape($event)"
           >
             <div class="popover-toolbar">
               <!-- Emoji toggle -->
@@ -459,25 +453,46 @@
               #cellEditTextarea
               class="cell-edit-textarea"
               [(ngModel)]="editingCellValue"
-              (keydown.escape)="cancelEditCell()"
+              (input)="layoutCellEditTextarea()"
+              (keydown)="onCellEditTextareaKeydown($event)"
               placeholder="Event description (optional)..."
-              rows="2"
             ></textarea>
 
             <div class="popover-footer">
+              <div class="popover-footer-left">
+                <button
+                  *ngIf="!confirmDeleteCell && (getCellValue(editingCell!.row, editingCell!.threadId) || getCellMeta(editingCell!.row, editingCell!.threadId)?.icon)"
+                  type="button"
+                  class="btn-delete-cell"
+                  (click)="requestDeleteCell(); $event.stopPropagation()"
+                >
+                  Delete
+                </button>
+                <button
+                  *ngIf="confirmDeleteCell"
+                  type="button"
+                  class="btn-delete-cell btn-delete-confirm"
+                  (click)="confirmDeleteCellAction(); $event.stopPropagation()"
+                >
+                  Confirm delete
+                </button>
+              </div>
               <button
-                *ngIf="!confirmDeleteCell && (getCellValue(editingCell!.row, editingCell!.threadId) || getCellMeta(editingCell!.row, editingCell!.threadId)?.icon)"
-                class="btn-delete-cell"
-                (click)="requestDeleteCell(); $event.stopPropagation()"
+                type="button"
+                class="btn-save-cell"
+                (click)="finishEditCell(); $event.stopPropagation()"
+                [attr.title]="
+                  cellSaveShortcutModifierLabel === '⌘'
+                    ? 'Save (⌘ Enter)'
+                    : 'Save (Ctrl+Enter)'
+                "
               >
-                Delete
-              </button>
-              <button
-                *ngIf="confirmDeleteCell"
-                class="btn-delete-cell btn-delete-confirm"
-                (click)="confirmDeleteCellAction(); $event.stopPropagation()"
-              >
-                Confirm delete
+                Save
+                <span class="cell-save-kbd-hint" aria-hidden="true">
+                  <kbd class="plot-board-action-kbd">{{ cellSaveShortcutModifierLabel }}</kbd>
+                  <span class="cell-save-kbd-plus">+</span>
+                  <kbd class="plot-board-action-kbd">↵</kbd>
+                </span>
               </button>
             </div>
           </div>
@@ -505,8 +520,8 @@
       <div
         class="thread-hover-toolbar"
         [class.thread-hover-toolbar--visible]="isThreadToolbarVisible(thread.id)"
-        [style.top.px]="threadToolbarFixedPos[thread.id]?.top"
-        [style.left.px]="threadToolbarFixedPos[thread.id]?.left"
+        [style.top.px]="threadToolbarFixedPos[thread.id].top"
+        [style.left.px]="threadToolbarFixedPos[thread.id].left"
         (mouseenter)="onThreadToolbarMouseEnter(thread.id)"
         (mouseleave)="onThreadToolbarMouseLeave(thread.id)"
         role="toolbar"

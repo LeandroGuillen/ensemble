@@ -22,7 +22,7 @@ import { CharacterPickerService } from '../../core/services/character-picker.ser
 import { ProjectService } from '../../core/services/project.service';
 import { LoggingService } from '../../core/services/logging.service';
 import { ColorPaletteService } from '../../core/services/color-palette.service';
-import { PlotBoard, PlotCellMeta, PlotRow } from '../../core/interfaces/plot-board.interface';
+import { PlotBoard, PlotCellMeta, PlotRow, PlotThread } from '../../core/interfaces/plot-board.interface';
 import { Character } from '../../core/interfaces/character.interface';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { pathBasename } from '../../core/utils/path.utils';
@@ -89,6 +89,8 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   editingCellColor = '';
   editingNameValue = '';
   showEmojiPicker = false;
+  /** Modifier shown in cell editor Save hint (⌘ on Apple platforms, Ctrl elsewhere). */
+  cellSaveShortcutModifierLabel = 'Ctrl';
 
   // Icon/color pickers for thread headers and row labels
   showThreadIconPicker: string | null = null;
@@ -149,6 +151,11 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   private static readonly THREAD_TOOLBAR_APPROX_HEIGHT = 36;
   private static readonly THREAD_TOOLBAR_GAP = 6;
 
+  private static readonly CELL_EDIT_HINT = 'Double-click to edit · Drag to move';
+
+  /** Max height for cell edit textarea (matches CSS max-height). */
+  private static readonly CELL_EDIT_TEXTAREA_MAX_REM = 15;
+
   private static readonly PLOTBOARD_SIDEBAR_STORAGE_KEY = 'ensemble.plotBoard.sidebarOpen';
 
   /** Plot board file list panel (left column) */
@@ -181,6 +188,13 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
       else if (v === '1') this.plotboardSidebarOpen = true;
     } catch {
       /* ignore */
+    }
+
+    if (
+      typeof navigator !== 'undefined' &&
+      /Mac|iPhone|iPad|iPod/i.test(navigator.userAgent)
+    ) {
+      this.cellSaveShortcutModifierLabel = '⌘';
     }
 
     this.saveRequest$
@@ -330,7 +344,8 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   get gridTemplateColumns(): string {
-    const labelWidth = this.zoomLevel === 1 ? '80px' : this.zoomLevel === 2 ? '120px' : '160px';
+    const labelWidth =
+      this.zoomLevel === 1 ? '104px' : this.zoomLevel === 2 ? '168px' : '224px';
     return `${labelWidth} repeat(${this.board.threads.length}, 1fr)`;
   }
 
@@ -943,6 +958,54 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
     return !!(text || meta?.icon);
   }
 
+  /** Native tooltip: full cell text (and icon) plus action hint. */
+  cellHoverTitle(rowIndex: number, threadId: string): string {
+    const text = this.getCellValue(rowIndex, threadId);
+    const icon = this.getCellMeta(rowIndex, threadId)?.icon;
+    const lines: string[] = [];
+    if (text) lines.push(text);
+    if (icon) lines.push(icon);
+    const body = lines.join('\n');
+    return body ? `${body}\n\n${PlotBoardComponent.CELL_EDIT_HINT}` : PlotBoardComponent.CELL_EDIT_HINT;
+  }
+
+  threadNameHoverTitle(thread: PlotThread): string {
+    const hint = !thread.icon
+      ? 'Drag to reorder · Double-click to rename · Hover left of the name to add an icon'
+      : 'Drag to reorder · Double-click to rename';
+    return `${thread.name}\n\n${hint}`;
+  }
+
+  rowNameHoverTitle(row: PlotRow): string {
+    return `${row.name}\n\nDrag to reorder · Double-click to rename`;
+  }
+
+  /** Grows textarea height to fit content, capped by CSS max-height (15rem). */
+  layoutCellEditTextarea(): void {
+    const ta = this.cellEditTextarea?.nativeElement;
+    if (!ta) return;
+    const rootPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    const maxPx = PlotBoardComponent.CELL_EDIT_TEXTAREA_MAX_REM * rootPx;
+    ta.style.height = '0';
+    ta.style.height = `${Math.min(ta.scrollHeight, maxPx)}px`;
+  }
+
+  /** Ctrl+Enter or Cmd+Enter: commit cell edit (same as click-outside save). */
+  onCellEditTextareaKeydown(event: KeyboardEvent): void {
+    if (event.key !== 'Enter' || (!event.ctrlKey && !event.metaKey)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.finishEditCell();
+  }
+
+  /** Escape closes the popover from textarea, toolbar, swatches, or footer (event bubbles). */
+  onCellEditPopoverEscape(event: Event): void {
+    if (!this.editingCell) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.cancelEditCell();
+  }
+
   startEditCell(rowIndex: number, threadId: string): void {
     if (this.editingCell) {
       this.finishEditCell();
@@ -963,6 +1026,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
         ta.focus();
         const len = ta.value.length;
         ta.setSelectionRange(len, len);
+        requestAnimationFrame(() => this.layoutCellEditTextarea());
       }
     }, { injector: this.injector });
   }
@@ -996,6 +1060,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
 
     this.editingCell = null;
     this.showEmojiPicker = false;
+    this.confirmDeleteCell = false;
     this.queueSave();
     this.focusBoardGridForKeyboard();
   }

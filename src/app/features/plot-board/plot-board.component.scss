@@ -667,9 +667,12 @@
   border-radius: var(--radius-sm);
   color: var(--color-text-primary);
   outline: none;
-  min-width: 0;
-  max-width: 160px;
+  box-sizing: border-box;
+  width: auto;
+  min-width: 3rem;
+  max-width: 15rem;
   text-align: center;
+  field-sizing: content;
 }
 
 // Sibling of .plot-board-body (see template) so this layer stacks above .page-header (z-index 90).
@@ -977,7 +980,7 @@
 }
 
 .row-name-input {
-  flex: 1;
+  flex: 0 1 auto;
   font-weight: 500;
   font-size: 0.8125rem;
   padding: 2px var(--spacing-xs);
@@ -986,7 +989,11 @@
   border-radius: var(--radius-sm);
   color: var(--color-text-primary);
   outline: none;
-  min-width: 0;
+  box-sizing: border-box;
+  width: auto;
+  min-width: 3rem;
+  max-width: 15rem;
+  field-sizing: content;
 }
 
 .row-remove {
@@ -1051,21 +1058,27 @@
 .event-box {
   position: relative;
   z-index: 1;
-  max-width: 85%;
   width: fit-content;
-  min-width: 48px;
-  padding: var(--spacing-sm) var(--spacing-md);
+  min-width: 11rem;
+  padding: var(--spacing-xs) var(--spacing-xs);
   background: var(--color-bg-elevated);
   border: 2px solid var(--color-border);
   border-radius: var(--radius-md);
   cursor: grab;
-  transition: box-shadow var(--transition-fast), transform var(--transition-fast),
+  transform: translateZ(0);
+  transform-origin: center center;
+  backface-visibility: hidden;
+  transition:
+    box-shadow 0.24s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    transform 0.24s cubic-bezier(0.25, 0.46, 0.45, 0.94),
     border-color var(--transition-fast);
   text-align: center;
 
   &:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    transform: translateY(-1px);
+    box-shadow:
+      0 16px 36px rgba(0, 0, 0, 0.18),
+      0 6px 14px rgba(0, 0, 0, 0.1);
+    transform: perspective(420px) rotateX(9deg) rotateY(-7deg) translateZ(14px);
   }
 
   &:active {
@@ -1107,12 +1120,23 @@
   height: 48px;
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background var(--transition-fast), border-color var(--transition-fast);
+  transform: translateZ(0);
+  transform-origin: center center;
+  backface-visibility: hidden;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow 0.24s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    transform 0.24s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   border: 2px dashed transparent;
 
   &:hover {
     border-color: var(--color-border);
     background: var(--color-bg-hover);
+    box-shadow:
+      0 12px 28px rgba(0, 0, 0, 0.14),
+      0 4px 10px rgba(0, 0, 0, 0.09);
+    transform: perspective(400px) rotateX(8deg) rotateY(8deg) translateZ(12px);
   }
 }
 
@@ -1121,12 +1145,14 @@
 .cell-edit-popover {
   position: relative;
   z-index: 10;
-  width: 260px;
+  width: min(100%, 15rem);
+  max-width: 15rem;
   background: var(--color-bg-elevated);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .popover-toolbar {
@@ -1272,6 +1298,7 @@
 .cell-edit-textarea {
   display: block;
   width: 100%;
+  max-width: 15rem;
   padding: var(--spacing-sm) var(--spacing-md);
   background: var(--color-bg-elevated);
   border: none;
@@ -1279,23 +1306,75 @@
   font-size: 0.8125rem;
   font-family: inherit;
   line-height: 1.5;
-  resize: vertical;
+  resize: none;
   outline: none;
   min-height: 52px;
+  max-height: 15rem;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  box-sizing: border-box;
 
   &::placeholder {
     color: var(--color-text-muted);
   }
 }
 
-// --- Popover footer (delete) ---
+// --- Popover footer (delete + save) ---
 
 .popover-footer {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-sm);
   padding: var(--spacing-xs) var(--spacing-sm);
   border-top: 1px solid var(--color-border);
   background: var(--color-bg-secondary);
+}
+
+.popover-footer-left {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  align-items: center;
+  min-height: 24px;
+}
+
+.btn-save-cell {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 3px var(--spacing-sm);
+  background: var(--color-accent-primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-inverse);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+
+  &:hover {
+    background: var(--color-accent-secondary);
+  }
+
+  .plot-board-action-kbd {
+    color: var(--color-text-inverse);
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.35);
+  }
+}
+
+.cell-save-kbd-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 6px;
+}
+
+.cell-save-kbd-plus {
+  font-size: 0.6rem;
+  font-weight: 600;
+  opacity: 0.9;
 }
 
 .btn-delete-cell {
@@ -1363,7 +1442,7 @@
   }
 
   .event-box {
-    padding: var(--spacing-xs) var(--spacing-sm);
+    padding: var(--spacing-xs) var(--spacing-xs);
     min-width: 40px;
   }
 
@@ -1433,7 +1512,7 @@
   }
 
   .event-box {
-    padding: 6px 8px;
+    padding: 8px 8px;
     min-width: 32px;
     border-width: 2px;
     border-radius: var(--radius-sm);

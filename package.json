@@ -1,11 +1,11 @@
 {
   "name": "ensemble",
-  "version": "1.4.3",
+  "version": "1.4.6",
   "description": "Character management application for writers and worldbuilders",
   "main": "main.js",
   "scripts": {
     "ng": "ng",
-    "start": "concurrently \"ng serve\" \"wait-on http://localhost:4200 && electron .\"",
+    "start": "ng serve",
     "build": "ng build",
     "electron": "electron .",
     "electron-dev": "concurrently \"ng serve\" \"wait-on http://localhost:4200 && electron .\"",
@@ -230,5 +230,8 @@
       "owner": "leandroguillen",
       "repo": "ensemble"
     }
+  },
+  "overrides": {
+    "baseline-browser-mapping": "^2.10.10"
   }
 }

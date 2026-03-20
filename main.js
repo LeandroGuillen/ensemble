@@ -4,52 +4,62 @@ const fs = require('fs').promises;
 const https = require('https');
 const http = require('http');
 const chokidar = require('chokidar');
-const { autoUpdater } = require('electron-updater');
 const isDev = !app.isPackaged;
 
 let mainWindow;
 let fileWatcher = null;
-
-// Update configuration
-autoUpdater.autoDownload = false; // Manual download after user approval
-autoUpdater.autoInstallOnAppQuit = false; // AppImage requires manual replacement
-
-// Configure logging for electron-updater
-// Enable debug logging to see what's happening with update checks
-autoUpdater.logger = {
-  info: (message) => {
-    // Log all info messages for debugging
-    console.log('[Updater]', message);
-  },
-  warn: (message) => {
-    console.warn('[Updater]', message);
-  },
-  error: (message, err) => {
-    // Check if it's a 404 error
-    const errorMessage = (err && err.message) || message || '';
-    const is404Error = 
-      (err && (err.statusCode === 404 || err.code === 404)) ||
-      (message && message.includes('404')) || 
-      (message && message.includes('releases.atom')) ||
-      errorMessage.includes('404');
-    
-    // Log 404 errors at info level (they're expected when no releases exist)
-    if (is404Error) {
-      console.log('[Updater] 404 - No releases found (this is normal if no releases have been published)');
-    } else {
-      console.error('[Updater]', message, err);
-    }
-  },
-  debug: (message) => {
-    // Enable debug logging to see network requests
-    console.log('[Updater Debug]', message);
-  }
-};
+let autoUpdater = null;
 
 // Update check interval (4 hours in milliseconds)
 const UPDATE_CHECK_INTERVAL = 4 * 60 * 60 * 1000;
 let updateCheckInterval = null;
 let updaterInitialized = false;
+
+function ensureAutoUpdater() {
+  if (autoUpdater) {
+    return autoUpdater;
+  }
+
+  ({ autoUpdater } = require('electron-updater'));
+
+  // Update configuration
+  autoUpdater.autoDownload = false; // Manual download after user approval
+  autoUpdater.autoInstallOnAppQuit = false; // AppImage requires manual replacement
+
+  // Configure logging for electron-updater
+  // Enable debug logging to see what's happening with update checks
+  autoUpdater.logger = {
+    info: (message) => {
+      // Log all info messages for debugging
+      console.log('[Updater]', message);
+    },
+    warn: (message) => {
+      console.warn('[Updater]', message);
+    },
+    error: (message, err) => {
+      // Check if it's a 404 error
+      const errorMessage = (err && err.message) || message || '';
+      const is404Error =
+        (err && (err.statusCode === 404 || err.code === 404)) ||
+        (message && message.includes('404')) ||
+        (message && message.includes('releases.atom')) ||
+        errorMessage.includes('404');
+
+      // Log 404 errors at info level (they're expected when no releases exist)
+      if (is404Error) {
+        console.log('[Updater] 404 - No releases found (this is normal if no releases have been published)');
+      } else {
+        console.error('[Updater]', message, err);
+      }
+    },
+    debug: (message) => {
+      // Enable debug logging to see network requests
+      console.log('[Updater Debug]', message);
+    }
+  };
+
+  return autoUpdater;
+}
 
 function createWindow() {
   // Get app version for title
@@ -712,6 +722,8 @@ function initializeUpdater() {
     console.log('[Update] Updater already initialized, skipping...');
     return;
   }
+
+  const updater = ensureAutoUpdater();
   
   console.log('[Update] Initializing auto-updater...');
   console.log('[Update] App version:', app.getVersion());
@@ -720,16 +732,16 @@ function initializeUpdater() {
   
   // Log updater configuration
   console.log('[Update] Updater config:', {
-    autoDownload: autoUpdater.autoDownload,
-    autoInstallOnAppQuit: autoUpdater.autoInstallOnAppQuit,
-    channel: autoUpdater.channel,
-    allowPrerelease: autoUpdater.allowPrerelease
+    autoDownload: updater.autoDownload,
+    autoInstallOnAppQuit: updater.autoInstallOnAppQuit,
+    channel: updater.channel,
+    allowPrerelease: updater.allowPrerelease
   });
   
   updaterInitialized = true;
   
   // Set up auto-updater event handlers
-  autoUpdater.on('checking-for-update', () => {
+  updater.on('checking-for-update', () => {
     console.log('[Update] Event: checking-for-update');
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('update-status', {
@@ -739,7 +751,7 @@ function initializeUpdater() {
     }
   });
 
-  autoUpdater.on('update-available', (info) => {
+  updater.on('update-available', (info) => {
     console.log('[Update] Event: update-available', info.version);
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('update-status', {
@@ -752,7 +764,7 @@ function initializeUpdater() {
     }
   });
 
-  autoUpdater.on('update-not-available', (info) => {
+  updater.on('update-not-available', (info) => {
     console.log('[Update] Event: update-not-available', info.version);
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('update-status', {
@@ -763,7 +775,7 @@ function initializeUpdater() {
     }
   });
 
-  autoUpdater.on('error', (err) => {
+  updater.on('error', (err) => {
     // Handle 404 errors gracefully - they're expected when there are no releases yet
     const errorMessage = err.message || err.toString() || '';
     const errorString = JSON.stringify(err);
@@ -807,7 +819,7 @@ function initializeUpdater() {
     }
   });
 
-  autoUpdater.on('download-progress', (progressObj) => {
+  updater.on('download-progress', (progressObj) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('update-status', {
         status: 'downloading',
@@ -821,7 +833,7 @@ function initializeUpdater() {
     }
   });
 
-  autoUpdater.on('update-downloaded', async (info) => {
+  updater.on('update-downloaded', async (info) => {
     console.log('[Update] update-downloaded event:', {
       version: info.version,
       path: info.path,
@@ -842,7 +854,7 @@ function initializeUpdater() {
     // If path is not absolute, try to resolve it
     if (actualPath && !path.isAbsolute(actualPath)) {
       // Check if it's in the cache directory
-      const cacheDir = autoUpdater.downloadedUpdateHelper?.cacheDir || 
+      const cacheDir = updater.downloadedUpdateHelper?.cacheDir || 
                        path.join(app.getPath('userData'), 'pending');
       
       const possiblePath = path.join(cacheDir, actualPath);
@@ -966,7 +978,8 @@ function checkForUpdates() {
   
   console.log('[Update] checkForUpdates() called (automatic check)');
   try {
-    autoUpdater.checkForUpdates().catch(err => {
+    const updater = ensureAutoUpdater();
+    updater.checkForUpdates().catch(err => {
       // The error handler will catch and process this, so we don't need to log it here
       // This catch is just to prevent unhandled promise rejections
       console.error('[Update] Unhandled error in checkForUpdates():', err);
@@ -1053,7 +1066,8 @@ ipcMain.handle('check-for-updates', async () => {
     
     // The autoUpdater will emit events that are handled by the event listeners above
     // We don't need to catch errors here as they're handled by the 'error' event handler
-    const result = await autoUpdater.checkForUpdates();
+    const updater = ensureAutoUpdater();
+    const result = await updater.checkForUpdates();
     console.log('[Update] checkForUpdates() completed:', result ? `result received (updateInfo: ${result.updateInfo?.version || 'N/A'})` : 'no result');
     return { success: true };
   } catch (error) {
@@ -1102,7 +1116,8 @@ ipcMain.handle('download-update', async () => {
   }
   
   try {
-    const result = await autoUpdater.downloadUpdate();
+    const updater = ensureAutoUpdater();
+    const result = await updater.downloadUpdate();
     console.log('[Update] downloadUpdate result:', {
       updateInfo: result?.updateInfo,
       downloadPromise: result?.downloadPromise,
@@ -1121,7 +1136,8 @@ ipcMain.handle('get-update-status', async () => {
   }
   
   try {
-    const updateInfo = await autoUpdater.checkForUpdates();
+    const updater = ensureAutoUpdater();
+    const updateInfo = await updater.checkForUpdates();
     return {
       success: true,
       updateInfo: updateInfo ? {
