@@ -56,11 +56,14 @@ Located in `src/app/core/utils/`:
 ### Running the Application
 
 ```bash
-# Start Angular dev server only (http://localhost:4200)
+# Full desktop app in dev mode (Angular dev server + Electron window)
 npm start
 
-# Start Electron in dev mode (opens Angular dev server in Electron window)
+# Same as npm start (explicit name)
 npm run electron-dev
+
+# Angular dev server only (http://localhost:4200), no Electron window
+npm run serve
 
 # Build and run in production mode
 npm run electron-prod

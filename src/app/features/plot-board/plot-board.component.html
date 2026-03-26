@@ -520,8 +520,8 @@
       <div
         class="thread-hover-toolbar"
         [class.thread-hover-toolbar--visible]="isThreadToolbarVisible(thread.id)"
-        [style.top.px]="threadToolbarFixedPos[thread.id].top"
-        [style.left.px]="threadToolbarFixedPos[thread.id].left"
+        [style.top.px]="getThreadToolbarTop(thread.id)"
+        [style.left.px]="getThreadToolbarLeft(thread.id)"
         (mouseenter)="onThreadToolbarMouseEnter(thread.id)"
         (mouseleave)="onThreadToolbarMouseLeave(thread.id)"
         role="toolbar"

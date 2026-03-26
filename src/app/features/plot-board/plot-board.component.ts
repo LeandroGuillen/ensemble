@@ -308,11 +308,11 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   isThreadToolbarVisible(threadId: string): boolean {
-    return (
+    const visible =
       this.activeThreadToolbarRowId === threadId ||
       this.confirmDeleteThreadId === threadId ||
-      this.showThreadColorPicker === threadId
-    );
+      this.showThreadColorPicker === threadId;
+    return visible;
   }
 
   private layoutThreadToolbar(threadId: string, anchor: HTMLElement): void {
@@ -333,9 +333,32 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
       this.showThreadColorPicker;
     if (!id) return;
     const anchor = this.threadToolbarAnchorById.get(id);
+    if (!anchor) {
+      // Anchor disappeared (e.g. rerender); nothing to reposition right now.
+    }
     if (anchor) {
       this.layoutThreadToolbar(id, anchor);
     }
+  }
+
+  // These helpers prevent template crashes when the toolbar is visible
+  // but its fixed position hasn't been computed yet.
+  getThreadToolbarTop(threadId: string): number {
+    const entry = this.threadToolbarFixedPos[threadId];
+    const top = entry?.top;
+    if (top === undefined) {
+      return 0;
+    }
+    return top;
+  }
+
+  getThreadToolbarLeft(threadId: string): number {
+    const entry = this.threadToolbarFixedPos[threadId];
+    const left = entry?.left;
+    if (left === undefined) {
+      return 0;
+    }
+    return left;
   }
 
   @HostListener('window:resize')
