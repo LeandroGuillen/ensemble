@@ -178,3 +178,12 @@
     opacity: 1; // Always show on mobile
   }
 }
+.character-item.dnd-enabled,
+.gallery-item.dnd-enabled {
+  cursor: grab;
+}
+
+.character-item.dnd-enabled:active,
+.gallery-item.dnd-enabled:active {
+  cursor: grabbing;
+}

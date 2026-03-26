@@ -397,6 +397,87 @@ app-character-filter {
   flex: 1;
   min-width: 0;
   padding-left: var(--spacing-md);
+  border: 1px dashed transparent;
+  border-radius: var(--radius-lg);
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+  position: relative;
+
+  &.drop-active {
+    border-color: var(--color-accent-primary);
+    background: rgba(229, 168, 85, 0.08);
+  }
+
+  &.drop-disabled {
+    opacity: 0.96;
+  }
+}
+
+.drop-hint {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  z-index: 2;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 2px 8px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+
+  &.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.category-content.drop-active .character-item:not(.cdk-drag-placeholder),
+.category-content.drop-active .gallery-item:not(.cdk-drag-placeholder) {
+  opacity: 0.35;
+}
+
+::ng-deep .character-drag-preview {
+  transition: none !important;
+  opacity: 0.95;
+  box-shadow: var(--shadow-lg);
+}
+
+::ng-deep .drag-preview-chip {
+  background: rgba(229, 168, 85, 0.55);
+  border: 2px solid rgba(229, 168, 85, 0.95);
+  color: var(--color-text-primary);
+  border-radius: var(--radius-lg);
+  padding: 10px 14px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+::ng-deep .category-content .cdk-drag-placeholder {
+  opacity: 0 !important;
+  min-height: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+}
+
+::ng-deep .drag-placeholder {
+  display: none !important;
+}
+
+::ng-deep .cdk-drop-list-dragging .character-item,
+::ng-deep .cdk-drop-list-dragging .gallery-item,
+::ng-deep .cdk-drag-animating {
+  transition: none !important;
 }
 
 // Cast Name Form Dialog

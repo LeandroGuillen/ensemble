@@ -1,11 +1,12 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, OnChanges, SimpleChanges, NgZone } from "@angular/core";
 import { CommonModule } from "@angular/common";
+import { DragDropModule } from '@angular/cdk/drag-drop';
 import { Character, Tag, Category } from "../../../../core/interfaces";
 
 @Component({
   selector: "app-character-grid-view",
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, DragDropModule],
   templateUrl: "./character-grid-view.component.html",
   styleUrls: ["./character-grid-view.component.scss"],
 })
@@ -14,6 +15,7 @@ export class CharacterGridViewComponent implements OnInit, OnDestroy, OnChanges 
   @Input() categories: Category[] = [];
   @Input() tags: Tag[] = [];
   @Input() selectedCharacterIndex = -1;
+  @Input() dndEnabled = false;
   @Input() thumbnailDataUrls: Map<string, string> = new Map();
   @Input() characterImagesDataUrls: Map<string, string[]> = new Map();
   @Input() slideshowEnabled = true;
@@ -23,6 +25,8 @@ export class CharacterGridViewComponent implements OnInit, OnDestroy, OnChanges 
     character: Character;
     event: Event;
   }>();
+  @Output() dragStarted = new EventEmitter<void>();
+  @Output() dragEnded = new EventEmitter<void>();
 
   // Slideshow state
   currentImageIndices: Map<string, number> = new Map();
@@ -30,6 +34,7 @@ export class CharacterGridViewComponent implements OnInit, OnDestroy, OnChanges 
   fadingCharacters: Set<string> = new Set(); // Track which characters are currently fading
   private characterTimers: Map<string, any> = new Map(); // Individual timer per character
   private readonly SLIDESHOW_BASE_DELAY = 5000; // 5 seconds base delay
+  private dragInProgress = false;
 
   constructor(private ngZone: NgZone) {}
 
@@ -157,11 +162,17 @@ export class CharacterGridViewComponent implements OnInit, OnDestroy, OnChanges 
   }
 
   onCharacterClick(character: Character): void {
+    if (this.dragInProgress) {
+      return;
+    }
     this.characterClick.emit(character);
   }
 
   onCharacterClickWithStop(character: Character, event: Event): void {
     event.stopPropagation();
+    if (this.dragInProgress) {
+      return;
+    }
     this.characterClick.emit(character);
   }
 
@@ -174,6 +185,18 @@ export class CharacterGridViewComponent implements OnInit, OnDestroy, OnChanges 
     if (img) {
       img.style.display = "none";
     }
+  }
+
+  onDragStarted(): void {
+    this.dragInProgress = true;
+    this.dragStarted.emit();
+  }
+
+  onDragEnded(): void {
+    setTimeout(() => {
+      this.dragInProgress = false;
+      this.dragEnded.emit();
+    }, 0);
   }
 
   getPlaceholderColor(character: Character): string {

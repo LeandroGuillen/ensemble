@@ -2,6 +2,13 @@
   <div
     *ngFor="let character of characters; let i = index"
     class="character-list-item character-item"
+    cdkDrag
+    [cdkDragData]="character"
+    [cdkDragDisabled]="!dndEnabled"
+    [cdkDragPreviewClass]="'character-drag-preview'"
+    (cdkDragStarted)="onDragStarted()"
+    (cdkDragEnded)="onDragEnded()"
+    [class.dnd-enabled]="dndEnabled"
     [class.selected]="selectedCharacterIndex === i"
     [class.multi-selected]="isCharacterSelected(character.id)"
     [attr.data-index]="i"
@@ -11,11 +18,17 @@
     (keydown.enter)="onCharacterClick(character)"
     (keydown.space)="onCharacterClick(character); $event.preventDefault()"
   >
+    <div class="drag-preview-chip" *cdkDragPreview>
+      {{ character.name }}
+    </div>
+    <div class="drag-placeholder" *cdkDragPlaceholder></div>
+
     <div class="list-item-thumbnail">
       <img
         *ngIf="getCharacterThumbnailDataUrl(character)"
         [src]="getCharacterThumbnailDataUrl(character)"
         [alt]="character.name"
+        draggable="false"
         (error)="onImageError($event)"
       />
       <div *ngIf="!getCharacterThumbnailDataUrl(character)" class="thumbnail-placeholder-small" [style.background-color]="getPlaceholderColor(character)">

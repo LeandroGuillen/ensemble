@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, HostListener, NgZone, OnDestroy, OnInit } from '@angular/core';
+import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
+import { ChangeDetectorRef, Component, ElementRef, HostListener, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Observable, Subject } from 'rxjs';
@@ -25,6 +26,7 @@ import {
   standalone: true,
   imports: [
     CommonModule,
+    DragDropModule,
     FormsModule,
     PageHeaderComponent,
     CharacterFilterComponent,
@@ -37,6 +39,12 @@ import {
   styleUrls: ['./character-list.component.scss'],
 })
 export class CharacterListComponent implements OnInit, OnDestroy {
+  @ViewChild('scrollableContent', { static: false })
+  private scrollableContentRef: ElementRef<HTMLDivElement> | null = null;
+
+  private readonly dragAutoScrollThresholdPx = 120;
+  private readonly dragAutoScrollMaxStepPx = 18;
+
   private destroy$ = new Subject<void>();
 
   characters$: Observable<Character[]>;
@@ -72,6 +80,12 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   filterExpanded = false; // Track filter expanded state
   slideshowEnabled = true; // Toggle slideshow on/off
   galleryThumbnailSize: 'big' | 'medium' | 'small' = 'big'; // Gallery thumbnail size
+  activeDropCategoryId: string | null = null;
+  isUpdatingCategory = false;
+  categoryDropListIds: string[] = [];
+  isDraggingCharacter = false;
+  private groupedCharacters: Array<{ categoryId: string; characters: Character[] }> = [];
+  private groupedByTag: Array<{ tagId: string; characters: Character[] }> = [];
 
   constructor(
     private characterService: CharacterService,
@@ -164,6 +178,8 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       this.tags = this.projectService.getTags();
       this.casts = this.metadataService.getCasts();
       this.books = this.metadataService.getBooks();
+      this.recomputeGroups();
+      this.updateCategoryDropListIds();
 
       if (project) {
         // Load filter expanded state from project settings
@@ -176,6 +192,8 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     this.characters$.pipe(takeUntil(this.destroy$)).subscribe((characters) => {
       this.allCharacters = characters;
       this.filteredCharacters = this.filterAndSortCharacters(characters);
+      this.recomputeGroups();
+      this.updateCategoryDropListIds();
       // Sync cache from service first (to restore cached images)
       this.syncCacheFromService();
       this.loadThumbnailDataUrls(characters).then(() => {
@@ -221,6 +239,42 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       this.toggleViewMode();
       return;
     }
+  }
+
+  @HostListener('document:pointermove', ['$event'])
+  onDocumentPointerMove(event: PointerEvent): void {
+    if (!this.isCategoryDragDropEnabled() || !this.isDraggingCharacter) {
+      return;
+    }
+
+    const el = this.scrollableContentRef?.nativeElement;
+    if (!el) return;
+
+    const rect = el.getBoundingClientRect();
+    const y = event.clientY;
+
+    // Only auto-scroll when the pointer is within the scroll container vertical bounds
+    if (y < rect.top || y > rect.bottom) return;
+
+    const distanceToTop = y - rect.top;
+    const distanceToBottom = rect.bottom - y;
+
+    const threshold = this.dragAutoScrollThresholdPx;
+    let direction = 0;
+    let intensity = 0;
+
+    if (distanceToTop >= 0 && distanceToTop < threshold) {
+      direction = -1;
+      intensity = (threshold - distanceToTop) / threshold;
+    } else if (distanceToBottom >= 0 && distanceToBottom < threshold) {
+      direction = 1;
+      intensity = (threshold - distanceToBottom) / threshold;
+    } else {
+      return;
+    }
+
+    const step = Math.max(2, Math.round(this.dragAutoScrollMaxStepPx * intensity));
+    el.scrollTop += direction * step;
   }
 
   private scrollToSelectedCharacter(): void {
@@ -474,6 +528,8 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     // Simply re-filter and sort the current character list
     // No need to subscribe again - the subscription in ngOnInit handles updates
     this.filteredCharacters = this.filterAndSortCharacters(this.allCharacters);
+    this.recomputeGroups();
+    this.updateCategoryDropListIds();
     // Reset selection when filters change
     this.selectedCharacterIndex = -1;
   }
@@ -787,6 +843,20 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   setGroupBy(groupBy: 'none' | 'category' | 'tag'): void {
     this.groupBy = groupBy;
     localStorage.setItem('characterGroupBy', this.groupBy);
+    this.activeDropCategoryId = null;
+    this.updateCategoryDropListIds();
+  }
+
+  isCategoryDragDropEnabled(): boolean {
+    return this.groupBy === 'category' && !this.isUpdatingCategory;
+  }
+
+  getCategoryDropListId(categoryId: string): string {
+    return `category-drop-${encodeURIComponent(categoryId)}`;
+  }
+
+  getConnectedCategoryDropListIds(): string[] {
+    return this.categoryDropListIds;
   }
 
   private sortCharacters(characters: Character[]): Character[] {
@@ -839,6 +909,18 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     categoryId: string;
     characters: Character[];
   }> {
+    return this.groupedCharacters;
+  }
+
+  private recomputeGroups(): void {
+    this.groupedCharacters = this.computeGroupedCharacters();
+    this.groupedByTag = this.computeGroupedByTag();
+  }
+
+  private computeGroupedCharacters(): Array<{
+    categoryId: string;
+    characters: Character[];
+  }> {
     const grouped = new Map<string, Character[]>();
 
     // Group characters by category
@@ -874,7 +956,54 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     return result;
   }
 
+  private updateCategoryDropListIds(): void {
+    this.categoryDropListIds = this.groupedCharacters.map((group) =>
+      this.getCategoryDropListId(group.categoryId)
+    );
+  }
+
+  async onCategoryDrop(event: CdkDragDrop<Character[]>, targetCategoryId: string): Promise<void> {
+    this.activeDropCategoryId = null;
+    if (!this.isCategoryDragDropEnabled()) {
+      return;
+    }
+
+    const draggedCharacter = event.item.data as Character | undefined;
+    if (!draggedCharacter) {
+      return;
+    }
+
+    if (draggedCharacter.category === targetCategoryId) {
+      return;
+    }
+
+    try {
+      this.isUpdatingCategory = true;
+      const updated = await this.characterService.updateCharacter(draggedCharacter.id, {
+        category: targetCategoryId,
+      });
+
+      if (!updated) {
+        this.notificationService.showError('Could not move character to the selected category.');
+        return;
+      }
+
+      const targetCategoryName = this.metadataHelper.getCategoryName(targetCategoryId);
+      this.notificationService.showSuccess(`Moved "${updated.name}" to ${targetCategoryName}.`);
+    } catch (error) {
+      this.logger.error('Failed to move character to category:', error);
+      this.notificationService.showError('Failed to move character. Please try again.');
+    } finally {
+      this.isUpdatingCategory = false;
+      this.updateCategoryDropListIds();
+    }
+  }
+
   getGroupedByTag(): Array<{ tagId: string; characters: Character[] }> {
+    return this.groupedByTag;
+  }
+
+  private computeGroupedByTag(): Array<{ tagId: string; characters: Character[] }> {
     const grouped = new Map<string, Character[]>();
 
     // Group characters by tag (characters can appear in multiple groups)
@@ -917,6 +1046,30 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     }
 
     return result;
+  }
+
+  onAnyCharacterDragStarted(): void {
+    this.isDraggingCharacter = true;
+  }
+
+  onAnyCharacterDragEnded(): void {
+    setTimeout(() => {
+      this.isDraggingCharacter = false;
+      this.activeDropCategoryId = null;
+    }, 0);
+  }
+
+  onCategoryDragEntered(categoryId: string): void {
+    if (!this.isCategoryDragDropEnabled() || !this.isDraggingCharacter) {
+      return;
+    }
+    this.activeDropCategoryId = categoryId;
+  }
+
+  onCategoryDragExited(categoryId: string): void {
+    if (this.activeDropCategoryId === categoryId) {
+      this.activeDropCategoryId = null;
+    }
   }
 
   /**

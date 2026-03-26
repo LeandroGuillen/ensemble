@@ -2,6 +2,13 @@
   <div
     *ngFor="let character of characters; let i = index"
     class="character-card card character-item"
+    cdkDrag
+    [cdkDragData]="character"
+    [cdkDragDisabled]="!dndEnabled"
+    [cdkDragPreviewClass]="'character-drag-preview'"
+    (cdkDragStarted)="onDragStarted()"
+    (cdkDragEnded)="onDragEnded()"
+    [class.dnd-enabled]="dndEnabled"
     [class.selected]="selectedCharacterIndex === i"
     [attr.data-index]="i"
     (click)="onCharacterClick(character)"
@@ -10,11 +17,17 @@
     (keydown.enter)="onCharacterClick(character)"
     (keydown.space)="onCharacterClick(character); $event.preventDefault()"
   >
+    <div class="drag-preview-chip" *cdkDragPreview>
+      {{ character.name }}
+    </div>
+    <div class="drag-placeholder" *cdkDragPlaceholder></div>
+
     <div class="character-thumbnail">
       <img
         *ngIf="getCurrentImageUrl(character)"
         [src]="getCurrentImageUrl(character)"
         [alt]="character.name"
+        draggable="false"
         (error)="onImageError($event)"
         class="slideshow-image"
         [class.fade-in]="shouldFadeIn(character)"

@@ -1,11 +1,12 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { DragDropModule } from '@angular/cdk/drag-drop';
 import { Character, Tag, Category } from '../../../../core/interfaces';
 
 @Component({
   selector: 'app-character-compact-view',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, DragDropModule],
   templateUrl: './character-compact-view.component.html',
   styleUrls: ['./character-compact-view.component.scss']
 })
@@ -15,12 +16,16 @@ export class CharacterCompactViewComponent {
   @Input() tags: Tag[] = [];
   @Input() columns: 1 | 2 = 2;
   @Input() selectedCharacterIndex = -1;
+  @Input() dndEnabled = false;
   @Input() selectedCharacterIds: string[] = [];
   @Input() thumbnailDataUrls: Map<string, string> = new Map();
 
   @Output() characterClick = new EventEmitter<Character>();
   @Output() characterDelete = new EventEmitter<{ character: Character; event: Event }>();
   @Output() characterSelectionToggle = new EventEmitter<string>();
+  @Output() dragStarted = new EventEmitter<void>();
+  @Output() dragEnded = new EventEmitter<void>();
+  private dragInProgress = false;
 
   getCharacterLink(character: Character): string[] {
     return ['/character', encodeURIComponent(character.id)];
@@ -49,11 +54,17 @@ export class CharacterCompactViewComponent {
   }
 
   onCharacterClick(character: Character): void {
+    if (this.dragInProgress) {
+      return;
+    }
     this.characterClick.emit(character);
   }
 
   onCharacterClickWithStop(character: Character, event: Event): void {
     event.stopPropagation();
+    if (this.dragInProgress) {
+      return;
+    }
     this.characterClick.emit(character);
   }
 
@@ -70,6 +81,18 @@ export class CharacterCompactViewComponent {
     if (img) {
       img.style.display = 'none';
     }
+  }
+
+  onDragStarted(): void {
+    this.dragInProgress = true;
+    this.dragStarted.emit();
+  }
+
+  onDragEnded(): void {
+    setTimeout(() => {
+      this.dragInProgress = false;
+      this.dragEnded.emit();
+    }, 0);
   }
 
   getPlaceholderColor(character: Character): string {

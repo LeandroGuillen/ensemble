@@ -1,11 +1,12 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, OnChanges, SimpleChanges, NgZone } from "@angular/core";
 import { CommonModule } from "@angular/common";
+import { DragDropModule } from '@angular/cdk/drag-drop';
 import { Character, Tag } from "../../../../core/interfaces";
 
 @Component({
   selector: "app-character-gallery-view",
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, DragDropModule],
   templateUrl: "./character-gallery-view.component.html",
   styleUrls: ["./character-gallery-view.component.scss"],
 })
@@ -16,8 +17,11 @@ export class CharacterGalleryViewComponent implements OnInit, OnDestroy, OnChang
   @Input() characterImagesDataUrls: Map<string, string[]> = new Map();
   @Input() slideshowEnabled = true;
   @Input() thumbnailSize: 'big' | 'medium' | 'small' = 'big';
+  @Input() dndEnabled = false;
 
   @Output() characterClick = new EventEmitter<Character>();
+  @Output() dragStarted = new EventEmitter<void>();
+  @Output() dragEnded = new EventEmitter<void>();
 
   // Slideshow state: Map<characterId, currentImageIndex>
   currentImageIndices: Map<string, number> = new Map();
@@ -25,6 +29,7 @@ export class CharacterGalleryViewComponent implements OnInit, OnDestroy, OnChang
   fadingCharacters: Set<string> = new Set(); // Track which characters are currently fading
   private characterTimers: Map<string, any> = new Map(); // Individual timer per character
   private readonly SLIDESHOW_BASE_DELAY = 5000; // 5 seconds base delay
+  private dragInProgress = false;
 
   constructor(private ngZone: NgZone) {}
 
@@ -138,6 +143,9 @@ export class CharacterGalleryViewComponent implements OnInit, OnDestroy, OnChang
   }
 
   onCharacterClick(character: Character): void {
+    if (this.dragInProgress) {
+      return;
+    }
     this.characterClick.emit(character);
   }
 
@@ -146,6 +154,18 @@ export class CharacterGalleryViewComponent implements OnInit, OnDestroy, OnChang
     if (img) {
       img.style.display = "none";
     }
+  }
+
+  onDragStarted(): void {
+    this.dragInProgress = true;
+    this.dragStarted.emit();
+  }
+
+  onDragEnded(): void {
+    setTimeout(() => {
+      this.dragInProgress = false;
+      this.dragEnded.emit();
+    }, 0);
   }
 
   getPlaceholderColor(character: Character): string {

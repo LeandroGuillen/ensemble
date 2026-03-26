@@ -363,6 +363,7 @@
 
     <div
       class="scrollable-content"
+      #scrollableContent
       *ngIf="currentProject && !isLoading && !error"
     >
       <!-- Grouped View by Category -->
@@ -387,19 +388,40 @@
               }}</span>
             </div>
           </div>
-          <div class="category-content">
+          <div
+            class="category-content"
+            cdkDropList
+            [id]="getCategoryDropListId(group.categoryId)"
+            [cdkDropListData]="group.characters"
+            [cdkDropListConnectedTo]="getConnectedCategoryDropListIds()"
+            [cdkDropListSortingDisabled]="true"
+            [class.drop-active]="activeDropCategoryId === group.categoryId && isDraggingCharacter"
+            [class.drop-disabled]="!isCategoryDragDropEnabled()"
+            (cdkDropListEntered)="onCategoryDragEntered(group.categoryId)"
+            (cdkDropListExited)="onCategoryDragExited(group.categoryId)"
+            (cdkDropListDropped)="onCategoryDrop($event, group.categoryId)"
+          >
+            <div
+              class="drop-hint"
+              [class.visible]="activeDropCategoryId === group.categoryId && isDraggingCharacter"
+            >
+              Drop here for {{ metadataHelper.getCategoryName(group.categoryId) }}
+            </div>
             <!-- Grid View (Cards) -->
             <app-character-grid-view
               *ngIf="viewMode === 'grid'"
               [characters]="group.characters"
               [categories]="categories"
               [tags]="tags"
+              [dndEnabled]="isCategoryDragDropEnabled()"
               [selectedCharacterIndex]="selectedCharacterIndex"
               [thumbnailDataUrls]="thumbnailDataUrls"
               [characterImagesDataUrls]="characterImagesDataUrls"
               [slideshowEnabled]="slideshowEnabled"
               (characterClick)="onViewCharacterClick($event)"
               (characterDelete)="onViewCharacterDelete($event)"
+              (dragStarted)="onAnyCharacterDragStarted()"
+              (dragEnded)="onAnyCharacterDragEnded()"
             ></app-character-grid-view>
 
             <!-- List View -->
@@ -408,6 +430,7 @@
               [characters]="group.characters"
               [categories]="categories"
               [tags]="tags"
+              [dndEnabled]="isCategoryDragDropEnabled()"
               [columns]="columns"
               [selectedCharacterIndex]="selectedCharacterIndex"
               [thumbnailDataUrls]="thumbnailDataUrls"
@@ -416,6 +439,8 @@
               (characterSelectionToggle)="
                 onViewCharacterSelectionToggle($event)
               "
+              (dragStarted)="onAnyCharacterDragStarted()"
+              (dragEnded)="onAnyCharacterDragEnded()"
             ></app-character-list-view>
 
             <!-- Compact View -->
@@ -424,6 +449,7 @@
               [characters]="group.characters"
               [categories]="categories"
               [tags]="tags"
+              [dndEnabled]="isCategoryDragDropEnabled()"
               [columns]="columns"
               [selectedCharacterIndex]="selectedCharacterIndex"
               [thumbnailDataUrls]="thumbnailDataUrls"
@@ -432,6 +458,8 @@
               (characterSelectionToggle)="
                 onViewCharacterSelectionToggle($event)
               "
+              (dragStarted)="onAnyCharacterDragStarted()"
+              (dragEnded)="onAnyCharacterDragEnded()"
             ></app-character-compact-view>
 
             <!-- Gallery View -->
@@ -439,11 +467,14 @@
               *ngIf="viewMode === 'gallery'"
               [characters]="group.characters"
               [tags]="tags"
+              [dndEnabled]="isCategoryDragDropEnabled()"
               [thumbnailDataUrls]="thumbnailDataUrls"
               [characterImagesDataUrls]="characterImagesDataUrls"
               [slideshowEnabled]="slideshowEnabled"
               [thumbnailSize]="galleryThumbnailSize"
               (characterClick)="onViewCharacterClick($event)"
+              (dragStarted)="onAnyCharacterDragStarted()"
+              (dragEnded)="onAnyCharacterDragEnded()"
             ></app-character-gallery-view>
           </div>
         </div>
