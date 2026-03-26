@@ -73,6 +73,8 @@ export type ZoomLevel = 1 | 2 | 3;
 export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   private destroy$ = new Subject<void>();
   private saveRequest$ = new Subject<void>();
+  /** Prevents the debounced auto-save from recreating a file being deleted (especially when deleting the open board). */
+  private suspendAutoSave = false;
 
   board: PlotBoard = { threads: [], rows: [], cells: {}, cellMeta: {} };
   characters: Character[] = [];
@@ -469,6 +471,8 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
       this.displayedBoardPath = this.plotBoardService.getCurrentRelativePath();
       this.isLoading = false;
       this.keyboardFocusCell = null;
+      // Re-enable auto-save after route load completes (e.g. after deleting a plot board).
+      this.suspendAutoSave = false;
     }
   }
 
@@ -552,11 +556,16 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
     const isDeletingOpen =
       !!cur && this.plotBoardService.normalizeRelativePath(p) === this.plotBoardService.normalizeRelativePath(cur);
     if (isDeletingOpen) {
+      // The debounced save can otherwise fire after deletion and recreate the file.
+      this.suspendAutoSave = true;
+    }
+    if (isDeletingOpen) {
       await this.flushSaveIfNeeded();
     }
     const del = await this.plotBoardService.deletePlotBoardFile(p);
     if (!del.success) {
       this.deletePlotBoardError = del.error || 'Could not delete file';
+      if (isDeletingOpen) this.suspendAutoSave = false;
       return;
     }
     this.showDeletePlotBoardDialog = false;
@@ -643,6 +652,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private async flushSaveIfNeeded(): Promise<void> {
+    if (this.suspendAutoSave) return;
     if (!this.isBoardSyncedToOpenFile()) return;
     try {
       await this.plotBoardService.savePlotBoard({ ...this.board });
@@ -656,6 +666,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private async persistBoard(): Promise<void> {
+    if (this.suspendAutoSave) return;
     if (!this.isBoardSyncedToOpenFile()) return;
     try {
       await this.plotBoardService.savePlotBoard({ ...this.board });
