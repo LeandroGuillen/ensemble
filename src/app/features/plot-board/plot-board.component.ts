@@ -1567,8 +1567,6 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
     return this.dragOverTarget?.row === rowIndex && this.dragOverTarget?.threadId === threadId;
   }
 
-  // --- Character linking ---
-
   getThreadCharacters(threadId: string): Character[] {
     const thread = this.board.threads.find((t) => t.id === threadId);
     if (!thread) return [];

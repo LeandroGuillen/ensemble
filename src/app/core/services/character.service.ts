@@ -79,85 +79,18 @@ export class CharacterService {
 
   /**
    * Relocates all characters of a given category to their new folder locations.
-   * Called when a category's folder mode or folder path changes.
+   *
+   * Characters are intentionally decoupled from category storage location:
+   * changing `category` should not move files and should not change `character.id`.
+   *
    * @param categoryId The category ID whose characters should be relocated
-   * @returns The number of characters relocated
+   * @returns The number of characters relocated (always 0 when decoupled)
    */
   async relocateCharactersForCategory(categoryId: string): Promise<number> {
-    const project = requireProject(this.projectService.getCurrentProject());
-    const charactersPath = this.projectService.getCharactersFolderPath();
-
-    // Ensure characters are loaded before relocation
-    if (this.charactersSubject.value.length === 0) {
-      await this.forceReloadCharacters();
-    }
-
-    // Get all characters in this category
-    const characters = this.charactersSubject.value.filter(
-      (char) => char.category === categoryId
+    this.logger.log(
+      `[relocateCharactersForCategory] Category storage location is decoupled; no character relocation performed for category '${categoryId}'.`
     );
-
-    if (characters.length === 0) {
-      return 0;
-    }
-
-    // Get the new folder path based on current category settings
-    const newCategoryFolder = this.getCategoryFolderPath(categoryId);
-    this.logger.log(`[relocateCharactersForCategory] New category folder: ${newCategoryFolder}`);
-
-    let relocatedCount = 0;
-
-    for (const character of characters) {
-      try {
-        const characterSlug = slugify(character.name);
-        const newFilename = `_${characterSlug}.md`;
-
-        // Determine the new file path
-        let newFilePath: string;
-        let newId: string;
-        if (newCategoryFolder === null) {
-          newFilePath = pathJoin(charactersPath, newFilename);
-          newId = newFilename;
-        } else {
-          const categoryPath = pathJoin(charactersPath, newCategoryFolder);
-          await this.electronService.createDirectory(categoryPath);
-          newFilePath = pathJoin(categoryPath, newFilename);
-          newId = pathJoin(newCategoryFolder, newFilename);
-        }
-
-        // Skip if already in the correct location
-        if (character.filePath === newFilePath) {
-          continue;
-        }
-
-        // Move the character file
-        const moveResult = await this.electronService.moveDirectory(
-          character.filePath,
-          newFilePath
-        );
-
-        if (!moveResult.success) {
-          this.logger.error(`Failed to move character ${character.name}`, moveResult.error);
-          continue;
-        }
-
-        // Update the character's paths in memory
-        character.id = newId;
-        character.filePath = newFilePath;
-        relocatedCount++;
-
-        this.logger.log(`Relocated character ${character.name} to ${newFilePath}`);
-      } catch (error) {
-        this.logger.error(`Failed to relocate character ${character.name}`, error);
-      }
-    }
-
-    // Update the characters subject with the modified paths
-    if (relocatedCount > 0) {
-      this.charactersSubject.next([...this.charactersSubject.value]);
-    }
-
-    return relocatedCount;
+    return 0;
   }
 
   getCharacters(): Observable<Character[]> {
@@ -393,11 +326,11 @@ export class CharacterService {
 
   /**
    * Creates a new character and saves it to disk as _<slug>.md
-   * File location depends on category folder mode
+   *
+   * Character storage location is intentionally decoupled from `category`.
+   * This always writes directly under the project's `characters/` folder.
    */
   async createCharacter(data: CharacterFormData): Promise<Character> {
-    const project = requireProject(this.projectService.getCurrentProject());
-
     try {
       // Validate book references
       await this.validateBookReferences(data.books);
@@ -405,24 +338,11 @@ export class CharacterService {
       const slug = slugify(data.name);
       const filename = `_${slug}.md`;
 
-      // Get category folder path based on folder mode
-      const categoryFolderPath = this.getCategoryFolderPath(data.category);
-
       let filePath: string;
       let relativePath: string;
       const charactersPath = this.projectService.getCharactersFolderPath();
-      if (categoryFolderPath === null) {
-        filePath = pathJoin(charactersPath, filename);
-        relativePath = filename;
-      } else {
-        const categoryPath = pathJoin(charactersPath, categoryFolderPath);
-        assertIpcSuccess(
-          await this.electronService.createDirectory(categoryPath),
-          'Create category directory'
-        );
-        filePath = pathJoin(categoryPath, filename);
-        relativePath = pathJoin(categoryFolderPath, filename);
-      }
+      filePath = pathJoin(charactersPath, filename);
+      relativePath = filename;
 
       const now = new Date();
       const character: Character = {
@@ -454,8 +374,10 @@ export class CharacterService {
   }
 
   /**
-   * Updates an existing character and saves changes to disk
-   * Handles file move/rename when category or name changes
+   * Updates an existing character and saves changes to disk.
+   *
+   * Moving/renaming the file is only done when the character `name` changes.
+   * Changing `category` only updates frontmatter and keeps `character.id` stable.
    */
   async updateCharacter(
     id: string,
@@ -480,32 +402,23 @@ export class CharacterService {
       let newFilePath = existingCharacter.filePath;
       let newId = id;
 
-      // Check if we need to move/rename the file (category or name changed)
-      const categoryChanged = data.category && data.category !== existingCharacter.category;
+      // Category changes only update frontmatter; file moves/renames happen only on name changes.
       const nameChanged = data.name && data.name !== existingCharacter.name;
 
-      if (categoryChanged || nameChanged) {
+      if (nameChanged) {
         const newName = data.name || existingCharacter.name;
-        const newCategory = data.category || existingCharacter.category;
         const newSlug = slugify(newName);
         const newFilename = `_${newSlug}.md`;
 
-        // Get category folder path based on folder mode
-        const categoryFolderPath = this.getCategoryFolderPath(newCategory);
+        // Preserve the existing directory (relative to `characters/`), so changing category
+        // doesn't move files and doesn't change the plotboard thread mappings.
+        const lastSlash = existingCharacter.id.lastIndexOf('/');
+        const oldRelDir = lastSlash === -1 ? '' : existingCharacter.id.slice(0, lastSlash);
+        newId = oldRelDir ? pathJoin(oldRelDir, newFilename) : newFilename;
 
-        let destFilePath: string;
-        const charactersPath = this.projectService.getCharactersFolderPath();
-        if (categoryFolderPath === null) {
-          destFilePath = pathJoin(charactersPath, newFilename);
-          newId = newFilename;
-        } else {
-          const newCategoryPath = pathJoin(charactersPath, categoryFolderPath);
-          await this.electronService.createDirectory(newCategoryPath);
-          destFilePath = pathJoin(newCategoryPath, newFilename);
-          newId = pathJoin(categoryFolderPath, newFilename);
-        }
+        const oldAbsDir = pathDirname(existingCharacter.filePath);
+        const destFilePath = pathJoin(oldAbsDir, newFilename);
 
-        // Move/rename the file (fs.rename works for files)
         const moveResult = await this.electronService.moveDirectory(existingCharacter.filePath, destFilePath);
         if (!moveResult.success) {
           throw new Error(`Failed to move character file: ${moveResult.error}`);

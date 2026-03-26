@@ -147,7 +147,7 @@ describe('CharacterService', () => {
       expect(character).toBeTruthy();
       expect(character.name).toBe('Test Character');
       expect(character.category).toBe('main-character');
-      expect(electronService.createDirectory).toHaveBeenCalled();
+      expect(electronService.createDirectory).not.toHaveBeenCalled();
       expect(electronService.writeFileAtomic).toHaveBeenCalled();
     });
 
@@ -170,24 +170,24 @@ describe('CharacterService', () => {
       const formData = createValidCharacterFormData();
       await service.createCharacter(formData);
 
-      // Should write character file directly under characters/
+      // Characters are always stored directly under characters/, regardless of folder mode.
       expect(electronService.writeFileAtomic).toHaveBeenCalled();
+      expect(electronService.createDirectory).not.toHaveBeenCalled();
     });
 
-    it('should create character folder in category folder for auto mode', async () => {
+    it('should not create category folders even when folder mode is auto', async () => {
       const project = createValidProject();
       project.metadata.categories[0].folderMode = 'auto';
       projectService.getCurrentProject.and.returnValue(project);
       (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
 
-      electronService.createDirectory.and.returnValue(Promise.resolve({ success: true }));
       electronService.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));
 
       const formData = createValidCharacterFormData();
       await service.createCharacter(formData);
 
-      // Should create category folder and character folder
-      expect(electronService.createDirectory).toHaveBeenCalled();
+      // Category storage location is decoupled from category.
+      expect(electronService.createDirectory).not.toHaveBeenCalled();
     });
   });
 
@@ -238,7 +238,7 @@ describe('CharacterService', () => {
       expect(updated).toBeNull();
     });
 
-    it('should move character folder when category changes', async () => {
+    it('should not move character file when category changes', async () => {
       const project = createValidProject();
       project.metadata.categories.push({ id: 'supporting', name: 'Supporting', color: '#00FF00' });
       projectService.getCurrentProject.and.returnValue(project);
@@ -259,8 +259,6 @@ describe('CharacterService', () => {
       (service as any).charactersSubject.next([existingCharacter]);
 
       electronService.fileExists.and.returnValue(Promise.resolve(true));
-      electronService.createDirectory.and.returnValue(Promise.resolve({ success: true }));
-      electronService.moveDirectory.and.returnValue(Promise.resolve({ success: true }));
       electronService.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));
 
       const updated = await service.updateCharacter('main-character/_test-character.md', {
@@ -269,7 +267,7 @@ describe('CharacterService', () => {
 
       expect(updated).toBeTruthy();
       expect(updated?.category).toBe('supporting');
-      expect(electronService.moveDirectory).toHaveBeenCalled();
+      expect(electronService.moveDirectory).not.toHaveBeenCalled();
     });
   });
 
