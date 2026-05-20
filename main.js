@@ -94,7 +94,7 @@ function createWindow() {
   } else {
     // In packaged apps, __dirname should still point to the app directory
     // where main.js and dist/ are located
-    const indexPath = path.join(__dirname, 'dist', 'index.html');
+    const indexPath = path.join(__dirname, 'dist', 'browser', 'index.html');
     mainWindow.loadFile(indexPath);
   }
 
