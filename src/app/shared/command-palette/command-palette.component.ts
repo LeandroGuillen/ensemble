@@ -1,12 +1,12 @@
 import { Component, OnInit, OnDestroy, HostListener, ViewChild, ElementRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { CommandPaletteService, Command } from './command-palette.service';
 import { Subject, takeUntil } from 'rxjs';
 
 @Component({
     selector: 'app-command-palette',
-    imports: [CommonModule, FormsModule],
+    imports: [FormsModule],
     templateUrl: './command-palette.component.html',
     styleUrl: './command-palette.component.scss'
 })

@@ -10,7 +10,7 @@ import {
   ViewChild,
   afterNextRender,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { animate, state, style, transition, trigger } from '@angular/animations';
 import { ActivatedRoute, Router, RouterLink, UrlSegment } from '@angular/router';
@@ -39,7 +39,7 @@ export type ZoomLevel = 1 | 2 | 3;
 
 @Component({
     selector: 'app-plot-board',
-    imports: [CommonModule, FormsModule, RouterLink, PageHeaderComponent],
+    imports: [FormsModule, RouterLink, PageHeaderComponent],
     templateUrl: './plot-board.component.html',
     styleUrls: ['./plot-board.component.scss'],
     animations: [

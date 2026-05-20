@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, OnDestroy, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -7,7 +7,7 @@ import { CharacterDetailComponent } from '../../features/character-detail/charac
 
 @Component({
     selector: 'app-character-edit-dialog',
-    imports: [CommonModule, CharacterDetailComponent],
+    imports: [CharacterDetailComponent],
     templateUrl: './character-edit-dialog.component.html',
     styleUrls: ['./character-edit-dialog.component.scss'],
     encapsulation: ViewEncapsulation.None

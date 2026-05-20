@@ -3,14 +3,14 @@
   [class.visible]="isVisible"
   (mousedown)="onOverlayMouseDown()"
   (click)="onOverlayClick()"
->
+  >
   <div
     class="book-editor-page"
     [class.visible]="isVisible"
     [style.border-left-color]="getCurrentColor()"
     (mousedown)="onModalClick(); $event.stopPropagation()"
     (click)="$event.stopPropagation()"
-  >
+    >
     <!-- Page Header -->
     <div class="page-header">
       <div class="page-title">
@@ -37,10 +37,12 @@
               placeholder="Enter book title"
               class="form-control"
               [class.error]="getFieldError('name')"
-            />
-            <div *ngIf="getFieldError('name')" class="field-error">
-              {{ getFieldError("name") }}
-            </div>
+              />
+            @if (getFieldError('name')) {
+              <div class="field-error">
+                {{ getFieldError("name") }}
+              </div>
+            }
           </div>
 
           <div class="form-group color-group">
@@ -51,33 +53,36 @@
                 type="color"
                 formControlName="color"
                 class="color-picker"
-              />
+                />
               <input
                 type="text"
                 formControlName="color"
                 placeholder="#3498db"
                 class="color-text"
                 [class.error]="getFieldError('color')"
-              />
+                />
             </div>
-            <div *ngIf="getFieldError('color')" class="field-error">
-              {{ getFieldError("color") }}
-            </div>
+            @if (getFieldError('color')) {
+              <div class="field-error">
+                {{ getFieldError("color") }}
+              </div>
+            }
           </div>
         </div>
 
         <!-- Color Presets -->
         <div class="color-presets">
           <span class="preset-label">Quick colors:</span>
-          <button
-            *ngFor="let color of colorPresets"
-            type="button"
-            class="color-preset"
-            [style.background-color]="color"
-            (click)="selectColor(color)"
-            [title]="color"
-            [class.selected]="getCurrentColor() === color"
-          ></button>
+          @for (color of colorPresets; track color) {
+            <button
+              type="button"
+              class="color-preset"
+              [style.background-color]="color"
+              (click)="selectColor(color)"
+              [title]="color"
+              [class.selected]="getCurrentColor() === color"
+            ></button>
+          }
         </div>
 
         <!-- Description -->
@@ -91,9 +96,11 @@
             rows="4"
             [class.error]="getFieldError('description')"
           ></textarea>
-          <div *ngIf="getFieldError('description')" class="field-error">
-            {{ getFieldError("description") }}
-          </div>
+          @if (getFieldError('description')) {
+            <div class="field-error">
+              {{ getFieldError("description") }}
+            </div>
+          }
         </div>
 
         <!-- Status and Date Row -->
@@ -104,14 +111,15 @@
               id="bookStatus"
               formControlName="status"
               class="form-control"
-            >
-              <option value="">Select status</option>
-              <option
-                *ngFor="let option of statusOptions"
-                [value]="option.value"
               >
-                {{ option.label }}
-              </option>
+              <option value="">Select status</option>
+              @for (option of statusOptions; track option) {
+                <option
+                  [value]="option.value"
+                  >
+                  {{ option.label }}
+                </option>
+              }
             </select>
           </div>
 
@@ -122,7 +130,7 @@
               type="date"
               formControlName="publicationDate"
               class="form-control"
-            />
+              />
           </div>
         </div>
 
@@ -136,10 +144,12 @@
             placeholder="Enter ISBN (optional)"
             class="form-control"
             [class.error]="getFieldError('isbn')"
-          />
-          <div *ngIf="getFieldError('isbn')" class="field-error">
-            {{ getFieldError("isbn") }}
-          </div>
+            />
+          @if (getFieldError('isbn')) {
+            <div class="field-error">
+              {{ getFieldError("isbn") }}
+            </div>
+          }
         </div>
 
         <!-- Form Actions -->
@@ -149,41 +159,48 @@
               type="button"
               class="btn btn-secondary"
               (click)="onCancel()"
-            >
+              >
               Cancel
             </button>
             <button
               type="submit"
               class="btn btn-primary"
               [disabled]="saving || bookForm.invalid"
-            >
-              <span *ngIf="saving" class="spinner"></span>
-              <span *ngIf="!saving"
-                >{{ isEditMode ? "Update" : "Create" }} Book</span
               >
-            </button>
-          </div>
+              @if (saving) {
+                <span class="spinner"></span>
+              }
+              @if (!saving) {
+                <span
+                  >{{ isEditMode ? "Update" : "Create" }} Book</span
+                  >
+                }
+              </button>
+            </div>
 
-          <div *ngIf="isEditMode" class="delete-action">
-            <button
-              type="button"
-              class="btn btn-danger"
-              (click)="onDelete()"
-              [disabled]="saving"
-            >
-              Delete Book
-            </button>
+            @if (isEditMode) {
+              <div class="delete-action">
+                <button
+                  type="button"
+                  class="btn btn-danger"
+                  (click)="onDelete()"
+                  [disabled]="saving"
+                  >
+                  Delete Book
+                </button>
+              </div>
+            }
           </div>
-        </div>
-      </form>
-    </div>
+        </form>
+      </div>
 
-    <!-- Page Lines Decoration -->
-    <div class="page-lines">
-      <div
-        class="line"
-        *ngFor="let line of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]"
-      ></div>
+      <!-- Page Lines Decoration -->
+      <div class="page-lines">
+        @for (line of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]; track line) {
+          <div
+            class="line"
+          ></div>
+        }
+      </div>
     </div>
   </div>
-</div>

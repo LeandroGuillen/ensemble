@@ -9,7 +9,7 @@
       [attr.aria-expanded]="plotboardSidebarOpen"
       aria-controls="plot-board-sidebar"
       [title]="plotboardSidebarOpen ? 'Hide plot board list' : 'Show plot board list'"
-    >
+      >
       <svg
         class="plot-board-sidebar-toggle-icon"
         width="20"
@@ -21,19 +21,19 @@
         stroke-linecap="round"
         stroke-linejoin="round"
         aria-hidden="true"
-      >
+        >
         <rect x="3" y="4" width="18" height="16" rx="2" />
         <line x1="9" y1="4" x2="9" y2="20" />
       </svg>
     </button>
-    <ng-container *ngIf="hasOpenFile && !isLoading">
+    @if (hasOpenFile && !isLoading) {
       <div class="zoom-controls">
         <button
           class="btn-zoom"
           [class.active]="zoomLevel === 1"
           (click)="setZoom(1)"
           title="Compact view"
-        >
+          >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
         </button>
         <button
@@ -41,7 +41,7 @@
           [class.active]="zoomLevel === 2"
           (click)="setZoom(2)"
           title="Medium view"
-        >
+          >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="7" rx="1"/><rect x="3" y="14" width="18" height="7" rx="1"/></svg>
         </button>
         <button
@@ -49,7 +49,7 @@
           [class.active]="zoomLevel === 3"
           (click)="setZoom(3)"
           title="Full view"
-        >
+          >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
         </button>
       </div>
@@ -61,582 +61,654 @@
         + Row
         <kbd class="plot-board-action-kbd" aria-hidden="true">R</kbd>
       </button>
-    </ng-container>
+    }
   </app-page-header>
 
   <div class="plot-board-body">
     <div
       class="plot-board-sidebar-anim"
       [@plotBoardSidebar]="plotboardSidebarOpen ? 'open' : 'closed'"
-    >
+      >
       <aside
         class="plot-board-sidebar"
         id="plot-board-sidebar"
         [attr.aria-hidden]="!plotboardSidebarOpen"
-      >
-      <div class="plot-board-sidebar-header">
-        <h3 class="plot-board-sidebar-title">Plot boards</h3>
-        <div class="plot-board-sidebar-actions">
-          <button type="button" class="icon-btn" (click)="refreshPlotboards()" title="Refresh list from disk">↻</button>
-          <button type="button" class="icon-btn" (click)="openNewPlotBoardDialog()" title="New plot board">+</button>
-        </div>
-      </div>
-      <p class="plot-board-sidebar-error" *ngIf="duplicateError">{{ duplicateError }}</p>
-      <ul class="plot-board-list">
-        <li *ngFor="let rel of plotboardPaths" class="plot-board-list-item">
-          <a
-            class="plot-board-list-hit"
-            [class.active]="isCurrentPath(rel)"
-            [routerLink]="routerLinkForPlotboard(rel)"
-          >
-            <span class="plot-board-list-title">{{ displayStem(rel) }}</span>
-            <span class="plot-board-list-path" [title]="rel">{{ rel }}</span>
-          </a>
-          <div class="plot-board-list-side-actions">
-            <button
-              type="button"
-              class="plot-board-list-action"
-              (click)="duplicatePlotBoardForPath(rel); $event.preventDefault(); $event.stopPropagation()"
-              title="Copy file with a new name (e.g. name-2 or name-3)"
-            >
-              Duplicate
-            </button>
-            <button
-              type="button"
-              class="plot-board-list-action"
-              (click)="openRenameDialogForPath(rel); $event.preventDefault(); $event.stopPropagation()"
-            >
-              Rename
-            </button>
-            <button
-              type="button"
-              class="plot-board-list-action plot-board-list-action-danger"
-              (click)="openDeletePlotBoardDialogForPath(rel); $event.preventDefault(); $event.stopPropagation()"
-            >
-              Delete
-            </button>
+        >
+        <div class="plot-board-sidebar-header">
+          <h3 class="plot-board-sidebar-title">Plot boards</h3>
+          <div class="plot-board-sidebar-actions">
+            <button type="button" class="icon-btn" (click)="refreshPlotboards()" title="Refresh list from disk">↻</button>
+            <button type="button" class="icon-btn" (click)="openNewPlotBoardDialog()" title="New plot board">+</button>
           </div>
-        </li>
-      </ul>
-    </aside>
+        </div>
+        @if (duplicateError) {
+          <p class="plot-board-sidebar-error">{{ duplicateError }}</p>
+        }
+        <ul class="plot-board-list">
+          @for (rel of plotboardPaths; track rel) {
+            <li class="plot-board-list-item">
+              <a
+                class="plot-board-list-hit"
+                [class.active]="isCurrentPath(rel)"
+                [routerLink]="routerLinkForPlotboard(rel)"
+                >
+                <span class="plot-board-list-title">{{ displayStem(rel) }}</span>
+                <span class="plot-board-list-path" [title]="rel">{{ rel }}</span>
+              </a>
+              <div class="plot-board-list-side-actions">
+                <button
+                  type="button"
+                  class="plot-board-list-action"
+                  (click)="duplicatePlotBoardForPath(rel); $event.preventDefault(); $event.stopPropagation()"
+                  title="Copy file with a new name (e.g. name-2 or name-3)"
+                  >
+                  Duplicate
+                </button>
+                <button
+                  type="button"
+                  class="plot-board-list-action"
+                  (click)="openRenameDialogForPath(rel); $event.preventDefault(); $event.stopPropagation()"
+                  >
+                  Rename
+                </button>
+                <button
+                  type="button"
+                  class="plot-board-list-action plot-board-list-action-danger"
+                  (click)="openDeletePlotBoardDialogForPath(rel); $event.preventDefault(); $event.stopPropagation()"
+                  >
+                  Delete
+                </button>
+              </div>
+            </li>
+          }
+        </ul>
+      </aside>
     </div>
 
     <div class="plot-board-main">
-      <div class="plot-board-main-loading" *ngIf="isLoading" aria-busy="true">
-        <p>Loading plot board...</p>
-      </div>
+      @if (isLoading) {
+        <div class="plot-board-main-loading" aria-busy="true">
+          <p>Loading plot board...</p>
+        </div>
+      }
       <div
         class="board-content"
         #boardContent
         tabindex="-1"
         [@plotBoardContent]="boardContentKey"
-      >
+        >
         <!-- No file open -->
-        <div class="empty-state" *ngIf="!hasOpenFile">
-          <p class="empty-title">No plot board selected</p>
-          <p class="empty-subtitle">
-            Plot boards are Markdown files named <code>*.plotboard.md</code> anywhere in the project. Create one here or add files on disk and press refresh.
-          </p>
-          <div class="empty-actions">
-            <button class="btn-primary" (click)="openNewPlotBoardDialog()">New plot board</button>
-            <button class="btn-action" (click)="refreshPlotboards()">Refresh list</button>
+        @if (!hasOpenFile) {
+          <div class="empty-state">
+            <p class="empty-title">No plot board selected</p>
+            <p class="empty-subtitle">
+              Plot boards are Markdown files named <code>*.plotboard.md</code> anywhere in the project. Create one here or add files on disk and press refresh.
+            </p>
+            <div class="empty-actions">
+              <button class="btn-primary" (click)="openNewPlotBoardDialog()">New plot board</button>
+              <button class="btn-action" (click)="refreshPlotboards()">Refresh list</button>
+            </div>
           </div>
-        </div>
+        }
 
         <!-- File open: empty grid -->
-        <div class="empty-state" *ngIf="hasOpenFile && board.threads.length === 0 && board.rows.length === 0">
-          <p class="empty-title">No plot threads yet</p>
-          <p class="empty-subtitle">Add a thread (column) and a row to start building your plot board.</p>
-          <div class="empty-actions">
-            <button class="btn-primary" (click)="addThread()">Add First Thread</button>
+        @if (hasOpenFile && board.threads.length === 0 && board.rows.length === 0) {
+          <div class="empty-state">
+            <p class="empty-title">No plot threads yet</p>
+            <p class="empty-subtitle">Add a thread (column) and a row to start building your plot board.</p>
+            <div class="empty-actions">
+              <button class="btn-primary" (click)="addThread()">Add First Thread</button>
+            </div>
           </div>
-        </div>
+        }
 
         <!-- Timeline grid -->
-        <div
-          class="board-grid"
-          *ngIf="hasOpenFile && (board.threads.length > 0 || board.rows.length > 0)"
-          [style.gridTemplateColumns]="gridTemplateColumns"
-        >
-      <!-- Header row: corner + thread headers -->
-      <div class="corner-cell"></div>
-
-      <div
-        *ngFor="let thread of board.threads; let ti = index"
-        class="thread-header"
-        [class.thread-header--picker-open]="showThreadIconPicker === thread.id"
-        [class.drag-over-reorder]="isThreadHeaderDragOver(ti)"
-        (dragover)="onThreadHeaderDragOver($event, ti)"
-        (dragleave)="onThreadHeaderDragLeave($event, ti)"
-        (drop)="onThreadHeaderDrop($event, ti)"
-      >
-        <div class="thread-header-inner">
-        <div class="thread-header-content">
+        @if (hasOpenFile && (board.threads.length > 0 || board.rows.length > 0)) {
           <div
-            class="thread-name-row"
-            #threadNameRow
-            (mouseenter)="onThreadNameRowEnter(thread.id, threadNameRow)"
-            (mouseleave)="onThreadNameRowLeave(thread.id)"
-          >
-            <div
-              class="thread-name-cluster"
-              [class.thread-name-cluster--has-icon]="!!thread.icon"
+            class="board-grid"
+            [style.gridTemplateColumns]="gridTemplateColumns"
             >
-              <!-- Thread icon + picker (out of flow when empty so the name centers alone) -->
+            <!-- Header row: corner + thread headers -->
+            <div class="corner-cell"></div>
+            @for (thread of board.threads; track thread; let ti = $index) {
               <div
-                class="thread-icon-picker-anchor"
-                [class.thread-icon-picker-anchor--empty]="!thread.icon"
-              >
-                <span
-                  class="thread-icon-btn thread-icon-picker-area"
-                  (click)="toggleThreadIconPicker(thread.id); $event.stopPropagation()"
-                  [attr.title]="thread.icon ? 'Change icon' : null"
+                class="thread-header"
+                [class.thread-header--picker-open]="showThreadIconPicker === thread.id"
+                [class.drag-over-reorder]="isThreadHeaderDragOver(ti)"
+                (dragover)="onThreadHeaderDragOver($event, ti)"
+                (dragleave)="onThreadHeaderDragLeave($event, ti)"
+                (drop)="onThreadHeaderDrop($event, ti)"
                 >
-                  <span *ngIf="thread.icon">{{ thread.icon }}</span>
-                  <span *ngIf="!thread.icon" class="plot-icon-placeholder">☺</span>
-                </span>
-                <div
-                  class="icon-picker-dropdown thread-icon-picker-area"
-                  *ngIf="showThreadIconPicker === thread.id"
-                >
-                  <div *ngFor="let group of emojiGroups" class="emoji-group">
-                    <div class="emoji-group-label">{{ group.label }}</div>
-                    <div class="emoji-group-grid">
-                      <button
-                        *ngFor="let emoji of group.emojis"
-                        class="emoji-btn"
-                        [class.active]="thread.icon === emoji"
-                        (click)="selectThreadIcon(thread.id, emoji); $event.stopPropagation()"
+                <div class="thread-header-inner">
+                  <div class="thread-header-content">
+                    <div
+                      class="thread-name-row"
+                      #threadNameRow
+                      (mouseenter)="onThreadNameRowEnter(thread.id, threadNameRow)"
+                      (mouseleave)="onThreadNameRowLeave(thread.id)"
                       >
-                        {{ emoji }}
-                      </button>
+                      <div
+                        class="thread-name-cluster"
+                        [class.thread-name-cluster--has-icon]="!!thread.icon"
+                        >
+                        <!-- Thread icon + picker (out of flow when empty so the name centers alone) -->
+                        <div
+                          class="thread-icon-picker-anchor"
+                          [class.thread-icon-picker-anchor--empty]="!thread.icon"
+                          >
+                          <span
+                            class="thread-icon-btn thread-icon-picker-area"
+                            (click)="toggleThreadIconPicker(thread.id); $event.stopPropagation()"
+                            [attr.title]="thread.icon ? 'Change icon' : null"
+                            >
+                            @if (thread.icon) {
+                              <span>{{ thread.icon }}</span>
+                            }
+                            @if (!thread.icon) {
+                              <span class="plot-icon-placeholder">☺</span>
+                            }
+                          </span>
+                          @if (showThreadIconPicker === thread.id) {
+                            <div
+                              class="icon-picker-dropdown thread-icon-picker-area"
+                              >
+                              @for (group of emojiGroups; track group) {
+                                <div class="emoji-group">
+                                  <div class="emoji-group-label">{{ group.label }}</div>
+                                  <div class="emoji-group-grid">
+                                    @for (emoji of group.emojis; track emoji) {
+                                      <button
+                                        class="emoji-btn"
+                                        [class.active]="thread.icon === emoji"
+                                        (click)="selectThreadIcon(thread.id, emoji); $event.stopPropagation()"
+                                        >
+                                        {{ emoji }}
+                                      </button>
+                                    }
+                                  </div>
+                                </div>
+                              }
+                              @if (thread.icon) {
+                                <button
+                                  class="icon-clear-btn"
+                                  (click)="clearThreadIcon(thread.id); $event.stopPropagation()"
+                                  >
+                                  Clear icon
+                                </button>
+                              }
+                            </div>
+                          }
+                        </div>
+                        <!-- Thread name (display) -->
+                        @if (editingThreadName !== thread.id) {
+                          <span
+                            class="thread-name thread-name--draggable"
+                            draggable="true"
+                            (dragstart)="onThreadNameDragStart($event, ti)"
+                            (dragend)="onThreadNameDragEnd($event)"
+                            (dblclick)="startEditThreadName(thread.id); $event.preventDefault()"
+                            [attr.title]="threadNameHoverTitle(thread)"
+                            >
+                            {{ thread.name }}
+                          </span>
+                        }
+                        <!-- Thread name (editing) -->
+                        @if (editingThreadName === thread.id) {
+                          <input
+                            #threadNameInput
+                            class="thread-name-input"
+                            [(ngModel)]="editingNameValue"
+                            (blur)="finishEditThreadName()"
+                            (keydown.enter)="finishEditThreadName()"
+                            (keydown.escape)="editingThreadName = null"
+                            />
+                        }
+                      </div>
                     </div>
                   </div>
-                  <button
-                    *ngIf="thread.icon"
-                    class="icon-clear-btn"
-                    (click)="clearThreadIcon(thread.id); $event.stopPropagation()"
-                  >
-                    Clear icon
-                  </button>
+                  <!-- Linked characters (thumbnails) -->
+                  @if (getThreadCharacters(thread.id).length > 0) {
+                    <div class="linked-characters">
+                      @for (char of getThreadCharacters(thread.id); track char) {
+                        <span
+                          class="character-thumb"
+                          [class.pending-removal]="isCharacterPendingRemoval(thread.id, char.id)"
+                          [title]="isCharacterPendingRemoval(thread.id, char.id) ? 'Click again to remove ' + char.name : char.name"
+                          (click)="onCharacterThumbClick(thread.id, char.id); $event.stopPropagation()"
+                          >
+                          @if (getCharacterThumbnail(char.id)) {
+                            <img
+                              [src]="getCharacterThumbnail(char.id)"
+                              [alt]="char.name"
+                              class="thumb-img"
+                              />
+                          }
+                          @if (!getCharacterThumbnail(char.id)) {
+                            <span class="thumb-fallback">
+                              {{ char.name.charAt(0) }}
+                            </span>
+                          }
+                          @if (isCharacterPendingRemoval(thread.id, char.id)) {
+                            <span class="thumb-remove-badge">×</span>
+                          }
+                        </span>
+                      }
+                    </div>
+                  }
                 </div>
               </div>
-
-              <!-- Thread name (display) -->
-              <span
-                *ngIf="editingThreadName !== thread.id"
-                class="thread-name thread-name--draggable"
-                draggable="true"
-                (dragstart)="onThreadNameDragStart($event, ti)"
-                (dragend)="onThreadNameDragEnd($event)"
-                (dblclick)="startEditThreadName(thread.id); $event.preventDefault()"
-                [attr.title]="threadNameHoverTitle(thread)"
-              >
-                {{ thread.name }}
-              </span>
-              <!-- Thread name (editing) -->
-              <input
-                #threadNameInput
-                *ngIf="editingThreadName === thread.id"
-                class="thread-name-input"
-                [(ngModel)]="editingNameValue"
-                (blur)="finishEditThreadName()"
-                (keydown.enter)="finishEditThreadName()"
-                (keydown.escape)="editingThreadName = null"
-              />
-            </div>
-          </div>
-        </div>
-
-        <!-- Linked characters (thumbnails) -->
-        <div class="linked-characters" *ngIf="getThreadCharacters(thread.id).length > 0">
-          <span
-            class="character-thumb"
-            [class.pending-removal]="isCharacterPendingRemoval(thread.id, char.id)"
-            *ngFor="let char of getThreadCharacters(thread.id)"
-            [title]="isCharacterPendingRemoval(thread.id, char.id) ? 'Click again to remove ' + char.name : char.name"
-            (click)="onCharacterThumbClick(thread.id, char.id); $event.stopPropagation()"
-          >
-            <img
-              *ngIf="getCharacterThumbnail(char.id)"
-              [src]="getCharacterThumbnail(char.id)"
-              [alt]="char.name"
-              class="thumb-img"
-            />
-            <span *ngIf="!getCharacterThumbnail(char.id)" class="thumb-fallback">
-              {{ char.name.charAt(0) }}
-            </span>
-            <span class="thumb-remove-badge" *ngIf="isCharacterPendingRemoval(thread.id, char.id)">×</span>
-          </span>
-        </div>
-        </div>
-      </div>
-
-      <!-- Data rows -->
-      <ng-container *ngFor="let row of board.rows; let rowIdx = index; let isLast = last">
-        <!-- Row label -->
-        <div
-          class="row-label"
-          [class.row-label--picker-open]="showRowIconPicker === rowIdx"
-          [class.drag-over-reorder]="isRowLabelDragOver(rowIdx)"
-          (dragover)="onRowLabelDragOver($event, rowIdx)"
-          (dragleave)="onRowLabelDragLeave($event, rowIdx)"
-          (drop)="onRowLabelDrop($event, rowIdx)"
-        >
-          <div class="row-label-content">
-            <div class="row-icon-picker-anchor">
-              <span
-                class="row-icon-btn row-icon-picker-area"
-                (click)="toggleRowIconPicker(rowIdx); $event.stopPropagation()"
-                [title]="row.icon ? 'Change icon' : 'Add icon'"
-              >
-                <span *ngIf="row.icon">{{ row.icon }}</span>
-                <span *ngIf="!row.icon" class="plot-icon-placeholder">☺</span>
-              </span>
-              <div class="icon-picker-dropdown row-icon-picker-area" *ngIf="showRowIconPicker === rowIdx">
-                <div *ngFor="let group of emojiGroups" class="emoji-group">
-                  <div class="emoji-group-label">{{ group.label }}</div>
-                  <div class="emoji-group-grid">
-                    <button
-                      *ngFor="let emoji of group.emojis"
-                      class="emoji-btn"
-                      [class.active]="row.icon === emoji"
-                      (click)="selectRowIcon(rowIdx, emoji); $event.stopPropagation()"
-                    >
-                      {{ emoji }}
-                    </button>
+            }
+            <!-- Data rows -->
+            @for (row of board.rows; track row; let rowIdx = $index; let isLast = $last) {
+              <!-- Row label -->
+              <div
+                class="row-label"
+                [class.row-label--picker-open]="showRowIconPicker === rowIdx"
+                [class.drag-over-reorder]="isRowLabelDragOver(rowIdx)"
+                (dragover)="onRowLabelDragOver($event, rowIdx)"
+                (dragleave)="onRowLabelDragLeave($event, rowIdx)"
+                (drop)="onRowLabelDrop($event, rowIdx)"
+                >
+                <div class="row-label-content">
+                  <div class="row-icon-picker-anchor">
+                    <span
+                      class="row-icon-btn row-icon-picker-area"
+                      (click)="toggleRowIconPicker(rowIdx); $event.stopPropagation()"
+                      [title]="row.icon ? 'Change icon' : 'Add icon'"
+                      >
+                      @if (row.icon) {
+                        <span>{{ row.icon }}</span>
+                      }
+                      @if (!row.icon) {
+                        <span class="plot-icon-placeholder">☺</span>
+                      }
+                    </span>
+                    @if (showRowIconPicker === rowIdx) {
+                      <div class="icon-picker-dropdown row-icon-picker-area">
+                        @for (group of emojiGroups; track group) {
+                          <div class="emoji-group">
+                            <div class="emoji-group-label">{{ group.label }}</div>
+                            <div class="emoji-group-grid">
+                              @for (emoji of group.emojis; track emoji) {
+                                <button
+                                  class="emoji-btn"
+                                  [class.active]="row.icon === emoji"
+                                  (click)="selectRowIcon(rowIdx, emoji); $event.stopPropagation()"
+                                  >
+                                  {{ emoji }}
+                                </button>
+                              }
+                            </div>
+                          </div>
+                        }
+                        @if (row.icon) {
+                          <button
+                            class="icon-clear-btn"
+                            (click)="clearRowIcon(rowIdx); $event.stopPropagation()"
+                            >
+                            Clear icon
+                          </button>
+                        }
+                      </div>
+                    }
                   </div>
+                  @if (editingRowName !== rowIdx) {
+                    <span
+                      class="row-name row-name--draggable"
+                      draggable="true"
+                      (dragstart)="onRowNameDragStart($event, rowIdx)"
+                      (dragend)="onRowNameDragEnd($event)"
+                      (dblclick)="startEditRowName(rowIdx); $event.preventDefault()"
+                      [attr.title]="rowNameHoverTitle(row)"
+                      >
+                      {{ row.name }}
+                    </span>
+                  }
+                  @if (editingRowName === rowIdx) {
+                    <input
+                      #rowNameInput
+                      class="row-name-input"
+                      [(ngModel)]="editingNameValue"
+                      (blur)="finishEditRowName()"
+                      (keydown.enter)="finishEditRowName()"
+                      (keydown.escape)="editingRowName = null"
+                      />
+                  }
+                  @if (confirmDeleteRowIndex !== rowIdx) {
+                    <button
+                      class="btn-icon-sm btn-danger row-remove"
+                      (click)="requestDeleteRow(rowIdx); $event.stopPropagation()"
+                      title="Remove row"
+                      >
+                      &times;
+                    </button>
+                  }
+                  @if (confirmDeleteRowIndex === rowIdx) {
+                    <button
+                      class="confirm-delete-btn"
+                      (click)="confirmDeleteRow(rowIdx); $event.stopPropagation()"
+                      >
+                      Confirm delete
+                    </button>
+                  }
                 </div>
-                <button
-                  *ngIf="row.icon"
-                  class="icon-clear-btn"
-                  (click)="clearRowIcon(rowIdx); $event.stopPropagation()"
-                >
-                  Clear icon
-                </button>
               </div>
-            </div>
-
-            <span
-              *ngIf="editingRowName !== rowIdx"
-              class="row-name row-name--draggable"
-              draggable="true"
-              (dragstart)="onRowNameDragStart($event, rowIdx)"
-              (dragend)="onRowNameDragEnd($event)"
-              (dblclick)="startEditRowName(rowIdx); $event.preventDefault()"
-              [attr.title]="rowNameHoverTitle(row)"
-            >
-              {{ row.name }}
-            </span>
-            <input
-              #rowNameInput
-              *ngIf="editingRowName === rowIdx"
-              class="row-name-input"
-              [(ngModel)]="editingNameValue"
-              (blur)="finishEditRowName()"
-              (keydown.enter)="finishEditRowName()"
-              (keydown.escape)="editingRowName = null"
-            />
-            <button
-              *ngIf="confirmDeleteRowIndex !== rowIdx"
-              class="btn-icon-sm btn-danger row-remove"
-              (click)="requestDeleteRow(rowIdx); $event.stopPropagation()"
-              title="Remove row"
-            >
-              &times;
-            </button>
-            <button
-              *ngIf="confirmDeleteRowIndex === rowIdx"
-              class="confirm-delete-btn"
-              (click)="confirmDeleteRow(rowIdx); $event.stopPropagation()"
-            >
-              Confirm delete
-            </button>
-          </div>
-        </div>
-
-        <!-- Thread cells -->
-        <div
-          *ngFor="let thread of board.threads"
-          class="thread-cell"
-          [attr.data-nav-row]="rowIdx"
-          [attr.data-nav-thread]="thread.id"
-          [class.thread-cell--keyboard-focus]="isKeyboardFocusCell(rowIdx, thread.id)"
-          [class.drag-over]="isDragOver(rowIdx, thread.id)"
-          [class.is-last-row]="isLast"
-          (pointerdown)="onThreadCellPointerDown(rowIdx, thread.id)"
-          (dragover)="onCellDragOver($event, rowIdx, thread.id)"
-          (dragleave)="onCellDragLeave($event, rowIdx, thread.id)"
-          (drop)="onCellDrop($event, rowIdx, thread.id)"
-        >
-          <!-- Vertical thread line -->
-          <div class="thread-line" [style.backgroundColor]="thread.color || null"></div>
-
-          <!-- Event box (when cell has content and not being edited) -->
-          <div
-            class="event-box"
-            *ngIf="hasCellContent(rowIdx, thread.id) && !isEditingCell(rowIdx, thread.id)"
-            draggable="true"
-            (dragstart)="onBoxDragStart($event, rowIdx, thread.id)"
-            (dragend)="onBoxDragEnd($event)"
-            [style.borderColor]="getBoxBorderColor(rowIdx, thread.id)"
-            (dblclick)="startEditCell(rowIdx, thread.id)"
-            [attr.title]="cellHoverTitle(rowIdx, thread.id)"
-          >
-            <span class="event-icon" *ngIf="getCellMeta(rowIdx, thread.id)?.icon">
-              {{ getCellMeta(rowIdx, thread.id)?.icon }}
-            </span>
-            <span class="event-text" *ngIf="getCellValue(rowIdx, thread.id)">{{ getCellValue(rowIdx, thread.id) }}</span>
-          </div>
-
-          <!-- Edit popover (inline, replaces the box during editing) -->
-          <div
-            class="cell-edit-popover"
-            *ngIf="isEditingCell(rowIdx, thread.id)"
-            (keydown.escape)="onCellEditPopoverEscape($event)"
-          >
-            <div class="popover-toolbar">
-              <!-- Emoji toggle -->
-              <button
-                class="toolbar-btn"
-                [class.active]="editingCellIcon"
-                (click)="toggleEmojiPicker(); $event.stopPropagation()"
-                title="Set icon"
-              >
-                <span *ngIf="editingCellIcon">{{ editingCellIcon }}</span>
-                <span *ngIf="!editingCellIcon" class="toolbar-icon-placeholder">☺</span>
-              </button>
-
-              <!-- Clear icon -->
-              <button
-                class="toolbar-btn btn-clear"
-                *ngIf="editingCellIcon"
-                (click)="clearIcon(); $event.stopPropagation()"
-                title="Remove icon"
-              >
-                &times;
-              </button>
-
-              <span class="toolbar-spacer"></span>
-
-              <!-- Color swatches -->
-              <div class="color-swatches">
-                <button
-                  *ngFor="let color of paletteColors"
-                  class="color-swatch"
-                  [style.backgroundColor]="color"
-                  [class.active]="editingCellColor === color"
-                  (click)="selectColor(color); $event.stopPropagation()"
-                  title="Set outline color"
-                ></button>
-              </div>
-            </div>
-
-            <!-- Emoji picker dropdown -->
-            <div class="emoji-picker" *ngIf="showEmojiPicker">
-              <div *ngFor="let group of emojiGroups" class="emoji-group">
-                <div class="emoji-group-label">{{ group.label }}</div>
-                <div class="emoji-group-grid">
-                  <button
-                    *ngFor="let emoji of group.emojis"
-                    class="emoji-btn"
-                    [class.active]="editingCellIcon === emoji"
-                    (click)="selectEmoji(emoji); $event.stopPropagation()"
+              <!-- Thread cells -->
+              @for (thread of board.threads; track thread) {
+                <div
+                  class="thread-cell"
+                  [attr.data-nav-row]="rowIdx"
+                  [attr.data-nav-thread]="thread.id"
+                  [class.thread-cell--keyboard-focus]="isKeyboardFocusCell(rowIdx, thread.id)"
+                  [class.drag-over]="isDragOver(rowIdx, thread.id)"
+                  [class.is-last-row]="isLast"
+                  (pointerdown)="onThreadCellPointerDown(rowIdx, thread.id)"
+                  (dragover)="onCellDragOver($event, rowIdx, thread.id)"
+                  (dragleave)="onCellDragLeave($event, rowIdx, thread.id)"
+                  (drop)="onCellDrop($event, rowIdx, thread.id)"
                   >
-                    {{ emoji }}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <textarea
-              #cellEditTextarea
-              class="cell-edit-textarea"
-              [(ngModel)]="editingCellValue"
-              (input)="layoutCellEditTextarea()"
-              (keydown)="onCellEditTextareaKeydown($event)"
-              placeholder="Event description (optional)..."
-            ></textarea>
-
-            <div class="popover-footer">
-              <div class="popover-footer-left">
-                <button
-                  *ngIf="!confirmDeleteCell && (getCellValue(editingCell!.row, editingCell!.threadId) || getCellMeta(editingCell!.row, editingCell!.threadId)?.icon)"
-                  type="button"
-                  class="btn-delete-cell"
-                  (click)="requestDeleteCell(); $event.stopPropagation()"
-                >
-                  Delete
-                </button>
-                <button
-                  *ngIf="confirmDeleteCell"
-                  type="button"
-                  class="btn-delete-cell btn-delete-confirm"
-                  (click)="confirmDeleteCellAction(); $event.stopPropagation()"
-                >
-                  Confirm delete
-                </button>
-              </div>
-              <button
-                type="button"
-                class="btn-save-cell"
-                (click)="finishEditCell(); $event.stopPropagation()"
+                  <!-- Vertical thread line -->
+                  <div class="thread-line" [style.backgroundColor]="thread.color || null"></div>
+                  <!-- Event box (when cell has content and not being edited) -->
+                  @if (hasCellContent(rowIdx, thread.id) && !isEditingCell(rowIdx, thread.id)) {
+                    <div
+                      class="event-box"
+                      draggable="true"
+                      (dragstart)="onBoxDragStart($event, rowIdx, thread.id)"
+                      (dragend)="onBoxDragEnd($event)"
+                      [style.borderColor]="getBoxBorderColor(rowIdx, thread.id)"
+                      (dblclick)="startEditCell(rowIdx, thread.id)"
+                      [attr.title]="cellHoverTitle(rowIdx, thread.id)"
+                      >
+                      @if (getCellMeta(rowIdx, thread.id)?.icon) {
+                        <span class="event-icon">
+                          {{ getCellMeta(rowIdx, thread.id)?.icon }}
+                        </span>
+                      }
+                      @if (getCellValue(rowIdx, thread.id)) {
+                        <span class="event-text">{{ getCellValue(rowIdx, thread.id) }}</span>
+                      }
+                    </div>
+                  }
+                  <!-- Edit popover (inline, replaces the box during editing) -->
+                  @if (isEditingCell(rowIdx, thread.id)) {
+                    <div
+                      class="cell-edit-popover"
+                      (keydown.escape)="onCellEditPopoverEscape($event)"
+                      >
+                      <div class="popover-toolbar">
+                        <!-- Emoji toggle -->
+                        <button
+                          class="toolbar-btn"
+                          [class.active]="editingCellIcon"
+                          (click)="toggleEmojiPicker(); $event.stopPropagation()"
+                          title="Set icon"
+                          >
+                          @if (editingCellIcon) {
+                            <span>{{ editingCellIcon }}</span>
+                          }
+                          @if (!editingCellIcon) {
+                            <span class="toolbar-icon-placeholder">☺</span>
+                          }
+                        </button>
+                        <!-- Clear icon -->
+                        @if (editingCellIcon) {
+                          <button
+                            class="toolbar-btn btn-clear"
+                            (click)="clearIcon(); $event.stopPropagation()"
+                            title="Remove icon"
+                            >
+                            &times;
+                          </button>
+                        }
+                        <span class="toolbar-spacer"></span>
+                        <!-- Color swatches -->
+                        <div class="color-swatches">
+                          @for (color of paletteColors; track color) {
+                            <button
+                              class="color-swatch"
+                              [style.backgroundColor]="color"
+                              [class.active]="editingCellColor === color"
+                              (click)="selectColor(color); $event.stopPropagation()"
+                              title="Set outline color"
+                            ></button>
+                          }
+                        </div>
+                      </div>
+                      <!-- Emoji picker dropdown -->
+                      @if (showEmojiPicker) {
+                        <div class="emoji-picker">
+                          @for (group of emojiGroups; track group) {
+                            <div class="emoji-group">
+                              <div class="emoji-group-label">{{ group.label }}</div>
+                              <div class="emoji-group-grid">
+                                @for (emoji of group.emojis; track emoji) {
+                                  <button
+                                    class="emoji-btn"
+                                    [class.active]="editingCellIcon === emoji"
+                                    (click)="selectEmoji(emoji); $event.stopPropagation()"
+                                    >
+                                    {{ emoji }}
+                                  </button>
+                                }
+                              </div>
+                            </div>
+                          }
+                        </div>
+                      }
+                      <textarea
+                        #cellEditTextarea
+                        class="cell-edit-textarea"
+                        [(ngModel)]="editingCellValue"
+                        (input)="layoutCellEditTextarea()"
+                        (keydown)="onCellEditTextareaKeydown($event)"
+                        placeholder="Event description (optional)..."
+                      ></textarea>
+                      <div class="popover-footer">
+                        <div class="popover-footer-left">
+                          @if (!confirmDeleteCell && (getCellValue(editingCell!.row, editingCell!.threadId) || getCellMeta(editingCell!.row, editingCell!.threadId)?.icon)) {
+                            <button
+                              type="button"
+                              class="btn-delete-cell"
+                              (click)="requestDeleteCell(); $event.stopPropagation()"
+                              >
+                              Delete
+                            </button>
+                          }
+                          @if (confirmDeleteCell) {
+                            <button
+                              type="button"
+                              class="btn-delete-cell btn-delete-confirm"
+                              (click)="confirmDeleteCellAction(); $event.stopPropagation()"
+                              >
+                              Confirm delete
+                            </button>
+                          }
+                        </div>
+                        <button
+                          type="button"
+                          class="btn-save-cell"
+                          (click)="finishEditCell(); $event.stopPropagation()"
                 [attr.title]="
                   cellSaveShortcutModifierLabel === '⌘'
                     ? 'Save (⌘ Enter)'
                     : 'Save (Ctrl+Enter)'
                 "
-              >
-                Save
-                <span class="cell-save-kbd-hint" aria-hidden="true">
-                  <kbd class="plot-board-action-kbd">{{ cellSaveShortcutModifierLabel }}</kbd>
-                  <span class="cell-save-kbd-plus">+</span>
-                  <kbd class="plot-board-action-kbd">↵</kbd>
-                </span>
-              </button>
-            </div>
+                          >
+                          Save
+                          <span class="cell-save-kbd-hint" aria-hidden="true">
+                            <kbd class="plot-board-action-kbd">{{ cellSaveShortcutModifierLabel }}</kbd>
+                            <span class="cell-save-kbd-plus">+</span>
+                            <kbd class="plot-board-action-kbd">↵</kbd>
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  }
+                  <!-- Empty cell drop target -->
+                  @if (!hasCellContent(rowIdx, thread.id) && !isEditingCell(rowIdx, thread.id)) {
+                    <div
+                      class="empty-cell-target"
+                      (dblclick)="startEditCell(rowIdx, thread.id)"
+                      title="Double-click to add event"
+                    ></div>
+                  }
+                </div>
+              }
+            }
           </div>
-
-          <!-- Empty cell drop target -->
-          <div
-            class="empty-cell-target"
-            *ngIf="!hasCellContent(rowIdx, thread.id) && !isEditingCell(rowIdx, thread.id)"
-            (dblclick)="startEditCell(rowIdx, thread.id)"
-            title="Double-click to add event"
-          ></div>
-        </div>
-      </ng-container>
-        </div>
+        }
       </div>
     </div>
   </div>
 
   <!-- Sibling of .plot-board-body + app-page-header so z-index stacks above sticky header (90) -->
-  <div
-    class="plot-board-floating-thread-toolbars"
-    *ngIf="hasOpenFile && board.threads.length > 0"
-  >
-    <ng-container *ngFor="let thread of board.threads">
-      <div
-        class="thread-hover-toolbar"
-        [class.thread-hover-toolbar--visible]="isThreadToolbarVisible(thread.id)"
-        [style.top.px]="getThreadToolbarTop(thread.id)"
-        [style.left.px]="getThreadToolbarLeft(thread.id)"
-        (mouseenter)="onThreadToolbarMouseEnter(thread.id)"
-        (mouseleave)="onThreadToolbarMouseLeave(thread.id)"
-        role="toolbar"
-        [attr.aria-label]="'Actions for ' + thread.name"
-        [attr.aria-hidden]="!isThreadToolbarVisible(thread.id)"
+  @if (hasOpenFile && board.threads.length > 0) {
+    <div
+      class="plot-board-floating-thread-toolbars"
       >
-        <div class="thread-toolbar-color-wrap thread-color-picker-area">
-          <button
-            type="button"
-            class="btn-icon-sm"
-            [style.color]="thread.color || null"
-            (click)="toggleThreadColorPicker(thread.id); $event.stopPropagation()"
-            title="Thread color"
+      @for (thread of board.threads; track thread) {
+        <div
+          class="thread-hover-toolbar"
+          [class.thread-hover-toolbar--visible]="isThreadToolbarVisible(thread.id)"
+          [style.top.px]="getThreadToolbarTop(thread.id)"
+          [style.left.px]="getThreadToolbarLeft(thread.id)"
+          (mouseenter)="onThreadToolbarMouseEnter(thread.id)"
+          (mouseleave)="onThreadToolbarMouseLeave(thread.id)"
+          role="toolbar"
+          [attr.aria-label]="'Actions for ' + thread.name"
+          [attr.aria-hidden]="!isThreadToolbarVisible(thread.id)"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-              <circle cx="12" cy="12" r="5"/>
+          <div class="thread-toolbar-color-wrap thread-color-picker-area">
+            <button
+              type="button"
+              class="btn-icon-sm"
+              [style.color]="thread.color || null"
+              (click)="toggleThreadColorPicker(thread.id); $event.stopPropagation()"
+              title="Thread color"
+              >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                <circle cx="12" cy="12" r="5"/>
+              </svg>
+            </button>
+            @if (showThreadColorPicker === thread.id) {
+              <div class="thread-color-dropdown">
+                <div class="thread-color-swatches">
+                  @for (color of paletteColors; track color) {
+                    <button
+                      type="button"
+                      class="color-swatch"
+                      [style.backgroundColor]="color"
+                      [class.active]="thread.color === color"
+                      (click)="selectThreadColor(thread.id, color); $event.stopPropagation()"
+                      title="Set thread color"
+                    ></button>
+                  }
+                </div>
+                @if (thread.color) {
+                  <button
+                    type="button"
+                    class="icon-clear-btn"
+                    (click)="clearThreadColor(thread.id); $event.stopPropagation()"
+                    >
+                    Clear color
+                  </button>
+                }
+              </div>
+            }
+          </div>
+          <button
+            class="btn-icon-sm"
+            (click)="addCharacterToThread(thread.id); $event.stopPropagation()"
+            title="Link character"
+            >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <line x1="20" y1="8" x2="20" y2="14"/>
+              <line x1="17" y1="11" x2="23" y2="11"/>
             </svg>
           </button>
-          <div class="thread-color-dropdown" *ngIf="showThreadColorPicker === thread.id">
-            <div class="thread-color-swatches">
-              <button
-                *ngFor="let color of paletteColors"
-                type="button"
-                class="color-swatch"
-                [style.backgroundColor]="color"
-                [class.active]="thread.color === color"
-                (click)="selectThreadColor(thread.id, color); $event.stopPropagation()"
-                title="Set thread color"
-              ></button>
-            </div>
+          @if (confirmDeleteThreadId !== thread.id) {
             <button
-              *ngIf="thread.color"
-              type="button"
-              class="icon-clear-btn"
-              (click)="clearThreadColor(thread.id); $event.stopPropagation()"
-            >
-              Clear color
+              class="btn-icon-sm btn-danger"
+              (click)="requestDeleteThread(thread.id); $event.stopPropagation()"
+              title="Remove thread"
+              >
+              &times;
             </button>
-          </div>
+          }
+          @if (confirmDeleteThreadId === thread.id) {
+            <button
+              class="confirm-delete-btn"
+              (click)="confirmDeleteThread(thread.id); $event.stopPropagation()"
+              >
+              Confirm
+            </button>
+          }
         </div>
-        <button
-          class="btn-icon-sm"
-          (click)="addCharacterToThread(thread.id); $event.stopPropagation()"
-          title="Link character"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <line x1="20" y1="8" x2="20" y2="14"/>
-            <line x1="17" y1="11" x2="23" y2="11"/>
-          </svg>
-        </button>
-        <button
-          *ngIf="confirmDeleteThreadId !== thread.id"
-          class="btn-icon-sm btn-danger"
-          (click)="requestDeleteThread(thread.id); $event.stopPropagation()"
-          title="Remove thread"
-        >
-          &times;
-        </button>
-        <button
-          *ngIf="confirmDeleteThreadId === thread.id"
-          class="confirm-delete-btn"
-          (click)="confirmDeleteThread(thread.id); $event.stopPropagation()"
-        >
-          Confirm
-        </button>
-      </div>
-    </ng-container>
-  </div>
+      }
+    </div>
+  }
 
-  <div class="rename-overlay" *ngIf="showRenameDialog" (click)="cancelRename()">
-    <div class="rename-dialog" (click)="$event.stopPropagation()">
-      <h4>Rename plot board file</h4>
-      <p class="rename-hint">The file will be renamed using a slug (no spaces). If a file already exists with that name, rename is blocked.</p>
-      <input type="text" class="rename-input" [(ngModel)]="renameValue" (keydown.escape)="cancelRename()" />
-      <p class="rename-error" *ngIf="renameError">{{ renameError }}</p>
-      <div class="rename-actions">
-        <button type="button" class="btn-action" (click)="cancelRename()">Cancel</button>
-        <button type="button" class="btn-primary" (click)="applyRename()">Rename</button>
+  @if (showRenameDialog) {
+    <div class="rename-overlay" (click)="cancelRename()">
+      <div class="rename-dialog" (click)="$event.stopPropagation()">
+        <h4>Rename plot board file</h4>
+        <p class="rename-hint">The file will be renamed using a slug (no spaces). If a file already exists with that name, rename is blocked.</p>
+        <input type="text" class="rename-input" [(ngModel)]="renameValue" (keydown.escape)="cancelRename()" />
+        @if (renameError) {
+          <p class="rename-error">{{ renameError }}</p>
+        }
+        <div class="rename-actions">
+          <button type="button" class="btn-action" (click)="cancelRename()">Cancel</button>
+          <button type="button" class="btn-primary" (click)="applyRename()">Rename</button>
+        </div>
       </div>
     </div>
-  </div>
+  }
 
-  <div class="rename-overlay" *ngIf="showNewPlotBoardDialog" (click)="cancelNewPlotBoard()">
-    <div class="rename-dialog" (click)="$event.stopPropagation()">
-      <h4>New plot board</h4>
-      <p class="rename-hint">Saved at the project root as <code>&lt;slug&gt;.plotboard.md</code>. The name is turned into a safe filename (no spaces).</p>
-      <input
-        type="text"
-        class="rename-input"
-        [(ngModel)]="newPlotBoardName"
-        (keydown.escape)="cancelNewPlotBoard()"
-        (keydown.enter)="applyNewPlotBoard()"
-        placeholder="e.g. Main arc"
-      />
-      <p class="rename-error" *ngIf="newPlotBoardError">{{ newPlotBoardError }}</p>
-      <div class="rename-actions">
-        <button type="button" class="btn-action" (click)="cancelNewPlotBoard()">Cancel</button>
-        <button type="button" class="btn-primary" (click)="applyNewPlotBoard()">Create</button>
+  @if (showNewPlotBoardDialog) {
+    <div class="rename-overlay" (click)="cancelNewPlotBoard()">
+      <div class="rename-dialog" (click)="$event.stopPropagation()">
+        <h4>New plot board</h4>
+        <p class="rename-hint">Saved at the project root as <code>&lt;slug&gt;.plotboard.md</code>. The name is turned into a safe filename (no spaces).</p>
+        <input
+          type="text"
+          class="rename-input"
+          [(ngModel)]="newPlotBoardName"
+          (keydown.escape)="cancelNewPlotBoard()"
+          (keydown.enter)="applyNewPlotBoard()"
+          placeholder="e.g. Main arc"
+          />
+        @if (newPlotBoardError) {
+          <p class="rename-error">{{ newPlotBoardError }}</p>
+        }
+        <div class="rename-actions">
+          <button type="button" class="btn-action" (click)="cancelNewPlotBoard()">Cancel</button>
+          <button type="button" class="btn-primary" (click)="applyNewPlotBoard()">Create</button>
+        </div>
       </div>
     </div>
-  </div>
+  }
 
-  <div class="rename-overlay" *ngIf="showDeletePlotBoardDialog" (click)="cancelDeletePlotBoard()">
-    <div class="rename-dialog" (click)="$event.stopPropagation()">
-      <h4>Delete plot board?</h4>
-      <p class="rename-hint" *ngIf="deleteDialogPath as path">
-        Remove <strong>{{ displayStem(path) }}</strong> from disk? This cannot be undone.
-      </p>
-      <p class="rename-error" *ngIf="deletePlotBoardError">{{ deletePlotBoardError }}</p>
-      <div class="rename-actions">
-        <button type="button" class="btn-action" (click)="cancelDeletePlotBoard()">Cancel</button>
-        <button type="button" class="btn-danger-outline" (click)="confirmDeletePlotBoard()">Delete</button>
+  @if (showDeletePlotBoardDialog) {
+    <div class="rename-overlay" (click)="cancelDeletePlotBoard()">
+      <div class="rename-dialog" (click)="$event.stopPropagation()">
+        <h4>Delete plot board?</h4>
+        @if (deleteDialogPath; as path) {
+          <p class="rename-hint">
+            Remove <strong>{{ displayStem(path) }}</strong> from disk? This cannot be undone.
+          </p>
+        }
+        @if (deletePlotBoardError) {
+          <p class="rename-error">{{ deletePlotBoardError }}</p>
+        }
+        <div class="rename-actions">
+          <button type="button" class="btn-action" (click)="cancelDeletePlotBoard()">Cancel</button>
+          <button type="button" class="btn-danger-outline" (click)="confirmDeletePlotBoard()">Delete</button>
+        </div>
       </div>
     </div>
-  </div>
+  }
 </div>

@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy, Output, EventEmitter } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { Pinboard } from '../../core/interfaces/pinboard.interface';
@@ -8,7 +8,7 @@ import { PinboardService } from '../../core/services/pinboard.service';
 
 @Component({
     selector: 'app-pinboard-sidebar',
-    imports: [CommonModule],
+    imports: [],
     templateUrl: './pinboard-sidebar.component.html',
     styleUrls: ['./pinboard-sidebar.component.scss']
 })

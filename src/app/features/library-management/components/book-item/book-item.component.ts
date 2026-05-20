@@ -1,11 +1,11 @@
-import { CommonModule } from "@angular/common";
+
 import { Component, EventEmitter, Input, Output } from "@angular/core";
 import { Book } from "@app/core";
 import { LoggingService } from "@app/core/services/logging.service";
 
 @Component({
     selector: "app-book-item",
-    imports: [CommonModule],
+    imports: [],
     templateUrl: "./book-item.component.html",
     styleUrls: ["./book-item.component.scss"]
 })

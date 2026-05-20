@@ -1,96 +1,99 @@
 <div class="character-grid">
-  <div
-    *ngFor="let character of characters; let i = index"
-    class="character-card card character-item"
-    cdkDrag
-    [cdkDragData]="character"
-    [cdkDragDisabled]="!dndEnabled"
-    [cdkDragPreviewClass]="'character-drag-preview'"
-    (cdkDragStarted)="onDragStarted()"
-    (cdkDragEnded)="onDragEnded()"
-    [class.dnd-enabled]="dndEnabled"
-    [class.selected]="selectedCharacterIndex === i"
-    [attr.data-index]="i"
-    (click)="onCharacterClick(character)"
-    role="button"
-    tabindex="0"
-    (keydown.enter)="onCharacterClick(character)"
-    (keydown.space)="onCharacterClick(character); $event.preventDefault()"
-  >
-    <div class="drag-preview-chip" *cdkDragPreview>
-      {{ character.name }}
-    </div>
-    <div class="drag-placeholder" *cdkDragPlaceholder></div>
-
-    <div class="character-thumbnail">
-      <img
-        *ngIf="getCurrentImageUrl(character)"
-        [src]="getCurrentImageUrl(character)"
-        [alt]="character.name"
-        draggable="false"
-        (error)="onImageError($event)"
-        class="slideshow-image"
-        [class.fade-in]="shouldFadeIn(character)"
-        [attr.data-image-key]="getImageKey(character)"
-      />
-      <div
-        *ngIf="!getCurrentImageUrl(character)"
-        class="thumbnail-placeholder"
-        [style.background-color]="getPlaceholderColor(character)"
+  @for (character of characters; track character; let i = $index) {
+    <div
+      class="character-card card character-item"
+      cdkDrag
+      [cdkDragData]="character"
+      [cdkDragDisabled]="!dndEnabled"
+      [cdkDragPreviewClass]="'character-drag-preview'"
+      (cdkDragStarted)="onDragStarted()"
+      (cdkDragEnded)="onDragEnded()"
+      [class.dnd-enabled]="dndEnabled"
+      [class.selected]="selectedCharacterIndex === i"
+      [attr.data-index]="i"
+      (click)="onCharacterClick(character)"
+      role="button"
+      tabindex="0"
+      (keydown.enter)="onCharacterClick(character)"
+      (keydown.space)="onCharacterClick(character); $event.preventDefault()"
       >
-        <svg viewBox="0 0 24 24" fill="currentColor" class="placeholder-icon">
-          <circle cx="12" cy="8" r="4.5"/>
-          <path d="M12 14c-5 0-9 2.5-9 5.5V22h18v-2.5c0-3-4-5.5-9-5.5z"/>
-        </svg>
+      <div class="drag-preview-chip" *cdkDragPreview>
+        {{ character.name }}
       </div>
-    </div>
-
-    <div class="character-info">
-      <h3 class="character-name">{{ character.name }}</h3>
-      <p
-        class="character-category"
-        [style.color]="getCategoryColor(character.category)"
-      >
-        {{ getCategoryName(character.category) }}
-      </p>
-
-      <div class="character-tags" *ngIf="character.tags.length > 0">
-        <span
-          *ngFor="let tag of getCharacterTagsInOrder(character)"
-          class="tag"
-          [style.background-color]="tag.color"
-          [style.color]="'white'"
-        >
-          {{ tag.name }}
-        </span>
+      <div class="drag-placeholder" *cdkDragPlaceholder></div>
+      <div class="character-thumbnail">
+        @if (getCurrentImageUrl(character)) {
+          <img
+            [src]="getCurrentImageUrl(character)"
+            [alt]="character.name"
+            draggable="false"
+            (error)="onImageError($event)"
+            class="slideshow-image"
+            [class.fade-in]="shouldFadeIn(character)"
+            [attr.data-image-key]="getImageKey(character)"
+            />
+        }
+        @if (!getCurrentImageUrl(character)) {
+          <div
+            class="thumbnail-placeholder"
+            [style.background-color]="getPlaceholderColor(character)"
+            >
+            <svg viewBox="0 0 24 24" fill="currentColor" class="placeholder-icon">
+              <circle cx="12" cy="8" r="4.5"/>
+              <path d="M12 14c-5 0-9 2.5-9 5.5V22h18v-2.5c0-3-4-5.5-9-5.5z"/>
+            </svg>
+          </div>
+        }
       </div>
-
-      <p class="character-description" *ngIf="character.content">
-        {{
-          character.content.length > 120
+      <div class="character-info">
+        <h3 class="character-name">{{ character.name }}</h3>
+        <p
+          class="character-category"
+          [style.color]="getCategoryColor(character.category)"
+          >
+          {{ getCategoryName(character.category) }}
+        </p>
+        @if (character.tags.length > 0) {
+          <div class="character-tags">
+            @for (tag of getCharacterTagsInOrder(character); track tag) {
+              <span
+                class="tag"
+                [style.background-color]="tag.color"
+                [style.color]="'white'"
+                >
+                {{ tag.name }}
+              </span>
+            }
+          </div>
+        }
+        @if (character.content) {
+          <p class="character-description">
+            {{
+            character.content.length > 120
             ? character.content.substring(0, 120) + "..."
             : character.content
-        }}
-      </p>
+            }}
+          </p>
+        }
+      </div>
+      <div class="character-actions">
+        <button
+          class="icon-btn"
+          (click)="onCharacterClickWithStop(character, $event)"
+          title="Edit character"
+          aria-label="Edit character"
+          >
+          ✏️
+        </button>
+        <button
+          class="icon-btn delete-btn"
+          (click)="onCharacterDelete(character, $event)"
+          title="Delete character"
+          aria-label="Delete character"
+          >
+          🗑️
+        </button>
+      </div>
     </div>
-
-    <div class="character-actions">
-      <button
-        class="icon-btn"
-        (click)="onCharacterClickWithStop(character, $event)"
-        title="Edit character"
-        aria-label="Edit character"
-      >
-        ✏️
-      </button>
-      <button
-        class="icon-btn delete-btn"
-        (click)="onCharacterDelete(character, $event)"
-        title="Delete character"
-        aria-label="Delete character"
-      >
-        🗑️
-      </button>
-    </div>
-  </div>
+  }
 </div>

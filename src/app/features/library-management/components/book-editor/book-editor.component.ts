@@ -1,5 +1,5 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, HostListener } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Book } from '../../../../core/interfaces/project.interface';
 
@@ -15,7 +15,7 @@ interface BookFormData {
 
 @Component({
     selector: 'app-book-editor',
-    imports: [CommonModule, FormsModule, ReactiveFormsModule],
+    imports: [FormsModule, ReactiveFormsModule],
     templateUrl: './book-editor.component.html',
     styleUrls: ['./book-editor.component.scss']
 })
@@ -72,7 +72,7 @@ export class BookEditorComponent implements OnInit, OnChanges {
   }
 
   @HostListener('document:keydown.escape', ['$event'])
-  onEscapeKey(event: KeyboardEvent): void {
+  onEscapeKey(event: Event): void {
     if (this.isVisible) {
       event.preventDefault();
       this.onCancel();

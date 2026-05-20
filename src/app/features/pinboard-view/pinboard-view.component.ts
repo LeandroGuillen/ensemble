@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, HostListener, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -26,14 +26,13 @@ interface ConnectionFormData {
 @Component({
     selector: 'app-pinboard-view',
     imports: [
-        CommonModule,
-        FormsModule,
-        PageHeaderComponent,
-        ColorSelectorComponent,
-        PinboardSidebarComponent,
-        PinboardCreateDialogComponent,
-        PinboardRenameDialogComponent,
-    ],
+    FormsModule,
+    PageHeaderComponent,
+    ColorSelectorComponent,
+    PinboardSidebarComponent,
+    PinboardCreateDialogComponent,
+    PinboardRenameDialogComponent
+],
     templateUrl: './pinboard-view.component.html',
     styleUrls: ['./pinboard-view.component.scss']
 })
@@ -187,19 +186,19 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   @HostListener('document:keydown.p', ['$event'])
-  handlePKey(event: KeyboardEvent): void {
-    // Only trigger if not typing in an input, textarea, or if a dialog is open
-    const target = event.target as HTMLElement;
+  handlePKey(event: Event): void {
+    const keyboardEvent = event as KeyboardEvent;
+    const target = keyboardEvent.target as HTMLElement;
     const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
-    
-    if (!isInput && 
-        !this.showAddPinDialog && 
-        !this.showConnectionDialog && 
+
+    if (!isInput &&
+        !this.showAddPinDialog &&
+        !this.showConnectionDialog &&
         !this.showEditDialog &&
         !this.showCreatePinboardDialog &&
         !this.showRenamePinboardDialog &&
         !this.connectionMode) {
-      event.preventDefault();
+      keyboardEvent.preventDefault();
       this.openAddPinDialog();
     }
   }

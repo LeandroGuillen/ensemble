@@ -1,6 +1,6 @@
 import { Component, OnInit, HostListener, OnDestroy } from "@angular/core";
 import { Router, RouterOutlet, NavigationEnd } from "@angular/router";
-import { CommonModule } from "@angular/common";
+
 import { Title } from "@angular/platform-browser";
 import { ProjectService, ElectronService, ThemeService, LoggingService, ZoomService } from "./core/services";
 import { filter } from "rxjs/operators";
@@ -18,7 +18,7 @@ import { ModalService, ConfirmationRequest } from "./core/services/modal.service
 
 @Component({
     selector: "app-root",
-    imports: [CommonModule, RouterOutlet, CommandPaletteComponent, SidebarComponent, NotificationComponent, CharacterEditDialogComponent, ConfirmationDialogComponent, KeyboardShortcutsDialogComponent, UpdateNotificationComponent],
+    imports: [RouterOutlet, CommandPaletteComponent, SidebarComponent, NotificationComponent, CharacterEditDialogComponent, ConfirmationDialogComponent, KeyboardShortcutsDialogComponent, UpdateNotificationComponent],
     templateUrl: "./app.component.html",
     styleUrls: ["./app.component.scss"]
 })

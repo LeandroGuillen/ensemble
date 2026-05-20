@@ -6,7 +6,7 @@ import {
   ChangeDetectorRef,
 } from "@angular/core";
 import { ActivatedRoute, Router } from "@angular/router";
-import { CommonModule } from "@angular/common";
+
 import {
   FormsModule,
   ReactiveFormsModule,
@@ -31,11 +31,10 @@ import { PageHeaderComponent } from "../../shared/page-header/page-header.compon
 @Component({
     selector: "app-cast-detail",
     imports: [
-        CommonModule,
-        FormsModule,
-        ReactiveFormsModule,
-        PageHeaderComponent,
-    ],
+    FormsModule,
+    ReactiveFormsModule,
+    PageHeaderComponent
+],
     templateUrl: "./cast-detail.component.html",
     styleUrls: ["./cast-detail.component.scss"]
 })

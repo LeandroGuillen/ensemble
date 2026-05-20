@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy } from "@angular/core";
-import { CommonModule } from "@angular/common";
+
 import {
   FormsModule,
   ReactiveFormsModule,
@@ -30,13 +30,12 @@ interface BookFormData {
 @Component({
     selector: "app-library-management",
     imports: [
-        CommonModule,
-        FormsModule,
-        ReactiveFormsModule,
-        PageHeaderComponent,
-        BookItemComponent,
-        BookEditorComponent,
-    ],
+    FormsModule,
+    ReactiveFormsModule,
+    PageHeaderComponent,
+    BookItemComponent,
+    BookEditorComponent
+],
     templateUrl: "./library-management.component.html",
     styleUrls: ["./library-management.component.scss"]
 })

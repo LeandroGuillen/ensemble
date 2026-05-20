@@ -1,5 +1,5 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 
 export interface ToggleOption {
   id: string;
@@ -9,7 +9,7 @@ export interface ToggleOption {
 
 @Component({
     selector: 'app-category-toggle',
-    imports: [CommonModule],
+    imports: [],
     templateUrl: './category-toggle.component.html',
     styleUrls: ['./category-toggle.component.scss']
 })

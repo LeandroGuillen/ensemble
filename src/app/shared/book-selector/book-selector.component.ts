@@ -1,11 +1,11 @@
-import { CommonModule } from "@angular/common";
+
 import { Component, EventEmitter, Input, Output, HostListener, ElementRef } from "@angular/core";
 import { Book } from "@app/core";
 import { trigger, transition, style, animate } from "@angular/animations";
 
 @Component({
     selector: "app-book-selector",
-    imports: [CommonModule],
+    imports: [],
     templateUrl: "./book-selector.component.html",
     styleUrls: ["./book-selector.component.scss"],
     animations: [

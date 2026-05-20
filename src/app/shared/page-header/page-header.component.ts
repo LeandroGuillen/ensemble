@@ -1,10 +1,10 @@
 import { Component, Input } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { CommandPaletteService } from '../command-palette/command-palette.service';
 
 @Component({
     selector: 'app-page-header',
-    imports: [CommonModule],
+    imports: [],
     templateUrl: './page-header.component.html',
     styleUrls: ['./page-header.component.scss']
 })

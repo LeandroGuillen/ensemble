@@ -1,11 +1,11 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { NotificationService, Notification } from '../../core/services/notification.service';
 import { Subject, takeUntil } from 'rxjs';
 
 @Component({
     selector: 'app-notification',
-    imports: [CommonModule],
+    imports: [],
     templateUrl: './notification.component.html',
     styleUrls: ['./notification.component.scss']
 })

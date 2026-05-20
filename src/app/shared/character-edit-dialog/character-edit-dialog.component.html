@@ -1,4 +1,4 @@
-<ng-container *ngIf="state">
+@if (state) {
   <!-- Backdrop: full viewport, receives clicks to close -->
   <div
     class="character-edit-dialog-backdrop"
@@ -13,4 +13,4 @@
       (closed)="onCharacterClosed()"
     ></app-character-detail>
   </div>
-</ng-container>
+}

@@ -1,11 +1,11 @@
 import { Component, HostListener, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { Subject, takeUntil } from 'rxjs';
 import { KeyboardShortcutsService, Shortcut } from './keyboard-shortcuts.service';
 
 @Component({
     selector: 'app-keyboard-shortcuts-dialog',
-    imports: [CommonModule],
+    imports: [],
     templateUrl: './keyboard-shortcuts-dialog.component.html',
     styleUrls: ['./keyboard-shortcuts-dialog.component.scss']
 })

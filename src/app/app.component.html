@@ -1,5 +1,7 @@
 <div class="app-container">
-  <app-sidebar *ngIf="hasProject && !isWelcomeScreen"></app-sidebar>
+  @if (hasProject && !isWelcomeScreen) {
+    <app-sidebar></app-sidebar>
+  }
 
   <main class="app-main">
     <router-outlet></router-outlet>

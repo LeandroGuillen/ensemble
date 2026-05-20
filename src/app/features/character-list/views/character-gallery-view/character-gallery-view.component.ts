@@ -1,11 +1,11 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, OnChanges, SimpleChanges, NgZone } from "@angular/core";
-import { CommonModule } from "@angular/common";
+
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { Character, Tag } from "../../../../core/interfaces";
 
 @Component({
     selector: "app-character-gallery-view",
-    imports: [CommonModule, DragDropModule],
+    imports: [DragDropModule],
     templateUrl: "./character-gallery-view.component.html",
     styleUrls: ["./character-gallery-view.component.scss"]
 })

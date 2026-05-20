@@ -1,11 +1,11 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { Pinboard } from '../../core/interfaces/pinboard.interface';
 
 @Component({
     selector: 'app-pinboard-create-dialog',
-    imports: [CommonModule, FormsModule],
+    imports: [FormsModule],
     templateUrl: './pinboard-create-dialog.component.html',
     styleUrls: ['./pinboard-create-dialog.component.scss']
 })

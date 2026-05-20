@@ -1,4 +1,4 @@
-import { CommonModule } from "@angular/common";
+
 import {
   AfterViewInit,
   ChangeDetectorRef,
@@ -56,12 +56,11 @@ import {
 @Component({
     selector: "app-character-detail",
     imports: [
-        CommonModule,
-        FormsModule,
-        ReactiveFormsModule,
-        CategoryToggleComponent,
-        MultiSelectButtonsComponent,
-    ],
+    FormsModule,
+    ReactiveFormsModule,
+    CategoryToggleComponent,
+    MultiSelectButtonsComponent
+],
     templateUrl: "./character-detail.component.html",
     styleUrls: ["./character-detail.component.scss"]
 })

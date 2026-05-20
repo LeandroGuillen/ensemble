@@ -1,4 +1,4 @@
-import { CommonModule } from "@angular/common";
+
 import {
   Component,
   EventEmitter,
@@ -16,7 +16,7 @@ import { ElectronService, LoggingService } from "../../core/services";
 
 @Component({
     selector: "app-cast-dropdown",
-    imports: [CommonModule],
+    imports: [],
     templateUrl: "./cast-dropdown.component.html",
     styleUrls: ["./cast-dropdown.component.scss"]
 })

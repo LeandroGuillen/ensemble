@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Book, Cast, Category, Character, Tag } from '../../core/interfaces';
@@ -18,13 +18,12 @@ export interface FilterState {
 @Component({
     selector: 'app-character-filter',
     imports: [
-        CommonModule,
-        FormsModule,
-        CategoryToggleComponent,
-        MultiSelectButtonsComponent,
-        CastDropdownComponent,
-        BookSelectorComponent,
-    ],
+    FormsModule,
+    CategoryToggleComponent,
+    MultiSelectButtonsComponent,
+    CastDropdownComponent,
+    BookSelectorComponent
+],
     templateUrl: './character-filter.component.html',
     styleUrls: ['./character-filter.component.scss']
 })

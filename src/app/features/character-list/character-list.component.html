@@ -1,85 +1,87 @@
 <div class="character-list-container">
   <app-page-header [title]="'Characters'" [showSearch]="true">
     <div class="page-actions">
-      <div
-        class="column-toggle"
-        [class.disabled]="!currentProject"
-        *ngIf="viewMode === 'list' || viewMode === 'compact'"
-      >
-        <button
-          class="toggle-option"
-          [class.active]="columns === 1"
-          (click)="setColumns(1)"
-          [disabled]="!currentProject"
-          title="Single column"
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <rect x="2" y="1" width="12" height="14" rx="1" />
-          </svg>
-        </button>
-        <button
-          class="toggle-option"
-          [class.active]="columns === 2"
-          (click)="setColumns(2)"
-          [disabled]="!currentProject"
-          title="Two columns"
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <rect x="1" y="1" width="6.5" height="14" rx="1" />
-            <rect x="8.5" y="1" width="6.5" height="14" rx="1" />
-          </svg>
-        </button>
-      </div>
-      <div
-        class="thumbnail-size-toggle"
-        [class.disabled]="!currentProject"
-        *ngIf="viewMode === 'gallery'"
-      >
-        <button
-          class="toggle-option"
-          [class.active]="galleryThumbnailSize === 'big'"
-          (click)="setGalleryThumbnailSize('big')"
-          [disabled]="!currentProject"
-          title="Big thumbnails"
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <rect x="1" y="1" width="14" height="14" rx="1.5" />
-          </svg>
-        </button>
-        <button
-          class="toggle-option"
-          [class.active]="galleryThumbnailSize === 'medium'"
-          (click)="setGalleryThumbnailSize('medium')"
-          [disabled]="!currentProject"
-          title="Medium thumbnails"
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <rect x="1" y="1" width="6" height="6" rx="1" />
-            <rect x="9" y="1" width="6" height="6" rx="1" />
-            <rect x="1" y="9" width="6" height="6" rx="1" />
-            <rect x="9" y="9" width="6" height="6" rx="1" />
-          </svg>
-        </button>
-        <button
-          class="toggle-option"
-          [class.active]="galleryThumbnailSize === 'small'"
-          (click)="setGalleryThumbnailSize('small')"
-          [disabled]="!currentProject"
-          title="Small thumbnails"
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <rect x="1" y="1" width="4" height="4" rx="0.5" />
-            <rect x="6" y="1" width="4" height="4" rx="0.5" />
-            <rect x="11" y="1" width="4" height="4" rx="0.5" />
-            <rect x="1" y="6" width="4" height="4" rx="0.5" />
-            <rect x="6" y="6" width="4" height="4" rx="0.5" />
-            <rect x="11" y="6" width="4" height="4" rx="0.5" />
-            <rect x="1" y="11" width="4" height="4" rx="0.5" />
-            <rect x="6" y="11" width="4" height="4" rx="0.5" />
-            <rect x="11" y="11" width="4" height="4" rx="0.5" />
-          </svg>
-        </button>
-      </div>
+      @if (viewMode === 'list' || viewMode === 'compact') {
+        <div
+          class="column-toggle"
+          [class.disabled]="!currentProject"
+          >
+          <button
+            class="toggle-option"
+            [class.active]="columns === 1"
+            (click)="setColumns(1)"
+            [disabled]="!currentProject"
+            title="Single column"
+            >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <rect x="2" y="1" width="12" height="14" rx="1" />
+            </svg>
+          </button>
+          <button
+            class="toggle-option"
+            [class.active]="columns === 2"
+            (click)="setColumns(2)"
+            [disabled]="!currentProject"
+            title="Two columns"
+            >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <rect x="1" y="1" width="6.5" height="14" rx="1" />
+              <rect x="8.5" y="1" width="6.5" height="14" rx="1" />
+            </svg>
+          </button>
+        </div>
+      }
+      @if (viewMode === 'gallery') {
+        <div
+          class="thumbnail-size-toggle"
+          [class.disabled]="!currentProject"
+          >
+          <button
+            class="toggle-option"
+            [class.active]="galleryThumbnailSize === 'big'"
+            (click)="setGalleryThumbnailSize('big')"
+            [disabled]="!currentProject"
+            title="Big thumbnails"
+            >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <rect x="1" y="1" width="14" height="14" rx="1.5" />
+            </svg>
+          </button>
+          <button
+            class="toggle-option"
+            [class.active]="galleryThumbnailSize === 'medium'"
+            (click)="setGalleryThumbnailSize('medium')"
+            [disabled]="!currentProject"
+            title="Medium thumbnails"
+            >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <rect x="1" y="1" width="6" height="6" rx="1" />
+              <rect x="9" y="1" width="6" height="6" rx="1" />
+              <rect x="1" y="9" width="6" height="6" rx="1" />
+              <rect x="9" y="9" width="6" height="6" rx="1" />
+            </svg>
+          </button>
+          <button
+            class="toggle-option"
+            [class.active]="galleryThumbnailSize === 'small'"
+            (click)="setGalleryThumbnailSize('small')"
+            [disabled]="!currentProject"
+            title="Small thumbnails"
+            >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <rect x="1" y="1" width="4" height="4" rx="0.5" />
+              <rect x="6" y="1" width="4" height="4" rx="0.5" />
+              <rect x="11" y="1" width="4" height="4" rx="0.5" />
+              <rect x="1" y="6" width="4" height="4" rx="0.5" />
+              <rect x="6" y="6" width="4" height="4" rx="0.5" />
+              <rect x="11" y="6" width="4" height="4" rx="0.5" />
+              <rect x="1" y="11" width="4" height="4" rx="0.5" />
+              <rect x="6" y="11" width="4" height="4" rx="0.5" />
+              <rect x="11" y="11" width="4" height="4" rx="0.5" />
+            </svg>
+          </button>
+        </div>
+      }
       <div class="view-toggle" [class.disabled]="!currentProject">
         <button
           class="toggle-option"
@@ -87,7 +89,7 @@
           (click)="setViewMode('gallery')"
           [disabled]="!currentProject"
           title="Gallery view"
-        >
+          >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
             <rect x="1" y="1" width="6" height="6" rx="1" />
             <rect x="9" y="1" width="6" height="6" rx="1" />
@@ -105,7 +107,7 @@
           (click)="setViewMode('grid')"
           [disabled]="!currentProject"
           title="Grid view"
-        >
+          >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
             <rect x="1" y="1" width="6" height="6" rx="1" />
             <rect x="9" y="1" width="6" height="6" rx="1" />
@@ -119,7 +121,7 @@
           (click)="setViewMode('list')"
           [disabled]="!currentProject"
           title="List view"
-        >
+          >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
             <rect x="1" y="2" width="14" height="2" rx="1" />
             <rect x="1" y="7" width="14" height="2" rx="1" />
@@ -132,7 +134,7 @@
           (click)="setViewMode('compact')"
           [disabled]="!currentProject"
           title="Compact view"
-        >
+          >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
             <rect x="1" y="1" width="14" height="1" rx="0.5" />
             <rect x="1" y="4" width="14" height="1" rx="0.5" />
@@ -149,12 +151,14 @@
           (click)="toggleSlideshow()"
           [disabled]="!currentProject"
           title="Toggle slideshow (show all images vs. thumbnail only)"
-        >
+          >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
             <rect x="2" y="3" width="12" height="10" rx="1" stroke="currentColor" fill="none" stroke-width="1.5"/>
             <circle cx="5" cy="6" r="1" />
             <polyline points="4,11 7,8 9,10 12,7" stroke="currentColor" fill="none" stroke-width="1.2"/>
-            <path *ngIf="slideshowEnabled" d="M13,2 L15,4 L13,6 Z" fill="currentColor"/>
+            @if (slideshowEnabled) {
+              <path d="M13,2 L15,4 L13,6 Z" fill="currentColor"/>
+            }
           </svg>
         </button>
       </div>
@@ -163,7 +167,7 @@
         (click)="createNewCharacter()"
         [disabled]="!currentProject"
         title="New Character (N)"
-      >
+        >
         New Character
         <kbd class="shortcut-hint">N</kbd>
       </button>
@@ -171,527 +175,553 @@
   </app-page-header>
 
   <!-- Loading State -->
-  <div class="loading-state" *ngIf="isLoading">
-    <div class="spinner spinner-lg"></div>
-    <p>Loading characters...</p>
-  </div>
+  @if (isLoading) {
+    <div class="loading-state">
+      <div class="spinner spinner-lg"></div>
+      <p>Loading characters...</p>
+    </div>
+  }
 
   <!-- Error State -->
-  <div class="error-state" *ngIf="error">
-    <p class="error-message">{{ error }}</p>
-    <button class="btn btn-secondary" (click)="loadCharacters()">Retry</button>
-  </div>
+  @if (error) {
+    <div class="error-state">
+      <p class="error-message">{{ error }}</p>
+      <button class="btn btn-secondary" (click)="loadCharacters()">Retry</button>
+    </div>
+  }
 
   <!-- No Project State -->
-  <div class="no-project-state" *ngIf="!currentProject && !isLoading">
-    <p>Please select or create a project to manage characters.</p>
-  </div>
+  @if (!currentProject && !isLoading) {
+    <div class="no-project-state">
+      <p>Please select or create a project to manage characters.</p>
+    </div>
+  }
 
   <!-- Main Content -->
   <div class="content-wrapper">
-    <div
-      class="controls-section"
-      *ngIf="currentProject && !isLoading && !error"
-    >
-      <!-- New Collapsible Filter Component -->
-      <app-character-filter
-        *ngIf="
+    @if (currentProject && !isLoading && !error) {
+      <div
+        class="controls-section"
+        >
+        <!-- New Collapsible Filter Component -->
+        @if (
           categories.length > 0 ||
           tags.length > 0 ||
           casts.length > 0 ||
           books.length > 0
-        "
-        [categories]="categories"
-        [tags]="tags"
-        [casts]="casts"
-        [books]="books"
-        [allCharacters]="allCharacters"
-        [searchTerm]="searchTerm"
-        [selectedCategory]="selectedCategory"
-        [selectedTags]="selectedTags"
-        [selectedCast]="selectedCast"
-        [selectedBook]="selectedBook"
-        [isExpanded]="filterExpanded"
-        (searchTermChange)="searchTerm = $event; onSearchChange()"
-        (categoryChange)="selectedCategory = $event; onCategoryChange()"
-        (tagsChange)="selectedTags = $event; onTagsSelectionChange($event)"
-        (castChange)="selectedCast = $event; onCastChange()"
-        (bookChange)="selectedBook = $event; onBookChange()"
-        (clearFilters)="clearFilters()"
-        (expandedChange)="onFilterExpandedChange($event)"
-      ></app-character-filter>
-
-      <!-- Multi-select Actions -->
-      <div class="multi-select-actions" *ngIf="selectedCharacterIds.length > 0">
-        <span class="selection-count"
-          >{{ selectedCharacterIds.length }} character{{
-            selectedCharacterIds.length !== 1 ? "s" : ""
-          }}
-          selected</span
-        >
-        <button
-          class="btn btn-secondary btn-sm"
-          (click)="showCastNameFormDialog()"
-        >
-          Save Selection as Cast
-        </button>
-        <button class="btn btn-link btn-sm" (click)="selectedCharacterIds = []">
-          Clear Selection
-        </button>
-      </div>
-
-      <!-- Cast Name Form Dialog -->
-      <div
-        class="cast-name-form-overlay"
-        *ngIf="showCastNameForm"
-        (click)="cancelCastForm()"
-      >
-        <div class="cast-name-form" (click)="$event.stopPropagation()">
-          <div class="form-header">
-            <h3>Create New Cast</h3>
-            <button class="btn-close" (click)="cancelCastForm()">×</button>
+          ) {
+          <app-character-filter
+            [categories]="categories"
+            [tags]="tags"
+            [casts]="casts"
+            [books]="books"
+            [allCharacters]="allCharacters"
+            [searchTerm]="searchTerm"
+            [selectedCategory]="selectedCategory"
+            [selectedTags]="selectedTags"
+            [selectedCast]="selectedCast"
+            [selectedBook]="selectedBook"
+            [isExpanded]="filterExpanded"
+            (searchTermChange)="searchTerm = $event; onSearchChange()"
+            (categoryChange)="selectedCategory = $event; onCategoryChange()"
+            (tagsChange)="selectedTags = $event; onTagsSelectionChange($event)"
+            (castChange)="selectedCast = $event; onCastChange()"
+            (bookChange)="selectedBook = $event; onBookChange()"
+            (clearFilters)="clearFilters()"
+            (expandedChange)="onFilterExpandedChange($event)"
+          ></app-character-filter>
+        }
+        <!-- Multi-select Actions -->
+        @if (selectedCharacterIds.length > 0) {
+          <div class="multi-select-actions">
+            <span class="selection-count"
+              >{{ selectedCharacterIds.length }} character{{
+              selectedCharacterIds.length !== 1 ? "s" : ""
+              }}
+              selected</span
+              >
+              <button
+                class="btn btn-secondary btn-sm"
+                (click)="showCastNameFormDialog()"
+                >
+                Save Selection as Cast
+              </button>
+              <button class="btn btn-link btn-sm" (click)="selectedCharacterIds = []">
+                Clear Selection
+              </button>
+            </div>
+          }
+          <!-- Cast Name Form Dialog -->
+          @if (showCastNameForm) {
+            <div
+              class="cast-name-form-overlay"
+              (click)="cancelCastForm()"
+              >
+              <div class="cast-name-form" (click)="$event.stopPropagation()">
+                <div class="form-header">
+                  <h3>Create New Cast</h3>
+                  <button class="btn-close" (click)="cancelCastForm()">×</button>
+                </div>
+                <div class="form-body">
+                  <p class="form-help">
+                    Enter a name for this cast ({{ selectedCharacterIds.length }}
+                    characters selected)
+                  </p>
+                  <input
+                    type="text"
+                    [(ngModel)]="newCastName"
+                    placeholder="e.g., Chapter 1 Cast, Battle Scene"
+                    class="form-control"
+                    (keyup.enter)="saveSelectionAsCast()"
+                    (keyup.escape)="cancelCastForm()"
+                    autofocus
+                    />
+                </div>
+                <div class="form-actions">
+                  <button class="btn btn-secondary" (click)="cancelCastForm()">
+                    Cancel
+                  </button>
+                  <button
+                    class="btn btn-primary"
+                    (click)="saveSelectionAsCast()"
+                    [disabled]="!newCastName || newCastName.trim() === ''"
+                    >
+                    Create Cast
+                  </button>
+                </div>
+              </div>
+            </div>
+          }
+          <!-- Results Count and Sort -->
+          @if (
+            filteredCharacters.length > 0 ||
+            searchTerm ||
+            selectedCategory ||
+            selectedTags.length > 0 ||
+            selectedCast ||
+            selectedBook
+            ) {
+            <div
+              class="results-bar"
+              >
+              <span class="text-muted text-sm" role="status" aria-live="polite"
+                >{{ filteredCharacters.length }} character{{
+                filteredCharacters.length !== 1 ? "s" : ""
+                }}</span
+                >
+                <div class="sort-controls">
+                  <span class="sort-label">Sort by:</span>
+                  <button
+                    class="sort-button"
+                    [class.active]="sortBy === 'name'"
+                    (click)="setSortBy('name')"
+                    >
+                    Name
+                    @if (sortBy === 'name') {
+                      <span class="sort-indicator">
+                        {{ sortDirection === "asc" ? "↑" : "↓" }}
+                      </span>
+                    }
+                  </button>
+                  <button
+                    class="sort-button"
+                    [class.active]="sortBy === 'category'"
+                    (click)="setSortBy('category')"
+                    >
+                    Category
+                    @if (sortBy === 'category') {
+                      <span class="sort-indicator">
+                        {{ sortDirection === "asc" ? "↑" : "↓" }}
+                      </span>
+                    }
+                  </button>
+                </div>
+                <div class="group-controls">
+                  <span class="group-label">Group:</span>
+                  <button
+                    class="group-button"
+                    [class.active]="groupBy === 'none'"
+                    (click)="setGroupBy('none')"
+                    >
+                    None
+                  </button>
+                  <button
+                    class="group-button"
+                    [class.active]="groupBy === 'category'"
+                    (click)="setGroupBy('category')"
+                    >
+                    Category
+                  </button>
+                  <button
+                    class="group-button"
+                    [class.active]="groupBy === 'tag'"
+                    (click)="setGroupBy('tag')"
+                    >
+                    Tag
+                  </button>
+                </div>
+                <div class="results-actions">
+                  <a
+                    class="refresh-link"
+                    (click)="refreshCharacters()"
+                    [class.disabled]="!currentProject || isLoading"
+                    title="Refresh characters"
+                    >
+                    Refresh
+                  </a>
+                </div>
+              </div>
+            }
           </div>
-          <div class="form-body">
-            <p class="form-help">
-              Enter a name for this cast ({{ selectedCharacterIds.length }}
-              characters selected)
-            </p>
-            <input
-              type="text"
-              [(ngModel)]="newCastName"
-              placeholder="e.g., Chapter 1 Cast, Battle Scene"
-              class="form-control"
-              (keyup.enter)="saveSelectionAsCast()"
-              (keyup.escape)="cancelCastForm()"
-              autofocus
-            />
-          </div>
-          <div class="form-actions">
-            <button class="btn btn-secondary" (click)="cancelCastForm()">
-              Cancel
-            </button>
-            <button
-              class="btn btn-primary"
-              (click)="saveSelectionAsCast()"
-              [disabled]="!newCastName || newCastName.trim() === ''"
-            >
-              Create Cast
-            </button>
-          </div>
-        </div>
-      </div>
+        }
 
-      <!-- Results Count and Sort -->
-      <div
-        class="results-bar"
-        *ngIf="
-          filteredCharacters.length > 0 ||
-          searchTerm ||
-          selectedCategory ||
-          selectedTags.length > 0 ||
-          selectedCast ||
-          selectedBook
-        "
-      >
-        <span class="text-muted text-sm" role="status" aria-live="polite"
-          >{{ filteredCharacters.length }} character{{
-            filteredCharacters.length !== 1 ? "s" : ""
-          }}</span
-        >
-
-        <div class="sort-controls">
-          <span class="sort-label">Sort by:</span>
-          <button
-            class="sort-button"
-            [class.active]="sortBy === 'name'"
-            (click)="setSortBy('name')"
-          >
-            Name
-            <span class="sort-indicator" *ngIf="sortBy === 'name'">
-              {{ sortDirection === "asc" ? "↑" : "↓" }}
-            </span>
-          </button>
-          <button
-            class="sort-button"
-            [class.active]="sortBy === 'category'"
-            (click)="setSortBy('category')"
-          >
-            Category
-            <span class="sort-indicator" *ngIf="sortBy === 'category'">
-              {{ sortDirection === "asc" ? "↑" : "↓" }}
-            </span>
-          </button>
-        </div>
-
-        <div class="group-controls">
-          <span class="group-label">Group:</span>
-          <button
-            class="group-button"
-            [class.active]="groupBy === 'none'"
-            (click)="setGroupBy('none')"
-          >
-            None
-          </button>
-          <button
-            class="group-button"
-            [class.active]="groupBy === 'category'"
-            (click)="setGroupBy('category')"
-          >
-            Category
-          </button>
-          <button
-            class="group-button"
-            [class.active]="groupBy === 'tag'"
-            (click)="setGroupBy('tag')"
-          >
-            Tag
-          </button>
-        </div>
-
-        <div class="results-actions">
-          <a
-            class="refresh-link"
-            (click)="refreshCharacters()"
-            [class.disabled]="!currentProject || isLoading"
-            title="Refresh characters"
-          >
-            Refresh
-          </a>
-        </div>
-      </div>
-    </div>
-
-    <div
-      class="scrollable-content"
-      #scrollableContent
-      *ngIf="currentProject && !isLoading && !error"
-    >
-      <!-- Grouped View by Category -->
-      <div
-        class="grouped-view"
-        *ngIf="filteredCharacters.length > 0 && groupBy === 'category'"
-      >
-        <div
-          class="category-group"
-          *ngFor="let group of getGroupedCharacters()"
-        >
+        @if (currentProject && !isLoading && !error) {
           <div
-            class="category-tab"
-            [style.background-color]="metadataHelper.getCategoryColor(group.categoryId)"
+            class="scrollable-content"
+            #scrollableContent
+            >
+            <!-- Grouped View by Category -->
+            @if (filteredCharacters.length > 0 && groupBy === 'category') {
+              <div
+                class="grouped-view"
+                >
+                @for (group of getGroupedCharacters(); track group) {
+                  <div
+                    class="category-group"
+                    >
+                    <div
+                      class="category-tab"
+                      [style.background-color]="metadataHelper.getCategoryColor(group.categoryId)"
             [style.color]="
               getContrastTextColor(metadataHelper.getCategoryColor(group.categoryId))
             "
-          >
-            <div class="category-label-content">
-              <span class="category-name">{{
-                metadataHelper.getCategoryName(group.categoryId)
-              }}</span>
-            </div>
-          </div>
-          <div
-            class="category-content"
-            cdkDropList
-            [id]="getCategoryDropListId(group.categoryId)"
-            [cdkDropListData]="group.characters"
-            [cdkDropListConnectedTo]="getConnectedCategoryDropListIds()"
-            [cdkDropListSortingDisabled]="true"
-            [class.drop-active]="activeDropCategoryId === group.categoryId && isDraggingCharacter"
-            [class.drop-disabled]="!isCategoryDragDropEnabled()"
-            (cdkDropListEntered)="onCategoryDragEntered(group.categoryId)"
-            (cdkDropListExited)="onCategoryDragExited(group.categoryId)"
-            (cdkDropListDropped)="onCategoryDrop($event, group.categoryId)"
-          >
-            <div
-              class="drop-hint"
-              [class.visible]="activeDropCategoryId === group.categoryId && isDraggingCharacter"
-            >
-              Drop here for {{ metadataHelper.getCategoryName(group.categoryId) }}
-            </div>
-            <!-- Grid View (Cards) -->
-            <app-character-grid-view
-              *ngIf="viewMode === 'grid'"
-              [characters]="group.characters"
-              [categories]="categories"
-              [tags]="tags"
-              [dndEnabled]="isCategoryDragDropEnabled()"
-              [selectedCharacterIndex]="selectedCharacterIndex"
-              [thumbnailDataUrls]="thumbnailDataUrls"
-              [characterImagesDataUrls]="characterImagesDataUrls"
-              [slideshowEnabled]="slideshowEnabled"
-              (characterClick)="onViewCharacterClick($event)"
-              (characterDelete)="onViewCharacterDelete($event)"
-              (dragStarted)="onAnyCharacterDragStarted()"
-              (dragEnded)="onAnyCharacterDragEnded()"
-            ></app-character-grid-view>
-
-            <!-- List View -->
-            <app-character-list-view
-              *ngIf="viewMode === 'list'"
-              [characters]="group.characters"
-              [categories]="categories"
-              [tags]="tags"
-              [dndEnabled]="isCategoryDragDropEnabled()"
-              [columns]="columns"
-              [selectedCharacterIndex]="selectedCharacterIndex"
-              [thumbnailDataUrls]="thumbnailDataUrls"
-              (characterClick)="onViewCharacterClick($event)"
-              (characterDelete)="onViewCharacterDelete($event)"
+                      >
+                      <div class="category-label-content">
+                        <span class="category-name">{{
+                          metadataHelper.getCategoryName(group.categoryId)
+                        }}</span>
+                      </div>
+                    </div>
+                    <div
+                      class="category-content"
+                      cdkDropList
+                      [id]="getCategoryDropListId(group.categoryId)"
+                      [cdkDropListData]="group.characters"
+                      [cdkDropListConnectedTo]="getConnectedCategoryDropListIds()"
+                      [cdkDropListSortingDisabled]="true"
+                      [class.drop-active]="activeDropCategoryId === group.categoryId && isDraggingCharacter"
+                      [class.drop-disabled]="!isCategoryDragDropEnabled()"
+                      (cdkDropListEntered)="onCategoryDragEntered(group.categoryId)"
+                      (cdkDropListExited)="onCategoryDragExited(group.categoryId)"
+                      (cdkDropListDropped)="onCategoryDrop($event, group.categoryId)"
+                      >
+                      <div
+                        class="drop-hint"
+                        [class.visible]="activeDropCategoryId === group.categoryId && isDraggingCharacter"
+                        >
+                        Drop here for {{ metadataHelper.getCategoryName(group.categoryId) }}
+                      </div>
+                      <!-- Grid View (Cards) -->
+                      @if (viewMode === 'grid') {
+                        <app-character-grid-view
+                          [characters]="group.characters"
+                          [categories]="categories"
+                          [tags]="tags"
+                          [dndEnabled]="isCategoryDragDropEnabled()"
+                          [selectedCharacterIndex]="selectedCharacterIndex"
+                          [thumbnailDataUrls]="thumbnailDataUrls"
+                          [characterImagesDataUrls]="characterImagesDataUrls"
+                          [slideshowEnabled]="slideshowEnabled"
+                          (characterClick)="onViewCharacterClick($event)"
+                          (characterDelete)="onViewCharacterDelete($event)"
+                          (dragStarted)="onAnyCharacterDragStarted()"
+                          (dragEnded)="onAnyCharacterDragEnded()"
+                        ></app-character-grid-view>
+                      }
+                      <!-- List View -->
+                      @if (viewMode === 'list') {
+                        <app-character-list-view
+                          [characters]="group.characters"
+                          [categories]="categories"
+                          [tags]="tags"
+                          [dndEnabled]="isCategoryDragDropEnabled()"
+                          [columns]="columns"
+                          [selectedCharacterIndex]="selectedCharacterIndex"
+                          [thumbnailDataUrls]="thumbnailDataUrls"
+                          (characterClick)="onViewCharacterClick($event)"
+                          (characterDelete)="onViewCharacterDelete($event)"
               (characterSelectionToggle)="
                 onViewCharacterSelectionToggle($event)
               "
-              (dragStarted)="onAnyCharacterDragStarted()"
-              (dragEnded)="onAnyCharacterDragEnded()"
-            ></app-character-list-view>
-
-            <!-- Compact View -->
-            <app-character-compact-view
-              *ngIf="viewMode === 'compact'"
-              [characters]="group.characters"
-              [categories]="categories"
-              [tags]="tags"
-              [dndEnabled]="isCategoryDragDropEnabled()"
-              [columns]="columns"
-              [selectedCharacterIndex]="selectedCharacterIndex"
-              [thumbnailDataUrls]="thumbnailDataUrls"
-              (characterClick)="onViewCharacterClick($event)"
-              (characterDelete)="onViewCharacterDelete($event)"
+                          (dragStarted)="onAnyCharacterDragStarted()"
+                          (dragEnded)="onAnyCharacterDragEnded()"
+                        ></app-character-list-view>
+                      }
+                      <!-- Compact View -->
+                      @if (viewMode === 'compact') {
+                        <app-character-compact-view
+                          [characters]="group.characters"
+                          [categories]="categories"
+                          [tags]="tags"
+                          [dndEnabled]="isCategoryDragDropEnabled()"
+                          [columns]="columns"
+                          [selectedCharacterIndex]="selectedCharacterIndex"
+                          [thumbnailDataUrls]="thumbnailDataUrls"
+                          (characterClick)="onViewCharacterClick($event)"
+                          (characterDelete)="onViewCharacterDelete($event)"
               (characterSelectionToggle)="
                 onViewCharacterSelectionToggle($event)
               "
-              (dragStarted)="onAnyCharacterDragStarted()"
-              (dragEnded)="onAnyCharacterDragEnded()"
-            ></app-character-compact-view>
-
-            <!-- Gallery View -->
-            <app-character-gallery-view
-              *ngIf="viewMode === 'gallery'"
-              [characters]="group.characters"
-              [tags]="tags"
-              [dndEnabled]="isCategoryDragDropEnabled()"
-              [thumbnailDataUrls]="thumbnailDataUrls"
-              [characterImagesDataUrls]="characterImagesDataUrls"
-              [slideshowEnabled]="slideshowEnabled"
-              [thumbnailSize]="galleryThumbnailSize"
-              (characterClick)="onViewCharacterClick($event)"
-              (dragStarted)="onAnyCharacterDragStarted()"
-              (dragEnded)="onAnyCharacterDragEnded()"
-            ></app-character-gallery-view>
-          </div>
-        </div>
-      </div>
-
-      <!-- Grouped View by Tag -->
-      <div
-        class="grouped-view"
-        *ngIf="filteredCharacters.length > 0 && groupBy === 'tag'"
-      >
-        <div class="category-group" *ngFor="let group of getGroupedByTag()">
-          <div
-            class="category-tab"
-            [style.background-color]="metadataHelper.getTagColor(group.tagId)"
-            [style.color]="getContrastTextColor(metadataHelper.getTagColor(group.tagId))"
-          >
-            <div class="category-label-content">
-              <span class="category-name">{{ metadataHelper.getTagName(group.tagId) }}</span>
-            </div>
-          </div>
-          <div class="category-content">
-            <!-- Grid View (Cards) -->
-            <app-character-grid-view
-              *ngIf="viewMode === 'grid'"
-              [characters]="group.characters"
-              [categories]="categories"
-              [tags]="tags"
-              [selectedCharacterIndex]="selectedCharacterIndex"
-              [thumbnailDataUrls]="thumbnailDataUrls"
-              [characterImagesDataUrls]="characterImagesDataUrls"
-              [slideshowEnabled]="slideshowEnabled"
-              (characterClick)="onViewCharacterClick($event)"
-              (characterDelete)="onViewCharacterDelete($event)"
-            ></app-character-grid-view>
-
-            <!-- List View -->
-            <app-character-list-view
-              *ngIf="viewMode === 'list'"
-              [characters]="group.characters"
-              [categories]="categories"
-              [tags]="tags"
-              [columns]="columns"
-              [selectedCharacterIndex]="selectedCharacterIndex"
-              [thumbnailDataUrls]="thumbnailDataUrls"
-              (characterClick)="onViewCharacterClick($event)"
-              (characterDelete)="onViewCharacterDelete($event)"
+                          (dragStarted)="onAnyCharacterDragStarted()"
+                          (dragEnded)="onAnyCharacterDragEnded()"
+                        ></app-character-compact-view>
+                      }
+                      <!-- Gallery View -->
+                      @if (viewMode === 'gallery') {
+                        <app-character-gallery-view
+                          [characters]="group.characters"
+                          [tags]="tags"
+                          [dndEnabled]="isCategoryDragDropEnabled()"
+                          [thumbnailDataUrls]="thumbnailDataUrls"
+                          [characterImagesDataUrls]="characterImagesDataUrls"
+                          [slideshowEnabled]="slideshowEnabled"
+                          [thumbnailSize]="galleryThumbnailSize"
+                          (characterClick)="onViewCharacterClick($event)"
+                          (dragStarted)="onAnyCharacterDragStarted()"
+                          (dragEnded)="onAnyCharacterDragEnded()"
+                        ></app-character-gallery-view>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+            <!-- Grouped View by Tag -->
+            @if (filteredCharacters.length > 0 && groupBy === 'tag') {
+              <div
+                class="grouped-view"
+                >
+                @for (group of getGroupedByTag(); track group) {
+                  <div class="category-group">
+                    <div
+                      class="category-tab"
+                      [style.background-color]="metadataHelper.getTagColor(group.tagId)"
+                      [style.color]="getContrastTextColor(metadataHelper.getTagColor(group.tagId))"
+                      >
+                      <div class="category-label-content">
+                        <span class="category-name">{{ metadataHelper.getTagName(group.tagId) }}</span>
+                      </div>
+                    </div>
+                    <div class="category-content">
+                      <!-- Grid View (Cards) -->
+                      @if (viewMode === 'grid') {
+                        <app-character-grid-view
+                          [characters]="group.characters"
+                          [categories]="categories"
+                          [tags]="tags"
+                          [selectedCharacterIndex]="selectedCharacterIndex"
+                          [thumbnailDataUrls]="thumbnailDataUrls"
+                          [characterImagesDataUrls]="characterImagesDataUrls"
+                          [slideshowEnabled]="slideshowEnabled"
+                          (characterClick)="onViewCharacterClick($event)"
+                          (characterDelete)="onViewCharacterDelete($event)"
+                        ></app-character-grid-view>
+                      }
+                      <!-- List View -->
+                      @if (viewMode === 'list') {
+                        <app-character-list-view
+                          [characters]="group.characters"
+                          [categories]="categories"
+                          [tags]="tags"
+                          [columns]="columns"
+                          [selectedCharacterIndex]="selectedCharacterIndex"
+                          [thumbnailDataUrls]="thumbnailDataUrls"
+                          (characterClick)="onViewCharacterClick($event)"
+                          (characterDelete)="onViewCharacterDelete($event)"
               (characterSelectionToggle)="
                 onViewCharacterSelectionToggle($event)
               "
-            ></app-character-list-view>
-
-            <!-- Compact View -->
-            <app-character-compact-view
-              *ngIf="viewMode === 'compact'"
-              [characters]="group.characters"
-              [categories]="categories"
-              [tags]="tags"
-              [columns]="columns"
-              [selectedCharacterIndex]="selectedCharacterIndex"
-              [thumbnailDataUrls]="thumbnailDataUrls"
-              (characterClick)="onViewCharacterClick($event)"
-              (characterDelete)="onViewCharacterDelete($event)"
+                        ></app-character-list-view>
+                      }
+                      <!-- Compact View -->
+                      @if (viewMode === 'compact') {
+                        <app-character-compact-view
+                          [characters]="group.characters"
+                          [categories]="categories"
+                          [tags]="tags"
+                          [columns]="columns"
+                          [selectedCharacterIndex]="selectedCharacterIndex"
+                          [thumbnailDataUrls]="thumbnailDataUrls"
+                          (characterClick)="onViewCharacterClick($event)"
+                          (characterDelete)="onViewCharacterDelete($event)"
               (characterSelectionToggle)="
                 onViewCharacterSelectionToggle($event)
               "
-            ></app-character-compact-view>
-
-            <!-- Gallery View -->
-            <app-character-gallery-view
-              *ngIf="viewMode === 'gallery'"
-              [characters]="group.characters"
-              [tags]="tags"
-              [thumbnailDataUrls]="thumbnailDataUrls"
-              [characterImagesDataUrls]="characterImagesDataUrls"
-              [slideshowEnabled]="slideshowEnabled"
-              [thumbnailSize]="galleryThumbnailSize"
-              (characterClick)="onViewCharacterClick($event)"
-            ></app-character-gallery-view>
+                        ></app-character-compact-view>
+                      }
+                      <!-- Gallery View -->
+                      @if (viewMode === 'gallery') {
+                        <app-character-gallery-view
+                          [characters]="group.characters"
+                          [tags]="tags"
+                          [thumbnailDataUrls]="thumbnailDataUrls"
+                          [characterImagesDataUrls]="characterImagesDataUrls"
+                          [slideshowEnabled]="slideshowEnabled"
+                          [thumbnailSize]="galleryThumbnailSize"
+                          (characterClick)="onViewCharacterClick($event)"
+                        ></app-character-gallery-view>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+            <!-- Non-Grouped View (Original) -->
+            @if (groupBy === 'none') {
+              <div>
+                <!-- Grid View (Cards) -->
+                @if (filteredCharacters.length > 0 && viewMode === 'grid') {
+                  <app-character-grid-view
+                    [characters]="filteredCharacters"
+                    [categories]="categories"
+                    [tags]="tags"
+                    [selectedCharacterIndex]="selectedCharacterIndex"
+                    [thumbnailDataUrls]="thumbnailDataUrls"
+                    [characterImagesDataUrls]="characterImagesDataUrls"
+                    [slideshowEnabled]="slideshowEnabled"
+                    (characterClick)="onViewCharacterClick($event)"
+                    (characterDelete)="onViewCharacterDelete($event)"
+                  ></app-character-grid-view>
+                }
+                <!-- List View -->
+                @if (filteredCharacters.length > 0 && viewMode === 'list') {
+                  <app-character-list-view
+                    [characters]="filteredCharacters"
+                    [categories]="categories"
+                    [tags]="tags"
+                    [columns]="columns"
+                    [selectedCharacterIndex]="selectedCharacterIndex"
+                    [thumbnailDataUrls]="thumbnailDataUrls"
+                    (characterClick)="onViewCharacterClick($event)"
+                    (characterDelete)="onViewCharacterDelete($event)"
+                    (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
+                  ></app-character-list-view>
+                }
+                <!-- Compact View -->
+                @if (filteredCharacters.length > 0 && viewMode === 'compact') {
+                  <app-character-compact-view
+                    [characters]="filteredCharacters"
+                    [categories]="categories"
+                    [tags]="tags"
+                    [columns]="columns"
+                    [selectedCharacterIndex]="selectedCharacterIndex"
+                    [thumbnailDataUrls]="thumbnailDataUrls"
+                    (characterClick)="onViewCharacterClick($event)"
+                    (characterDelete)="onViewCharacterDelete($event)"
+                    (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
+                  ></app-character-compact-view>
+                }
+                <!-- Gallery View -->
+                @if (filteredCharacters.length > 0 && viewMode === 'gallery') {
+                  <app-character-gallery-view
+                    [characters]="filteredCharacters"
+                    [tags]="tags"
+                    [thumbnailDataUrls]="thumbnailDataUrls"
+                    [characterImagesDataUrls]="characterImagesDataUrls"
+                    [slideshowEnabled]="slideshowEnabled"
+                    [thumbnailSize]="galleryThumbnailSize"
+                    (characterClick)="onViewCharacterClick($event)"
+                  ></app-character-gallery-view>
+                }
+              </div>
+            }
+            @if (filteredCharacters.length === 0 && !isLoading) {
+              <div class="empty-state">
+                <div class="empty-icon">
+                  <i class="icon-users"></i>
+                </div>
+                @if (
+                  searchTerm ||
+                  selectedCategory ||
+                  selectedTags.length > 0 ||
+                  selectedCast ||
+                  selectedBook
+                  ) {
+                  <h3
+                    >
+                    No characters match your filters
+                  </h3>
+                }
+                @if (
+                  !searchTerm &&
+                  !selectedCategory &&
+                  selectedTags.length === 0 &&
+                  !selectedCast &&
+                  !selectedBook
+                  ) {
+                  <h3
+                    >
+                    No characters yet
+                  </h3>
+                }
+                @if (
+                  searchTerm ||
+                  selectedCategory ||
+                  selectedTags.length > 0 ||
+                  selectedCast ||
+                  selectedBook
+                  ) {
+                  <p
+                    >
+                    Try adjusting your search criteria or clearing the filters to see more
+                    characters.
+                  </p>
+                }
+                @if (
+                  !searchTerm &&
+                  !selectedCategory &&
+                  selectedTags.length === 0 &&
+                  !selectedCast &&
+                  !selectedBook
+                  ) {
+                  <p
+                    >
+                    Create your first character to get started with your project!
+                  </p>
+                }
+                <div class="empty-state-actions">
+                  @if (
+                    searchTerm ||
+                    selectedCategory ||
+                    selectedTags.length > 0 ||
+                    selectedCast ||
+                    selectedBook
+                    ) {
+                    <button
+                      class="btn btn-secondary"
+                      (click)="clearFilters()"
+                      >
+                      Clear Filters
+                    </button>
+                  }
+                  @if (
+                    !searchTerm &&
+                    !selectedCategory &&
+                    selectedTags.length === 0 &&
+                    !selectedCast &&
+                    !selectedBook
+                    ) {
+                    <button
+                      class="btn btn-primary"
+                      (click)="createNewCharacter()"
+                      >
+                      Create Your First Character
+                    </button>
+                  }
+                </div>
+              </div>
+            }
           </div>
-        </div>
-      </div>
-
-      <!-- Non-Grouped View (Original) -->
-      <div *ngIf="groupBy === 'none'">
-        <!-- Grid View (Cards) -->
-        <app-character-grid-view
-          *ngIf="filteredCharacters.length > 0 && viewMode === 'grid'"
-          [characters]="filteredCharacters"
-          [categories]="categories"
-          [tags]="tags"
-          [selectedCharacterIndex]="selectedCharacterIndex"
-          [thumbnailDataUrls]="thumbnailDataUrls"
-          [characterImagesDataUrls]="characterImagesDataUrls"
-          [slideshowEnabled]="slideshowEnabled"
-          (characterClick)="onViewCharacterClick($event)"
-          (characterDelete)="onViewCharacterDelete($event)"
-        ></app-character-grid-view>
-
-        <!-- List View -->
-        <app-character-list-view
-          *ngIf="filteredCharacters.length > 0 && viewMode === 'list'"
-          [characters]="filteredCharacters"
-          [categories]="categories"
-          [tags]="tags"
-          [columns]="columns"
-          [selectedCharacterIndex]="selectedCharacterIndex"
-          [thumbnailDataUrls]="thumbnailDataUrls"
-          (characterClick)="onViewCharacterClick($event)"
-          (characterDelete)="onViewCharacterDelete($event)"
-          (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
-        ></app-character-list-view>
-
-        <!-- Compact View -->
-        <app-character-compact-view
-          *ngIf="filteredCharacters.length > 0 && viewMode === 'compact'"
-          [characters]="filteredCharacters"
-          [categories]="categories"
-          [tags]="tags"
-          [columns]="columns"
-          [selectedCharacterIndex]="selectedCharacterIndex"
-          [thumbnailDataUrls]="thumbnailDataUrls"
-          (characterClick)="onViewCharacterClick($event)"
-          (characterDelete)="onViewCharacterDelete($event)"
-          (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
-        ></app-character-compact-view>
-
-        <!-- Gallery View -->
-        <app-character-gallery-view
-          *ngIf="filteredCharacters.length > 0 && viewMode === 'gallery'"
-          [characters]="filteredCharacters"
-          [tags]="tags"
-          [thumbnailDataUrls]="thumbnailDataUrls"
-          [characterImagesDataUrls]="characterImagesDataUrls"
-          [slideshowEnabled]="slideshowEnabled"
-          [thumbnailSize]="galleryThumbnailSize"
-          (characterClick)="onViewCharacterClick($event)"
-        ></app-character-gallery-view>
-      </div>
-
-      <div class="empty-state" *ngIf="filteredCharacters.length === 0 && !isLoading">
-        <div class="empty-icon">
-          <i class="icon-users"></i>
-        </div>
-        <h3
-          *ngIf="
-            searchTerm ||
-            selectedCategory ||
-            selectedTags.length > 0 ||
-            selectedCast ||
-            selectedBook
-          "
-        >
-          No characters match your filters
-        </h3>
-        <h3
-          *ngIf="
-            !searchTerm &&
-            !selectedCategory &&
-            selectedTags.length === 0 &&
-            !selectedCast &&
-            !selectedBook
-          "
-        >
-          No characters yet
-        </h3>
-        <p
-          *ngIf="
-            searchTerm ||
-            selectedCategory ||
-            selectedTags.length > 0 ||
-            selectedCast ||
-            selectedBook
-          "
-        >
-          Try adjusting your search criteria or clearing the filters to see more
-          characters.
-        </p>
-        <p
-          *ngIf="
-            !searchTerm &&
-            !selectedCategory &&
-            selectedTags.length === 0 &&
-            !selectedCast &&
-            !selectedBook
-          "
-        >
-          Create your first character to get started with your project!
-        </p>
-        <div class="empty-state-actions">
-          <button
-            *ngIf="
-              searchTerm ||
-              selectedCategory ||
-              selectedTags.length > 0 ||
-              selectedCast ||
-              selectedBook
-            "
-            class="btn btn-secondary"
-            (click)="clearFilters()"
-          >
-            Clear Filters
-          </button>
-          <button
-            *ngIf="
-              !searchTerm &&
-              !selectedCategory &&
-              selectedTags.length === 0 &&
-              !selectedCast &&
-              !selectedBook
-            "
-            class="btn btn-primary"
-            (click)="createNewCharacter()"
-          >
-            Create Your First Character
-          </button>
-        </div>
+        }
       </div>
     </div>
-  </div>
-</div>

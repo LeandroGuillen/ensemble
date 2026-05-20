@@ -1,6 +1,6 @@
 import { Component, OnInit, HostListener } from '@angular/core';
 import { Router } from '@angular/router';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { ProjectService, ElectronService, LoggingService } from '../../core/services';
 
@@ -13,7 +13,7 @@ interface RecentProject {
 
 @Component({
     selector: 'app-project-selector',
-    imports: [CommonModule, FormsModule],
+    imports: [FormsModule],
     templateUrl: './project-selector.component.html',
     styleUrls: ['./project-selector.component.scss']
 })

@@ -1,47 +1,49 @@
 <div class="character-gallery-view" [class.size-medium]="thumbnailSize === 'medium'" [class.size-small]="thumbnailSize === 'small'">
-  <div
-    *ngFor="let character of characters; let i = index"
-    class="gallery-item"
-    cdkDrag
-    [cdkDragData]="character"
-    [cdkDragDisabled]="!dndEnabled"
-    [cdkDragPreviewClass]="'character-drag-preview'"
-    (cdkDragStarted)="onDragStarted()"
-    (cdkDragEnded)="onDragEnded()"
-    [class.dnd-enabled]="dndEnabled"
-    (click)="onCharacterClick(character)"
-    role="button"
-    tabindex="0"
-    (keydown.enter)="onCharacterClick(character)"
-    (keydown.space)="onCharacterClick(character); $event.preventDefault()"
-  >
-    <div class="drag-preview-chip" *cdkDragPreview>
-      {{ character.name }}
-    </div>
-    <div class="drag-placeholder" *cdkDragPlaceholder></div>
-
-    <div class="gallery-thumbnail">
-      <img
-        *ngIf="getCurrentImageUrl(character)"
-        [src]="getCurrentImageUrl(character)"
-        [alt]="character.name"
-        draggable="false"
-        (error)="onImageError($event)"
-        class="slideshow-image"
-        [class.fade-in]="shouldFadeIn(character)"
-        [attr.data-image-key]="getImageKey(character)"
-      />
-      <div
-        *ngIf="!getCurrentImageUrl(character)"
-        class="thumbnail-placeholder-gallery"
-        [style.background-color]="getPlaceholderColor(character)"
+  @for (character of characters; track character; let i = $index) {
+    <div
+      class="gallery-item"
+      cdkDrag
+      [cdkDragData]="character"
+      [cdkDragDisabled]="!dndEnabled"
+      [cdkDragPreviewClass]="'character-drag-preview'"
+      (cdkDragStarted)="onDragStarted()"
+      (cdkDragEnded)="onDragEnded()"
+      [class.dnd-enabled]="dndEnabled"
+      (click)="onCharacterClick(character)"
+      role="button"
+      tabindex="0"
+      (keydown.enter)="onCharacterClick(character)"
+      (keydown.space)="onCharacterClick(character); $event.preventDefault()"
       >
-        <svg viewBox="0 0 24 24" fill="currentColor" class="placeholder-icon">
-          <circle cx="12" cy="8" r="4.5"/>
-          <path d="M12 14c-5 0-9 2.5-9 5.5V22h18v-2.5c0-3-4-5.5-9-5.5z"/>
-        </svg>
+      <div class="drag-preview-chip" *cdkDragPreview>
+        {{ character.name }}
       </div>
+      <div class="drag-placeholder" *cdkDragPlaceholder></div>
+      <div class="gallery-thumbnail">
+        @if (getCurrentImageUrl(character)) {
+          <img
+            [src]="getCurrentImageUrl(character)"
+            [alt]="character.name"
+            draggable="false"
+            (error)="onImageError($event)"
+            class="slideshow-image"
+            [class.fade-in]="shouldFadeIn(character)"
+            [attr.data-image-key]="getImageKey(character)"
+            />
+        }
+        @if (!getCurrentImageUrl(character)) {
+          <div
+            class="thumbnail-placeholder-gallery"
+            [style.background-color]="getPlaceholderColor(character)"
+            >
+            <svg viewBox="0 0 24 24" fill="currentColor" class="placeholder-icon">
+              <circle cx="12" cy="8" r="4.5"/>
+              <path d="M12 14c-5 0-9 2.5-9 5.5V22h18v-2.5c0-3-4-5.5-9-5.5z"/>
+            </svg>
+          </div>
+        }
+      </div>
+      <div class="gallery-name">{{ character.name }}</div>
     </div>
-    <div class="gallery-name">{{ character.name }}</div>
-  </div>
+  }
 </div>

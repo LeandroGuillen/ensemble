@@ -1,48 +1,60 @@
-<div class="command-palette-backdrop" *ngIf="isOpen" (click)="onBackdropClick()">
-  <div class="command-palette" (click)="onPaletteClick($event)">
-    <div class="command-search">
-      <input
-        #searchInput
-        type="text"
-        class="command-search-input"
-        [placeholder]="placeholder"
-        [(ngModel)]="searchQuery"
-        (input)="onSearchChange()"
-        autocomplete="off">
-      <span class="command-search-hint">ESC to close</span>
-    </div>
-
-    <div class="command-list" *ngIf="filteredCommands.length > 0">
-      <div
-        *ngFor="let command of filteredCommands; let i = index"
-        class="command-item"
-        [class.selected]="i === selectedIndex"
-        (mouseenter)="selectCommand(i)"
-        (click)="executeCommand(command)">
-        <div class="command-thumbnail" *ngIf="command.thumbnail">
-          <img [src]="command.thumbnail" [alt]="command.label">
-        </div>
-        <div class="command-thumbnail-placeholder" *ngIf="!command.thumbnail && !command.icon && command.metadata">
-          {{ command.label.charAt(0) }}
-        </div>
-        <span class="command-icon" *ngIf="command.icon && !command.thumbnail">{{ command.icon }}</span>
-        <div class="command-content">
-          <span class="command-label">{{ command.label }}</span>
-          <span class="command-metadata" *ngIf="command.metadata">{{ command.metadata }}</span>
-        </div>
+@if (isOpen) {
+  <div class="command-palette-backdrop" (click)="onBackdropClick()">
+    <div class="command-palette" (click)="onPaletteClick($event)">
+      <div class="command-search">
+        <input
+          #searchInput
+          type="text"
+          class="command-search-input"
+          [placeholder]="placeholder"
+          [(ngModel)]="searchQuery"
+          (input)="onSearchChange()"
+          autocomplete="off">
+        <span class="command-search-hint">ESC to close</span>
       </div>
-    </div>
-
-    <div class="command-empty" *ngIf="filteredCommands.length === 0 && searchQuery">
-      <p>No commands found</p>
-    </div>
-
-    <div class="command-footer">
-      <div class="command-shortcuts">
-        <span class="shortcut-item"><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
-        <span class="shortcut-item"><kbd>Enter</kbd> {{ enterLabel }}</span>
-        <span class="shortcut-item"><kbd>ESC</kbd> Close</span>
+      @if (filteredCommands.length > 0) {
+        <div class="command-list">
+          @for (command of filteredCommands; track command; let i = $index) {
+            <div
+              class="command-item"
+              [class.selected]="i === selectedIndex"
+              (mouseenter)="selectCommand(i)"
+              (click)="executeCommand(command)">
+              @if (command.thumbnail) {
+                <div class="command-thumbnail">
+                  <img [src]="command.thumbnail" [alt]="command.label">
+                </div>
+              }
+              @if (!command.thumbnail && !command.icon && command.metadata) {
+                <div class="command-thumbnail-placeholder">
+                  {{ command.label.charAt(0) }}
+                </div>
+              }
+              @if (command.icon && !command.thumbnail) {
+                <span class="command-icon">{{ command.icon }}</span>
+              }
+              <div class="command-content">
+                <span class="command-label">{{ command.label }}</span>
+                @if (command.metadata) {
+                  <span class="command-metadata">{{ command.metadata }}</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+      @if (filteredCommands.length === 0 && searchQuery) {
+        <div class="command-empty">
+          <p>No commands found</p>
+        </div>
+      }
+      <div class="command-footer">
+        <div class="command-shortcuts">
+          <span class="shortcut-item"><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
+          <span class="shortcut-item"><kbd>Enter</kbd> {{ enterLabel }}</span>
+          <span class="shortcut-item"><kbd>ESC</kbd> Close</span>
+        </div>
       </div>
     </div>
   </div>
-</div>
+}

@@ -1,11 +1,11 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { UpdateService, UpdateStatus } from '../../core/services/update.service';
 import { Subject, takeUntil } from 'rxjs';
 
 @Component({
     selector: 'app-update-notification',
-    imports: [CommonModule],
+    imports: [],
     templateUrl: './update-notification.component.html',
     styleUrls: ['./update-notification.component.scss']
 })

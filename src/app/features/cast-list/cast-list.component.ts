@@ -6,7 +6,7 @@ import {
   ChangeDetectorRef,
 } from "@angular/core";
 import { Router } from "@angular/router";
-import { CommonModule } from "@angular/common";
+
 import { FormsModule } from "@angular/forms";
 import { Subject, takeUntil } from "rxjs";
 import { Cast, Category } from "../../core/interfaces/project.interface";
@@ -23,7 +23,7 @@ import { PageHeaderComponent } from "../../shared/page-header/page-header.compon
 
 @Component({
     selector: "app-cast-list",
-    imports: [CommonModule, FormsModule, PageHeaderComponent],
+    imports: [FormsModule, PageHeaderComponent],
     templateUrl: "./cast-list.component.html",
     styleUrls: ["./cast-list.component.scss"]
 })

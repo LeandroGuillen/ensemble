@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { ChangeDetectorRef, Component, ElementRef, HostListener, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -24,16 +24,15 @@ import {
 @Component({
     selector: 'app-character-list',
     imports: [
-        CommonModule,
-        DragDropModule,
-        FormsModule,
-        PageHeaderComponent,
-        CharacterFilterComponent,
-        CharacterGridViewComponent,
-        CharacterListViewComponent,
-        CharacterCompactViewComponent,
-        CharacterGalleryViewComponent,
-    ],
+    DragDropModule,
+    FormsModule,
+    PageHeaderComponent,
+    CharacterFilterComponent,
+    CharacterGridViewComponent,
+    CharacterListViewComponent,
+    CharacterCompactViewComponent,
+    CharacterGalleryViewComponent
+],
     templateUrl: './character-list.component.html',
     styleUrls: ['./character-list.component.scss']
 })

@@ -7,38 +7,46 @@
       class="brand-icon"
       width="32"
       height="32"
-    />
-    <span class="brand-text" *ngIf="!isCollapsed">Ensemble</span>
+      />
+    @if (!isCollapsed) {
+      <span class="brand-text">Ensemble</span>
+    }
   </div>
 
   <!-- Navigation Sections -->
   <nav class="sidebar-nav">
-    <ng-container *ngFor="let section of sections; let isLast = last">
+    @for (section of sections; track section; let isLast = $last) {
       <div class="nav-section">
         <!-- Section Header -->
         <div class="section-header" [class.collapsed]="isCollapsed">
-          <span class="section-label" *ngIf="!isCollapsed">{{ section.label }}</span>
-          <span class="section-divider" *ngIf="isCollapsed"></span>
+          @if (!isCollapsed) {
+            <span class="section-label">{{ section.label }}</span>
+          }
+          @if (isCollapsed) {
+            <span class="section-divider"></span>
+          }
         </div>
-
         <!-- Section Items -->
         <div class="section-items">
-          <button
-            *ngFor="let item of section.items"
-            class="nav-item"
-            [class.active]="item.route && isActive(item.route)"
-            (click)="handleItemClick(item)"
-            [title]="isCollapsed ? item.title : ''"
-            [attr.aria-label]="item.label"
-          >
-            <svg class="nav-icon" [attr.data-icon]="item.icon">
-              <use [attr.href]="'#icon-' + item.icon"></use>
-            </svg>
-            <span class="nav-label" *ngIf="!isCollapsed">{{ item.label }}</span>
-          </button>
+          @for (item of section.items; track item) {
+            <button
+              class="nav-item"
+              [class.active]="item.route && isActive(item.route)"
+              (click)="handleItemClick(item)"
+              [title]="isCollapsed ? item.title : ''"
+              [attr.aria-label]="item.label"
+              >
+              <svg class="nav-icon" [attr.data-icon]="item.icon">
+                <use [attr.href]="'#icon-' + item.icon"></use>
+              </svg>
+              @if (!isCollapsed) {
+                <span class="nav-label">{{ item.label }}</span>
+              }
+            </button>
+          }
         </div>
       </div>
-    </ng-container>
+    }
   </nav>
 
   <!-- Collapse Toggle -->

@@ -1,10 +1,10 @@
 import { Component, EventEmitter, Input, Output, OnChanges, SimpleChanges } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 
 @Component({
     selector: 'app-pinboard-rename-dialog',
-    imports: [CommonModule, FormsModule],
+    imports: [FormsModule],
     templateUrl: './pinboard-rename-dialog.component.html',
     styleUrls: ['./pinboard-rename-dialog.component.scss']
 })

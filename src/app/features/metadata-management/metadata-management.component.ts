@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Subject, takeUntil } from 'rxjs';
 import { MetadataService } from '../../core/services/metadata.service';
@@ -36,7 +36,7 @@ interface TagFormData {
 
 @Component({
     selector: 'app-metadata-management',
-    imports: [CommonModule, FormsModule, ReactiveFormsModule, PageHeaderComponent],
+    imports: [FormsModule, ReactiveFormsModule, PageHeaderComponent],
     templateUrl: './metadata-management.component.html',
     styleUrls: ['./metadata-management.component.scss']
 })

@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy, HostListener, SecurityContext } from "@angular/core";
-import { CommonModule } from "@angular/common";
+
 import { FormsModule } from "@angular/forms";
 import { Router } from "@angular/router";
 import { DomSanitizer, SafeHtml } from "@angular/platform-browser";
@@ -18,10 +18,9 @@ import { PageHeaderComponent } from "../../shared/page-header/page-header.compon
 @Component({
     selector: "app-backstage",
     imports: [
-        CommonModule,
-        FormsModule,
-        PageHeaderComponent,
-    ],
+    FormsModule,
+    PageHeaderComponent
+],
     templateUrl: "./backstage.component.html",
     styleUrls: ["./backstage.component.scss"]
 })

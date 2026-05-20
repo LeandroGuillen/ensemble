@@ -1,10 +1,10 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 
 @Component({
     selector: 'app-color-selector',
-    imports: [CommonModule, FormsModule],
+    imports: [FormsModule],
     templateUrl: './color-selector.component.html',
     styleUrls: ['./color-selector.component.scss']
 })

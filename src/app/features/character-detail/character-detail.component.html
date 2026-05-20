@@ -3,282 +3,335 @@
     <div class="detail-inner">
       <div class="detail-header">
         <h2>{{ isEditing ? 'Edit Character' : 'Create New Character' }}</h2>
-        <button
-          *ngIf="isEditing && character"
-          type="button"
-          class="character-file-path"
-          (click)="openCharacterFolder()"
-          [title]="'Open folder in file explorer'"
-        >
-          characters/{{ character.id }}
-        </button>
+        @if (isEditing && character) {
+          <button
+            type="button"
+            class="character-file-path"
+            (click)="openCharacterFolder()"
+            [title]="'Open folder in file explorer'"
+            >
+            characters/{{ character.id }}
+          </button>
+        }
       </div>
 
       <!-- Loading State -->
-      <div class="loading-state" *ngIf="isLoading">
-        <div class="spinner spinner-lg"></div>
-        <p>Loading character...</p>
-      </div>
+      @if (isLoading) {
+        <div class="loading-state">
+          <div class="spinner spinner-lg"></div>
+          <p>Loading character...</p>
+        </div>
+      }
 
       <!-- No Project State -->
-      <div class="no-project-state" *ngIf="!currentProject && !isLoading">
-        <p>Please select or create a project to manage characters.</p>
-      </div>
+      @if (!currentProject && !isLoading) {
+        <div class="no-project-state">
+          <p>Please select or create a project to manage characters.</p>
+        </div>
+      }
 
       <!-- Main Form -->
-      <div class="character-form card" *ngIf="currentProject && !isLoading">
-        <form [formGroup]="characterForm" (ngSubmit)="onSubmit()">
-          <!-- Form Actions at Top -->
-          <div class="form-actions-top">
-            <!-- Form Status in Button Row -->
-            <div class="form-status-inline" *ngIf="!error && ((activeContentTab === 'main' && characterForm.dirty) || (activeContentTab !== 'main' && activeContentTab && isBookPageDirty(activeContentTab)))">
-              <i class="icon-info"></i>
-              You have unsaved changes
-            </div>
-
-            <div class="action-buttons">
-              <button
-                type="button"
-                class="btn btn-secondary"
-                (click)="onCancel()"
-                [disabled]="isSaving || savingBookPageId"
-                title="Cancel (ESC)"
-              >
-                <i class="icon-x"></i>
-                Cancel
-                <kbd class="shortcut-hint">ESC</kbd>
-              </button>
-              <ng-container *ngIf="activeContentTab === 'main'">
-                <button
-                  type="submit"
-                  class="btn btn-primary"
-                  [disabled]="isSaving"
-                  title="Save (Ctrl+Enter)"
-                >
-                  <i class="icon-save" *ngIf="!isSaving"></i>
-                  <span *ngIf="isSaving" class="spinner spinner-sm"></span>
-                  {{ isSaving ? 'Saving...' : isEditing ? 'Update Character' : 'Create Character' }}
-                  <kbd class="shortcut-hint" *ngIf="!isSaving">Ctrl+Enter</kbd>
-                </button>
-              </ng-container>
-              <ng-container *ngIf="activeContentTab !== 'main'">
+      @if (currentProject && !isLoading) {
+        <div class="character-form card">
+          <form [formGroup]="characterForm" (ngSubmit)="onSubmit()">
+            <!-- Form Actions at Top -->
+            <div class="form-actions-top">
+              <!-- Form Status in Button Row -->
+              @if (!error && ((activeContentTab === 'main' && characterForm.dirty) || (activeContentTab !== 'main' && activeContentTab && isBookPageDirty(activeContentTab)))) {
+                <div class="form-status-inline">
+                  <i class="icon-info"></i>
+                  You have unsaved changes
+                </div>
+              }
+              <div class="action-buttons">
                 <button
                   type="button"
-                  class="btn btn-primary"
-                  [disabled]="savingBookPageId || !bookPageData[activeContentTab].exists"
-                  (click)="onSaveBookPage(activeContentTab)"
-                  title="Update Character (Ctrl+Enter)"
-                >
-                  <i class="icon-save" *ngIf="!savingBookPageId"></i>
-                  <span *ngIf="savingBookPageId" class="spinner spinner-sm"></span>
-                  {{ savingBookPageId ? 'Saving...' : 'Update Character' }}
-                  <kbd class="shortcut-hint" *ngIf="!savingBookPageId">Ctrl+Enter</kbd>
+                  class="btn btn-secondary"
+                  (click)="onCancel()"
+                  [disabled]="isSaving || savingBookPageId"
+                  title="Cancel (ESC)"
+                  >
+                  <i class="icon-x"></i>
+                  Cancel
+                  <kbd class="shortcut-hint">ESC</kbd>
                 </button>
-              </ng-container>
-            </div>
-          </div>
-
-          <!-- Error Message at Top -->
-          <div class="error-message" *ngIf="error">
-            <i class="icon-alert-circle"></i>
-            {{ error }}
-          </div>
-
-          <!-- Content tabs (Main + book pages) when editing a character with books -->
-          <nav class="content-tabs" *ngIf="isEditing && contentTabs.length > 1" aria-label="Content sections">
-            <button
-              type="button"
-              *ngFor="let tab of contentTabs"
-              class="content-tab"
-              [class.active]="activeContentTab === tab.id"
-              (click)="setActiveContentTab(tab.id)"
-            >
-              {{ tab.label }}
-            </button>
-          </nav>
-
-          <!-- Main tab: full character form -->
-          <div class="tab-content main-tab-content" *ngIf="activeContentTab === 'main'">
-          <!-- Basic Info -->
-          <div class="tab-content" *ngIf="activeTab === 'basic'">
-          <div class="form-section">
-            <div class="basic-info-row">
-              <!-- Name -->
-              <div class="form-group form-group-flex">
-                <label class="form-label" for="name"> Name * </label>
-                <div class="name-input-group">
-                  <input
-                    #nameInput
-                    type="text"
-                    id="name"
-                    class="form-control"
-                    formControlName="name"
-                    placeholder="Enter character name"
-                    [class.error]="fieldErrors['name']"
-                    (focus)="onTextInputFocus($event)"
-                    (blur)="onTextInputBlur('name')"
-                    aria-describedby="name-error"
-                    [attr.aria-invalid]="fieldErrors['name'] ? 'true' : 'false'"
-                  />
+                @if (activeContentTab === 'main') {
+                  <button
+                    type="submit"
+                    class="btn btn-primary"
+                    [disabled]="isSaving"
+                    title="Save (Ctrl+Enter)"
+                    >
+                    @if (!isSaving) {
+                      <i class="icon-save"></i>
+                    }
+                    @if (isSaving) {
+                      <span class="spinner spinner-sm"></span>
+                    }
+                    {{ isSaving ? 'Saving...' : isEditing ? 'Update Character' : 'Create Character' }}
+                    @if (!isSaving) {
+                      <kbd class="shortcut-hint">Ctrl+Enter</kbd>
+                    }
+                  </button>
+                }
+                @if (activeContentTab !== 'main') {
                   <button
                     type="button"
-                    class="generate-name-btn"
-                    (click)="generateName()"
-                    [disabled]="!aiEnabled || isGeneratingName"
-                    [title]="aiEnabled ? 'Generate name with AI' : 'Enable AI in settings to generate names'"
-                    [attr.aria-label]="aiEnabled ? 'Generate name with AI' : 'Enable AI in settings to generate names'"
-                  >
-                    <span *ngIf="!isGeneratingName">🎲</span>
-                    <span *ngIf="isGeneratingName" class="spinner spinner-sm"></span>
+                    class="btn btn-primary"
+                    [disabled]="savingBookPageId || !bookPageData[activeContentTab].exists"
+                    (click)="onSaveBookPage(activeContentTab)"
+                    title="Update Character (Ctrl+Enter)"
+                    >
+                    @if (!savingBookPageId) {
+                      <i class="icon-save"></i>
+                    }
+                    @if (savingBookPageId) {
+                      <span class="spinner spinner-sm"></span>
+                    }
+                    {{ savingBookPageId ? 'Saving...' : 'Update Character' }}
+                    @if (!savingBookPageId) {
+                      <kbd class="shortcut-hint">Ctrl+Enter</kbd>
+                    }
                   </button>
-                </div>
-                <div class="error-text" *ngIf="fieldErrors['name']" id="name-error" role="alert" aria-live="polite">
-                  {{ fieldErrors['name'] }}
-                </div>
+                }
               </div>
             </div>
-          </div>
-
-          <!-- Delete Character Link -->
-          <div class="delete-section" *ngIf="isEditing">
-            <button
-              type="button"
-              class="delete-link"
-              (click)="deleteCharacter()"
-              [disabled]="isSaving"
-              title="Delete character"
-            >
-              Delete character
-            </button>
-          </div>
-
-          <div class="form-section" *ngIf="categories.length > 0">
-            <!-- Category -->
-            <div class="form-group form-group-category" [class.field-highlight]="characterForm.get('category')?.invalid && characterForm.get('category')?.touched">
-              <label class="form-label"> Category * </label>
-              <app-category-toggle
-                [options]="categoryToggleOptions"
-                [selectedValue]="getSelectedCategory()"
-                [emptyLabel]="'None'"
-                [error]="!!fieldErrors['category']"
-                (valueChange)="onCategorySelect($event); onFieldBlur('category')"
-              ></app-category-toggle>
-              <div class="error-text" *ngIf="fieldErrors['category']" id="category-error" role="alert" aria-live="polite">
-                {{ fieldErrors['category'] }}
+            <!-- Error Message at Top -->
+            @if (error) {
+              <div class="error-message">
+                <i class="icon-alert-circle"></i>
+                {{ error }}
               </div>
-            </div>
-          </div>
-
-          <div class="form-section" *ngIf="tags.length > 0">
-            <div class="form-group">
-              <label class="form-label">Tags</label>
-              <app-multi-select-buttons
-                [items]="getTagsAsSelectableItems()"
-                [selectedIds]="characterForm.get('tags')?.value || []"
-                (selectionChange)="onTagsSelectionChange($event)"
-              ></app-multi-select-buttons>
-            </div>
-          </div>
-
-          <div class="form-section" *ngIf="books.length > 0">
-            <div class="form-group">
-              <label class="form-label">Books</label>
-              <app-multi-select-buttons
-                [items]="getBooksAsSelectableItems()"
-                [selectedIds]="characterForm.get('books')?.value || []"
-                (selectionChange)="onBooksSelectionChange($event)"
-              ></app-multi-select-buttons>
-            </div>
-          </div>
-
-          <div class="form-section">
-            <div class="form-group">
-              <label class="form-label" for="thumbnail">
-                Thumbnail
-                <span class="field-hint">Wiki-link path, e.g. [[img/path/to/image.jpg]]</span>
-              </label>
-              <div class="thumbnail-input-row">
-                <input
-                  type="text"
-                  id="thumbnail"
-                  class="form-control"
-                  formControlName="thumbnail"
-                  placeholder="[[img/path/to/image.jpg]]"
-                  [class.error]="fieldErrors['thumbnail']"
-                  (focus)="onTextInputFocus($event)"
-                  (blur)="onTextInputBlur('thumbnail')"
-                />
-                <div class="thumbnail-preview" *ngIf="thumbnailPreviewUrl">
-                  <img [src]="thumbnailPreviewUrl" alt="Thumbnail preview" />
-                </div>
+            }
+            <!-- Content tabs (Main + book pages) when editing a character with books -->
+            @if (isEditing && contentTabs.length > 1) {
+              <nav class="content-tabs" aria-label="Content sections">
+                @for (tab of contentTabs; track tab) {
+                  <button
+                    type="button"
+                    class="content-tab"
+                    [class.active]="activeContentTab === tab.id"
+                    (click)="setActiveContentTab(tab.id)"
+                    >
+                    {{ tab.label }}
+                  </button>
+                }
+              </nav>
+            }
+            <!-- Main tab: full character form -->
+            @if (activeContentTab === 'main') {
+              <div class="tab-content main-tab-content">
+                <!-- Basic Info -->
+                @if (activeTab === 'basic') {
+                  <div class="tab-content">
+                    <div class="form-section">
+                      <div class="basic-info-row">
+                        <!-- Name -->
+                        <div class="form-group form-group-flex">
+                          <label class="form-label" for="name"> Name * </label>
+                          <div class="name-input-group">
+                            <input
+                              #nameInput
+                              type="text"
+                              id="name"
+                              class="form-control"
+                              formControlName="name"
+                              placeholder="Enter character name"
+                              [class.error]="fieldErrors['name']"
+                              (focus)="onTextInputFocus($event)"
+                              (blur)="onTextInputBlur('name')"
+                              aria-describedby="name-error"
+                              [attr.aria-invalid]="fieldErrors['name'] ? 'true' : 'false'"
+                              />
+                            <button
+                              type="button"
+                              class="generate-name-btn"
+                              (click)="generateName()"
+                              [disabled]="!aiEnabled || isGeneratingName"
+                              [title]="aiEnabled ? 'Generate name with AI' : 'Enable AI in settings to generate names'"
+                              [attr.aria-label]="aiEnabled ? 'Generate name with AI' : 'Enable AI in settings to generate names'"
+                              >
+                              @if (!isGeneratingName) {
+                                <span>🎲</span>
+                              }
+                              @if (isGeneratingName) {
+                                <span class="spinner spinner-sm"></span>
+                              }
+                            </button>
+                          </div>
+                          @if (fieldErrors['name']) {
+                            <div class="error-text" id="name-error" role="alert" aria-live="polite">
+                              {{ fieldErrors['name'] }}
+                            </div>
+                          }
+                        </div>
+                      </div>
+                    </div>
+                    <!-- Delete Character Link -->
+                    @if (isEditing) {
+                      <div class="delete-section">
+                        <button
+                          type="button"
+                          class="delete-link"
+                          (click)="deleteCharacter()"
+                          [disabled]="isSaving"
+                          title="Delete character"
+                          >
+                          Delete character
+                        </button>
+                      </div>
+                    }
+                    @if (categories.length > 0) {
+                      <div class="form-section">
+                        <!-- Category -->
+                        <div class="form-group form-group-category" [class.field-highlight]="characterForm.get('category')?.invalid && characterForm.get('category')?.touched">
+                          <label class="form-label"> Category * </label>
+                          <app-category-toggle
+                            [options]="categoryToggleOptions"
+                            [selectedValue]="getSelectedCategory()"
+                            [emptyLabel]="'None'"
+                            [error]="!!fieldErrors['category']"
+                            (valueChange)="onCategorySelect($event); onFieldBlur('category')"
+                          ></app-category-toggle>
+                          @if (fieldErrors['category']) {
+                            <div class="error-text" id="category-error" role="alert" aria-live="polite">
+                              {{ fieldErrors['category'] }}
+                            </div>
+                          }
+                        </div>
+                      </div>
+                    }
+                    @if (tags.length > 0) {
+                      <div class="form-section">
+                        <div class="form-group">
+                          <label class="form-label">Tags</label>
+                          <app-multi-select-buttons
+                            [items]="getTagsAsSelectableItems()"
+                            [selectedIds]="characterForm.get('tags')?.value || []"
+                            (selectionChange)="onTagsSelectionChange($event)"
+                          ></app-multi-select-buttons>
+                        </div>
+                      </div>
+                    }
+                    @if (books.length > 0) {
+                      <div class="form-section">
+                        <div class="form-group">
+                          <label class="form-label">Books</label>
+                          <app-multi-select-buttons
+                            [items]="getBooksAsSelectableItems()"
+                            [selectedIds]="characterForm.get('books')?.value || []"
+                            (selectionChange)="onBooksSelectionChange($event)"
+                          ></app-multi-select-buttons>
+                        </div>
+                      </div>
+                    }
+                    <div class="form-section">
+                      <div class="form-group">
+                        <label class="form-label" for="thumbnail">
+                          Thumbnail
+                          <span class="field-hint">Wiki-link path, e.g. [[img/path/to/image.jpg]]</span>
+                        </label>
+                        <div class="thumbnail-input-row">
+                          <input
+                            type="text"
+                            id="thumbnail"
+                            class="form-control"
+                            formControlName="thumbnail"
+                            placeholder="[[img/path/to/image.jpg]]"
+                            [class.error]="fieldErrors['thumbnail']"
+                            (focus)="onTextInputFocus($event)"
+                            (blur)="onTextInputBlur('thumbnail')"
+                            />
+                          @if (thumbnailPreviewUrl) {
+                            <div class="thumbnail-preview">
+                              <img [src]="thumbnailPreviewUrl" alt="Thumbnail preview" />
+                            </div>
+                          }
+                        </div>
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label" for="content">
+                          Content
+                          <span class="field-hint">Markdown body (max 100,000 characters)</span>
+                        </label>
+                        <textarea
+                          id="content"
+                          class="form-control"
+                          formControlName="content"
+                          rows="12"
+                          placeholder="Character description, notes, backstory..."
+                          [class.error]="fieldErrors['content']"
+                          (focus)="onTextInputFocus($event)"
+                          (blur)="onTextInputBlur('content')"
+                          aria-describedby="content-error"
+                          [attr.aria-invalid]="fieldErrors['content'] ? 'true' : 'false'"
+                        ></textarea>
+                        <div class="char-count">{{ characterForm.get('content')?.value?.length || 0 }}/100000</div>
+                        @if (fieldErrors['content']) {
+                          <div class="error-text" id="content-error" role="alert" aria-live="polite">
+                            {{ fieldErrors['content'] }}
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                }
               </div>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label" for="content">
-                Content
-                <span class="field-hint">Markdown body (max 100,000 characters)</span>
-              </label>
-              <textarea
-                id="content"
-                class="form-control"
-                formControlName="content"
-                rows="12"
-                placeholder="Character description, notes, backstory..."
-                [class.error]="fieldErrors['content']"
-                (focus)="onTextInputFocus($event)"
-                (blur)="onTextInputBlur('content')"
-                aria-describedby="content-error"
-                [attr.aria-invalid]="fieldErrors['content'] ? 'true' : 'false'"
-              ></textarea>
-              <div class="char-count">{{ characterForm.get('content')?.value?.length || 0 }}/100000</div>
-              <div class="error-text" *ngIf="fieldErrors['content']" id="content-error" role="alert" aria-live="polite">
-                {{ fieldErrors['content'] }}
+            }
+            <!-- Book tab: loading, create CTA, or editor -->
+            @if (activeContentTab !== 'main' && isEditing) {
+              <div class="tab-content book-tab-content">
+                @if (!bookPageData[activeContentTab]) {
+                  <div class="book-page-loading">
+                    <p>Loading...</p>
+                  </div>
+                }
+                @if (bookPageData[activeContentTab] && !bookPageData[activeContentTab].exists) {
+                  <div class="book-page-cta">
+                    <p>No page for this book yet.</p>
+                    <button
+                      type="button"
+                      class="btn btn-primary"
+                      [disabled]="savingBookPageId"
+                      (click)="onCreateBookPage(activeContentTab)"
+                      >
+                      @if (!savingBookPageId) {
+                        <span>Create page for {{ getBookName(activeContentTab) }}</span>
+                      }
+                      @if (savingBookPageId) {
+                        <span class="spinner spinner-sm"></span>
+                      }
+                      @if (savingBookPageId) {
+                        <span>Creating...</span>
+                      }
+                    </button>
+                  </div>
+                }
+                @if (bookPageData[activeContentTab]?.exists) {
+                  <div class="book-page-editor">
+                    <label class="form-label" [attr.for]="'book-content-' + activeContentTab">
+                      Content for {{ getBookName(activeContentTab) }}
+                      <span class="field-hint">Markdown (max 100,000 characters)</span>
+                    </label>
+                    <textarea
+                      [id]="'book-content-' + activeContentTab"
+                      class="form-control"
+                      rows="12"
+                      placeholder="Book-specific plot, developments, journey..."
+                      [ngModel]="getBookPageContent(activeContentTab)"
+                      (ngModelChange)="setBookPageContent(activeContentTab, $event)"
+                      [ngModelOptions]="{standalone: true}"
+                      (focus)="onTextInputFocus($event)"
+                      (blur)="onTextInputBlur('')"
+                    ></textarea>
+                    <div class="char-count">{{ (getBookPageContent(activeContentTab) || '').length }}/100000</div>
+                  </div>
+                }
               </div>
-            </div>
-          </div>
-          </div>
-          </div>
-
-          <!-- Book tab: loading, create CTA, or editor -->
-          <div class="tab-content book-tab-content" *ngIf="activeContentTab !== 'main' && isEditing">
-            <div class="book-page-loading" *ngIf="!bookPageData[activeContentTab]">
-              <p>Loading...</p>
-            </div>
-            <div class="book-page-cta" *ngIf="bookPageData[activeContentTab] && !bookPageData[activeContentTab].exists">
-              <p>No page for this book yet.</p>
-              <button
-                type="button"
-                class="btn btn-primary"
-                [disabled]="savingBookPageId"
-                (click)="onCreateBookPage(activeContentTab)"
-              >
-                <span *ngIf="!savingBookPageId">Create page for {{ getBookName(activeContentTab) }}</span>
-                <span *ngIf="savingBookPageId" class="spinner spinner-sm"></span>
-                <span *ngIf="savingBookPageId">Creating...</span>
-              </button>
-            </div>
-            <div class="book-page-editor" *ngIf="bookPageData[activeContentTab]?.exists">
-              <label class="form-label" [attr.for]="'book-content-' + activeContentTab">
-                Content for {{ getBookName(activeContentTab) }}
-                <span class="field-hint">Markdown (max 100,000 characters)</span>
-              </label>
-              <textarea
-                [id]="'book-content-' + activeContentTab"
-                class="form-control"
-                rows="12"
-                placeholder="Book-specific plot, developments, journey..."
-                [ngModel]="getBookPageContent(activeContentTab)"
-                (ngModelChange)="setBookPageContent(activeContentTab, $event)"
-                [ngModelOptions]="{standalone: true}"
-                (focus)="onTextInputFocus($event)"
-                (blur)="onTextInputBlur('')"
-              ></textarea>
-              <div class="char-count">{{ (getBookPageContent(activeContentTab) || '').length }}/100000</div>
-            </div>
-          </div>
-        </form>
-      </div>
+            }
+          </form>
+        </div>
+      }
     </div>
   </div>
 </div>

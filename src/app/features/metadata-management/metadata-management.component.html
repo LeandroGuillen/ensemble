@@ -6,790 +6,859 @@
       <p class="page-subtitle">Manage categories, tags, and project settings for your character database.</p>
 
       <!-- Loading State -->
-      <div *ngIf="loading" class="loading">
-        <div class="spinner"></div>
-        <p>Loading metadata...</p>
-      </div>
+      @if (loading) {
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>Loading metadata...</p>
+        </div>
+      }
 
       <!-- Error Display -->
-      <div *ngIf="error" class="error-banner">
-        <div class="error-content">
-          <span class="error-icon">⚠️</span>
-          <span class="error-message">{{ error }}</span>
-          <button class="error-close" (click)="error = null">×</button>
+      @if (error) {
+        <div class="error-banner">
+          <div class="error-content">
+            <span class="error-icon">⚠️</span>
+            <span class="error-message">{{ error }}</span>
+            <button class="error-close" (click)="error = null">×</button>
+          </div>
         </div>
-      </div>
+      }
 
       <!-- Main Content -->
-      <div *ngIf="!loading" class="content">
-    
-    <!-- Categories and Tags Container -->
-    <div class="categories-tags-container">
-      <!-- Categories Section -->
-      <section class="section categories-section">
-        <div class="section-header">
-          <h2>Categories</h2>
-          <button class="btn btn-primary" (click)="showAddCategoryForm()" [disabled]="saving">
-            <span class="icon">+</span>
-            Add Category
-          </button>
-        </div>
-
-      <!-- Add Category Form (only shown when adding new) -->
-      <div *ngIf="showCategoryForm && !editingCategory" class="form-card">
-        <div class="form-header">
-          <h3>Add New Category</h3>
-          <button class="btn-close" (click)="cancelCategoryForm()">×</button>
-        </div>
-        
-        <form [formGroup]="categoryForm" (ngSubmit)="saveCategory()">
-          <div class="form-group">
-            <label for="categoryName">Name</label>
-            <input 
-              id="categoryName"
-              type="text" 
-              formControlName="name" 
-              placeholder="Enter category name"
-              class="form-control"
-              [class.error]="getFieldError(categoryForm, 'name')"
-            >
-            <div *ngIf="getFieldError(categoryForm, 'name')" class="field-error">
-              {{ getFieldError(categoryForm, 'name') }}
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="categoryDescription">Description (optional)</label>
-            <textarea 
-              id="categoryDescription"
-              formControlName="description" 
-              placeholder="Enter a brief description for this category..."
-              class="form-control"
-              rows="2"
-              [class.error]="getFieldError(categoryForm, 'description')"
-            ></textarea>
-            <div *ngIf="getFieldError(categoryForm, 'description')" class="field-error">
-              {{ getFieldError(categoryForm, 'description') }}
-            </div>
-            <small class="form-help">This description will appear as a tooltip when selecting categories.</small>
-          </div>
-
-          <div class="form-group">
-            <label for="categoryColor">Color</label>
-            <div class="color-input-group">
-              <input 
-                id="categoryColor"
-                type="color" 
-                formControlName="color" 
-                class="color-input"
-              >
-              <input 
-                type="text" 
-                formControlName="color" 
-                placeholder="#3498db"
-                class="form-control color-text"
-                [class.error]="getFieldError(categoryForm, 'color')"
-              >
-            </div>
-            <div *ngIf="getFieldError(categoryForm, 'color')" class="field-error">
-              {{ getFieldError(categoryForm, 'color') }}
-            </div>
-            
-            <!-- Color Presets -->
-            <div class="color-presets">
-              <span class="preset-label">Quick colors:</span>
-              <button 
-                *ngFor="let color of colorPresets" 
-                type="button"
-                class="color-preset"
-                [style.background-color]="color"
-                (click)="selectColor(color, 'category')"
-                [title]="color"
-              ></button>
-            </div>
-          </div>
-
-          <!-- Folder Mode -->
-          <div class="form-group">
-            <label>Folder Structure</label>
-            <div class="folder-mode-options">
-              <label class="radio-label">
-                <input type="radio" formControlName="folderMode" value="auto">
-                <span class="radio-text">Auto</span>
-                <small class="radio-help">Creates a folder named after the category</small>
-              </label>
-              <label class="radio-label">
-                <input type="radio" formControlName="folderMode" value="flat">
-                <span class="radio-text">Flat</span>
-                <small class="radio-help">Characters at root level (no subfolder)</small>
-              </label>
-              <label class="radio-label">
-                <input type="radio" formControlName="folderMode" value="specify">
-                <span class="radio-text">Custom folder</span>
-                <small class="radio-help">Specify a shared folder name</small>
-              </label>
-            </div>
-            <div *ngIf="categoryForm.get('folderMode')?.value === 'specify'" class="folder-path-input">
-              <input 
-                type="text" 
-                formControlName="folderPath" 
-                placeholder="e.g., _others"
-                class="form-control"
-              >
-              <small class="form-help">Multiple categories can share the same folder.</small>
-            </div>
-          </div>
-
-          <div class="form-actions">
-            <button type="button" class="btn btn-secondary" (click)="cancelCategoryForm()">
-              Cancel
-            </button>
-            <button type="submit" class="btn btn-primary" [disabled]="saving || categoryForm.invalid">
-              <span *ngIf="saving" class="spinner-small"></span>
-              Add Category
-            </button>
-          </div>
-        </form>
-      </div>
-
-      <!-- Categories List -->
-      <div class="items-list">
-        <div
-          *ngFor="let category of categories; let i = index"
-          class="item-row"
-          draggable="true"
-          (dragstart)="onDragStart($event, i)"
-          (dragover)="onDragOver($event, i)"
-          (drop)="onDrop($event, i)"
-          (dragend)="onDragEnd()"
-          [class.dragging]="draggedIndex === i"
-          [class.drag-over]="dragOverIndex === i">
-          <!-- Drag Handle -->
-          <div class="drag-handle" *ngIf="!editingCategory || editingCategory.id !== category.id" draggable="false">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" draggable="false">
-              <circle cx="6" cy="3" r="1.5"/>
-              <circle cx="10" cy="3" r="1.5"/>
-              <circle cx="6" cy="8" r="1.5"/>
-              <circle cx="10" cy="8" r="1.5"/>
-              <circle cx="6" cy="13" r="1.5"/>
-              <circle cx="10" cy="13" r="1.5"/>
-            </svg>
-          </div>
-
-          <!-- Regular item display -->
-          <div *ngIf="!editingCategory || editingCategory.id !== category.id" class="item-content" (click)="showEditCategoryForm(category)" draggable="false">
-            <div class="item-color" [style.background-color]="category.color"></div>
-            <div class="item-info">
-              <div class="item-name-row">
-                <span class="item-name">{{ category.name }}</span>
-                <span *ngIf="isDefaultCategory(category.id)" class="default-badge">Default</span>
-                <span *ngIf="category.description" class="item-description">{{ category.description }}</span>
+      @if (!loading) {
+        <div class="content">
+          <!-- Categories and Tags Container -->
+          <div class="categories-tags-container">
+            <!-- Categories Section -->
+            <section class="section categories-section">
+              <div class="section-header">
+                <h2>Categories</h2>
+                <button class="btn btn-primary" (click)="showAddCategoryForm()" [disabled]="saving">
+                  <span class="icon">+</span>
+                  Add Category
+                </button>
               </div>
-            </div>
-          </div>
-          <div *ngIf="!editingCategory || editingCategory.id !== category.id" class="item-actions" draggable="false">
-            <button
-              class="btn-icon btn-danger"
-              (click)="deleteCategory(category); $event.stopPropagation()"
-              [disabled]="!canDeleteCategory(category) || saving"
-              [title]="!canDeleteCategory(category) ? 'Cannot delete default category' : 'Delete category'"
-            >
-              🗑️
-            </button>
-          </div>
-
-          <!-- Inline edit form -->
-          <div *ngIf="editingCategory && editingCategory.id === category.id" class="inline-edit-form">
-            <form [formGroup]="categoryForm" (ngSubmit)="saveCategory()">
-              <div class="inline-form-row">
-                <div class="inline-color-input">
-                  <input 
-                    type="color" 
-                    formControlName="color" 
-                    class="color-input-small"
-                  >
+              <!-- Add Category Form (only shown when adding new) -->
+              @if (showCategoryForm && !editingCategory) {
+                <div class="form-card">
+                  <div class="form-header">
+                    <h3>Add New Category</h3>
+                    <button class="btn-close" (click)="cancelCategoryForm()">×</button>
+                  </div>
+                  <form [formGroup]="categoryForm" (ngSubmit)="saveCategory()">
+                    <div class="form-group">
+                      <label for="categoryName">Name</label>
+                      <input
+                        id="categoryName"
+                        type="text"
+                        formControlName="name"
+                        placeholder="Enter category name"
+                        class="form-control"
+                        [class.error]="getFieldError(categoryForm, 'name')"
+                        >
+                      @if (getFieldError(categoryForm, 'name')) {
+                        <div class="field-error">
+                          {{ getFieldError(categoryForm, 'name') }}
+                        </div>
+                      }
+                    </div>
+                    <div class="form-group">
+                      <label for="categoryDescription">Description (optional)</label>
+                      <textarea
+                        id="categoryDescription"
+                        formControlName="description"
+                        placeholder="Enter a brief description for this category..."
+                        class="form-control"
+                        rows="2"
+                        [class.error]="getFieldError(categoryForm, 'description')"
+                      ></textarea>
+                      @if (getFieldError(categoryForm, 'description')) {
+                        <div class="field-error">
+                          {{ getFieldError(categoryForm, 'description') }}
+                        </div>
+                      }
+                      <small class="form-help">This description will appear as a tooltip when selecting categories.</small>
+                    </div>
+                    <div class="form-group">
+                      <label for="categoryColor">Color</label>
+                      <div class="color-input-group">
+                        <input
+                          id="categoryColor"
+                          type="color"
+                          formControlName="color"
+                          class="color-input"
+                          >
+                        <input
+                          type="text"
+                          formControlName="color"
+                          placeholder="#3498db"
+                          class="form-control color-text"
+                          [class.error]="getFieldError(categoryForm, 'color')"
+                          >
+                      </div>
+                      @if (getFieldError(categoryForm, 'color')) {
+                        <div class="field-error">
+                          {{ getFieldError(categoryForm, 'color') }}
+                        </div>
+                      }
+                      <!-- Color Presets -->
+                      <div class="color-presets">
+                        <span class="preset-label">Quick colors:</span>
+                        @for (color of colorPresets; track color) {
+                          <button
+                            type="button"
+                            class="color-preset"
+                            [style.background-color]="color"
+                            (click)="selectColor(color, 'category')"
+                            [title]="color"
+                          ></button>
+                        }
+                      </div>
+                    </div>
+                    <!-- Folder Mode -->
+                    <div class="form-group">
+                      <label>Folder Structure</label>
+                      <div class="folder-mode-options">
+                        <label class="radio-label">
+                          <input type="radio" formControlName="folderMode" value="auto">
+                          <span class="radio-text">Auto</span>
+                          <small class="radio-help">Creates a folder named after the category</small>
+                        </label>
+                        <label class="radio-label">
+                          <input type="radio" formControlName="folderMode" value="flat">
+                          <span class="radio-text">Flat</span>
+                          <small class="radio-help">Characters at root level (no subfolder)</small>
+                        </label>
+                        <label class="radio-label">
+                          <input type="radio" formControlName="folderMode" value="specify">
+                          <span class="radio-text">Custom folder</span>
+                          <small class="radio-help">Specify a shared folder name</small>
+                        </label>
+                      </div>
+                      @if (categoryForm.get('folderMode')?.value === 'specify') {
+                        <div class="folder-path-input">
+                          <input
+                            type="text"
+                            formControlName="folderPath"
+                            placeholder="e.g., _others"
+                            class="form-control"
+                            >
+                          <small class="form-help">Multiple categories can share the same folder.</small>
+                        </div>
+                      }
+                    </div>
+                    <div class="form-actions">
+                      <button type="button" class="btn btn-secondary" (click)="cancelCategoryForm()">
+                        Cancel
+                      </button>
+                      <button type="submit" class="btn btn-primary" [disabled]="saving || categoryForm.invalid">
+                        @if (saving) {
+                          <span class="spinner-small"></span>
+                        }
+                        Add Category
+                      </button>
+                    </div>
+                  </form>
                 </div>
-                <div class="inline-name-input">
-                  <input 
-                    type="text" 
-                    formControlName="name" 
-                    placeholder="Category name"
-                    class="form-control-inline"
-                    [class.error]="getFieldError(categoryForm, 'name')"
-                  >
+              }
+              <!-- Categories List -->
+              <div class="items-list">
+                @for (category of categories; track category; let i = $index) {
+                  <div
+                    class="item-row"
+                    draggable="true"
+                    (dragstart)="onDragStart($event, i)"
+                    (dragover)="onDragOver($event, i)"
+                    (drop)="onDrop($event, i)"
+                    (dragend)="onDragEnd()"
+                    [class.dragging]="draggedIndex === i"
+                    [class.drag-over]="dragOverIndex === i">
+                    <!-- Drag Handle -->
+                    @if (!editingCategory || editingCategory.id !== category.id) {
+                      <div class="drag-handle" draggable="false">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" draggable="false">
+                          <circle cx="6" cy="3" r="1.5"/>
+                          <circle cx="10" cy="3" r="1.5"/>
+                          <circle cx="6" cy="8" r="1.5"/>
+                          <circle cx="10" cy="8" r="1.5"/>
+                          <circle cx="6" cy="13" r="1.5"/>
+                          <circle cx="10" cy="13" r="1.5"/>
+                        </svg>
+                      </div>
+                    }
+                    <!-- Regular item display -->
+                    @if (!editingCategory || editingCategory.id !== category.id) {
+                      <div class="item-content" (click)="showEditCategoryForm(category)" draggable="false">
+                        <div class="item-color" [style.background-color]="category.color"></div>
+                        <div class="item-info">
+                          <div class="item-name-row">
+                            <span class="item-name">{{ category.name }}</span>
+                            @if (isDefaultCategory(category.id)) {
+                              <span class="default-badge">Default</span>
+                            }
+                            @if (category.description) {
+                              <span class="item-description">{{ category.description }}</span>
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    }
+                    @if (!editingCategory || editingCategory.id !== category.id) {
+                      <div class="item-actions" draggable="false">
+                        <button
+                          class="btn-icon btn-danger"
+                          (click)="deleteCategory(category); $event.stopPropagation()"
+                          [disabled]="!canDeleteCategory(category) || saving"
+                          [title]="!canDeleteCategory(category) ? 'Cannot delete default category' : 'Delete category'"
+                          >
+                          🗑️
+                        </button>
+                      </div>
+                    }
+                    <!-- Inline edit form -->
+                    @if (editingCategory && editingCategory.id === category.id) {
+                      <div class="inline-edit-form">
+                        <form [formGroup]="categoryForm" (ngSubmit)="saveCategory()">
+                          <div class="inline-form-row">
+                            <div class="inline-color-input">
+                              <input
+                                type="color"
+                                formControlName="color"
+                                class="color-input-small"
+                                >
+                            </div>
+                            <div class="inline-name-input">
+                              <input
+                                type="text"
+                                formControlName="name"
+                                placeholder="Category name"
+                                class="form-control-inline"
+                                [class.error]="getFieldError(categoryForm, 'name')"
+                                >
+                            </div>
+                          </div>
+                          <div class="inline-description-row">
+                            <textarea
+                              formControlName="description"
+                              placeholder="Description (optional)..."
+                              class="form-control-inline description-textarea"
+                              rows="2"
+                              [class.error]="getFieldError(categoryForm, 'description')"
+                            ></textarea>
+                          </div>
+                          <!-- Inline Color Presets -->
+                          <div class="inline-color-presets">
+                            @for (color of colorPresets; track color) {
+                              <button
+                                type="button"
+                                class="color-preset-small"
+                                [style.background-color]="color"
+                                (click)="selectColor(color, 'category')"
+                                [title]="color"
+                              ></button>
+                            }
+                          </div>
+                          <!-- Inline Folder Mode -->
+                          <div class="inline-folder-mode">
+                            <label class="inline-label">Folder:</label>
+                            <div class="inline-radio-group">
+                              <label class="inline-radio">
+                                <input type="radio" formControlName="folderMode" value="auto">
+                                <span>Auto</span>
+                              </label>
+                              <label class="inline-radio">
+                                <input type="radio" formControlName="folderMode" value="flat">
+                                <span>Flat</span>
+                              </label>
+                              <label class="inline-radio">
+                                <input type="radio" formControlName="folderMode" value="specify">
+                                <span>Custom</span>
+                              </label>
+                            </div>
+                            @if (categoryForm.get('folderMode')?.value === 'specify') {
+                              <input
+                                type="text"
+                                formControlName="folderPath"
+                                placeholder="folder name"
+                                class="form-control-inline folder-path-inline"
+                                >
+                            }
+                          </div>
+                          <!-- Error Messages -->
+                          @if (getFieldError(categoryForm, 'name')) {
+                            <div class="inline-error">
+                              {{ getFieldError(categoryForm, 'name') }}
+                            </div>
+                          }
+                          @if (getFieldError(categoryForm, 'description')) {
+                            <div class="inline-error">
+                              {{ getFieldError(categoryForm, 'description') }}
+                            </div>
+                          }
+                          <!-- Save and Cancel Links -->
+                          <div class="inline-form-actions">
+                            <button type="submit" class="btn-link btn-save" [disabled]="saving || categoryForm.invalid">
+                              @if (saving) {
+                                <span class="spinner-small"></span>
+                              }
+                              @if (!saving) {
+                                <span>Save</span>
+                              }
+                            </button>
+                            <button type="button" class="btn-link btn-cancel" (click)="cancelCategoryForm()">
+                              Cancel
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                    }
+                  </div>
+                }
+                <!-- Drop zone for last position -->
+                @if (draggedIndex !== null) {
+                  <div
+                    class="drop-zone-last"
+                    (dragover)="onDragOver($event, categories.length)"
+                    (drop)="onDrop($event, categories.length)"
+                    [class.drag-over]="dragOverIndex === categories.length">
+                  </div>
+                }
+              </div>
+            </section>
+            <!-- Tags Section -->
+            <section class="section tags-section">
+              <div class="section-header">
+                <h2>Tags</h2>
+                <button class="btn btn-primary" (click)="showAddTagForm()" [disabled]="saving">
+                  <span class="icon">+</span>
+                  Add Tag
+                </button>
+              </div>
+              <!-- Add Tag Form (only shown when adding new) -->
+              @if (showTagForm && !editingTag) {
+                <div class="form-card">
+                  <div class="form-header">
+                    <h3>Add New Tag</h3>
+                    <button class="btn-close" (click)="cancelTagForm()">×</button>
+                  </div>
+                  <form [formGroup]="tagForm" (ngSubmit)="saveTag()">
+                    <div class="form-group">
+                      <label for="tagName">Name</label>
+                      <input
+                        id="tagName"
+                        type="text"
+                        formControlName="name"
+                        placeholder="Enter tag name"
+                        class="form-control"
+                        [class.error]="getFieldError(tagForm, 'name')"
+                        >
+                      @if (getFieldError(tagForm, 'name')) {
+                        <div class="field-error">
+                          {{ getFieldError(tagForm, 'name') }}
+                        </div>
+                      }
+                    </div>
+                    <div class="form-group">
+                      <label for="tagColor">Color</label>
+                      <div class="color-input-group">
+                        <input
+                          id="tagColor"
+                          type="color"
+                          formControlName="color"
+                          class="color-input"
+                          >
+                        <input
+                          type="text"
+                          formControlName="color"
+                          placeholder="#e74c3c"
+                          class="form-control color-text"
+                          [class.error]="getFieldError(tagForm, 'color')"
+                          >
+                      </div>
+                      @if (getFieldError(tagForm, 'color')) {
+                        <div class="field-error">
+                          {{ getFieldError(tagForm, 'color') }}
+                        </div>
+                      }
+                      <!-- Color Presets -->
+                      <div class="color-presets">
+                        <span class="preset-label">Quick colors:</span>
+                        @for (color of colorPresets; track color) {
+                          <button
+                            type="button"
+                            class="color-preset"
+                            [style.background-color]="color"
+                            (click)="selectColor(color, 'tag')"
+                            [title]="color"
+                          ></button>
+                        }
+                      </div>
+                    </div>
+                    <div class="form-actions">
+                      <button type="button" class="btn btn-secondary" (click)="cancelTagForm()">
+                        Cancel
+                      </button>
+                      <button type="submit" class="btn btn-primary" [disabled]="saving || tagForm.invalid">
+                        @if (saving) {
+                          <span class="spinner-small"></span>
+                        }
+                        Add Tag
+                      </button>
+                    </div>
+                  </form>
                 </div>
+              }
+              <!-- Tags List -->
+              <div class="items-list">
+                @for (tag of tags; track tag; let i = $index) {
+                  <div
+                    class="item-row"
+                    draggable="true"
+                    (dragstart)="onTagDragStart($event, i)"
+                    (dragover)="onTagDragOver($event, i)"
+                    (drop)="onTagDrop($event, i)"
+                    (dragend)="onTagDragEnd()"
+                    [class.dragging]="tagDraggedIndex === i"
+                    [class.drag-over]="tagDragOverIndex === i">
+                    <!-- Drag Handle -->
+                    @if (!editingTag || editingTag.id !== tag.id) {
+                      <div class="drag-handle" draggable="false">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" draggable="false">
+                          <circle cx="6" cy="3" r="1.5"/>
+                          <circle cx="10" cy="3" r="1.5"/>
+                          <circle cx="6" cy="8" r="1.5"/>
+                          <circle cx="10" cy="8" r="1.5"/>
+                          <circle cx="6" cy="13" r="1.5"/>
+                          <circle cx="10" cy="13" r="1.5"/>
+                        </svg>
+                      </div>
+                    }
+                    <!-- Regular item display -->
+                    @if (!editingTag || editingTag.id !== tag.id) {
+                      <div class="item-content" (click)="showEditTagForm(tag)" draggable="false">
+                        <div class="item-color" [style.background-color]="tag.color"></div>
+                        <div class="item-info">
+                          <span class="item-name">{{ tag.name }}</span>
+                        </div>
+                      </div>
+                    }
+                    @if (!editingTag || editingTag.id !== tag.id) {
+                      <div class="item-actions" draggable="false">
+                        <button
+                          class="btn-icon btn-danger"
+                          (click)="deleteTag(tag); $event.stopPropagation()"
+                          [disabled]="saving"
+                          title="Delete tag"
+                          >
+                          🗑️
+                        </button>
+                      </div>
+                    }
+                    <!-- Inline edit form -->
+                    @if (editingTag && editingTag.id === tag.id) {
+                      <div class="inline-edit-form">
+                        <form [formGroup]="tagForm" (ngSubmit)="saveTag()">
+                          <div class="inline-form-row">
+                            <div class="inline-color-input">
+                              <input
+                                type="color"
+                                formControlName="color"
+                                class="color-input-small"
+                                >
+                            </div>
+                            <div class="inline-name-input">
+                              <input
+                                type="text"
+                                formControlName="name"
+                                placeholder="Tag name"
+                                class="form-control-inline"
+                                [class.error]="getFieldError(tagForm, 'name')"
+                                >
+                            </div>
+                          </div>
+                          <!-- Inline Color Presets -->
+                          <div class="inline-color-presets">
+                            @for (color of colorPresets; track color) {
+                              <button
+                                type="button"
+                                class="color-preset-small"
+                                [style.background-color]="color"
+                                (click)="selectColor(color, 'tag')"
+                                [title]="color"
+                              ></button>
+                            }
+                          </div>
+                          <!-- Error Messages -->
+                          @if (getFieldError(tagForm, 'name')) {
+                            <div class="inline-error">
+                              {{ getFieldError(tagForm, 'name') }}
+                            </div>
+                          }
+                          <!-- Save and Cancel Links -->
+                          <div class="inline-form-actions">
+                            <button type="submit" class="btn-link btn-save" [disabled]="saving || tagForm.invalid">
+                              @if (saving) {
+                                <span class="spinner-small"></span>
+                              }
+                              @if (!saving) {
+                                <span>Save</span>
+                              }
+                            </button>
+                            <button type="button" class="btn-link btn-cancel" (click)="cancelTagForm()">
+                              Cancel
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                    }
+                  </div>
+                }
+                <!-- Drop zone for last position -->
+                @if (tagDraggedIndex !== null) {
+                  <div
+                    class="drop-zone-last"
+                    (dragover)="onTagDragOver($event, tags.length)"
+                    (drop)="onTagDrop($event, tags.length)"
+                    [class.drag-over]="tagDragOverIndex === tags.length">
+                  </div>
+                }
               </div>
-              
-              <div class="inline-description-row">
-                <textarea 
-                  formControlName="description" 
-                  placeholder="Description (optional)..."
-                  class="form-control-inline description-textarea"
-                  rows="2"
-                  [class.error]="getFieldError(categoryForm, 'description')"
-                ></textarea>
+            </section>
+          </div>
+          <!-- Color Palette Management Section -->
+          @if (colorPalette) {
+            <section class="section">
+              <div class="section-header">
+                <button
+                  class="section-toggle"
+                  (click)="colorPaletteExpanded = !colorPaletteExpanded"
+                  [attr.aria-expanded]="colorPaletteExpanded"
+                  >
+                  <h2>Color Palette</h2>
+                  <span class="toggle-icon" [class.expanded]="colorPaletteExpanded">▼</span>
+                </button>
+                @if (colorPaletteExpanded) {
+                  <button
+                    class="btn btn-secondary"
+                    (click)="resetBaseColors()"
+                    [disabled]="saving"
+                    title="Reset all base colors to defaults"
+                    >
+                    Reset to Defaults
+                  </button>
+                }
               </div>
-              
-              <!-- Inline Color Presets -->
-              <div class="inline-color-presets">
-                <button 
-                  *ngFor="let color of colorPresets" 
-                  type="button"
-                  class="color-preset-small"
-                  [style.background-color]="color"
-                  (click)="selectColor(color, 'category')"
-                  [title]="color"
-                ></button>
-              </div>
-              
-              <!-- Inline Folder Mode -->
-              <div class="inline-folder-mode">
-                <label class="inline-label">Folder:</label>
-                <div class="inline-radio-group">
-                  <label class="inline-radio">
-                    <input type="radio" formControlName="folderMode" value="auto">
-                    <span>Auto</span>
+              @if (colorPaletteExpanded) {
+                <div class="form-card">
+                  <p class="form-help">
+                    Manage the color palette used for categories and tags. Base colors can be themed but not removed.
+                    You can add extra colors beyond the base 10.
+                  </p>
+                  <!-- Base Colors -->
+                  <div class="color-palette-section">
+                    <h3>Base Colors (10 - Themable, Not Removable)</h3>
+                    <div class="color-grid">
+                      @for (color of getBaseColors(); track color; let i = $index) {
+                        <div
+                          class="color-item"
+                          >
+                          <div class="color-preview" [style.background-color]="color"></div>
+                          <div class="color-info">
+                            <div class="color-name">{{ baseColorNames[i] }}</div>
+                            @if (editingBaseColorIndex !== i) {
+                              <div class="color-value">{{ color }}</div>
+                            }
+                            @if (editingBaseColorIndex === i) {
+                              <div class="color-edit">
+                                <input
+                                  type="color"
+                                  [value]="color"
+                                  (change)="saveBaseColor(i, $any($event.target).value)"
+                                  class="color-input-inline"
+                                  >
+                                <input
+                                  type="text"
+                                  [value]="color"
+                                  (change)="saveBaseColor(i, $any($event.target).value)"
+                                  class="color-text-inline"
+                                  pattern="^#[0-9A-Fa-f]{6}$"
+                                  >
+                                <button class="btn-icon" (click)="cancelEditingBaseColor()" title="Cancel">×</button>
+                              </div>
+                            }
+                          </div>
+                          @if (editingBaseColorIndex !== i) {
+                            <button
+                              class="btn-icon"
+                              (click)="startEditingBaseColor(i)"
+                              title="Edit color"
+                              [disabled]="saving"
+                              >
+                              ✎
+                            </button>
+                          }
+                        </div>
+                      }
+                    </div>
+                  </div>
+                  <!-- Theme Overrides -->
+                  @if (currentTheme) {
+                    <div class="color-palette-section">
+                      <h3>Theme-Specific Colors</h3>
+                      <p class="form-help">
+                        Current theme: <strong>{{ currentTheme.name }}</strong>
+                        @if (hasThemeOverrides()) {
+                          <span> (has custom colors)</span>
+                        }
+                      </p>
+                      <div class="form-actions-inline">
+                        <button
+                          class="btn btn-secondary"
+                          (click)="setThemeOverrides()"
+                          [disabled]="saving"
+                          title="Save current base colors as theme-specific overrides"
+                          >
+                          Save as Theme Override
+                        </button>
+                        @if (hasThemeOverrides()) {
+                          <button
+                            class="btn btn-secondary"
+                            (click)="removeThemeOverrides()"
+                            [disabled]="saving"
+                            title="Remove theme-specific color overrides"
+                            >
+                            Remove Theme Override
+                          </button>
+                        }
+                      </div>
+                    </div>
+                  }
+                  <!-- Extra Colors -->
+                  <div class="color-palette-section">
+                    <h3>Extra Colors</h3>
+                    <p class="form-help">Add additional colors beyond the base 10. These can be removed.</p>
+                    <div class="add-color-form">
+                      <input
+                        type="color"
+                        [(ngModel)]="newExtraColor"
+                        class="color-input-inline"
+                        placeholder="#000000"
+                        >
+                      <input
+                        type="text"
+                        [(ngModel)]="newExtraColor"
+                        class="form-control color-text-inline"
+                        placeholder="#3498db"
+                        pattern="^#[0-9A-Fa-f]{6}$"
+                        >
+                      <button
+                        class="btn btn-primary"
+                        (click)="addExtraColor()"
+                        [disabled]="saving || !newExtraColor"
+                        >
+                        Add Color
+                      </button>
+                    </div>
+                    @if (getExtraColors().length > 0) {
+                      <div class="color-grid">
+                        @for (color of getExtraColors(); track color) {
+                          <div
+                            class="color-item"
+                            >
+                            <div class="color-preview" [style.background-color]="color"></div>
+                            <div class="color-info">
+                              <div class="color-value">{{ color }}</div>
+                            </div>
+                            <button
+                              class="btn-icon btn-danger"
+                              (click)="removeExtraColor(color)"
+                              title="Remove color"
+                              [disabled]="saving"
+                              >
+                              ×
+                            </button>
+                          </div>
+                        }
+                      </div>
+                    }
+                    @if (getExtraColors().length === 0) {
+                      <p class="form-help">No extra colors added yet.</p>
+                    }
+                  </div>
+                </div>
+              }
+            </section>
+          }
+          <!-- Settings Section -->
+          <section class="section">
+            <div class="section-header">
+              <h2>Project Settings</h2>
+            </div>
+            <div class="form-card">
+              <form [formGroup]="settingsForm" (ngSubmit)="saveSettings()">
+                <div class="form-group">
+                  <label for="defaultCategory">Default Category</label>
+                  <select
+                    id="defaultCategory"
+                    formControlName="defaultCategory"
+                    class="form-control"
+                    [class.error]="getFieldError(settingsForm, 'defaultCategory')"
+                    >
+                    <option value="">Select default category</option>
+                    @for (category of categories; track category) {
+                      <option [value]="category.id" [title]="category.description || category.name">
+                        {{ category.name }}{{ category.description ? ' - ' + category.description : '' }}
+                      </option>
+                    }
+                  </select>
+                  @if (getFieldError(settingsForm, 'defaultCategory')) {
+                    <div class="field-error">
+                      {{ getFieldError(settingsForm, 'defaultCategory') }}
+                    </div>
+                  }
+                  <small class="form-help">This category will be pre-selected when creating new characters.</small>
+                </div>
+                <div class="form-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" formControlName="autoSave">
+                    <span class="checkmark"></span>
+                    Auto-save changes
                   </label>
-                  <label class="inline-radio">
-                    <input type="radio" formControlName="folderMode" value="flat">
-                    <span>Flat</span>
+                  <small class="form-help">Automatically save character changes without confirmation.</small>
+                </div>
+                <div class="form-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" formControlName="fileWatchEnabled">
+                    <span class="checkmark"></span>
+                    Watch for external file changes
                   </label>
-                  <label class="inline-radio">
-                    <input type="radio" formControlName="folderMode" value="specify">
-                    <span>Custom</span>
-                  </label>
+                  <small class="form-help">Monitor files for changes made by external editors.</small>
                 </div>
-                <input 
-                  *ngIf="categoryForm.get('folderMode')?.value === 'specify'"
-                  type="text" 
-                  formControlName="folderPath" 
-                  placeholder="folder name"
-                  class="form-control-inline folder-path-inline"
-                >
-              </div>
-              
-              <!-- Error Messages -->
-              <div *ngIf="getFieldError(categoryForm, 'name')" class="inline-error">
-                {{ getFieldError(categoryForm, 'name') }}
-              </div>
-              <div *ngIf="getFieldError(categoryForm, 'description')" class="inline-error">
-                {{ getFieldError(categoryForm, 'description') }}
-              </div>
-              
-              <!-- Save and Cancel Links -->
-              <div class="inline-form-actions">
-                <button type="submit" class="btn-link btn-save" [disabled]="saving || categoryForm.invalid">
-                  <span *ngIf="saving" class="spinner-small"></span>
-                  <span *ngIf="!saving">Save</span>
-                </button>
-                <button type="button" class="btn-link btn-cancel" (click)="cancelCategoryForm()">
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-
-        <!-- Drop zone for last position -->
-        <div
-          *ngIf="draggedIndex !== null"
-          class="drop-zone-last"
-          (dragover)="onDragOver($event, categories.length)"
-          (drop)="onDrop($event, categories.length)"
-          [class.drag-over]="dragOverIndex === categories.length">
-        </div>
-      </div>
-      </section>
-
-      <!-- Tags Section -->
-      <section class="section tags-section">
-        <div class="section-header">
-          <h2>Tags</h2>
-          <button class="btn btn-primary" (click)="showAddTagForm()" [disabled]="saving">
-            <span class="icon">+</span>
-            Add Tag
-          </button>
-        </div>
-
-      <!-- Add Tag Form (only shown when adding new) -->
-      <div *ngIf="showTagForm && !editingTag" class="form-card">
-        <div class="form-header">
-          <h3>Add New Tag</h3>
-          <button class="btn-close" (click)="cancelTagForm()">×</button>
-        </div>
-        
-        <form [formGroup]="tagForm" (ngSubmit)="saveTag()">
-          <div class="form-group">
-            <label for="tagName">Name</label>
-            <input 
-              id="tagName"
-              type="text" 
-              formControlName="name" 
-              placeholder="Enter tag name"
-              class="form-control"
-              [class.error]="getFieldError(tagForm, 'name')"
-            >
-            <div *ngIf="getFieldError(tagForm, 'name')" class="field-error">
-              {{ getFieldError(tagForm, 'name') }}
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="tagColor">Color</label>
-            <div class="color-input-group">
-              <input 
-                id="tagColor"
-                type="color" 
-                formControlName="color" 
-                class="color-input"
-              >
-              <input 
-                type="text" 
-                formControlName="color" 
-                placeholder="#e74c3c"
-                class="form-control color-text"
-                [class.error]="getFieldError(tagForm, 'color')"
-              >
-            </div>
-            <div *ngIf="getFieldError(tagForm, 'color')" class="field-error">
-              {{ getFieldError(tagForm, 'color') }}
-            </div>
-            
-            <!-- Color Presets -->
-            <div class="color-presets">
-              <span class="preset-label">Quick colors:</span>
-              <button 
-                *ngFor="let color of colorPresets" 
-                type="button"
-                class="color-preset"
-                [style.background-color]="color"
-                (click)="selectColor(color, 'tag')"
-                [title]="color"
-              ></button>
-            </div>
-          </div>
-
-          <div class="form-actions">
-            <button type="button" class="btn btn-secondary" (click)="cancelTagForm()">
-              Cancel
-            </button>
-            <button type="submit" class="btn btn-primary" [disabled]="saving || tagForm.invalid">
-              <span *ngIf="saving" class="spinner-small"></span>
-              Add Tag
-            </button>
-          </div>
-        </form>
-      </div>
-
-      <!-- Tags List -->
-      <div class="items-list">
-        <div
-          *ngFor="let tag of tags; let i = index"
-          class="item-row"
-          draggable="true"
-          (dragstart)="onTagDragStart($event, i)"
-          (dragover)="onTagDragOver($event, i)"
-          (drop)="onTagDrop($event, i)"
-          (dragend)="onTagDragEnd()"
-          [class.dragging]="tagDraggedIndex === i"
-          [class.drag-over]="tagDragOverIndex === i">
-          <!-- Drag Handle -->
-          <div class="drag-handle" *ngIf="!editingTag || editingTag.id !== tag.id" draggable="false">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" draggable="false">
-              <circle cx="6" cy="3" r="1.5"/>
-              <circle cx="10" cy="3" r="1.5"/>
-              <circle cx="6" cy="8" r="1.5"/>
-              <circle cx="10" cy="8" r="1.5"/>
-              <circle cx="6" cy="13" r="1.5"/>
-              <circle cx="10" cy="13" r="1.5"/>
-            </svg>
-          </div>
-
-          <!-- Regular item display -->
-          <div *ngIf="!editingTag || editingTag.id !== tag.id" class="item-content" (click)="showEditTagForm(tag)" draggable="false">
-            <div class="item-color" [style.background-color]="tag.color"></div>
-            <div class="item-info">
-              <span class="item-name">{{ tag.name }}</span>
-            </div>
-          </div>
-          <div *ngIf="!editingTag || editingTag.id !== tag.id" class="item-actions" draggable="false">
-            <button
-              class="btn-icon btn-danger"
-              (click)="deleteTag(tag); $event.stopPropagation()"
-              [disabled]="saving"
-              title="Delete tag"
-            >
-              🗑️
-            </button>
-          </div>
-
-          <!-- Inline edit form -->
-          <div *ngIf="editingTag && editingTag.id === tag.id" class="inline-edit-form">
-            <form [formGroup]="tagForm" (ngSubmit)="saveTag()">
-              <div class="inline-form-row">
-                <div class="inline-color-input">
-                  <input 
-                    type="color" 
-                    formControlName="color" 
-                    class="color-input-small"
-                  >
+                <div class="form-group">
+                  <label for="charactersFolder">Characters Folder</label>
+                  <input
+                    type="text"
+                    id="charactersFolder"
+                    formControlName="charactersFolder"
+                    class="form-control"
+                    placeholder="characters"
+                    [class.error]="getFieldError(settingsForm, 'charactersFolder')"
+                    />
+                  @if (getFieldError(settingsForm, 'charactersFolder')) {
+                    <div class="field-error">
+                      {{ getFieldError(settingsForm, 'charactersFolder') }}
+                    </div>
+                  }
+                  <small class="form-help">Relative path from project root where character files are stored (default: characters).</small>
                 </div>
-                <div class="inline-name-input">
-                  <input 
-                    type="text" 
-                    formControlName="name" 
-                    placeholder="Tag name"
-                    class="form-control-inline"
-                    [class.error]="getFieldError(tagForm, 'name')"
-                  >
+                <div class="form-group">
+                  <label for="castsFolder">Casts Folder</label>
+                  <input
+                    type="text"
+                    id="castsFolder"
+                    formControlName="castsFolder"
+                    class="form-control"
+                    placeholder="characters/casts"
+                    [class.error]="getFieldError(settingsForm, 'castsFolder')"
+                    />
+                  @if (getFieldError(settingsForm, 'castsFolder')) {
+                    <div class="field-error">
+                      {{ getFieldError(settingsForm, 'castsFolder') }}
+                    </div>
+                  }
+                  <small class="form-help">Relative path from project root where cast folders are stored (default: characters/casts). Can be any path, e.g. writing/casts.</small>
                 </div>
-              </div>
-              
-              <!-- Inline Color Presets -->
-              <div class="inline-color-presets">
-                <button 
-                  *ngFor="let color of colorPresets" 
-                  type="button"
-                  class="color-preset-small"
-                  [style.background-color]="color"
-                  (click)="selectColor(color, 'tag')"
-                  [title]="color"
-                ></button>
-              </div>
-              
-              <!-- Error Messages -->
-              <div *ngIf="getFieldError(tagForm, 'name')" class="inline-error">
-                {{ getFieldError(tagForm, 'name') }}
-              </div>
-              
-              <!-- Save and Cancel Links -->
-              <div class="inline-form-actions">
-                <button type="submit" class="btn-link btn-save" [disabled]="saving || tagForm.invalid">
-                  <span *ngIf="saving" class="spinner-small"></span>
-                  <span *ngIf="!saving">Save</span>
-                </button>
-                <button type="button" class="btn-link btn-cancel" (click)="cancelTagForm()">
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-
-        <!-- Drop zone for last position -->
-        <div
-          *ngIf="tagDraggedIndex !== null"
-          class="drop-zone-last"
-          (dragover)="onTagDragOver($event, tags.length)"
-          (drop)="onTagDrop($event, tags.length)"
-          [class.drag-over]="tagDragOverIndex === tags.length">
-        </div>
-      </div>
-      </section>
-    </div>
-
-    <!-- Color Palette Management Section -->
-    <section class="section" *ngIf="colorPalette">
-      <div class="section-header">
-        <button 
-          class="section-toggle"
-          (click)="colorPaletteExpanded = !colorPaletteExpanded"
-          [attr.aria-expanded]="colorPaletteExpanded"
-        >
-          <h2>Color Palette</h2>
-          <span class="toggle-icon" [class.expanded]="colorPaletteExpanded">▼</span>
-        </button>
-        <button 
-          *ngIf="colorPaletteExpanded"
-          class="btn btn-secondary" 
-          (click)="resetBaseColors()" 
-          [disabled]="saving"
-          title="Reset all base colors to defaults"
-        >
-          Reset to Defaults
-        </button>
-      </div>
-
-      <div class="form-card" *ngIf="colorPaletteExpanded">
-        <p class="form-help">
-          Manage the color palette used for categories and tags. Base colors can be themed but not removed. 
-          You can add extra colors beyond the base 10.
-        </p>
-
-        <!-- Base Colors -->
-        <div class="color-palette-section">
-          <h3>Base Colors (10 - Themable, Not Removable)</h3>
-          <div class="color-grid">
-            <div 
-              *ngFor="let color of getBaseColors(); let i = index" 
-              class="color-item"
-            >
-              <div class="color-preview" [style.background-color]="color"></div>
-              <div class="color-info">
-                <div class="color-name">{{ baseColorNames[i] }}</div>
-                <div class="color-value" *ngIf="editingBaseColorIndex !== i">{{ color }}</div>
-                <div class="color-edit" *ngIf="editingBaseColorIndex === i">
-                  <input 
-                    type="color" 
-                    [value]="color"
-                    (change)="saveBaseColor(i, $any($event.target).value)"
-                    class="color-input-inline"
-                  >
-                  <input 
-                    type="text" 
-                    [value]="color"
-                    (change)="saveBaseColor(i, $any($event.target).value)"
-                    class="color-text-inline"
-                    pattern="^#[0-9A-Fa-f]{6}$"
-                  >
-                  <button class="btn-icon" (click)="cancelEditingBaseColor()" title="Cancel">×</button>
+                <div class="form-group">
+                  <label for="namesFile">Names File</label>
+                  <input
+                    type="text"
+                    id="namesFile"
+                    formControlName="namesFile"
+                    class="form-control"
+                    placeholder="characters/names.md"
+                    [class.error]="getFieldError(settingsForm, 'namesFile')"
+                    />
+                  @if (getFieldError(settingsForm, 'namesFile')) {
+                    <div class="field-error">
+                      {{ getFieldError(settingsForm, 'namesFile') }}
+                    </div>
+                  }
+                  <small class="form-help">Relative path from project root for the backstage names list file (default: characters/names.md). Can be any path, e.g. notes/names.md.</small>
                 </div>
-              </div>
-              <button 
-                *ngIf="editingBaseColorIndex !== i"
-                class="btn-icon" 
-                (click)="startEditingBaseColor(i)"
-                title="Edit color"
-                [disabled]="saving"
-              >
-                ✎
-              </button>
+                <div class="form-group">
+                  <label for="theme">Theme</label>
+                  <select
+                    id="theme"
+                    formControlName="theme"
+                    class="form-control"
+                    >
+                    @for (theme of availableThemes; track theme) {
+                      <option [value]="theme.id">
+                        {{ theme.name }}{{ theme.description ? ' - ' + theme.description : '' }}
+                      </option>
+                    }
+                  </select>
+                  <small class="form-help">Choose the color theme for this project.</small>
+                </div>
+                @if (zoomService.isElectron()) {
+                  <div class="form-group">
+                    <label>Interface zoom</label>
+                    <div class="zoom-controls-inline">
+                      <button type="button" class="btn btn-secondary btn-zoom" (click)="zoomService.zoomOut()" [disabled]="!zoomService.canZoomOut()" title="Zoom out">−</button>
+                      <span class="zoom-value">{{ zoomPercent }}%</span>
+                      <button type="button" class="btn btn-secondary btn-zoom" (click)="zoomService.zoomIn()" [disabled]="!zoomService.canZoomIn()" title="Zoom in">+</button>
+                      <button type="button" class="btn btn-ghost btn-zoom-reset" (click)="zoomService.resetZoom()" [disabled]="zoomService.zoomLevel === 0" title="Reset to 100%">Reset</button>
+                    </div>
+                    <small class="form-help">Zoom the entire application interface. Preference is saved automatically.</small>
+                  </div>
+                }
+                <div class="form-group">
+                  <label>Application Updates</label>
+                  <div class="update-check-section">
+                    <button
+                      type="button"
+                      class="btn btn-secondary"
+                      (click)="checkForUpdates()"
+                      [disabled]="checkingForUpdates"
+                      >
+                      @if (checkingForUpdates) {
+                        <i class="icon-loader"></i>
+                      }
+                      @if (!checkingForUpdates) {
+                        <i class="icon-download"></i>
+                      }
+                      {{ checkingForUpdates ? 'Checking...' : 'Check for Updates' }}
+                    </button>
+                    @if (hasUpdateStatus()) {
+                      <div class="update-status-message" [class.update-available]="isUpdateAvailable()" [class.update-error]="isUpdateError()">
+                        @if (isUpdateAvailable()) {
+                          <i class="icon-check"></i>
+                        }
+                        @if (isUpdateError()) {
+                          <i class="icon-alert-circle"></i>
+                        }
+                        @if (updateStatus.status === 'not-available') {
+                          <i class="icon-info"></i>
+                        }
+                        <span>{{ getUpdateStatusMessage() }}</span>
+                      </div>
+                    }
+                  </div>
+                  <small class="form-help">Check if a new version of the application is available.</small>
+                </div>
+                <div class="form-actions">
+                  <button type="submit" class="btn btn-primary" [disabled]="saving || settingsForm.invalid">
+                    @if (saving) {
+                      <span class="spinner-small"></span>
+                    }
+                    Save Settings
+                  </button>
+                </div>
+              </form>
             </div>
-          </div>
+          </section>
         </div>
-
-        <!-- Theme Overrides -->
-        <div class="color-palette-section" *ngIf="currentTheme">
-          <h3>Theme-Specific Colors</h3>
-          <p class="form-help">
-            Current theme: <strong>{{ currentTheme.name }}</strong>
-            <span *ngIf="hasThemeOverrides()"> (has custom colors)</span>
-          </p>
-          <div class="form-actions-inline">
-            <button 
-              class="btn btn-secondary" 
-              (click)="setThemeOverrides()"
-              [disabled]="saving"
-              title="Save current base colors as theme-specific overrides"
-            >
-              Save as Theme Override
-            </button>
-            <button 
-              *ngIf="hasThemeOverrides()"
-              class="btn btn-secondary" 
-              (click)="removeThemeOverrides()"
-              [disabled]="saving"
-              title="Remove theme-specific color overrides"
-            >
-              Remove Theme Override
-            </button>
-          </div>
-        </div>
-
-        <!-- Extra Colors -->
-        <div class="color-palette-section">
-          <h3>Extra Colors</h3>
-          <p class="form-help">Add additional colors beyond the base 10. These can be removed.</p>
-          
-          <div class="add-color-form">
-            <input 
-              type="color" 
-              [(ngModel)]="newExtraColor"
-              class="color-input-inline"
-              placeholder="#000000"
-            >
-            <input 
-              type="text" 
-              [(ngModel)]="newExtraColor"
-              class="form-control color-text-inline"
-              placeholder="#3498db"
-              pattern="^#[0-9A-Fa-f]{6}$"
-            >
-            <button 
-              class="btn btn-primary" 
-              (click)="addExtraColor()"
-              [disabled]="saving || !newExtraColor"
-            >
-              Add Color
-            </button>
-          </div>
-
-          <div class="color-grid" *ngIf="getExtraColors().length > 0">
-            <div 
-              *ngFor="let color of getExtraColors()" 
-              class="color-item"
-            >
-              <div class="color-preview" [style.background-color]="color"></div>
-              <div class="color-info">
-                <div class="color-value">{{ color }}</div>
-              </div>
-              <button 
-                class="btn-icon btn-danger" 
-                (click)="removeExtraColor(color)"
-                title="Remove color"
-                [disabled]="saving"
-              >
-                ×
-              </button>
-            </div>
-          </div>
-          <p *ngIf="getExtraColors().length === 0" class="form-help">No extra colors added yet.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- Settings Section -->
-    <section class="section">
-      <div class="section-header">
-        <h2>Project Settings</h2>
-      </div>
-
-      <div class="form-card">
-        <form [formGroup]="settingsForm" (ngSubmit)="saveSettings()">
-          <div class="form-group">
-            <label for="defaultCategory">Default Category</label>
-            <select 
-              id="defaultCategory"
-              formControlName="defaultCategory" 
-              class="form-control"
-              [class.error]="getFieldError(settingsForm, 'defaultCategory')"
-            >
-              <option value="">Select default category</option>
-              <option *ngFor="let category of categories" [value]="category.id" [title]="category.description || category.name">
-                {{ category.name }}{{ category.description ? ' - ' + category.description : '' }}
-              </option>
-            </select>
-            <div *ngIf="getFieldError(settingsForm, 'defaultCategory')" class="field-error">
-              {{ getFieldError(settingsForm, 'defaultCategory') }}
-            </div>
-            <small class="form-help">This category will be pre-selected when creating new characters.</small>
-          </div>
-
-          <div class="form-group">
-            <label class="checkbox-label">
-              <input type="checkbox" formControlName="autoSave">
-              <span class="checkmark"></span>
-              Auto-save changes
-            </label>
-            <small class="form-help">Automatically save character changes without confirmation.</small>
-          </div>
-
-          <div class="form-group">
-            <label class="checkbox-label">
-              <input type="checkbox" formControlName="fileWatchEnabled">
-              <span class="checkmark"></span>
-              Watch for external file changes
-            </label>
-            <small class="form-help">Monitor files for changes made by external editors.</small>
-          </div>
-
-          <div class="form-group">
-            <label for="charactersFolder">Characters Folder</label>
-            <input
-              type="text"
-              id="charactersFolder"
-              formControlName="charactersFolder"
-              class="form-control"
-              placeholder="characters"
-              [class.error]="getFieldError(settingsForm, 'charactersFolder')"
-            />
-            <div *ngIf="getFieldError(settingsForm, 'charactersFolder')" class="field-error">
-              {{ getFieldError(settingsForm, 'charactersFolder') }}
-            </div>
-            <small class="form-help">Relative path from project root where character files are stored (default: characters).</small>
-          </div>
-
-          <div class="form-group">
-            <label for="castsFolder">Casts Folder</label>
-            <input
-              type="text"
-              id="castsFolder"
-              formControlName="castsFolder"
-              class="form-control"
-              placeholder="characters/casts"
-              [class.error]="getFieldError(settingsForm, 'castsFolder')"
-            />
-            <div *ngIf="getFieldError(settingsForm, 'castsFolder')" class="field-error">
-              {{ getFieldError(settingsForm, 'castsFolder') }}
-            </div>
-            <small class="form-help">Relative path from project root where cast folders are stored (default: characters/casts). Can be any path, e.g. writing/casts.</small>
-          </div>
-
-          <div class="form-group">
-            <label for="namesFile">Names File</label>
-            <input
-              type="text"
-              id="namesFile"
-              formControlName="namesFile"
-              class="form-control"
-              placeholder="characters/names.md"
-              [class.error]="getFieldError(settingsForm, 'namesFile')"
-            />
-            <div *ngIf="getFieldError(settingsForm, 'namesFile')" class="field-error">
-              {{ getFieldError(settingsForm, 'namesFile') }}
-            </div>
-            <small class="form-help">Relative path from project root for the backstage names list file (default: characters/names.md). Can be any path, e.g. notes/names.md.</small>
-          </div>
-
-          <div class="form-group">
-            <label for="theme">Theme</label>
-            <select 
-              id="theme"
-              formControlName="theme" 
-              class="form-control"
-            >
-              <option *ngFor="let theme of availableThemes" [value]="theme.id">
-                {{ theme.name }}{{ theme.description ? ' - ' + theme.description : '' }}
-              </option>
-            </select>
-            <small class="form-help">Choose the color theme for this project.</small>
-          </div>
-
-          <div class="form-group" *ngIf="zoomService.isElectron()">
-            <label>Interface zoom</label>
-            <div class="zoom-controls-inline">
-              <button type="button" class="btn btn-secondary btn-zoom" (click)="zoomService.zoomOut()" [disabled]="!zoomService.canZoomOut()" title="Zoom out">−</button>
-              <span class="zoom-value">{{ zoomPercent }}%</span>
-              <button type="button" class="btn btn-secondary btn-zoom" (click)="zoomService.zoomIn()" [disabled]="!zoomService.canZoomIn()" title="Zoom in">+</button>
-              <button type="button" class="btn btn-ghost btn-zoom-reset" (click)="zoomService.resetZoom()" [disabled]="zoomService.zoomLevel === 0" title="Reset to 100%">Reset</button>
-            </div>
-            <small class="form-help">Zoom the entire application interface. Preference is saved automatically.</small>
-          </div>
-
-          <div class="form-group">
-            <label>Application Updates</label>
-            <div class="update-check-section">
-              <button 
-                type="button"
-                class="btn btn-secondary"
-                (click)="checkForUpdates()"
-                [disabled]="checkingForUpdates"
-              >
-                <i *ngIf="checkingForUpdates" class="icon-loader"></i>
-                <i *ngIf="!checkingForUpdates" class="icon-download"></i>
-                {{ checkingForUpdates ? 'Checking...' : 'Check for Updates' }}
-              </button>
-              <div *ngIf="hasUpdateStatus()" class="update-status-message" [class.update-available]="isUpdateAvailable()" [class.update-error]="isUpdateError()">
-                <i *ngIf="isUpdateAvailable()" class="icon-check"></i>
-                <i *ngIf="isUpdateError()" class="icon-alert-circle"></i>
-                <i *ngIf="updateStatus.status === 'not-available'" class="icon-info"></i>
-                <span>{{ getUpdateStatusMessage() }}</span>
-              </div>
-            </div>
-            <small class="form-help">Check if a new version of the application is available.</small>
-          </div>
-
-          <div class="form-actions">
-            <button type="submit" class="btn btn-primary" [disabled]="saving || settingsForm.invalid">
-              <span *ngIf="saving" class="spinner-small"></span>
-              Save Settings
-            </button>
-          </div>
-        </form>
-      </div>
-    </section>
-
-      </div>
+      }
     </div>
   </div>
 </div>

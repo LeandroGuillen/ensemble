@@ -1,5 +1,5 @@
 import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 
 export interface SelectableItem {
   id: string;
@@ -9,7 +9,7 @@ export interface SelectableItem {
 
 @Component({
     selector: 'app-multi-select-buttons',
-    imports: [CommonModule],
+    imports: [],
     templateUrl: './multi-select-buttons.component.html',
     styleUrls: ['./multi-select-buttons.component.scss'],
     changeDetection: ChangeDetectionStrategy.Default

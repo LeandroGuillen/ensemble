@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Subject, takeUntil } from 'rxjs';
@@ -8,7 +8,7 @@ import { PageHeaderComponent } from '../../shared/page-header/page-header.compon
 
 @Component({
     selector: 'app-ai-settings',
-    imports: [CommonModule, FormsModule, ReactiveFormsModule, PageHeaderComponent],
+    imports: [FormsModule, ReactiveFormsModule, PageHeaderComponent],
     templateUrl: './ai-settings.component.html',
     styleUrls: ['./ai-settings.component.scss']
 })

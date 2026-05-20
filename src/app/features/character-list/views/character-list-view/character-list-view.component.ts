@@ -1,11 +1,11 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { Character, Tag, Category } from '../../../../core/interfaces';
 
 @Component({
     selector: 'app-character-list-view',
-    imports: [CommonModule, DragDropModule],
+    imports: [DragDropModule],
     templateUrl: './character-list-view.component.html',
     styleUrls: ['./character-list-view.component.scss']
 })

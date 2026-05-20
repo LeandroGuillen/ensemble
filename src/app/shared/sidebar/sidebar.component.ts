@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Router, NavigationEnd } from '@angular/router';
-import { CommonModule } from '@angular/common';
+
 import { ProjectService } from '../../core/services';
 import { KeyboardShortcutsService } from '../keyboard-shortcuts-dialog/keyboard-shortcuts.service';
 import { filter } from 'rxjs/operators';
@@ -21,7 +21,7 @@ interface NavSection {
 
 @Component({
     selector: 'app-sidebar',
-    imports: [CommonModule],
+    imports: [],
     templateUrl: './sidebar.component.html',
     styleUrls: ['./sidebar.component.scss']
 })
