@@ -1,6 +1,6 @@
 {
   "name": "ensemble",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "description": "Character management application for writers and worldbuilders",
   "main": "main.js",
   "scripts": {
@@ -54,13 +54,13 @@
     "@angular/compiler-cli": "^21.2.13",
     "@types/jasmine": "^6.0.0",
     "@types/js-yaml": "^4.0.9",
-    "@types/node": "^20.0.0",
+    "@types/node": "^22.19.19",
     "autoprefixer": "^10.4.22",
     "concurrently": "^8.2.2",
     "electron": "^27.0.0",
     "electron-builder": "^24.0.0",
     "electron-icon-builder": "^2.0.1",
-    "jasmine-core": "^6.0.1",
+    "jasmine-core": "^6.2.0",
     "karma": "^6.4.4",
     "karma-chrome-launcher": "^3.2.0",
     "karma-coverage": "^2.2.1",
