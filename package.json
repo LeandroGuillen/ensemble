@@ -57,8 +57,8 @@
     "@types/node": "^22.19.19",
     "autoprefixer": "^10.4.22",
     "concurrently": "^8.2.2",
-    "electron": "^27.0.0",
-    "electron-builder": "^24.0.0",
+    "electron": "^42.0.0",
+    "electron-builder": "^26.0.0",
     "electron-icon-builder": "^2.0.1",
     "jasmine-core": "^6.2.0",
     "karma": "^6.4.4",
@@ -82,7 +82,7 @@
     "@angular/platform-browser-dynamic": "^21.2.13",
     "@angular/router": "^21.2.13",
     "chokidar": "^3.5.0",
-    "electron-updater": "^6.1.7",
+    "electron-updater": "^6.8.3",
     "js-yaml": "^4.1.0",
     "remark": "^15.0.0",
     "remark-frontmatter": "^5.0.0",
@@ -167,7 +167,6 @@
           ]
         }
       ],
-      "publisherName": "Ensemble",
       "verifyUpdateCodeSignature": false
     },
     "linux": {
@@ -194,9 +193,11 @@
       ],
       "category": "Office",
       "desktop": {
-        "Name": "Ensemble",
-        "Comment": "Character management for writers and worldbuilders",
-        "Keywords": "writing;characters;worldbuilding;story;"
+        "entry": {
+          "Name": "Ensemble",
+          "Comment": "Character management for writers and worldbuilders",
+          "Keywords": "writing;characters;worldbuilding;story;"
+        }
       }
     },
     "nsis": {
