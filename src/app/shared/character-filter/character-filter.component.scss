@@ -1,43 +1,52 @@
 .character-filter {
-  background: var(--color-bg-secondary);
+  background: var(--color-bg-tertiary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   overflow: visible;
-  transition: all 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
   position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  max-width: 100%;
+  height: 36px;
+  box-sizing: border-box;
+
+  &:focus-within {
+    border-color: var(--color-accent-primary);
+    box-shadow: 0 0 0 2px rgba(229, 168, 85, 0.1);
+  }
 
   .filter-header {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 10px;
-    background: var(--color-bg-secondary);
+    align-items: stretch;
+    gap: 0;
+    padding: 0;
+    background: transparent;
     border-radius: var(--radius-md);
-    min-height: 36px;
+    height: 100%;
+    box-sizing: border-box;
 
     .search-input-wrapper {
       position: relative;
-      flex: 0 0 220px;
+      flex: 0 0 200px;
+      display: flex;
+      align-items: center;
 
       .search-input {
         width: 100%;
-        padding: 6px 28px 6px 10px;
-        background: var(--color-bg-tertiary);
-        border: 1px solid var(--color-border);
-        border-radius: var(--radius-sm);
+        height: 100%;
+        padding: 0 28px 0 12px;
+        background: transparent;
+        border: none;
+        border-radius: var(--radius-md) 0 0 var(--radius-md);
         color: var(--color-text-primary);
         font-size: 13px;
-        transition: all 0.15s ease;
+        font-family: inherit;
+        transition: background 0.15s ease;
+        box-sizing: border-box;
 
         &:focus {
           outline: none;
-          border-color: var(--color-accent-primary);
-          background: var(--color-bg-elevated);
-          box-shadow: 0 0 0 2px rgba(229, 168, 85, 0.1);
-        }
-
-        &:hover:not(:focus) {
-          border-color: var(--color-accent-primary);
           background: var(--color-bg-elevated);
         }
 
@@ -78,14 +87,14 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      padding: 4px 8px;
-      border-radius: var(--radius-sm);
-      transition: all 0.15s ease;
-      min-height: 28px;
+      padding: 0 10px;
+      border-left: 1px solid var(--color-border);
+      transition: background 0.15s ease;
       cursor: pointer;
+      min-width: 140px;
 
       &:hover {
-        background: var(--color-bg-tertiary);
+        background: var(--color-bg-elevated);
       }
     }
 
@@ -117,8 +126,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      border-radius: var(--radius-sm);
-      transition: all 0.15s ease;
+      transition: color 0.15s ease;
 
       svg {
         width: 14px;
@@ -129,45 +137,50 @@
       &.expanded svg {
         transform: rotate(180deg);
       }
-
-      &:hover {
-        background: var(--color-bg-elevated);
-        color: var(--color-text-primary);
-      }
     }
   }
 
   .clear-all-btn {
     flex-shrink: 0;
+    align-self: center;
     background: none;
-    border: 1px solid var(--color-border);
-    color: var(--color-text-primary);
-    padding: 4px 10px;
-    border-radius: var(--radius-sm);
-    font-size: 12px;
+    border: none;
+    border-left: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    padding: 0 10px;
+    height: 100%;
+    border-radius: 0;
+    font-size: 11px;
     font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: color 0.15s ease, background 0.15s ease;
 
     &:hover {
-      background: var(--color-bg-tertiary);
-      border-color: var(--color-accent-primary);
+      background: var(--color-bg-elevated);
       color: var(--color-accent-primary);
     }
   }
 }
 
 .filter-body {
-  padding: 10px 12px;
-  border-top: 1px solid var(--color-border);
-  background: var(--color-bg-tertiary);
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 100%;
+  width: max-content;
+  max-width: min(720px, 90vw);
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-secondary);
   display: flex;
   flex-direction: column;
   gap: 10px;
   animation: slideDown 0.15s ease;
-  border-radius: 0 0 var(--radius-md) var(--radius-md);
-  position: relative;
-  z-index: 1;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg, 0 12px 28px rgba(0, 0, 0, 0.35));
+  z-index: 200;
 
   .filter-section {
     display: flex;

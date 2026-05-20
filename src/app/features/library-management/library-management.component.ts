@@ -44,6 +44,9 @@ export class LibraryManagementComponent implements OnInit, OnDestroy {
 
   books: Book[] = [];
 
+  // View mode
+  viewMode: 'gallery' | 'list' = 'gallery';
+
   // Form states
   showBookForm = false;
   editingBook: Book | null = null;
@@ -114,6 +117,11 @@ export class LibraryManagementComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    const savedViewMode = localStorage.getItem('libraryViewMode');
+    if (savedViewMode === 'gallery' || savedViewMode === 'list') {
+      this.viewMode = savedViewMode;
+    }
+
     this.loadData();
 
     // Subscribe to metadata changes
@@ -124,6 +132,11 @@ export class LibraryManagementComponent implements OnInit, OnDestroy {
           this.books = metadata.books || [];
         }
       });
+  }
+
+  setViewMode(mode: 'gallery' | 'list'): void {
+    this.viewMode = mode;
+    localStorage.setItem('libraryViewMode', mode);
   }
 
   ngOnDestroy(): void {

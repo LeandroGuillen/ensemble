@@ -1,65 +1,39 @@
 <div class="plot-board-container" [class]="zoomClass">
   <app-page-header [title]="pageTitle">
-    <button
-      type="button"
-      pageHeaderPrefix
-      class="plot-board-sidebar-toggle"
-      [class.is-collapsed]="!plotboardSidebarOpen"
-      (click)="togglePlotboardSidebar()"
-      [attr.aria-expanded]="plotboardSidebarOpen"
-      aria-controls="plot-board-sidebar"
-      [title]="plotboardSidebarOpen ? 'Hide plot board list' : 'Show plot board list'"
-      >
-      <svg
-        class="plot-board-sidebar-toggle-icon"
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-        >
-        <rect x="3" y="4" width="18" height="16" rx="2" />
-        <line x1="9" y1="4" x2="9" y2="20" />
-      </svg>
-    </button>
     @if (hasOpenFile && !isLoading) {
-      <div class="zoom-controls">
+      <div class="view-toggle view-toggle-text">
         <button
-          class="btn-zoom"
+          class="toggle-option"
           [class.active]="zoomLevel === 1"
           (click)="setZoom(1)"
           title="Compact view"
           >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          Compact
         </button>
         <button
-          class="btn-zoom"
+          class="toggle-option"
           [class.active]="zoomLevel === 2"
           (click)="setZoom(2)"
           title="Medium view"
           >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="7" rx="1"/><rect x="3" y="14" width="18" height="7" rx="1"/></svg>
+          Medium
         </button>
         <button
-          class="btn-zoom"
+          class="toggle-option"
           [class.active]="zoomLevel === 3"
           (click)="setZoom(3)"
           title="Full view"
           >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+          Full
         </button>
       </div>
       <button class="btn-action" type="button" (click)="addThread()" title="Add thread (T)">
         + Thread
-        <kbd class="plot-board-action-kbd" aria-hidden="true">T</kbd>
+        <kbd class="shortcut-hint" aria-hidden="true">T</kbd>
       </button>
       <button class="btn-action" type="button" (click)="addRow()" title="Add row (R)">
         + Row
-        <kbd class="plot-board-action-kbd" aria-hidden="true">R</kbd>
+        <kbd class="shortcut-hint" aria-hidden="true">R</kbd>
       </button>
     }
   </app-page-header>
@@ -77,8 +51,31 @@
         <div class="plot-board-sidebar-header">
           <h3 class="plot-board-sidebar-title">Plot boards</h3>
           <div class="plot-board-sidebar-actions">
-            <button type="button" class="icon-btn" (click)="refreshPlotboards()" title="Refresh list from disk">↻</button>
-            <button type="button" class="icon-btn" (click)="openNewPlotBoardDialog()" title="New plot board">+</button>
+            <button type="button" class="icon-btn" (click)="refreshPlotboards()" title="Refresh list from disk" aria-label="Refresh list from disk">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <polyline points="1 20 1 14 7 14"></polyline>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+              </svg>
+            </button>
+            <button type="button" class="icon-btn" (click)="openNewPlotBoardDialog()" title="New plot board" aria-label="New plot board">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              class="icon-btn sidebar-collapse-btn"
+              (click)="togglePlotboardSidebar()"
+              [attr.aria-expanded]="plotboardSidebarOpen"
+              aria-controls="plot-board-sidebar"
+              title="Hide sidebar"
+              aria-label="Hide sidebar"
+              >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </button>
           </div>
         </div>
         @if (duplicateError) {
@@ -126,6 +123,21 @@
     </div>
 
     <div class="plot-board-main">
+      @if (!plotboardSidebarOpen) {
+        <button
+          type="button"
+          class="sidebar-expand-btn"
+          (click)="togglePlotboardSidebar()"
+          [attr.aria-expanded]="plotboardSidebarOpen"
+          aria-controls="plot-board-sidebar"
+          title="Show sidebar"
+          aria-label="Show sidebar"
+          >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+      }
       @if (isLoading) {
         <div class="plot-board-main-loading" aria-busy="true">
           <p>Loading plot board...</p>
@@ -537,9 +549,9 @@
                           >
                           Save
                           <span class="cell-save-kbd-hint" aria-hidden="true">
-                            <kbd class="plot-board-action-kbd">{{ cellSaveShortcutModifierLabel }}</kbd>
+                            <kbd class="shortcut-hint">{{ cellSaveShortcutModifierLabel }}</kbd>
                             <span class="cell-save-kbd-plus">+</span>
-                            <kbd class="plot-board-action-kbd">↵</kbd>
+                            <kbd class="shortcut-hint">↵</kbd>
                           </span>
                         </button>
                       </div>

@@ -90,13 +90,7 @@
 }
 
 .zoom-controls {
-  display: flex;
-  align-items: center;
   gap: 0;
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border-light);
-  border-radius: var(--radius-md);
-  padding: 4px;
   box-shadow: var(--shadow-sm);
 }
 
@@ -104,9 +98,6 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
   background: transparent;
   border: none;
   border-radius: var(--radius-sm);
@@ -144,16 +135,12 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border-light);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   color: var(--color-text-secondary);
   cursor: pointer;
   transition: all var(--transition-base);
-  box-shadow: var(--shadow-sm);
 }
 
 .control-btn:hover {

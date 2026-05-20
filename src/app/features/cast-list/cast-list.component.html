@@ -1,20 +1,35 @@
 <div class="cast-list">
-  <app-page-header [title]="'Casts'" [showSearch]="false">
+  <app-page-header [title]="'Casts'">
     <div class="page-actions">
+      <!-- Search -->
+      <div class="search-box">
+        <input
+          type="text"
+          [(ngModel)]="searchTerm"
+          (ngModelChange)="onSearchChange()"
+          placeholder="Search casts or characters..."
+          class="search-input"
+          />
+        @if (searchTerm) {
+          <button
+            class="search-clear"
+            (click)="clearSearchTerm()"
+            title="Clear search"
+            >
+            ×
+          </button>
+        }
+      </div>
+
       <!-- View Mode Toggle -->
-      <div class="view-toggle">
+      <div class="view-toggle view-toggle-text">
         <button
           class="toggle-option"
           [class.active]="viewMode === 'grid'"
           (click)="setViewMode('grid')"
           title="Grid view"
           >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <rect x="1" y="1" width="6" height="6" rx="1"/>
-            <rect x="9" y="1" width="6" height="6" rx="1"/>
-            <rect x="1" y="9" width="6" height="6" rx="1"/>
-            <rect x="9" y="9" width="6" height="6" rx="1"/>
-          </svg>
+          Grid
         </button>
         <button
           class="toggle-option"
@@ -22,15 +37,12 @@
           (click)="setViewMode('list')"
           title="List view"
           >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <rect x="1" y="2" width="14" height="2" rx="1"/>
-            <rect x="1" y="7" width="14" height="2" rx="1"/>
-            <rect x="1" y="12" width="14" height="2" rx="1"/>
-          </svg>
+          List
         </button>
       </div>
 
       <button class="btn btn-primary" (click)="createNewCast()">
+        <span class="plus-glyph" aria-hidden="true">+</span>
         New Cast
       </button>
     </div>
@@ -38,28 +50,6 @@
 
   <div class="cast-content">
     <div class="cast-inner">
-      <!-- Search Bar -->
-      <div class="toolbar">
-        <div class="search-box">
-          <input
-            type="text"
-            [(ngModel)]="searchTerm"
-            (ngModelChange)="onSearchChange()"
-            placeholder="Search casts or characters..."
-            class="search-input"
-            />
-          @if (searchTerm) {
-            <button
-              class="search-clear"
-              (click)="clearSearchTerm()"
-              title="Clear search"
-              >
-              ×
-            </button>
-          }
-        </div>
-      </div>
-
       <!-- Loading State -->
       @if (isLoading) {
         <div class="loading-state">

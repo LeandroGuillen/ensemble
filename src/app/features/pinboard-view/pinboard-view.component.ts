@@ -1,5 +1,6 @@
 
 import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, HostListener, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { animate, state, style, transition, trigger } from '@angular/animations';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Observable, Subscription } from 'rxjs';
@@ -34,7 +35,16 @@ interface ConnectionFormData {
     PinboardRenameDialogComponent
 ],
     templateUrl: './pinboard-view.component.html',
-    styleUrls: ['./pinboard-view.component.scss']
+    styleUrls: ['./pinboard-view.component.scss'],
+    animations: [
+        trigger('pinboardSidebar', [
+            state('open', style({ width: '240px' })),
+            state('closed', style({ width: '0', overflow: 'hidden' })),
+            transition('open <=> closed', [
+                animate('240ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'),
+            ]),
+        ]),
+    ]
 })
 export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('pinboardContainer', { static: true }) pinboardContainer!: ElementRef;
@@ -49,6 +59,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
   private edges: DataSet<Edge> = new DataSet([]);
 
   // UI state
+  sidebarOpen = true;
   showConnectionDialog = false;
   showEditDialog = false;
   showAddPinDialog = false;
@@ -1688,6 +1699,10 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   // Pinboard Management Methods
+  toggleSidebar(): void {
+    this.sidebarOpen = !this.sidebarOpen;
+  }
+
   onCreatePinboard(): void {
     this.showCreatePinboardDialog = true;
   }

@@ -1,5 +1,5 @@
-/* Import Google Fonts - Outfit for modern, geometric sans-serif */
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+/* Import Google Fonts - Outfit for sans, Playfair Display for editorial serif headings */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 /* Tailwind CSS */
 @tailwind base;
@@ -69,10 +69,19 @@
   --spacing-2xl: 32px;
   --spacing-3xl: 48px;
 
-  /* Border Radius */
+  /* Border Radius — single source of truth for rounded corners.
+     Buttons and panels intentionally share the same radius (8) for visual unity.
+     xs (3) tiny inset chips, kbd, color swatches
+     sm (4) tags, dropdown items, small inputs, inner segments
+     md (8) buttons, inputs, toolbars, cards, dropdowns, panels — the "container" radius
+     lg (8) alias of md — kept for compatibility with existing references
+     xl (16) modals, dialogs
+     2xl (24) reserved for hero surfaces
+     full     pills */
+  --radius-xs: 3px;
   --radius-sm: 4px;
   --radius-md: 8px;
-  --radius-lg: 12px;
+  --radius-lg: 8px;
   --radius-xl: 16px;
   --radius-2xl: 24px;
   --radius-full: 9999px;
@@ -83,6 +92,11 @@
   --font-medium: 500;
   --font-semibold: 600;
   --font-bold: 700;
+
+  /* Font families */
+  --font-sans: 'Outfit', system-ui, -apple-system, sans-serif;
+  --font-serif: 'Playfair Display', 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --font-mono: 'JetBrains Mono', monospace;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -297,6 +311,12 @@
     &:hover:not(:disabled) {
       background: var(--color-bg-elevated);
       border-color: var(--color-border-light);
+    }
+
+    &.active {
+      background: var(--color-accent-primary);
+      color: var(--color-text-inverse);
+      border-color: var(--color-accent-primary);
     }
   }
 
@@ -612,11 +632,225 @@
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
   }
 
-  /* Shortcut hint in buttons */
+  /* Shortcut hint in buttons — single canonical style, used app-wide.
+     Translucent white overlay so it reads correctly on both dark and gold backgrounds. */
   .shortcut-hint {
+    display: inline-flex;
+    align-items: center;
     margin-left: var(--spacing-sm);
-    opacity: 0.7;
+    padding: 3px 7px;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    line-height: 1;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: var(--radius-sm);
+    color: inherit;
+    opacity: 0.8;
   }
+}
+
+@media (max-width: 768px) {
+  .shortcut-hint { display: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Page Header — Cross-cutting control normalization
+
+   Every page projects its actions into <app-page-header>'s right slot.
+   These rules lock all those controls to a single 36px baseline so the
+   row reads as one band of equal-height pills regardless of which page
+   authored the controls. Authored outside @layer base so they win over
+   per-component padding without needing !important.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.page-header {
+  /* Text buttons (.btn family) — drop vertical padding in favor of fixed height */
+  .btn:not(.btn-sm):not(.btn-lg),
+  .btn-action {
+    height: 36px;
+    padding-top: 0;
+    padding-bottom: 0;
+    box-sizing: border-box;
+  }
+
+  /* Standalone square icon buttons (sit alone in the row) */
+  .btn-icon,
+  .control-btn,
+  .icon-btn,
+  .icon-toggle,
+  .plot-board-sidebar-toggle {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+  }
+
+  /* Action buttons — bordered pill, accent hover. Read as "click to do".
+     Used for one-shot actions (refresh, reset view, fit to view, etc.). */
+  .icon-btn,
+  .control-btn {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: background var(--transition-fast), color var(--transition-fast),
+                border-color var(--transition-fast), transform var(--transition-fast);
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    &:hover:not(:disabled) {
+      color: var(--color-accent-primary);
+      border-color: var(--color-accent-primary);
+      background: var(--color-bg-tertiary);
+    }
+
+    &:active:not(:disabled) {
+      transform: scale(0.98);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  /* Toggle buttons — borderless when off, filled accent when on. Read as
+     "switch / state". Visually distinct from action buttons so the user can
+     tell at a glance whether a control performs an action or carries state.
+     Used for slideshow, show-grid, snap-to-grid, and similar binary toggles. */
+  .icon-toggle {
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-md);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: background var(--transition-fast), color var(--transition-fast),
+                box-shadow var(--transition-fast), transform var(--transition-fast);
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    &:hover:not(:disabled):not(.active) {
+      color: var(--color-text-primary);
+      background: var(--color-bg-hover, var(--color-bg-tertiary));
+    }
+
+    &:active:not(:disabled) {
+      transform: scale(0.96);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    &.active {
+      background: linear-gradient(135deg, var(--color-accent-primary) 0%, var(--color-accent-dark) 100%);
+      color: var(--color-text-inverse);
+      box-shadow: 0 2px 6px rgba(229, 168, 85, 0.3);
+    }
+  }
+
+  /* Vertical divider between control groups — make visible */
+  .divider {
+    width: 1px;
+    height: 24px;
+    background: var(--color-border-light, var(--color-border));
+    margin: 0 var(--spacing-xs);
+  }
+
+  /* Pill-style toggle groups (view modes, zoom, columns, slideshow, etc.) */
+  .view-toggle,
+  .column-toggle,
+  .thumbnail-size-toggle,
+  .zoom-controls {
+    display: inline-flex;
+    align-items: center;
+    height: 36px;
+    padding: 3px;
+    gap: 2px;
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-sizing: border-box;
+
+    &.disabled {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+  }
+
+  /* Wide text segments inside those groups */
+  .toggle-option {
+    height: 100%;
+    padding-top: 0;
+    padding-bottom: 0;
+    box-sizing: border-box;
+    background: transparent;
+    border: none;
+    border-radius: calc(var(--radius-md) - 2px);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+
+    &:hover:not(:disabled):not(.active) {
+      color: var(--color-text-primary);
+      background: var(--color-bg-hover);
+    }
+
+    &.active {
+      background: var(--color-accent-primary);
+      color: var(--color-text-inverse);
+      box-shadow: 0 2px 4px rgba(229, 168, 85, 0.2);
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+    }
+  }
+
+  /* Editorial-style text-label variant — opt in by adding .view-toggle-text */
+  .view-toggle-text .toggle-option {
+    padding: 0 14px;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+
+  /* Square icon segments inside those groups */
+  .zoom-btn,
+  .btn-zoom {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  /* Search field + its wrapper */
+  .search-input {
+    height: 36px;
+    box-sizing: border-box;
+  }
+  .search-container {
+    display: inline-flex;
+    align-items: center;
+    height: 36px;
+  }
+
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

@@ -13,6 +13,24 @@
     }
   </div>
 
+  <!-- Search / Command Palette -->
+  <button
+    class="sidebar-search"
+    [class.collapsed]="isCollapsed"
+    (click)="openSearch()"
+    [title]="isCollapsed ? 'Search (Ctrl+P)' : ''"
+    aria-label="Search"
+    >
+    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"></circle>
+      <path d="M21 21l-4.35-4.35"></path>
+    </svg>
+    @if (!isCollapsed) {
+      <span class="search-label">Search</span>
+      <kbd class="search-shortcut">Ctrl+P</kbd>
+    }
+  </button>
+
   <!-- Navigation Sections -->
   <nav class="sidebar-nav">
     @for (section of sections; track section; let isLast = $last) {

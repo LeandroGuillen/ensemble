@@ -1,15 +1,15 @@
-<app-page-header [title]="getCurrentPinboardName()" [showSearch]="false">
+<app-page-header [title]="getCurrentPinboardName()">
   <div class="page-actions">
     <!-- Zoom controls -->
     <div class="zoom-controls">
-      <button class="zoom-btn" (click)="zoomOut()" [disabled]="currentZoomIndex === 0" title="Zoom out" aria-label="Zoom out">
+      <button class="toggle-option" (click)="zoomOut()" [disabled]="currentZoomIndex === 0" title="Zoom out" aria-label="Zoom out">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
         </svg>
       </button>
       <span class="zoom-level">{{ getCurrentZoomLevel() }}</span>
       <button
-        class="zoom-btn"
+        class="toggle-option"
         (click)="zoomIn()"
         [disabled]="currentZoomIndex === zoomLevels.length - 1"
         title="Zoom in"
@@ -21,7 +21,7 @@
       </button>
     </div>
 
-    <button class="control-btn" (click)="onResetView()" title="Fit to view" aria-label="Fit to view">
+    <button class="icon-btn" (click)="onResetView()" title="Fit to view" aria-label="Fit to view">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path
           d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z"
@@ -34,7 +34,7 @@
     </button>
 
     <button
-      class="control-btn"
+      class="icon-toggle"
       [class.active]="showGrid"
       (click)="onToggleGrid()"
       [title]="showGrid ? 'Hide Grid' : 'Show Grid'"
@@ -52,7 +52,7 @@
     </button>
 
     <button
-      class="control-btn"
+      class="icon-toggle"
       [class.active]="snapToGrid"
       (click)="onToggleSnapToGrid()"
       [title]="snapToGrid ? 'Disable Snap to Grid' : 'Enable Snap to Grid'"
@@ -81,29 +81,45 @@
       </svg>
     </button>
 
-    <div class="divider"></div>
-
-    <button class="btn btn-secondary" (click)="openAddPinDialog()" title="Pin Character (P)">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="2" fill="none" />
-        <path d="M8 5V11M5 8H11" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-      </svg>
+    <button class="btn btn-primary pin-character-btn" (click)="openAddPinDialog()" title="Pin Character (P)">
+      <span class="plus-glyph" aria-hidden="true">+</span>
       Pin Character
       <kbd class="shortcut-hint">P</kbd>
     </button>
   </div>
 </app-page-header>
 
-<div class="container">
+<div class="pinboard-page">
   <div class="pinboard-view">
     <!-- Pinboard Sidebar -->
-    <app-pinboard-sidebar
-      (createPinboard)="onCreatePinboard()"
-      (renamePinboard)="onRenamePinboard($event)"
-      (deletePinboard)="onDeletePinboard($event)"
-    ></app-pinboard-sidebar>
+    <div
+      class="pinboard-sidebar-anim"
+      [@pinboardSidebar]="sidebarOpen ? 'open' : 'closed'"
+      >
+      <app-pinboard-sidebar
+        [attr.aria-hidden]="!sidebarOpen"
+        (createPinboard)="onCreatePinboard()"
+        (renamePinboard)="onRenamePinboard($event)"
+        (deletePinboard)="onDeletePinboard($event)"
+        (toggleCollapse)="toggleSidebar()"
+      ></app-pinboard-sidebar>
+    </div>
 
-    <div class="pinboard-container card">
+    <div class="pinboard-container">
+      @if (!sidebarOpen) {
+        <button
+          type="button"
+          class="sidebar-expand-btn"
+          (click)="toggleSidebar()"
+          [attr.aria-expanded]="sidebarOpen"
+          title="Show sidebar"
+          aria-label="Show sidebar"
+          >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+      }
       <!-- Empty State -->
       @if (isEmpty && networkInitialized) {
         <div class="pinboard-empty-state">

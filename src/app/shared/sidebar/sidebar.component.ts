@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router, NavigationEnd } from '@angular/router';
 
 import { ProjectService } from '../../core/services';
+import { CommandPaletteService } from '../command-palette/command-palette.service';
 import { KeyboardShortcutsService } from '../keyboard-shortcuts-dialog/keyboard-shortcuts.service';
 import { filter } from 'rxjs/operators';
 
@@ -69,7 +70,8 @@ export class SidebarComponent implements OnInit {
   constructor(
     private projectService: ProjectService,
     private router: Router,
-    private shortcutsService: KeyboardShortcutsService
+    private shortcutsService: KeyboardShortcutsService,
+    private commandPaletteService: CommandPaletteService
   ) {}
 
   ngOnInit(): void {
@@ -118,5 +120,9 @@ export class SidebarComponent implements OnInit {
 
   openShortcuts(): void {
     this.shortcutsService.open();
+  }
+
+  openSearch(): void {
+    this.commandPaletteService.open();
   }
 }

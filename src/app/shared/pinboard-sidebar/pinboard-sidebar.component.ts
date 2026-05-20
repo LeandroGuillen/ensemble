@@ -16,6 +16,7 @@ export class PinboardSidebarComponent implements OnInit, OnDestroy {
   @Output() createPinboard = new EventEmitter<void>();
   @Output() renamePinboard = new EventEmitter<string>();
   @Output() deletePinboard = new EventEmitter<string>();
+  @Output() toggleCollapse = new EventEmitter<void>();
 
   pinboards: Pinboard[] = [];
   currentPinboardId: string | null = null;

@@ -17,15 +17,20 @@
 
   h3 {
     margin: 0;
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
     color: var(--color-text-muted);
   }
 
-  .create-btn {
+  .sidebar-actions {
     display: flex;
+    gap: var(--spacing-xs);
+  }
+
+  .create-btn {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     width: 28px;
@@ -36,16 +41,11 @@
     border-radius: var(--radius-md);
     color: var(--color-text-secondary);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
 
     &:hover {
       background: var(--color-bg-tertiary);
       color: var(--color-text-primary);
-      border-color: var(--color-border-light);
-    }
-
-    &:active {
-      transform: scale(0.95);
     }
 
     svg {
@@ -68,13 +68,13 @@
   justify-content: space-between;
   gap: var(--spacing-sm);
   padding: var(--spacing-sm) var(--spacing-md);
-  margin-bottom: 2px;
+  margin-bottom: var(--spacing-xs);
   background: transparent;
   border: none;
   border-radius: var(--radius-md);
   color: var(--color-text-secondary);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: background 0.12s ease, color 0.12s ease;
   text-align: left;
   width: 100%;
 
@@ -84,17 +84,16 @@
   }
 
   &.active {
-    background: linear-gradient(135deg, var(--color-accent-primary) 0%, var(--color-accent-dark) 100%);
-    color: var(--color-text-inverse);
-    box-shadow: 0 2px 8px rgba(229, 168, 85, 0.25);
+    background: var(--color-bg-elevated);
+    color: var(--color-accent-primary);
 
-    &:hover {
-      box-shadow: 0 4px 12px rgba(229, 168, 85, 0.35);
+    .pinboard-name {
+      font-weight: 600;
     }
   }
 
   .pinboard-name {
-    font-size: 0.9375rem;
+    font-size: 0.875rem;
     font-weight: 500;
     flex: 1;
     overflow: hidden;
@@ -103,9 +102,9 @@
   }
 
   .pinboard-count {
-    font-size: 0.75rem;
-    opacity: 0.7;
-    background: rgba(255, 255, 255, 0.1);
+    font-size: 0.6875rem;
+    color: var(--color-text-muted);
+    background: var(--color-bg-tertiary);
     padding: 2px 6px;
     border-radius: var(--radius-sm);
   }

@@ -1,12 +1,31 @@
 <div class="library-management">
-  <app-page-header [title]="'Library'" [showSearch]="false">
+  <app-page-header [title]="'Library'">
     <div class="page-actions">
+      <div class="view-toggle view-toggle-text">
+        <button
+          class="toggle-option"
+          [class.active]="viewMode === 'gallery'"
+          (click)="setViewMode('gallery')"
+          title="Gallery view"
+          >
+          Gallery
+        </button>
+        <button
+          class="toggle-option"
+          [class.active]="viewMode === 'list'"
+          (click)="setViewMode('list')"
+          title="List view"
+          >
+          List
+        </button>
+      </div>
+
       <button
         class="btn btn-primary add-book-btn"
         (click)="showAddBookForm()"
         [disabled]="saving"
         >
-        <span class="icon">📚</span>
+        <span class="plus-glyph" aria-hidden="true">+</span>
         Add Book
       </button>
     </div>
@@ -38,72 +57,98 @@
         <div class="content">
           <!-- Books Section -->
           <section class="section books-section">
-            <!-- Books Library Display -->
-            <div class="books-library">
-              <div
-                class="bookshelf"
-                (dragover)="onGlobalDragOver($event)"
-                (drop)="onGlobalDrop($event)"
-                >
-                <!-- Book Items with Smart Drop Zones -->
-                @for (book of books; track book; let i = $index) {
-                  <div
-                    class="book-slot"
-                    [class.drag-active]="draggedIndex !== null"
-                  [class.drag-over-left]="
-                    dragOverIndex === i &&
-                    dragOverSide === 'left' &&
-                    draggedIndex !== null
-                  "
-                  [class.drag-over-right]="
-                    dragOverIndex === i &&
-                    dragOverSide === 'right' &&
-                    draggedIndex !== null
-                  "
-                    >
-                    <!-- Left drop zone (covers left half of book area) -->
+            <!-- Gallery View -->
+            @if (viewMode === 'gallery') {
+              <div class="books-library">
+                <div
+                  class="bookshelf"
+                  (dragover)="onGlobalDragOver($event)"
+                  (drop)="onGlobalDrop($event)"
+                  >
+                  <!-- Book Items with Smart Drop Zones -->
+                  @for (book of books; track book; let i = $index) {
                     <div
-                      class="drop-zone-left"
-                      (dragover)="onDragOver($event, i, 'left')"
-                      (dragenter)="onDragEnter($event, i, 'left')"
-                      (dragleave)="onDragLeave($event)"
-                      (drop)="onDrop($event, i)"
-                    ></div>
-                    <!-- Right drop zone (covers right half of book area) -->
-                    <div
-                      class="drop-zone-right"
-                      (dragover)="onDragOver($event, i, 'right')"
-                      (dragenter)="onDragEnter($event, i, 'right')"
-                      (dragleave)="onDragLeave($event)"
-                      (drop)="onDrop($event, i + 1)"
-                    ></div>
-                    <!-- Book Item -->
-                    <app-book-item
-                      [book]="book"
-                      [isSelected]="selectedBook?.id === book.id"
-                      [isDragging]="draggedIndex === i"
-                      [dragIndex]="i"
-                      (bookClick)="onBookClick($event)"
-                      (dragStart)="onDragStart($event, i)"
-                      (dragEndEvent)="onDragEnd()"
+                      class="book-slot"
+                      [class.drag-active]="draggedIndex !== null"
+                      [class.drag-over-left]="
+                        dragOverIndex === i &&
+                        dragOverSide === 'left' &&
+                        draggedIndex !== null
+                      "
+                      [class.drag-over-right]="
+                        dragOverIndex === i &&
+                        dragOverSide === 'right' &&
+                        draggedIndex !== null
+                      "
                       >
-                    </app-book-item>
-                  </div>
-                }
-                <!-- Empty state -->
-                @if (books.length === 0) {
-                  <div class="empty-bookshelf">
-                    <div class="empty-book-placeholder">
-                      <div class="placeholder-icon">📖</div>
-                      <p>Your library is empty</p>
-                      <p class="empty-subtitle">
-                        Add your first book to get started
-                      </p>
+                      <div
+                        class="drop-zone-left"
+                        (dragover)="onDragOver($event, i, 'left')"
+                        (dragenter)="onDragEnter($event, i, 'left')"
+                        (dragleave)="onDragLeave($event)"
+                        (drop)="onDrop($event, i)"
+                      ></div>
+                      <div
+                        class="drop-zone-right"
+                        (dragover)="onDragOver($event, i, 'right')"
+                        (dragenter)="onDragEnter($event, i, 'right')"
+                        (dragleave)="onDragLeave($event)"
+                        (drop)="onDrop($event, i + 1)"
+                      ></div>
+                      <app-book-item
+                        [book]="book"
+                        [isSelected]="selectedBook?.id === book.id"
+                        [isDragging]="draggedIndex === i"
+                        [dragIndex]="i"
+                        (bookClick)="onBookClick($event)"
+                        (dragStart)="onDragStart($event, i)"
+                        (dragEndEvent)="onDragEnd()"
+                        >
+                      </app-book-item>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+
+            <!-- List View -->
+            @if (viewMode === 'list' && books.length > 0) {
+              <div class="books-list">
+                @for (book of books; track book) {
+                  <div
+                    class="book-row"
+                    [class.selected]="selectedBook?.id === book.id"
+                    (click)="onBookClick(book)"
+                    >
+                    <span class="book-color-swatch" [style.background]="book.color"></span>
+                    <div class="book-row-main">
+                      <div class="book-row-title-line">
+                        <span class="book-row-title">{{ book.name }}</span>
+                        @if (book.status) {
+                          <span class="book-row-status">{{ getStatusLabel(book.status) }}</span>
+                        }
+                      </div>
+                      @if (book.description) {
+                        <span class="book-row-description">{{ book.description }}</span>
+                      }
                     </div>
                   </div>
                 }
               </div>
-            </div>
+            }
+
+            <!-- Empty State -->
+            @if (books.length === 0) {
+              <div class="empty-bookshelf">
+                <div class="empty-book-placeholder">
+                  <div class="placeholder-icon">📖</div>
+                  <p>Your library is empty</p>
+                  <p class="empty-subtitle">
+                    Add your first book to get started
+                  </p>
+                </div>
+              </div>
+            }
           </section>
         </div>
       }

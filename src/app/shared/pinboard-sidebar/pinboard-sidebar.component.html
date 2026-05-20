@@ -1,11 +1,18 @@
 <div class="pinboard-sidebar">
   <div class="sidebar-header">
     <h3>Pinboards</h3>
-    <button class="create-btn" (click)="onCreatePinboard()" title="Create new pinboard">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-      </svg>
-    </button>
+    <div class="sidebar-actions">
+      <button class="create-btn" (click)="onCreatePinboard()" title="Create new pinboard" aria-label="Create new pinboard">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </button>
+      <button class="create-btn collapse-btn" (click)="toggleCollapse.emit()" title="Hide sidebar" aria-label="Hide sidebar">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+    </div>
   </div>
 
   <div class="pinboard-list">

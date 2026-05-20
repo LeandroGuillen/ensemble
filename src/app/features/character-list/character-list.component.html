@@ -1,6 +1,108 @@
 <div class="character-list-container">
-  <app-page-header [title]="'Characters'" [showSearch]="true">
+  <app-page-header [title]="'Characters'">
+    @if (currentProject) {
+      <span
+        pageHeaderSuffix
+        class="title-count"
+        role="status"
+        aria-live="polite"
+        [title]="filteredCharacters.length + ' character' + (filteredCharacters.length !== 1 ? 's' : '')"
+        >
+        {{ filteredCharacters.length }}
+      </span>
+    }
     <div class="page-actions">
+      <!-- Filter (search + expandable panel) -->
+      @if (
+        currentProject && (
+          categories.length > 0 ||
+          tags.length > 0 ||
+          casts.length > 0 ||
+          books.length > 0
+        )
+      ) {
+        <app-character-filter
+          class="header-filter"
+          [categories]="categories"
+          [tags]="tags"
+          [casts]="casts"
+          [books]="books"
+          [allCharacters]="allCharacters"
+          [searchTerm]="searchTerm"
+          [selectedCategory]="selectedCategory"
+          [selectedTags]="selectedTags"
+          [selectedCast]="selectedCast"
+          [selectedBook]="selectedBook"
+          [isExpanded]="filterExpanded"
+          (searchTermChange)="searchTerm = $event; onSearchChange()"
+          (categoryChange)="selectedCategory = $event; onCategoryChange()"
+          (tagsChange)="selectedTags = $event; onTagsSelectionChange($event)"
+          (castChange)="selectedCast = $event; onCastChange()"
+          (bookChange)="selectedBook = $event; onBookChange()"
+          (clearFilters)="clearFilters()"
+          (expandedChange)="onFilterExpandedChange($event)"
+        ></app-character-filter>
+      }
+
+      <!-- Sort -->
+      <div class="view-toggle view-toggle-text" [class.disabled]="!currentProject">
+        <button
+          class="toggle-option"
+          [class.active]="sortBy === 'name'"
+          (click)="setSortBy('name')"
+          [disabled]="!currentProject"
+          title="Sort by name"
+          >
+          Name
+          @if (sortBy === 'name') {
+            <span class="sort-indicator">{{ sortDirection === "asc" ? "↑" : "↓" }}</span>
+          }
+        </button>
+        <button
+          class="toggle-option"
+          [class.active]="sortBy === 'category'"
+          (click)="setSortBy('category')"
+          [disabled]="!currentProject"
+          title="Sort by category"
+          >
+          Category
+          @if (sortBy === 'category') {
+            <span class="sort-indicator">{{ sortDirection === "asc" ? "↑" : "↓" }}</span>
+          }
+        </button>
+      </div>
+
+      <!-- Group -->
+      <div class="view-toggle view-toggle-text" [class.disabled]="!currentProject">
+        <button
+          class="toggle-option"
+          [class.active]="groupBy === 'none'"
+          (click)="setGroupBy('none')"
+          [disabled]="!currentProject"
+          title="No grouping"
+          >
+          Flat
+        </button>
+        <button
+          class="toggle-option"
+          [class.active]="groupBy === 'category'"
+          (click)="setGroupBy('category')"
+          [disabled]="!currentProject"
+          title="Group by category"
+          >
+          By Category
+        </button>
+        <button
+          class="toggle-option"
+          [class.active]="groupBy === 'tag'"
+          (click)="setGroupBy('tag')"
+          [disabled]="!currentProject"
+          title="Group by tag"
+          >
+          By Tag
+        </button>
+      </div>
+
       @if (viewMode === 'list' || viewMode === 'compact') {
         <div
           class="column-toggle"
@@ -82,7 +184,7 @@
           </button>
         </div>
       }
-      <div class="view-toggle" [class.disabled]="!currentProject">
+      <div class="view-toggle view-toggle-text" [class.disabled]="!currentProject">
         <button
           class="toggle-option"
           [class.active]="viewMode === 'gallery'"
@@ -90,16 +192,7 @@
           [disabled]="!currentProject"
           title="Gallery view"
           >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <rect x="1" y="1" width="6" height="6" rx="1" />
-            <rect x="9" y="1" width="6" height="6" rx="1" />
-            <rect x="1" y="9" width="6" height="6" rx="1" />
-            <rect x="9" y="9" width="6" height="6" rx="1" />
-            <circle cx="4" cy="4" r="1.5" fill="white" />
-            <circle cx="12" cy="4" r="1.5" fill="white" />
-            <circle cx="4" cy="12" r="1.5" fill="white" />
-            <circle cx="12" cy="12" r="1.5" fill="white" />
-          </svg>
+          Gallery
         </button>
         <button
           class="toggle-option"
@@ -108,12 +201,7 @@
           [disabled]="!currentProject"
           title="Grid view"
           >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <rect x="1" y="1" width="6" height="6" rx="1" />
-            <rect x="9" y="1" width="6" height="6" rx="1" />
-            <rect x="1" y="9" width="6" height="6" rx="1" />
-            <rect x="9" y="9" width="6" height="6" rx="1" />
-          </svg>
+          Grid
         </button>
         <button
           class="toggle-option"
@@ -122,11 +210,7 @@
           [disabled]="!currentProject"
           title="List view"
           >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <rect x="1" y="2" width="14" height="2" rx="1" />
-            <rect x="1" y="7" width="14" height="2" rx="1" />
-            <rect x="1" y="12" width="14" height="2" rx="1" />
-          </svg>
+          List
         </button>
         <button
           class="toggle-option"
@@ -135,39 +219,50 @@
           [disabled]="!currentProject"
           title="Compact view"
           >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <rect x="1" y="1" width="14" height="1" rx="0.5" />
-            <rect x="1" y="4" width="14" height="1" rx="0.5" />
-            <rect x="1" y="7" width="14" height="1" rx="0.5" />
-            <rect x="1" y="10" width="14" height="1" rx="0.5" />
-            <rect x="1" y="13" width="14" height="1" rx="0.5" />
-          </svg>
-        </button>
-      </div>
-      <div class="slideshow-toggle" [class.disabled]="!currentProject">
-        <button
-          class="toggle-option"
-          [class.active]="slideshowEnabled"
-          (click)="toggleSlideshow()"
-          [disabled]="!currentProject"
-          title="Toggle slideshow (show all images vs. thumbnail only)"
-          >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <rect x="2" y="3" width="12" height="10" rx="1" stroke="currentColor" fill="none" stroke-width="1.5"/>
-            <circle cx="5" cy="6" r="1" />
-            <polyline points="4,11 7,8 9,10 12,7" stroke="currentColor" fill="none" stroke-width="1.2"/>
-            @if (slideshowEnabled) {
-              <path d="M13,2 L15,4 L13,6 Z" fill="currentColor"/>
-            }
-          </svg>
+          Compact
         </button>
       </div>
       <button
-        class="btn btn-primary"
+        class="icon-toggle"
+        [class.active]="slideshowEnabled"
+        (click)="toggleSlideshow()"
+        [disabled]="!currentProject"
+        title="Toggle slideshow (show all images vs. thumbnail only)"
+        aria-label="Toggle slideshow"
+        >
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <rect x="2" y="3" width="12" height="10" rx="1" stroke="currentColor" fill="none" stroke-width="1.5"/>
+          <circle cx="5" cy="6" r="1" />
+          <polyline points="4,11 7,8 9,10 12,7" stroke="currentColor" fill="none" stroke-width="1.2"/>
+          @if (slideshowEnabled) {
+            <path d="M13,2 L15,4 L13,6 Z" fill="currentColor"/>
+          }
+        </svg>
+      </button>
+      <!-- Refresh -->
+      @if (currentProject) {
+        <button
+          class="icon-btn refresh-btn"
+          (click)="refreshCharacters()"
+          [disabled]="!currentProject || isLoading"
+          title="Refresh characters"
+          aria-label="Refresh"
+          >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+        </button>
+      }
+
+      <button
+        class="btn btn-primary new-character-btn"
         (click)="createNewCharacter()"
         [disabled]="!currentProject"
         title="New Character (N)"
         >
+        <span class="plus-glyph" aria-hidden="true">+</span>
         New Character
         <kbd class="shortcut-hint">N</kbd>
       </button>
@@ -200,37 +295,7 @@
   <!-- Main Content -->
   <div class="content-wrapper">
     @if (currentProject && !isLoading && !error) {
-      <div
-        class="controls-section"
-        >
-        <!-- New Collapsible Filter Component -->
-        @if (
-          categories.length > 0 ||
-          tags.length > 0 ||
-          casts.length > 0 ||
-          books.length > 0
-          ) {
-          <app-character-filter
-            [categories]="categories"
-            [tags]="tags"
-            [casts]="casts"
-            [books]="books"
-            [allCharacters]="allCharacters"
-            [searchTerm]="searchTerm"
-            [selectedCategory]="selectedCategory"
-            [selectedTags]="selectedTags"
-            [selectedCast]="selectedCast"
-            [selectedBook]="selectedBook"
-            [isExpanded]="filterExpanded"
-            (searchTermChange)="searchTerm = $event; onSearchChange()"
-            (categoryChange)="selectedCategory = $event; onCategoryChange()"
-            (tagsChange)="selectedTags = $event; onTagsSelectionChange($event)"
-            (castChange)="selectedCast = $event; onCastChange()"
-            (bookChange)="selectedBook = $event; onBookChange()"
-            (clearFilters)="clearFilters()"
-            (expandedChange)="onFilterExpandedChange($event)"
-          ></app-character-filter>
-        }
+      <div class="controls-section">
         <!-- Multi-select Actions -->
         @if (selectedCharacterIds.length > 0) {
           <div class="multi-select-actions">
@@ -240,140 +305,60 @@
               }}
               selected</span
               >
-              <button
-                class="btn btn-secondary btn-sm"
-                (click)="showCastNameFormDialog()"
-                >
-                Save Selection as Cast
-              </button>
-              <button class="btn btn-link btn-sm" (click)="selectedCharacterIds = []">
-                Clear Selection
-              </button>
-            </div>
-          }
-          <!-- Cast Name Form Dialog -->
-          @if (showCastNameForm) {
-            <div
-              class="cast-name-form-overlay"
-              (click)="cancelCastForm()"
+            <button
+              class="btn btn-secondary btn-sm"
+              (click)="showCastNameFormDialog()"
               >
-              <div class="cast-name-form" (click)="$event.stopPropagation()">
-                <div class="form-header">
-                  <h3>Create New Cast</h3>
-                  <button class="btn-close" (click)="cancelCastForm()">×</button>
-                </div>
-                <div class="form-body">
-                  <p class="form-help">
-                    Enter a name for this cast ({{ selectedCharacterIds.length }}
-                    characters selected)
-                  </p>
-                  <input
-                    type="text"
-                    [(ngModel)]="newCastName"
-                    placeholder="e.g., Chapter 1 Cast, Battle Scene"
-                    class="form-control"
-                    (keyup.enter)="saveSelectionAsCast()"
-                    (keyup.escape)="cancelCastForm()"
-                    autofocus
-                    />
-                </div>
-                <div class="form-actions">
-                  <button class="btn btn-secondary" (click)="cancelCastForm()">
-                    Cancel
-                  </button>
-                  <button
-                    class="btn btn-primary"
-                    (click)="saveSelectionAsCast()"
-                    [disabled]="!newCastName || newCastName.trim() === ''"
-                    >
-                    Create Cast
-                  </button>
-                </div>
-              </div>
-            </div>
-          }
-          <!-- Results Count and Sort -->
-          @if (
-            filteredCharacters.length > 0 ||
-            searchTerm ||
-            selectedCategory ||
-            selectedTags.length > 0 ||
-            selectedCast ||
-            selectedBook
-            ) {
-            <div
-              class="results-bar"
-              >
-              <span class="text-muted text-sm" role="status" aria-live="polite"
-                >{{ filteredCharacters.length }} character{{
-                filteredCharacters.length !== 1 ? "s" : ""
-                }}</span
-                >
-                <div class="sort-controls">
-                  <span class="sort-label">Sort by:</span>
-                  <button
-                    class="sort-button"
-                    [class.active]="sortBy === 'name'"
-                    (click)="setSortBy('name')"
-                    >
-                    Name
-                    @if (sortBy === 'name') {
-                      <span class="sort-indicator">
-                        {{ sortDirection === "asc" ? "↑" : "↓" }}
-                      </span>
-                    }
-                  </button>
-                  <button
-                    class="sort-button"
-                    [class.active]="sortBy === 'category'"
-                    (click)="setSortBy('category')"
-                    >
-                    Category
-                    @if (sortBy === 'category') {
-                      <span class="sort-indicator">
-                        {{ sortDirection === "asc" ? "↑" : "↓" }}
-                      </span>
-                    }
-                  </button>
-                </div>
-                <div class="group-controls">
-                  <span class="group-label">Group:</span>
-                  <button
-                    class="group-button"
-                    [class.active]="groupBy === 'none'"
-                    (click)="setGroupBy('none')"
-                    >
-                    None
-                  </button>
-                  <button
-                    class="group-button"
-                    [class.active]="groupBy === 'category'"
-                    (click)="setGroupBy('category')"
-                    >
-                    Category
-                  </button>
-                  <button
-                    class="group-button"
-                    [class.active]="groupBy === 'tag'"
-                    (click)="setGroupBy('tag')"
-                    >
-                    Tag
-                  </button>
-                </div>
-                <div class="results-actions">
-                  <a
-                    class="refresh-link"
-                    (click)="refreshCharacters()"
-                    [class.disabled]="!currentProject || isLoading"
-                    title="Refresh characters"
-                    >
-                    Refresh
-                  </a>
-                </div>
-              </div>
-            }
+              Save Selection as Cast
+            </button>
+            <button class="btn btn-link btn-sm" (click)="selectedCharacterIds = []">
+              Clear Selection
+            </button>
           </div>
         }
+        <!-- Cast Name Form Dialog -->
+        @if (showCastNameForm) {
+          <div
+            class="cast-name-form-overlay"
+            (click)="cancelCastForm()"
+            >
+            <div class="cast-name-form" (click)="$event.stopPropagation()">
+              <div class="form-header">
+                <h3>Create New Cast</h3>
+                <button class="btn-close" (click)="cancelCastForm()">×</button>
+              </div>
+              <div class="form-body">
+                <p class="form-help">
+                  Enter a name for this cast ({{ selectedCharacterIds.length }}
+                  characters selected)
+                </p>
+                <input
+                  type="text"
+                  [(ngModel)]="newCastName"
+                  placeholder="e.g., Chapter 1 Cast, Battle Scene"
+                  class="form-control"
+                  (keyup.enter)="saveSelectionAsCast()"
+                  (keyup.escape)="cancelCastForm()"
+                  autofocus
+                  />
+              </div>
+              <div class="form-actions">
+                <button class="btn btn-secondary" (click)="cancelCastForm()">
+                  Cancel
+                </button>
+                <button
+                  class="btn btn-primary"
+                  (click)="saveSelectionAsCast()"
+                  [disabled]="!newCastName || newCastName.trim() === ''"
+                  >
+                  Create Cast
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
 
         @if (currentProject && !isLoading && !error) {
           <div

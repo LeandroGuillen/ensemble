@@ -1,7 +1,7 @@
 <div class="backstage-container">
   <app-page-header [title]="'Backstage'">
     <div class="page-actions">
-      <div class="search-container">
+      <div class="search-box">
         <input
           type="text"
           class="search-input"
@@ -19,7 +19,7 @@
         }
         @if (searchQuery) {
           <button
-            class="btn-icon"
+            class="search-clear"
             (click)="clearSearch()"
             title="Clear search"
             aria-label="Clear search"
@@ -29,16 +29,21 @@
         }
       </div>
       <button
-        class="btn btn-ghost"
+        class="icon-btn"
         (click)="reload()"
         [disabled]="isLoading"
         title="Reload from files"
+        aria-label="Reload"
         >
-        Reload
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <polyline points="1 20 1 14 7 14"></polyline>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+        </svg>
       </button>
       @if (activeTab === 'nameLists') {
         <button
-          class="btn-icon"
+          class="btn btn-secondary btn-icon"
           [class.active]="showSorted"
           (click)="toggleSortedView()"
           title="Show sorted"
@@ -48,10 +53,11 @@
       }
       @if (activeTab === 'nameLists') {
         <button
-          class="btn btn-secondary"
+          class="btn btn-primary"
           (click)="addNameList()"
           title="New Name List (Ctrl+Shift+N)"
           >
+          <span class="plus-glyph" aria-hidden="true">+</span>
           New Name List
           <kbd class="shortcut-hint">Ctrl+Shift+N</kbd>
         </button>
@@ -62,6 +68,7 @@
           (click)="addConcept()"
           title="New Concept (Ctrl+N)"
           >
+          <span class="plus-glyph" aria-hidden="true">+</span>
           New Concept
           <kbd class="shortcut-hint">Ctrl+N</kbd>
         </button>

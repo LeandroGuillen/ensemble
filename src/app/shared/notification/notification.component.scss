@@ -15,7 +15,7 @@
   align-items: flex-start;
   gap: 0.75rem;
   padding: 0.875rem 1rem;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.35)), 0 0 0 1px rgba(0, 0, 0, 0.1);
   background: var(--color-bg-elevated, #222838);
   border: 1px solid var(--color-border, #2a3142);
