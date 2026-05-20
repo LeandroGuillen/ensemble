@@ -24,19 +24,18 @@ interface ConnectionFormData {
 }
 
 @Component({
-  selector: 'app-pinboard-view',
-  standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    PageHeaderComponent,
-    ColorSelectorComponent,
-    PinboardSidebarComponent,
-    PinboardCreateDialogComponent,
-    PinboardRenameDialogComponent,
-  ],
-  templateUrl: './pinboard-view.component.html',
-  styleUrls: ['./pinboard-view.component.scss'],
+    selector: 'app-pinboard-view',
+    imports: [
+        CommonModule,
+        FormsModule,
+        PageHeaderComponent,
+        ColorSelectorComponent,
+        PinboardSidebarComponent,
+        PinboardCreateDialogComponent,
+        PinboardRenameDialogComponent,
+    ],
+    templateUrl: './pinboard-view.component.html',
+    styleUrls: ['./pinboard-view.component.scss']
 })
 export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('pinboardContainer', { static: true }) pinboardContainer!: ElementRef;

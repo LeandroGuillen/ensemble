@@ -8,11 +8,10 @@ export interface ToggleOption {
 }
 
 @Component({
-  selector: 'app-category-toggle',
-  standalone: true,
-  imports: [CommonModule],
-  templateUrl: './category-toggle.component.html',
-  styleUrls: ['./category-toggle.component.scss']
+    selector: 'app-category-toggle',
+    imports: [CommonModule],
+    templateUrl: './category-toggle.component.html',
+    styleUrls: ['./category-toggle.component.scss']
 })
 export class CategoryToggleComponent {
   @Input() options: ToggleOption[] = [];

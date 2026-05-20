@@ -17,11 +17,10 @@ import { UpdateNotificationComponent } from "./shared/update-notification/update
 import { ModalService, ConfirmationRequest } from "./core/services/modal.service";
 
 @Component({
-  selector: "app-root",
-  standalone: true,
-  imports: [CommonModule, RouterOutlet, CommandPaletteComponent, SidebarComponent, NotificationComponent, CharacterEditDialogComponent, ConfirmationDialogComponent, KeyboardShortcutsDialogComponent, UpdateNotificationComponent],
-  templateUrl: "./app.component.html",
-  styleUrls: ["./app.component.scss"],
+    selector: "app-root",
+    imports: [CommonModule, RouterOutlet, CommandPaletteComponent, SidebarComponent, NotificationComponent, CharacterEditDialogComponent, ConfirmationDialogComponent, KeyboardShortcutsDialogComponent, UpdateNotificationComponent],
+    templateUrl: "./app.component.html",
+    styleUrls: ["./app.component.scss"]
 })
 export class AppComponent implements OnInit, OnDestroy {
   title = "Ensemble";

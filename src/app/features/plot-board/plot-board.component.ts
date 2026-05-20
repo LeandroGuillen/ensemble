@@ -38,37 +38,30 @@ const EMOJI_GROUPS: { label: string; emojis: string[] }[] = [
 export type ZoomLevel = 1 | 2 | 3;
 
 @Component({
-  selector: 'app-plot-board',
-  standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, PageHeaderComponent],
-  templateUrl: './plot-board.component.html',
-  styleUrls: ['./plot-board.component.scss'],
-  animations: [
-    trigger('plotBoardContent', [
-      transition('* => *', [
-        style({ opacity: 0 }),
-        animate('260ms cubic-bezier(0.25, 0.46, 0.45, 0.94)', style({ opacity: 1 })),
-      ]),
-    ]),
-    trigger('plotBoardSidebar', [
-      state(
-        'open',
-        style({
-          width: '240px',
-        })
-      ),
-      state(
-        'closed',
-        style({
-          width: '0',
-          overflow: 'hidden',
-        })
-      ),
-      transition('open <=> closed', [
-        animate('240ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'),
-      ]),
-    ]),
-  ],
+    selector: 'app-plot-board',
+    imports: [CommonModule, FormsModule, RouterLink, PageHeaderComponent],
+    templateUrl: './plot-board.component.html',
+    styleUrls: ['./plot-board.component.scss'],
+    animations: [
+        trigger('plotBoardContent', [
+            transition('* => *', [
+                style({ opacity: 0 }),
+                animate('260ms cubic-bezier(0.25, 0.46, 0.45, 0.94)', style({ opacity: 1 })),
+            ]),
+        ]),
+        trigger('plotBoardSidebar', [
+            state('open', style({
+                width: '240px',
+            })),
+            state('closed', style({
+                width: '0',
+                overflow: 'hidden',
+            })),
+            transition('open <=> closed', [
+                animate('240ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'),
+            ]),
+        ]),
+    ]
 })
 export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   private destroy$ = new Subject<void>();

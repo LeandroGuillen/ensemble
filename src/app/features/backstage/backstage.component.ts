@@ -16,15 +16,14 @@ import {
 import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
 
 @Component({
-  selector: "app-backstage",
-  standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    PageHeaderComponent,
-  ],
-  templateUrl: "./backstage.component.html",
-  styleUrls: ["./backstage.component.scss"],
+    selector: "app-backstage",
+    imports: [
+        CommonModule,
+        FormsModule,
+        PageHeaderComponent,
+    ],
+    templateUrl: "./backstage.component.html",
+    styleUrls: ["./backstage.component.scss"]
 })
 export class BackstageComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();

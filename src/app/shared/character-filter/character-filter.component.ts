@@ -16,18 +16,17 @@ export interface FilterState {
 }
 
 @Component({
-  selector: 'app-character-filter',
-  standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    CategoryToggleComponent,
-    MultiSelectButtonsComponent,
-    CastDropdownComponent,
-    BookSelectorComponent,
-  ],
-  templateUrl: './character-filter.component.html',
-  styleUrls: ['./character-filter.component.scss'],
+    selector: 'app-character-filter',
+    imports: [
+        CommonModule,
+        FormsModule,
+        CategoryToggleComponent,
+        MultiSelectButtonsComponent,
+        CastDropdownComponent,
+        BookSelectorComponent,
+    ],
+    templateUrl: './character-filter.component.html',
+    styleUrls: ['./character-filter.component.scss']
 })
 export class CharacterFilterComponent {
   @Input() categories: Category[] = [];

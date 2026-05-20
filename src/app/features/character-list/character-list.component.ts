@@ -22,21 +22,20 @@ import {
   CharacterListViewComponent,
 } from './views';
 @Component({
-  selector: 'app-character-list',
-  standalone: true,
-  imports: [
-    CommonModule,
-    DragDropModule,
-    FormsModule,
-    PageHeaderComponent,
-    CharacterFilterComponent,
-    CharacterGridViewComponent,
-    CharacterListViewComponent,
-    CharacterCompactViewComponent,
-    CharacterGalleryViewComponent,
-  ],
-  templateUrl: './character-list.component.html',
-  styleUrls: ['./character-list.component.scss'],
+    selector: 'app-character-list',
+    imports: [
+        CommonModule,
+        DragDropModule,
+        FormsModule,
+        PageHeaderComponent,
+        CharacterFilterComponent,
+        CharacterGridViewComponent,
+        CharacterListViewComponent,
+        CharacterCompactViewComponent,
+        CharacterGalleryViewComponent,
+    ],
+    templateUrl: './character-list.component.html',
+    styleUrls: ['./character-list.component.scss']
 })
 export class CharacterListComponent implements OnInit, OnDestroy {
   @ViewChild('scrollableContent', { static: false })

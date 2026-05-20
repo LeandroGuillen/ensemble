@@ -4,11 +4,10 @@ import { DragDropModule } from '@angular/cdk/drag-drop';
 import { Character, Tag, Category } from '../../../../core/interfaces';
 
 @Component({
-  selector: 'app-character-compact-view',
-  standalone: true,
-  imports: [CommonModule, DragDropModule],
-  templateUrl: './character-compact-view.component.html',
-  styleUrls: ['./character-compact-view.component.scss']
+    selector: 'app-character-compact-view',
+    imports: [CommonModule, DragDropModule],
+    templateUrl: './character-compact-view.component.html',
+    styleUrls: ['./character-compact-view.component.scss']
 })
 export class CharacterCompactViewComponent {
   @Input() characters: Character[] = [];

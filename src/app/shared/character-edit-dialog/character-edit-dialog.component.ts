@@ -6,12 +6,11 @@ import { CharacterEditDialogService, CharacterEditDialogState } from '../../core
 import { CharacterDetailComponent } from '../../features/character-detail/character-detail.component';
 
 @Component({
-  selector: 'app-character-edit-dialog',
-  standalone: true,
-  imports: [CommonModule, CharacterDetailComponent],
-  templateUrl: './character-edit-dialog.component.html',
-  styleUrls: ['./character-edit-dialog.component.scss'],
-  encapsulation: ViewEncapsulation.None,
+    selector: 'app-character-edit-dialog',
+    imports: [CommonModule, CharacterDetailComponent],
+    templateUrl: './character-edit-dialog.component.html',
+    styleUrls: ['./character-edit-dialog.component.scss'],
+    encapsulation: ViewEncapsulation.None
 })
 export class CharacterEditDialogComponent implements OnInit, OnDestroy {
   @ViewChild(CharacterDetailComponent) characterDetailRef?: CharacterDetailComponent;

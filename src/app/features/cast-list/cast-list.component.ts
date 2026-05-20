@@ -22,11 +22,10 @@ import {
 import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
 
 @Component({
-  selector: "app-cast-list",
-  standalone: true,
-  imports: [CommonModule, FormsModule, PageHeaderComponent],
-  templateUrl: "./cast-list.component.html",
-  styleUrls: ["./cast-list.component.scss"],
+    selector: "app-cast-list",
+    imports: [CommonModule, FormsModule, PageHeaderComponent],
+    templateUrl: "./cast-list.component.html",
+    styleUrls: ["./cast-list.component.scss"]
 })
 export class CastListComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();

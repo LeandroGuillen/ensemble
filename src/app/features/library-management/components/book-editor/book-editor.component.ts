@@ -14,11 +14,10 @@ interface BookFormData {
 }
 
 @Component({
-  selector: 'app-book-editor',
-  standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
-  templateUrl: './book-editor.component.html',
-  styleUrls: ['./book-editor.component.scss']
+    selector: 'app-book-editor',
+    imports: [CommonModule, FormsModule, ReactiveFormsModule],
+    templateUrl: './book-editor.component.html',
+    styleUrls: ['./book-editor.component.scss']
 })
 export class BookEditorComponent implements OnInit, OnChanges {
   @Input() book: Book | null = null;

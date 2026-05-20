@@ -7,11 +7,10 @@ import { AiService, AiTestConnectionResult } from '../../core/services/ai.servic
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 
 @Component({
-  selector: 'app-ai-settings',
-  standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, PageHeaderComponent],
-  templateUrl: './ai-settings.component.html',
-  styleUrls: ['./ai-settings.component.scss'],
+    selector: 'app-ai-settings',
+    imports: [CommonModule, FormsModule, ReactiveFormsModule, PageHeaderComponent],
+    templateUrl: './ai-settings.component.html',
+    styleUrls: ['./ai-settings.component.scss']
 })
 export class AiSettingsComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();

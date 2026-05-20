@@ -4,11 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { Pinboard } from '../../core/interfaces/pinboard.interface';
 
 @Component({
-  selector: 'app-pinboard-create-dialog',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './pinboard-create-dialog.component.html',
-  styleUrls: ['./pinboard-create-dialog.component.scss']
+    selector: 'app-pinboard-create-dialog',
+    imports: [CommonModule, FormsModule],
+    templateUrl: './pinboard-create-dialog.component.html',
+    styleUrls: ['./pinboard-create-dialog.component.scss']
 })
 export class PinboardCreateDialogComponent {
   @Input() visible = false;

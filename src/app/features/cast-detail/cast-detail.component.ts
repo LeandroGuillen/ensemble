@@ -29,16 +29,15 @@ import {
 import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
 
 @Component({
-  selector: "app-cast-detail",
-  standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    ReactiveFormsModule,
-    PageHeaderComponent,
-  ],
-  templateUrl: "./cast-detail.component.html",
-  styleUrls: ["./cast-detail.component.scss"],
+    selector: "app-cast-detail",
+    imports: [
+        CommonModule,
+        FormsModule,
+        ReactiveFormsModule,
+        PageHeaderComponent,
+    ],
+    templateUrl: "./cast-detail.component.html",
+    styleUrls: ["./cast-detail.component.scss"]
 })
 export class CastDetailComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();

@@ -15,11 +15,10 @@ import { Cast, Character } from "../../core/interfaces";
 import { ElectronService, LoggingService } from "../../core/services";
 
 @Component({
-  selector: "app-cast-dropdown",
-  standalone: true,
-  imports: [CommonModule],
-  templateUrl: "./cast-dropdown.component.html",
-  styleUrls: ["./cast-dropdown.component.scss"],
+    selector: "app-cast-dropdown",
+    imports: [CommonModule],
+    templateUrl: "./cast-dropdown.component.html",
+    styleUrls: ["./cast-dropdown.component.scss"]
 })
 export class CastDropdownComponent implements OnInit, OnDestroy {
   @Input() casts: Cast[] = [];

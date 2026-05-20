@@ -4,11 +4,10 @@ import { Subject, takeUntil } from 'rxjs';
 import { KeyboardShortcutsService, Shortcut } from './keyboard-shortcuts.service';
 
 @Component({
-  selector: 'app-keyboard-shortcuts-dialog',
-  standalone: true,
-  imports: [CommonModule],
-  templateUrl: './keyboard-shortcuts-dialog.component.html',
-  styleUrls: ['./keyboard-shortcuts-dialog.component.scss']
+    selector: 'app-keyboard-shortcuts-dialog',
+    imports: [CommonModule],
+    templateUrl: './keyboard-shortcuts-dialog.component.html',
+    styleUrls: ['./keyboard-shortcuts-dialog.component.scss']
 })
 export class KeyboardShortcutsDialogComponent implements OnInit, OnDestroy {
   isOpen = false;

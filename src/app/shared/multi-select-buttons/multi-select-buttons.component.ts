@@ -8,12 +8,11 @@ export interface SelectableItem {
 }
 
 @Component({
-  selector: 'app-multi-select-buttons',
-  standalone: true,
-  imports: [CommonModule],
-  templateUrl: './multi-select-buttons.component.html',
-  styleUrls: ['./multi-select-buttons.component.scss'],
-  changeDetection: ChangeDetectionStrategy.Default
+    selector: 'app-multi-select-buttons',
+    imports: [CommonModule],
+    templateUrl: './multi-select-buttons.component.html',
+    styleUrls: ['./multi-select-buttons.component.scss'],
+    changeDetection: ChangeDetectionStrategy.Default
 })
 export class MultiSelectButtonsComponent {
   @Input() items: SelectableItem[] = [];

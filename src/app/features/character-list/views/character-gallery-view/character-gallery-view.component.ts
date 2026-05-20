@@ -4,11 +4,10 @@ import { DragDropModule } from '@angular/cdk/drag-drop';
 import { Character, Tag } from "../../../../core/interfaces";
 
 @Component({
-  selector: "app-character-gallery-view",
-  standalone: true,
-  imports: [CommonModule, DragDropModule],
-  templateUrl: "./character-gallery-view.component.html",
-  styleUrls: ["./character-gallery-view.component.scss"],
+    selector: "app-character-gallery-view",
+    imports: [CommonModule, DragDropModule],
+    templateUrl: "./character-gallery-view.component.html",
+    styleUrls: ["./character-gallery-view.component.scss"]
 })
 export class CharacterGalleryViewComponent implements OnInit, OnDestroy, OnChanges {
   @Input() characters: Character[] = [];

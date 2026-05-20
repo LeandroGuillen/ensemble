@@ -12,11 +12,10 @@ interface RecentProject {
 }
 
 @Component({
-  selector: 'app-project-selector',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './project-selector.component.html',
-  styleUrls: ['./project-selector.component.scss']
+    selector: 'app-project-selector',
+    imports: [CommonModule, FormsModule],
+    templateUrl: './project-selector.component.html',
+    styleUrls: ['./project-selector.component.scss']
 })
 export class ProjectSelectorComponent implements OnInit {
   isLoading = false;

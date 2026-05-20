@@ -5,11 +5,10 @@ import { CommandPaletteService, Command } from './command-palette.service';
 import { Subject, takeUntil } from 'rxjs';
 
 @Component({
-  selector: 'app-command-palette',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './command-palette.component.html',
-  styleUrl: './command-palette.component.scss'
+    selector: 'app-command-palette',
+    imports: [CommonModule, FormsModule],
+    templateUrl: './command-palette.component.html',
+    styleUrl: './command-palette.component.scss'
 })
 export class CommandPaletteComponent implements OnInit, OnDestroy {
   @ViewChild('searchInput') searchInput?: ElementRef<HTMLInputElement>;

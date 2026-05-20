@@ -3,11 +3,10 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 @Component({
-  selector: 'app-color-selector',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './color-selector.component.html',
-  styleUrls: ['./color-selector.component.scss']
+    selector: 'app-color-selector',
+    imports: [CommonModule, FormsModule],
+    templateUrl: './color-selector.component.html',
+    styleUrls: ['./color-selector.component.scss']
 })
 export class ColorSelectorComponent implements OnInit, OnChanges {
   @Input() label: string = 'Color';

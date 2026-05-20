@@ -3,11 +3,10 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 @Component({
-  selector: 'app-pinboard-rename-dialog',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './pinboard-rename-dialog.component.html',
-  styleUrls: ['./pinboard-rename-dialog.component.scss']
+    selector: 'app-pinboard-rename-dialog',
+    imports: [CommonModule, FormsModule],
+    templateUrl: './pinboard-rename-dialog.component.html',
+    styleUrls: ['./pinboard-rename-dialog.component.scss']
 })
 export class PinboardRenameDialogComponent implements OnChanges {
   @Input() visible = false;

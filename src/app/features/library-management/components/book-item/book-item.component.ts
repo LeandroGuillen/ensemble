@@ -4,11 +4,10 @@ import { Book } from "@app/core";
 import { LoggingService } from "@app/core/services/logging.service";
 
 @Component({
-  selector: "app-book-item",
-  standalone: true,
-  imports: [CommonModule],
-  templateUrl: "./book-item.component.html",
-  styleUrls: ["./book-item.component.scss"],
+    selector: "app-book-item",
+    imports: [CommonModule],
+    templateUrl: "./book-item.component.html",
+    styleUrls: ["./book-item.component.scss"]
 })
 export class BookItemComponent {
   @Input() book!: Book;

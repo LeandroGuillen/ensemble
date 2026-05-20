@@ -28,18 +28,17 @@ interface BookFormData {
 }
 
 @Component({
-  selector: "app-library-management",
-  standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    ReactiveFormsModule,
-    PageHeaderComponent,
-    BookItemComponent,
-    BookEditorComponent,
-  ],
-  templateUrl: "./library-management.component.html",
-  styleUrls: ["./library-management.component.scss"],
+    selector: "app-library-management",
+    imports: [
+        CommonModule,
+        FormsModule,
+        ReactiveFormsModule,
+        PageHeaderComponent,
+        BookItemComponent,
+        BookEditorComponent,
+    ],
+    templateUrl: "./library-management.component.html",
+    styleUrls: ["./library-management.component.scss"]
 })
 export class LibraryManagementComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();

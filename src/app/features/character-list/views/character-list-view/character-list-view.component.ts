@@ -4,11 +4,10 @@ import { DragDropModule } from '@angular/cdk/drag-drop';
 import { Character, Tag, Category } from '../../../../core/interfaces';
 
 @Component({
-  selector: 'app-character-list-view',
-  standalone: true,
-  imports: [CommonModule, DragDropModule],
-  templateUrl: './character-list-view.component.html',
-  styleUrls: ['./character-list-view.component.scss']
+    selector: 'app-character-list-view',
+    imports: [CommonModule, DragDropModule],
+    templateUrl: './character-list-view.component.html',
+    styleUrls: ['./character-list-view.component.scss']
 })
 export class CharacterListViewComponent {
   @Input() characters: Character[] = [];

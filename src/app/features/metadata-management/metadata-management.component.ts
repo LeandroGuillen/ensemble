@@ -35,11 +35,10 @@ interface TagFormData {
 }
 
 @Component({
-  selector: 'app-metadata-management',
-  standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, PageHeaderComponent],
-  templateUrl: './metadata-management.component.html',
-  styleUrls: ['./metadata-management.component.scss']
+    selector: 'app-metadata-management',
+    imports: [CommonModule, FormsModule, ReactiveFormsModule, PageHeaderComponent],
+    templateUrl: './metadata-management.component.html',
+    styleUrls: ['./metadata-management.component.scss']
 })
 export class MetadataManagementComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();

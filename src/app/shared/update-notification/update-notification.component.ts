@@ -4,11 +4,10 @@ import { UpdateService, UpdateStatus } from '../../core/services/update.service'
 import { Subject, takeUntil } from 'rxjs';
 
 @Component({
-  selector: 'app-update-notification',
-  standalone: true,
-  imports: [CommonModule],
-  templateUrl: './update-notification.component.html',
-  styleUrls: ['./update-notification.component.scss']
+    selector: 'app-update-notification',
+    imports: [CommonModule],
+    templateUrl: './update-notification.component.html',
+    styleUrls: ['./update-notification.component.scss']
 })
 export class UpdateNotificationComponent implements OnInit, OnDestroy {
   updateStatus: UpdateStatus | null = null;

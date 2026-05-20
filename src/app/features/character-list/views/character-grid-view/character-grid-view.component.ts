@@ -4,11 +4,10 @@ import { DragDropModule } from '@angular/cdk/drag-drop';
 import { Character, Tag, Category } from "../../../../core/interfaces";
 
 @Component({
-  selector: "app-character-grid-view",
-  standalone: true,
-  imports: [CommonModule, DragDropModule],
-  templateUrl: "./character-grid-view.component.html",
-  styleUrls: ["./character-grid-view.component.scss"],
+    selector: "app-character-grid-view",
+    imports: [CommonModule, DragDropModule],
+    templateUrl: "./character-grid-view.component.html",
+    styleUrls: ["./character-grid-view.component.scss"]
 })
 export class CharacterGridViewComponent implements OnInit, OnDestroy, OnChanges {
   @Input() characters: Character[] = [];

@@ -7,11 +7,10 @@ import { ProjectService } from '../../core/services/project.service';
 import { PinboardService } from '../../core/services/pinboard.service';
 
 @Component({
-  selector: 'app-pinboard-sidebar',
-  standalone: true,
-  imports: [CommonModule],
-  templateUrl: './pinboard-sidebar.component.html',
-  styleUrls: ['./pinboard-sidebar.component.scss']
+    selector: 'app-pinboard-sidebar',
+    imports: [CommonModule],
+    templateUrl: './pinboard-sidebar.component.html',
+    styleUrls: ['./pinboard-sidebar.component.scss']
 })
 export class PinboardSidebarComponent implements OnInit, OnDestroy {
   @Output() createPinboard = new EventEmitter<void>();

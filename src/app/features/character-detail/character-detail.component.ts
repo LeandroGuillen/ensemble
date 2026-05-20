@@ -54,17 +54,16 @@ import {
   SelectableItem,
 } from "../../shared/multi-select-buttons/multi-select-buttons.component";
 @Component({
-  selector: "app-character-detail",
-  standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    ReactiveFormsModule,
-    CategoryToggleComponent,
-    MultiSelectButtonsComponent,
-  ],
-  templateUrl: "./character-detail.component.html",
-  styleUrls: ["./character-detail.component.scss"],
+    selector: "app-character-detail",
+    imports: [
+        CommonModule,
+        FormsModule,
+        ReactiveFormsModule,
+        CategoryToggleComponent,
+        MultiSelectButtonsComponent,
+    ],
+    templateUrl: "./character-detail.component.html",
+    styleUrls: ["./character-detail.component.scss"]
 })
 export class CharacterDetailComponent
   implements OnInit, OnDestroy, AfterViewInit, OnChanges
