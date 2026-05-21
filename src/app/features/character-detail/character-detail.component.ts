@@ -4,14 +4,9 @@ import {
   ChangeDetectorRef,
   Component,
   ElementRef,
-  EventEmitter,
-  Input,
   NgZone,
-  OnChanges,
   OnDestroy,
   OnInit,
-  Output,
-  SimpleChanges,
   ViewChild,
 } from "@angular/core";
 import {
@@ -53,32 +48,23 @@ import {
   MultiSelectButtonsComponent,
   SelectableItem,
 } from "../../shared/multi-select-buttons/multi-select-buttons.component";
+import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
 @Component({
     selector: "app-character-detail",
     imports: [
     FormsModule,
     ReactiveFormsModule,
     CategoryToggleComponent,
-    MultiSelectButtonsComponent
+    MultiSelectButtonsComponent,
+    PageHeaderComponent,
 ],
     templateUrl: "./character-detail.component.html",
     styleUrls: ["./character-detail.component.scss"]
 })
 export class CharacterDetailComponent
-  implements OnInit, OnDestroy, AfterViewInit, OnChanges
+  implements OnInit, OnDestroy, AfterViewInit
 {
   @ViewChild("nameInput") nameInput?: ElementRef<HTMLInputElement>;
-
-  /** When set, component runs in dialog mode (no route). string = edit, null = create. */
-  @Input() dialogCharacterId: string | null | undefined = undefined;
-  /** Pre-fill name when opening create form in dialog (e.g. from Backstage). */
-  @Input() dialogInitialName?: string;
-  @Output() closed = new EventEmitter<void>();
-
-  /** True when opened via CharacterEditDialogService (floating dialog). */
-  isDialogMode = false;
-  /** When in dialog mode, load this id once project is available (set in ngOnChanges, consumed in project subscription). */
-  private pendingDialogLoadId: string | null = null;
 
   private destroy$ = new Subject<void>();
 
@@ -192,12 +178,6 @@ export class CharacterDetailComponent
             this.characterForm.patchValue({ category: defaultCategory.id });
           }
         }
-        // Deferred dialog load: when opened in dialog mode, load character once project is available
-        if (this.isDialogMode && this.pendingDialogLoadId && project) {
-          const id = this.pendingDialogLoadId;
-          this.pendingDialogLoadId = null;
-          this.loadCharacter(id);
-        }
         this.cdr.markForCheck();
       });
 
@@ -210,11 +190,10 @@ export class CharacterDetailComponent
         this.cdr.markForCheck();
       });
 
-    // Subscribe to route parameter changes (not just snapshot) — skipped in dialog mode
+    // Subscribe to route parameter changes (not just snapshot)
     this.route.paramMap
       .pipe(takeUntil(this.destroy$))
       .subscribe((params) => {
-        if (this.isDialogMode) return;
         const characterId = params.get("id");
         if (characterId && characterId !== "new") {
           this.isEditing = true;
@@ -228,11 +207,10 @@ export class CharacterDetailComponent
         }
       });
 
-    // Check for query params (e.g., from Backstage) — skipped in dialog mode
+    // Check for query params (e.g., from Backstage)
     this.route.queryParams
       .pipe(takeUntil(this.destroy$))
       .subscribe((params) => {
-        if (this.isDialogMode) return;
         if (params["name"] && !this.isEditing) {
           this.characterForm.patchValue({ name: params["name"] });
           this.cdr.markForCheck();
@@ -291,32 +269,6 @@ export class CharacterDetailComponent
 
     // Initial field errors (e.g. for create form)
     this.updateFieldErrors();
-  }
-
-  ngOnChanges(changes: SimpleChanges): void {
-    if (changes["dialogCharacterId"]) {
-      const id = changes["dialogCharacterId"].currentValue as string | null | undefined;
-      if (id !== undefined) {
-        this.isDialogMode = true;
-        if (id != null && id !== "") {
-          this.isEditing = true;
-          this.pendingDialogLoadId = id;
-          // loadCharacter will run when project is available (see currentProject$ subscription)
-        } else {
-          this.isEditing = false;
-          this.character = null;
-          this.characterForm.reset();
-          this.contentTabs = [{ id: 'main', label: 'Main' }];
-          if (this.dialogInitialName) {
-            this.characterForm.patchValue({ name: this.dialogInitialName });
-          }
-        }
-      }
-    }
-    if (changes["dialogInitialName"] && this.isDialogMode && !this.isEditing) {
-      const name = changes["dialogInitialName"].currentValue as string | undefined;
-      if (name) this.characterForm.patchValue({ name });
-    }
   }
 
   ngOnDestroy(): void {
@@ -573,11 +525,7 @@ export class CharacterDetailComponent
       await this.characterService.saveBookPage(this.character.id, bookId, content);
       this.bookPageOriginalContent[bookId] = content;
       this.notificationService.showSuccess('Character saved successfully');
-      if (this.isDialogMode) {
-        this.closed.emit();
-      } else {
-        this.router.navigate(['/characters']);
-      }
+      this.router.navigate(['/characters']);
     } catch (err) {
       this.error = err instanceof Error ? err.message : 'Failed to save book page';
       this.cdr.markForCheck();
@@ -629,11 +577,7 @@ export class CharacterDetailComponent
         this.notificationService.showSuccess("Character created successfully");
       }
 
-      if (this.isDialogMode) {
-        this.closed.emit();
-      } else {
-        this.router.navigate(["/characters"]);
-      }
+      this.router.navigate(["/characters"]);
     } catch (error) {
       this.error = `Failed to save character: ${error}`;
       this.logger.error("Save error:", error);
@@ -666,10 +610,6 @@ export class CharacterDetailComponent
   }
 
   private navigateBack(): void {
-    if (this.isDialogMode) {
-      this.closed.emit();
-      return;
-    }
     // Check if we have a valid previous route within the app
     // The issue: when opening directly to a character page, there's no in-app history
     // Solution: check referrer to see if we came from within the app
@@ -1032,11 +972,7 @@ export class CharacterDetailComponent
     try {
       await this.characterService.deleteCharacter(this.character.id);
       this.notificationService.showSuccess(`Character "${this.character.name}" deleted successfully`);
-      if (this.isDialogMode) {
-        this.closed.emit();
-      } else {
-        this.router.navigate(["/characters"]);
-      }
+      this.router.navigate(["/characters"]);
     } catch (error) {
       this.error = `Failed to delete character: ${error}`;
       this.logger.error("Delete error:", error);

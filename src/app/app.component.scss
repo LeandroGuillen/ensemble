@@ -10,7 +10,11 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  // overflow: visible so absolutely-positioned popovers from sticky page
+  // headers (e.g. the character filter dropdown) can paint over the sidebar
+  // instead of being clipped at the main-area boundary. Routes manage their
+  // own scroll containers, so this doesn't introduce shell scrollbars.
+  overflow: visible;
   min-height: 0;
   min-width: 0;
 }

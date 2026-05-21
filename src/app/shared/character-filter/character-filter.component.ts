@@ -1,5 +1,5 @@
 
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, ElementRef, EventEmitter, HostListener, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Book, Cast, Category, Character, Tag } from '../../core/interfaces';
 import { BookSelectorComponent } from '../book-selector/book-selector.component';
@@ -48,9 +48,27 @@ export class CharacterFilterComponent {
   @Output() clearFilters = new EventEmitter<void>();
   @Output() expandedChange = new EventEmitter<boolean>();
 
+  constructor(private host: ElementRef<HTMLElement>) {}
+
   toggleExpanded(): void {
     this.isExpanded = !this.isExpanded;
     this.expandedChange.emit(this.isExpanded);
+  }
+
+  @HostListener('document:pointerdown', ['$event'])
+  onDocumentPointerDown(event: PointerEvent): void {
+    if (!this.isExpanded) return;
+    const target = event.target as Node | null;
+    if (target && this.host.nativeElement.contains(target)) return;
+    this.isExpanded = false;
+    this.expandedChange.emit(false);
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (!this.isExpanded) return;
+    this.isExpanded = false;
+    this.expandedChange.emit(false);
   }
 
   onSearchChange(): void {

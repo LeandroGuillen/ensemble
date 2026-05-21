@@ -9,7 +9,6 @@ import { CommandPaletteComponent } from "./shared/command-palette/command-palett
 import { CommandPaletteService } from "./shared/command-palette/command-palette.service";
 import { SidebarComponent } from "./shared/sidebar/sidebar.component";
 import { NotificationComponent } from "./shared/notification/notification.component";
-import { CharacterEditDialogComponent } from "./shared/character-edit-dialog/character-edit-dialog.component";
 import { ConfirmationDialogComponent } from "./shared/confirmation-dialog/confirmation-dialog.component";
 import { KeyboardShortcutsDialogComponent } from "./shared/keyboard-shortcuts-dialog/keyboard-shortcuts-dialog.component";
 import { KeyboardShortcutsService } from "./shared/keyboard-shortcuts-dialog/keyboard-shortcuts.service";
@@ -18,7 +17,7 @@ import { ModalService, ConfirmationRequest } from "./core/services/modal.service
 
 @Component({
     selector: "app-root",
-    imports: [RouterOutlet, CommandPaletteComponent, SidebarComponent, NotificationComponent, CharacterEditDialogComponent, ConfirmationDialogComponent, KeyboardShortcutsDialogComponent, UpdateNotificationComponent],
+    imports: [RouterOutlet, CommandPaletteComponent, SidebarComponent, NotificationComponent, ConfirmationDialogComponent, KeyboardShortcutsDialogComponent, UpdateNotificationComponent],
     templateUrl: "./app.component.html",
     styleUrls: ["./app.component.scss"]
 })

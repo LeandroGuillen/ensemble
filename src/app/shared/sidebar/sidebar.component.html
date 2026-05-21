@@ -33,7 +33,7 @@
 
   <!-- Navigation Sections -->
   <nav class="sidebar-nav">
-    @for (section of sections; track section; let isLast = $last) {
+    @for (section of sections; track section.id; let isLast = $last) {
       <div class="nav-section">
         <!-- Section Header -->
         <div class="section-header" [class.collapsed]="isCollapsed">
@@ -46,7 +46,7 @@
         </div>
         <!-- Section Items -->
         <div class="section-items">
-          @for (item of section.items; track item) {
+          @for (item of section.items; track item.label) {
             <button
               class="nav-item"
               [class.active]="item.route && isActive(item.route)"

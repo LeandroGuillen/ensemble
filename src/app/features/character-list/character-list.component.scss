@@ -4,7 +4,10 @@
   max-width: none;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  // Allow the sticky page header's popovers (filter dropdown) to paint over
+  // the sidebar. Inner scroll lives on `.scrollable-content`, so this doesn't
+  // produce shell scrollbars.
+  overflow: visible;
   background: var(--color-bg-primary);
 }
 
