@@ -1,4 +1,4 @@
-<div class="character-filter">
+<div class="character-filter" [class.sidebar-mode]="sidebar">
   <!-- Collapsed State: Search + Filter Summary + Expand Button -->
   <div class="filter-header">
     <div class="search-input-wrapper">
@@ -23,29 +23,31 @@
       }
     </div>
 
-    <div class="filter-summary-area" (click)="toggleExpanded()">
-      <div class="filter-summary" [class.has-filters]="hasActiveFilters()">
-        <span class="summary-text">{{ getFilterSummary() }}</span>
-      </div>
+    @if (!sidebar) {
+      <div class="filter-summary-area" (click)="toggleExpanded()">
+        <div class="filter-summary" [class.has-filters]="hasActiveFilters()">
+          <span class="summary-text">{{ getFilterSummary() }}</span>
+        </div>
 
-      <button
-        class="expand-toggle"
-        [class.expanded]="isExpanded"
-        title="Toggle filter options"
-        type="button"
-        >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-          <path
-            d="M4 6l4 4 4-4"
-            stroke="currentColor"
-            stroke-width="2"
-            fill="none"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            />
-        </svg>
-      </button>
-    </div>
+        <button
+          class="expand-toggle"
+          [class.expanded]="isExpanded"
+          title="Toggle filter options"
+          type="button"
+          >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path
+              d="M4 6l4 4 4-4"
+              stroke="currentColor"
+              stroke-width="2"
+              fill="none"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              />
+          </svg>
+        </button>
+      </div>
+    }
 
     @if (hasActiveFilters()) {
       <button
@@ -54,13 +56,13 @@
         title="Clear all filters"
         type="button"
         >
-        Clear
+        {{ sidebar ? "Clear filters" : "Clear" }}
       </button>
     }
   </div>
 
   <!-- Expanded State: All Filter Options -->
-  @if (isExpanded) {
+  @if (sidebar || isExpanded) {
     <div class="filter-body">
       <!-- Category Filter -->
       @if (categories.length > 0) {
@@ -93,6 +95,7 @@
             [casts]="casts"
             [characters]="allCharacters"
             [selectedCastId]="selectedCast"
+            [label]="''"
             [showCharacterThumbnails]="true"
             (castChange)="onCastDropdownChange($event)"
           ></app-cast-dropdown>

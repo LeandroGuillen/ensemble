@@ -1,5 +1,6 @@
 
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
+import { animate, state, style, transition, trigger } from '@angular/animations';
 import { ChangeDetectorRef, Component, ElementRef, HostListener, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -34,7 +35,16 @@ import {
     CharacterGalleryViewComponent
 ],
     templateUrl: './character-list.component.html',
-    styleUrls: ['./character-list.component.scss']
+    styleUrls: ['./character-list.component.scss'],
+    animations: [
+      trigger('characterFiltersSidebar', [
+        state('open', style({ width: '260px' })),
+        state('closed', style({ width: '0', overflow: 'hidden' })),
+        transition('open <=> closed', [
+          animate('240ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'),
+        ]),
+      ]),
+    ]
 })
 export class CharacterListComponent implements OnInit, OnDestroy {
   @ViewChild('scrollableContent', { static: false })
@@ -76,6 +86,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   groupBy: 'none' | 'category' | 'tag' = 'none'; // Group characters by category or tag
   selectedCharacterIndex = -1; // Track selected character for keyboard navigation
   filterExpanded = false; // Track filter expanded state
+  filtersSidebarOpen = true;
   slideshowEnabled = true; // Toggle slideshow on/off
   galleryThumbnailSize: 'big' | 'medium' | 'small' = 'big'; // Gallery thumbnail size
   activeDropCategoryId: string | null = null;
@@ -105,6 +116,11 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    const savedSidebarState = localStorage.getItem('characterFiltersSidebarOpen');
+    if (savedSidebarState !== null) {
+      this.filtersSidebarOpen = savedSidebarState === 'true';
+    }
+
     // Load saved view mode preference
     this.viewMode = this.preferences.getViewMode();
 
@@ -499,6 +515,11 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     this.filterExpanded = expanded;
     // Save to project settings in ensemble.json
     await this.projectService.saveFilterExpandedState(expanded);
+  }
+
+  toggleFiltersSidebar(): void {
+    this.filtersSidebarOpen = !this.filtersSidebarOpen;
+    localStorage.setItem('characterFiltersSidebarOpen', String(this.filtersSidebarOpen));
   }
 
   clearFilters(): void {

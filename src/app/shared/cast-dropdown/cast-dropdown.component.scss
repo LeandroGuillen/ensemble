@@ -3,6 +3,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
+  width: 100%;
 
   label {
     font-size: 12px;
@@ -13,10 +14,13 @@
 
 .cast-dropdown-container {
   position: relative;
+  flex: 1;
+  min-width: 0;
 }
 
 .cast-dropdown {
   position: relative;
+  width: 100%;
 
   &.open .cast-dropdown-arrow {
     transform: rotate(180deg);
@@ -26,19 +30,23 @@
 .cast-dropdown-trigger {
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: space-between;
+  gap: 8px;
   padding: 4px 8px;
-  background: var(--color-bg-elevated);
+  background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all 0.15s ease;
-  min-width: 140px;
-  height: 26px;
+  width: 100%;
+  min-width: 160px;
+  min-height: 32px;
+  color: var(--color-text-primary);
+  font: inherit;
 
   &:hover {
     border-color: var(--color-accent-primary);
-    background: var(--color-bg-secondary);
+    background: var(--color-bg-tertiary);
   }
 
   &.has-selection {
@@ -74,6 +82,7 @@
 
 .cast-trigger-label {
   font-size: 12px;
+  font-weight: 500;
   color: var(--color-text-primary);
   white-space: nowrap;
   overflow: hidden;
@@ -93,17 +102,17 @@
 
 .cast-dropdown-menu {
   position: absolute;
-  top: 100%;
+  top: calc(100% + 4px);
   left: 0;
   right: 0;
-  background: var(--color-bg-elevated);
+  background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-md);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
   z-index: 1000;
   max-height: 240px;
   overflow-y: auto;
-  margin-top: 2px;
+  padding: 4px;
 }
 
 .cast-dropdown-item {
@@ -113,10 +122,11 @@
   padding: 6px 8px;
   cursor: pointer;
   transition: background-color 0.15s ease;
-  border-bottom: 1px solid var(--color-border-light);
+  border-radius: var(--radius-sm);
+  margin-bottom: 2px;
 
   &:last-child {
-    border-bottom: none;
+    margin-bottom: 0;
   }
 
   &:hover {
@@ -124,8 +134,8 @@
   }
 
   &.selected {
-    background: var(--color-accent-primary);
-    color: white;
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-accent-primary);
   }
 }
 
@@ -269,10 +279,3 @@
   }
 }
 
-// Selected state text color override
-.cast-dropdown-item.selected {
-  .cast-item-name,
-  .cast-item-count {
-    color: white;
-  }
-}

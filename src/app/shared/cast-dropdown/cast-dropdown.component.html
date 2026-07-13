@@ -1,5 +1,7 @@
 <div class="cast-filter">
-  <label>{{ label }}</label>
+  @if (label) {
+    <label>{{ label }}</label>
+  }
   <div class="cast-dropdown-container">
     <div class="cast-dropdown" [class.open]="isDropdownOpen">
       <button

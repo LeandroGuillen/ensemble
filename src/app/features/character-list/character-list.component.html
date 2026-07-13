@@ -12,234 +12,6 @@
       </span>
     }
     <div class="page-actions">
-      <!-- Filter (search + expandable panel) -->
-      @if (
-        currentProject && (
-          categories.length > 0 ||
-          tags.length > 0 ||
-          casts.length > 0 ||
-          books.length > 0
-        )
-      ) {
-        <app-character-filter
-          class="header-filter"
-          [categories]="categories"
-          [tags]="tags"
-          [casts]="casts"
-          [books]="books"
-          [allCharacters]="allCharacters"
-          [searchTerm]="searchTerm"
-          [selectedCategory]="selectedCategory"
-          [selectedTags]="selectedTags"
-          [selectedCast]="selectedCast"
-          [selectedBook]="selectedBook"
-          [isExpanded]="filterExpanded"
-          (searchTermChange)="searchTerm = $event; onSearchChange()"
-          (categoryChange)="selectedCategory = $event; onCategoryChange()"
-          (tagsChange)="selectedTags = $event; onTagsSelectionChange($event)"
-          (castChange)="selectedCast = $event; onCastChange()"
-          (bookChange)="selectedBook = $event; onBookChange()"
-          (clearFilters)="clearFilters()"
-          (expandedChange)="onFilterExpandedChange($event)"
-        ></app-character-filter>
-      }
-
-      <!-- Sort -->
-      <div class="view-toggle view-toggle-text" [class.disabled]="!currentProject">
-        <button
-          class="toggle-option"
-          [class.active]="sortBy === 'name'"
-          (click)="setSortBy('name')"
-          [disabled]="!currentProject"
-          title="Sort by name"
-          >
-          Name
-          @if (sortBy === 'name') {
-            <span class="sort-indicator">{{ sortDirection === "asc" ? "↑" : "↓" }}</span>
-          }
-        </button>
-        <button
-          class="toggle-option"
-          [class.active]="sortBy === 'category'"
-          (click)="setSortBy('category')"
-          [disabled]="!currentProject"
-          title="Sort by category"
-          >
-          Category
-          @if (sortBy === 'category') {
-            <span class="sort-indicator">{{ sortDirection === "asc" ? "↑" : "↓" }}</span>
-          }
-        </button>
-      </div>
-
-      <!-- Group -->
-      <div class="view-toggle view-toggle-text" [class.disabled]="!currentProject">
-        <button
-          class="toggle-option"
-          [class.active]="groupBy === 'none'"
-          (click)="setGroupBy('none')"
-          [disabled]="!currentProject"
-          title="No grouping"
-          >
-          Flat
-        </button>
-        <button
-          class="toggle-option"
-          [class.active]="groupBy === 'category'"
-          (click)="setGroupBy('category')"
-          [disabled]="!currentProject"
-          title="Group by category"
-          >
-          By Category
-        </button>
-        <button
-          class="toggle-option"
-          [class.active]="groupBy === 'tag'"
-          (click)="setGroupBy('tag')"
-          [disabled]="!currentProject"
-          title="Group by tag"
-          >
-          By Tag
-        </button>
-      </div>
-
-      @if (viewMode === 'list' || viewMode === 'compact') {
-        <div
-          class="column-toggle"
-          [class.disabled]="!currentProject"
-          >
-          <button
-            class="toggle-option"
-            [class.active]="columns === 1"
-            (click)="setColumns(1)"
-            [disabled]="!currentProject"
-            title="Single column"
-            >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="2" y="1" width="12" height="14" rx="1" />
-            </svg>
-          </button>
-          <button
-            class="toggle-option"
-            [class.active]="columns === 2"
-            (click)="setColumns(2)"
-            [disabled]="!currentProject"
-            title="Two columns"
-            >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="1" y="1" width="6.5" height="14" rx="1" />
-              <rect x="8.5" y="1" width="6.5" height="14" rx="1" />
-            </svg>
-          </button>
-        </div>
-      }
-      @if (viewMode === 'gallery') {
-        <div
-          class="thumbnail-size-toggle"
-          [class.disabled]="!currentProject"
-          >
-          <button
-            class="toggle-option"
-            [class.active]="galleryThumbnailSize === 'big'"
-            (click)="setGalleryThumbnailSize('big')"
-            [disabled]="!currentProject"
-            title="Big thumbnails"
-            >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="1" y="1" width="14" height="14" rx="1.5" />
-            </svg>
-          </button>
-          <button
-            class="toggle-option"
-            [class.active]="galleryThumbnailSize === 'medium'"
-            (click)="setGalleryThumbnailSize('medium')"
-            [disabled]="!currentProject"
-            title="Medium thumbnails"
-            >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="1" y="1" width="6" height="6" rx="1" />
-              <rect x="9" y="1" width="6" height="6" rx="1" />
-              <rect x="1" y="9" width="6" height="6" rx="1" />
-              <rect x="9" y="9" width="6" height="6" rx="1" />
-            </svg>
-          </button>
-          <button
-            class="toggle-option"
-            [class.active]="galleryThumbnailSize === 'small'"
-            (click)="setGalleryThumbnailSize('small')"
-            [disabled]="!currentProject"
-            title="Small thumbnails"
-            >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="1" y="1" width="4" height="4" rx="0.5" />
-              <rect x="6" y="1" width="4" height="4" rx="0.5" />
-              <rect x="11" y="1" width="4" height="4" rx="0.5" />
-              <rect x="1" y="6" width="4" height="4" rx="0.5" />
-              <rect x="6" y="6" width="4" height="4" rx="0.5" />
-              <rect x="11" y="6" width="4" height="4" rx="0.5" />
-              <rect x="1" y="11" width="4" height="4" rx="0.5" />
-              <rect x="6" y="11" width="4" height="4" rx="0.5" />
-              <rect x="11" y="11" width="4" height="4" rx="0.5" />
-            </svg>
-          </button>
-        </div>
-      }
-      <div class="view-toggle view-toggle-text" [class.disabled]="!currentProject">
-        <button
-          class="toggle-option"
-          [class.active]="viewMode === 'gallery'"
-          (click)="setViewMode('gallery')"
-          [disabled]="!currentProject"
-          title="Gallery view"
-          >
-          Gallery
-        </button>
-        <button
-          class="toggle-option"
-          [class.active]="viewMode === 'grid'"
-          (click)="setViewMode('grid')"
-          [disabled]="!currentProject"
-          title="Grid view"
-          >
-          Grid
-        </button>
-        <button
-          class="toggle-option"
-          [class.active]="viewMode === 'list'"
-          (click)="setViewMode('list')"
-          [disabled]="!currentProject"
-          title="List view"
-          >
-          List
-        </button>
-        <button
-          class="toggle-option"
-          [class.active]="viewMode === 'compact'"
-          (click)="setViewMode('compact')"
-          [disabled]="!currentProject"
-          title="Compact view"
-          >
-          Compact
-        </button>
-      </div>
-      <button
-        class="icon-toggle"
-        [class.active]="slideshowEnabled"
-        (click)="toggleSlideshow()"
-        [disabled]="!currentProject"
-        title="Toggle slideshow (show all images vs. thumbnail only)"
-        aria-label="Toggle slideshow"
-        >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-          <rect x="2" y="3" width="12" height="10" rx="1" stroke="currentColor" fill="none" stroke-width="1.5"/>
-          <circle cx="5" cy="6" r="1" />
-          <polyline points="4,11 7,8 9,10 12,7" stroke="currentColor" fill="none" stroke-width="1.2"/>
-          @if (slideshowEnabled) {
-            <path d="M13,2 L15,4 L13,6 Z" fill="currentColor"/>
-          }
-        </svg>
-      </button>
-      <!-- Refresh -->
       @if (currentProject) {
         <button
           class="icon-btn refresh-btn"
@@ -268,6 +40,153 @@
       </button>
     </div>
   </app-page-header>
+
+  <div class="characters-body">
+    @if (currentProject) {
+      <div
+        class="filters-sidebar-anim"
+        [@characterFiltersSidebar]="filtersSidebarOpen ? 'open' : 'closed'"
+        >
+        <aside
+          class="filters-sidebar"
+          id="character-filters-sidebar"
+          [attr.aria-hidden]="!filtersSidebarOpen"
+          >
+        <div class="filters-sidebar-header">
+          <h2>Filters</h2>
+          <button
+            type="button"
+            class="sidebar-collapse-btn"
+            (click)="toggleFiltersSidebar()"
+            aria-label="Hide filters"
+            title="Hide filters"
+            >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+          </button>
+        </div>
+        <div class="filters-sidebar-content">
+          <app-character-filter
+            [sidebar]="true"
+            [categories]="categories"
+            [tags]="tags"
+            [casts]="casts"
+            [books]="books"
+            [allCharacters]="allCharacters"
+            [searchTerm]="searchTerm"
+            [selectedCategory]="selectedCategory"
+            [selectedTags]="selectedTags"
+            [selectedCast]="selectedCast"
+            [selectedBook]="selectedBook"
+            (searchTermChange)="searchTerm = $event; onSearchChange()"
+            (categoryChange)="selectedCategory = $event; onCategoryChange()"
+            (tagsChange)="selectedTags = $event; onTagsSelectionChange($event)"
+            (castChange)="selectedCast = $event; onCastChange()"
+            (bookChange)="selectedBook = $event; onBookChange()"
+            (clearFilters)="clearFilters()"
+          ></app-character-filter>
+        </div>
+        </aside>
+      </div>
+    }
+
+    <main class="characters-main" [class.filters-collapsed]="!filtersSidebarOpen">
+      @if (currentProject && !filtersSidebarOpen) {
+        <button
+          type="button"
+          class="sidebar-expand-btn"
+          (click)="toggleFiltersSidebar()"
+          aria-label="Show filters"
+          title="Show filters"
+          >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+          <span>Filters</span>
+        </button>
+      }
+
+      @if (currentProject && !isLoading && !error) {
+        <div class="results-toolbar" aria-label="Character display controls">
+          <div class="toolbar-control">
+            <span class="toolbar-label">Sort</span>
+            <div class="view-toggle view-toggle-text" aria-label="Sort characters">
+              <button class="toggle-option" [class.active]="sortBy === 'name'" (click)="setSortBy('name')" title="Sort by name">
+                Name
+                @if (sortBy === 'name') {
+                  <span class="sort-indicator">{{ sortDirection === "asc" ? "↑" : "↓" }}</span>
+                }
+              </button>
+              <button class="toggle-option" [class.active]="sortBy === 'category'" (click)="setSortBy('category')" title="Sort by category">
+                Category
+                @if (sortBy === 'category') {
+                  <span class="sort-indicator">{{ sortDirection === "asc" ? "↑" : "↓" }}</span>
+                }
+              </button>
+            </div>
+          </div>
+
+          <div class="toolbar-control">
+            <span class="toolbar-label">Group</span>
+            <div class="view-toggle view-toggle-text" aria-label="Group characters">
+              <button class="toggle-option" [class.active]="groupBy === 'none'" (click)="setGroupBy('none')" title="No grouping">Flat</button>
+              <button class="toggle-option" [class.active]="groupBy === 'category'" (click)="setGroupBy('category')" title="Group by category">Category</button>
+              <button class="toggle-option" [class.active]="groupBy === 'tag'" (click)="setGroupBy('tag')" title="Group by tag">Tag</button>
+            </div>
+          </div>
+
+          <span class="toolbar-spacer"></span>
+
+          @if (viewMode === 'list' || viewMode === 'compact') {
+            <div class="column-toggle" aria-label="Column count">
+              <button class="toggle-option" [class.active]="columns === 1" (click)="setColumns(1)" title="Single column" aria-label="Single column">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="1" width="12" height="14" rx="1" /></svg>
+              </button>
+              <button class="toggle-option" [class.active]="columns === 2" (click)="setColumns(2)" title="Two columns" aria-label="Two columns">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6.5" height="14" rx="1" /><rect x="8.5" y="1" width="6.5" height="14" rx="1" /></svg>
+              </button>
+            </div>
+          }
+
+          @if (viewMode === 'gallery') {
+            <div class="thumbnail-size-toggle" aria-label="Thumbnail size">
+              <button class="toggle-option" [class.active]="galleryThumbnailSize === 'big'" (click)="setGalleryThumbnailSize('big')" title="Large thumbnails" aria-label="Large thumbnails">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="14" height="14" rx="1.5" /></svg>
+              </button>
+              <button class="toggle-option" [class.active]="galleryThumbnailSize === 'medium'" (click)="setGalleryThumbnailSize('medium')" title="Medium thumbnails" aria-label="Medium thumbnails">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1" /><rect x="9" y="1" width="6" height="6" rx="1" /><rect x="1" y="9" width="6" height="6" rx="1" /><rect x="9" y="9" width="6" height="6" rx="1" /></svg>
+              </button>
+              <button class="toggle-option" [class.active]="galleryThumbnailSize === 'small'" (click)="setGalleryThumbnailSize('small')" title="Small thumbnails" aria-label="Small thumbnails">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="4" height="4" rx=".5" /><rect x="6" y="1" width="4" height="4" rx=".5" /><rect x="11" y="1" width="4" height="4" rx=".5" /><rect x="1" y="6" width="4" height="4" rx=".5" /><rect x="6" y="6" width="4" height="4" rx=".5" /><rect x="11" y="6" width="4" height="4" rx=".5" /><rect x="1" y="11" width="4" height="4" rx=".5" /><rect x="6" y="11" width="4" height="4" rx=".5" /><rect x="11" y="11" width="4" height="4" rx=".5" /></svg>
+              </button>
+            </div>
+          }
+
+          <div class="view-toggle view-toggle-icons" aria-label="View mode">
+            <button class="toggle-option" [class.active]="viewMode === 'gallery'" (click)="setViewMode('gallery')" title="Gallery view" aria-label="Gallery view">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+            </button>
+            <button class="toggle-option" [class.active]="viewMode === 'grid'" (click)="setViewMode('grid')" title="Grid view" aria-label="Grid view">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="6" height="5" rx="1"/><rect x="9" y="2" width="6" height="5" rx="1"/><rect x="1" y="9" width="6" height="5" rx="1"/><rect x="9" y="9" width="6" height="5" rx="1"/></svg>
+            </button>
+            <button class="toggle-option" [class.active]="viewMode === 'list'" (click)="setViewMode('list')" title="List view" aria-label="List view">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="4" height="4" rx="1"/><rect x="7" y="2" width="8" height="2" rx="1"/><rect x="7" y="5" width="6" height="1" rx=".5"/><rect x="1" y="10" width="4" height="4" rx="1"/><rect x="7" y="10" width="8" height="2" rx="1"/><rect x="7" y="13" width="6" height="1" rx=".5"/></svg>
+            </button>
+            <button class="toggle-option" [class.active]="viewMode === 'compact'" (click)="setViewMode('compact')" title="Compact view" aria-label="Compact view">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg>
+            </button>
+          </div>
+
+          <button class="icon-toggle" [class.active]="slideshowEnabled" (click)="toggleSlideshow()" title="Toggle image slideshow" aria-label="Toggle image slideshow">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <rect x="2" y="3" width="12" height="10" rx="1" stroke="currentColor" fill="none" stroke-width="1.5"/>
+              <circle cx="5" cy="6" r="1" />
+              <polyline points="4,11 7,8 9,10 12,7" stroke="currentColor" fill="none" stroke-width="1.2"/>
+            </svg>
+          </button>
+        </div>
+      }
 
   <!-- Loading State -->
   @if (isLoading) {
@@ -709,4 +628,6 @@
           </div>
         }
       </div>
-    </div>
+    </main>
+  </div>
+</div>

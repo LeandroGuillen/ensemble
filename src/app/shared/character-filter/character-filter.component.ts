@@ -39,6 +39,7 @@ export class CharacterFilterComponent {
   @Input() selectedCast = '';
   @Input() selectedBook = '';
   @Input() isExpanded = false;
+  @Input() sidebar = false;
 
   @Output() searchTermChange = new EventEmitter<string>();
   @Output() categoryChange = new EventEmitter<string>();
@@ -57,7 +58,7 @@ export class CharacterFilterComponent {
 
   @HostListener('document:pointerdown', ['$event'])
   onDocumentPointerDown(event: PointerEvent): void {
-    if (!this.isExpanded) return;
+    if (this.sidebar || !this.isExpanded) return;
     const target = event.target as Node | null;
     if (target && this.host.nativeElement.contains(target)) return;
     this.isExpanded = false;
@@ -66,7 +67,7 @@ export class CharacterFilterComponent {
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
-    if (!this.isExpanded) return;
+    if (this.sidebar || !this.isExpanded) return;
     this.isExpanded = false;
     this.expandedChange.emit(false);
   }
