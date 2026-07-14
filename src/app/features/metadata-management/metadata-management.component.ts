@@ -278,36 +278,13 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
       this.error = null;
       
       const formData: CategoryFormData = this.categoryForm.value;
-      
-      // Track if folder mode or path changed for relocation
-      let needsRelocation = false;
-      let categoryId: string | null = null;
-      
+
       if (this.editingCategory) {
-        categoryId = this.editingCategory.id;
-        
-        // Check if folder configuration changed
-        const oldFolderMode = this.editingCategory.folderMode || 'auto';
-        const oldFolderPath = this.editingCategory.folderPath || '';
-        const newFolderMode = formData.folderMode || 'auto';
-        const newFolderPath = formData.folderPath || '';
-        
-        needsRelocation = (oldFolderMode !== newFolderMode) || 
-                          (newFolderMode === 'specify' && oldFolderPath !== newFolderPath);
-        
         await this.metadataService.updateCategory(this.editingCategory.id, formData);
       } else {
         await this.metadataService.addCategory(formData);
       }
-      
-      // If folder configuration changed, relocate existing characters
-      if (needsRelocation && categoryId) {
-        const relocatedCount = await this.characterService.relocateCharactersForCategory(categoryId);
-        if (relocatedCount > 0) {
-          this.logger.log(`Relocated ${relocatedCount} character(s) due to folder mode change`);
-        }
-      }
-      
+
       this.cancelCategoryForm();
     } catch (error) {
       this.logger.error('Failed to save category:', error);

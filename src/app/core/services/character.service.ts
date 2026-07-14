@@ -87,22 +87,6 @@ export class CharacterService {
     return project?.metadata?.categories?.find((c) => c.id === categoryId);
   }
 
-  /**
-   * Relocates all characters of a given category to their new folder locations.
-   *
-   * Characters are intentionally decoupled from category storage location:
-   * changing `category` should not move files and should not change `character.id`.
-   *
-   * @param categoryId The category ID whose characters should be relocated
-   * @returns The number of characters relocated (always 0 when decoupled)
-   */
-  async relocateCharactersForCategory(categoryId: string): Promise<number> {
-    this.logger.log(
-      `[relocateCharactersForCategory] Category storage location is decoupled; no character relocation performed for category '${categoryId}'.`
-    );
-    return 0;
-  }
-
   getCharacters(): Observable<Character[]> {
     return this.characters$;
   }

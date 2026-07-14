@@ -76,7 +76,6 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   // Use service cache - sync from service on init and after loading
   thumbnailDataUrls: Map<string, string> = new Map();
   thumbnailModificationTimes: Map<string, string> = new Map();
-  characterImagesDataUrls: Map<string, string[]> = new Map();
   isLoading = false;
   error: string | null = null;
   viewMode: 'grid' | 'list' | 'compact' | 'gallery' = 'grid'; // Toggle between grid (cards), list, compact, and gallery view
@@ -87,7 +86,6 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   selectedCharacterIndex = -1; // Track selected character for keyboard navigation
   filterExpanded = false; // Track filter expanded state
   filtersSidebarOpen = true;
-  slideshowEnabled = true; // Toggle slideshow on/off
   galleryThumbnailSize: 'big' | 'medium' | 'small' = 'big'; // Gallery thumbnail size
   activeDropCategoryId: string | null = null;
   isUpdatingCategory = false;
@@ -141,12 +139,6 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     const savedGroupBy = localStorage.getItem('characterGroupBy') as 'none' | 'category' | 'tag';
     if (savedGroupBy) {
       this.groupBy = savedGroupBy;
-    }
-
-    // Load saved slideshow preference
-    const savedSlideshowEnabled = localStorage.getItem('characterSlideshowEnabled');
-    if (savedSlideshowEnabled !== null) {
-      this.slideshowEnabled = savedSlideshowEnabled === 'true';
     }
 
     // Load saved gallery thumbnail size preference
@@ -679,16 +671,6 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     return this.tags.filter((tag) => character.tags.includes(tag.id));
   }
 
-  getThumbnailPath(_character: Character): string | null {
-    // Thumbnail is now an opaque string (wiki-link), not resolved to file path
-    return null;
-  }
-
-  async getThumbnailDataUrl(_character: Character): Promise<string | null> {
-    // Thumbnail is now an opaque string (wiki-link), not resolved to file path
-    return null;
-  }
-
   getCharacterThumbnailDataUrl(character: Character): string | null {
     return this.thumbnailDataUrls.get(character.id) || null;
   }
@@ -713,11 +695,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  getCharacterImages(character: Character): string[] {
-    return [];
-  }
-
-  getFilterSummary(): string {
+getFilterSummary(): string {
     const filters: string[] = [];
 
     if (this.searchTerm) {
@@ -777,11 +755,6 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   setColumns(count: 1 | 2): void {
     this.columns = count;
     localStorage.setItem('characterColumns', count.toString());
-  }
-
-  toggleSlideshow(): void {
-    this.slideshowEnabled = !this.slideshowEnabled;
-    localStorage.setItem('characterSlideshowEnabled', this.slideshowEnabled.toString());
   }
 
   setGalleryThumbnailSize(size: 'big' | 'medium' | 'small'): void {

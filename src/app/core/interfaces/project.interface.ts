@@ -26,21 +26,12 @@ export interface ProjectMetadata {
   tags: Tag[];
   casts: Cast[];
   books: Book[];
-  imageTags?: string[]; // Image tags for character image library
   settings: ProjectSettings;
   pinboards?: Pinboard[];  // New: array of pinboards
   /** @deprecated Migrated to lastSession.lastPinboardId on load; do not write. */
   currentPinboardId?: string;
   lastSession?: ProjectLastSession;
-  relationships?: {        // Deprecated: kept for migration
-    nodes: PinboardPin[];
-    edges: PinboardConnection[];
-  };
 }
-
-// Legacy type aliases for backward compatibility with JSON data
-export type Relationship = PinboardConnection;
-export type GraphNode = PinboardPin;
 
 export interface PinboardConnection {
   id: string;
@@ -138,16 +129,12 @@ export interface ProjectSettings {
   namesFile?: string;
   /** Relative path from project root containing project images (default: 'img') */
   imagesFolder?: string;
-  graphView?: PinboardViewState; // Legacy name for backward compatibility
   pinboardView?: PinboardViewState;
   ai?: AiSettings;
   imageGeneration?: ImageGenerationSettings;
   theme?: string; // Theme ID (e.g., "blue-gold")
   colorPalette?: import('./color-palette.interface').ColorPaletteConfig;
 }
-
-// Legacy type alias for backward compatibility
-export type GraphViewState = PinboardViewState;
 
 export interface PinboardViewState {
   zoomIndex: number;

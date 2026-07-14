@@ -2,8 +2,6 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { PinboardConnection, PinboardPin, PinboardData } from '../interfaces/pinboard.interface';
 import { generateId } from '../utils/id.utils';
-import { pathJoin } from '../utils/path.utils';
-import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
 import { CharacterService } from './character.service';
 import { LoggingService } from './logging.service';
@@ -20,7 +18,6 @@ export class PinboardService {
   private pinboardLoaded = false;
 
   constructor(
-    private electronService: ElectronService,
     private projectService: ProjectService,
     private characterService: CharacterService,
     private logger: LoggingService
@@ -79,21 +76,6 @@ export class PinboardService {
   }
 
   /**
-   * @deprecated Use getPinboardData() instead
-   * Legacy method for backward compatibility
-   */
-  getGraphData(): Observable<PinboardData> {
-    return this.pinboardData$;
-  }
-
-  /**
-   * @deprecated This method is no longer used - pinboard data is loaded from ensemble.json via ProjectService
-   */
-  async loadRelationships(projectPath: string): Promise<void> {
-    // No-op: pinboard data is now loaded from project metadata
-  }
-
-  /**
    * Creates a new connection and saves to ensemble.json
    */
   async createConnection(connection: Omit<PinboardConnection, 'id'>): Promise<PinboardConnection> {
@@ -116,14 +98,6 @@ export class PinboardService {
     this.pinboardDataSubject.next(updatedData);
 
     return newConnection;
-  }
-
-  /**
-   * @deprecated Use createConnection() instead
-   * Legacy method for backward compatibility
-   */
-  async createRelationship(relationship: Omit<PinboardConnection, 'id'>): Promise<PinboardConnection> {
-    return this.createConnection(relationship);
   }
 
   /**
@@ -155,14 +129,6 @@ export class PinboardService {
   }
 
   /**
-   * @deprecated Use updateConnection() instead
-   * Legacy method for backward compatibility
-   */
-  async updateRelationship(id: string, updates: Partial<PinboardConnection>): Promise<PinboardConnection | null> {
-    return this.updateConnection(id, updates);
-  }
-
-  /**
    * Deletes a connection and saves to ensemble.json
    */
   async deleteConnection(id: string): Promise<boolean> {
@@ -184,14 +150,6 @@ export class PinboardService {
     this.pinboardDataSubject.next(updatedData);
 
     return true;
-  }
-
-  /**
-   * @deprecated Use deleteConnection() instead
-   * Legacy method for backward compatibility
-   */
-  async deleteRelationship(id: string): Promise<boolean> {
-    return this.deleteConnection(id);
   }
 
   /**
@@ -219,14 +177,6 @@ export class PinboardService {
 
     await this.projectService.updatePinboard(updatedData);
     this.pinboardDataSubject.next(updatedData);
-  }
-
-  /**
-   * @deprecated Use updatePinPosition() instead
-   * Legacy method for backward compatibility
-   */
-  async updateNodePosition(nodeId: string, position: { x: number; y: number }): Promise<void> {
-    return this.updatePinPosition(nodeId, position);
   }
 
   /**
@@ -306,22 +256,6 @@ export class PinboardService {
   }
 
   /**
-   * @deprecated Use ensurePinsForCharacters instead
-   * Legacy method for backward compatibility
-   */
-  async ensureNodesForCharacters(characters: any[]): Promise<void> {
-    return this.ensurePinsForCharacters(characters);
-  }
-
-  /**
-   * @deprecated Use ensurePinsForCharacters instead
-   * Synchronizes pins with character data and maintains referential integrity
-   */
-  async syncNodesWithCharacters(characters: any[]): Promise<void> {
-    return this.ensurePinsForCharacters(characters);
-  }
-
-  /**
    * Removes all connections for a specific character (for referential integrity)
    */
   async removeCharacterConnections(characterId: string): Promise<void> {
@@ -346,125 +280,6 @@ export class PinboardService {
 
     await this.projectService.updatePinboard(updatedData);
     this.pinboardDataSubject.next(updatedData);
-  }
-
-  /**
-   * @deprecated Use removeCharacterConnections() instead
-   * Legacy method for backward compatibility
-   */
-  async removeCharacterRelationships(characterId: string): Promise<void> {
-    return this.removeCharacterConnections(characterId);
-  }
-
-  /**
-   * Converts pinboard data to vis.js Network format (without images)
-   * @deprecated Use getVisJsDataWithThumbnails instead
-   */
-  getVisJsData(): { nodes: any[], edges: any[] } {
-    const currentData = this.pinboardDataSubject.value;
-    
-    const visNodes = currentData.nodes.map(node => {
-      const baseNode: any = {
-        id: node.id,
-        label: node.name,
-        x: node.position.x,
-        y: node.position.y,
-        font: {
-          color: '#ffffff',
-          size: 14,
-          face: 'Arial',
-          strokeWidth: 2,
-          strokeColor: '#000000'
-        },
-        borderWidth: 2,
-        borderWidthSelected: 3,
-        shape: 'dot',
-        size: 30,
-        color: {
-          background: '#e0e0e0',
-          border: '#999999'
-        }
-      };
-
-      return baseNode;
-    });
-
-    // Group edges by node pairs to handle multiple connections between same nodes
-    const edgePairCounts = new Map<string, number>();
-    const edgePairIndex = new Map<string, number>();
-    
-    // Count edges between each pair of nodes
-    currentData.edges.forEach(edge => {
-      const pairKey = [edge.source, edge.target].sort().join('|');
-      edgePairCounts.set(pairKey, (edgePairCounts.get(pairKey) || 0) + 1);
-    });
-    
-    const visEdges = currentData.edges.map(edge => {
-      // Determine arrows based on arrowFrom/arrowTo or bidirectional (for backward compatibility)
-      let arrows: string | object = {};
-      
-      // Check if we're using the new format (both arrowFrom and arrowTo are explicitly set)
-      const usingNewFormat = edge.arrowFrom !== undefined && edge.arrowTo !== undefined;
-      
-      if (usingNewFormat) {
-        // New format: use arrowFrom/arrowTo explicitly
-        // Both are explicitly set (could be true or false)
-        if (edge.arrowFrom && edge.arrowTo) {
-          arrows = { to: { enabled: true }, from: { enabled: true } };
-        } else if (edge.arrowFrom && !edge.arrowTo) {
-          arrows = { to: { enabled: false }, from: { enabled: true } };
-        } else if (!edge.arrowFrom && edge.arrowTo) {
-          arrows = { to: { enabled: true }, from: { enabled: false } };
-        } else {
-          // Both are false - explicitly disable both arrows
-          arrows = { to: { enabled: false }, from: { enabled: false } };
-        }
-      } else {
-        // Legacy format: use bidirectional
-        if (edge.bidirectional) {
-          arrows = { to: { enabled: true }, from: { enabled: true } };
-        } else {
-          arrows = { to: { enabled: true }, from: { enabled: false } }; // Default old behavior
-        }
-      }
-      
-      // Calculate smooth settings for multiple edges between same nodes
-      const pairKey = [edge.source, edge.target].sort().join('|');
-      const totalEdges = edgePairCounts.get(pairKey) || 1;
-      const currentIndex = edgePairIndex.get(pairKey) || 0;
-      edgePairIndex.set(pairKey, currentIndex + 1);
-      
-      let smooth: any = { enabled: true, type: 'continuous', roundness: 0.5 };
-      if (totalEdges > 1) {
-        const isEven = currentIndex % 2 === 0;
-        const roundnessBase = 0.2 + (Math.floor(currentIndex / 2) * 0.15);
-        smooth = {
-          enabled: true,
-          type: isEven ? 'curvedCW' : 'curvedCCW',
-          roundness: Math.min(roundnessBase, 0.8)
-        };
-      }
-      
-      return {
-        id: edge.id,
-        from: edge.source,
-        to: edge.target,
-        label: edge.label || '',
-        color: {
-          color: edge.color || '#848484'
-        },
-        arrows: arrows,
-        smooth: smooth,
-        font: {
-          color: edge.labelColor || '#ffffff',
-          size: 12,
-          strokeWidth: 2,
-          strokeColor: '#000000'
-        }
-      };
-    });
-
-    return { nodes: visNodes, edges: visEdges };
   }
 
   /**
@@ -662,21 +477,6 @@ export class PinboardService {
   }
 
   /**
-   * @deprecated Use getConnectionTypes() instead
-   * Legacy method for backward compatibility
-   */
-  getRelationshipTypes(): string[] {
-    return this.getConnectionTypes();
-  }
-
-  /**
-   * @deprecated No longer needed - pinboard data is saved via ProjectService.updatePinboard
-   */
-  private async saveRelationshipsToFile(projectPath: string, data: PinboardData): Promise<void> {
-    // No-op: pinboard data is now saved via ProjectService
-  }
-
-  /**
    * Gets category color from project metadata
    */
 
@@ -811,14 +611,6 @@ export class PinboardService {
   }
 
   /**
-   * @deprecated Use addPin() instead
-   * Legacy method for backward compatibility
-   */
-  async addNode(character: any, gridSize: number = 100): Promise<void> {
-    return this.addPin(character, gridSize);
-  }
-
-  /**
    * Debug method to log current pinboard state
    */
   debugLogPinboardState(): void {
@@ -834,13 +626,5 @@ export class PinboardService {
     });
   }
 
-  /**
-   * @deprecated Use debugLogPinboardState() instead
-   * Legacy method for backward compatibility
-   */
-  debugLogGraphState(): void {
-    this.debugLogPinboardState();
   }
-
-}
 

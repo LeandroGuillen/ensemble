@@ -3,8 +3,6 @@ import { BehaviorSubject } from 'rxjs';
 import {
   Book,
   Category,
-  GraphNode,
-  GraphViewState,
   Pinboard,
   PinboardPin,
   PinboardConnection,
@@ -12,7 +10,6 @@ import {
   Project,
   ProjectMetadata,
   ProjectSettings,
-  Relationship,
   Tag,
 } from '../interfaces/project.interface';
 import { generateId } from '../utils/id.utils';
@@ -184,28 +181,13 @@ export class ProjectService {
         try {
           metadata = JSON.parse(result.content!);
 
-          // Load relationships.json if it exists
-          const relationshipsPath = pathJoin(projectPath, 'relationships.json');
-          const relationshipsExists = await this.electronService.fileExists(relationshipsPath);
-          if (relationshipsExists) {
-            const relResult = await this.electronService.readFile(relationshipsPath);
-            if (relResult.success) {
-              const relationshipsData = JSON.parse(relResult.content!);
-              metadata.relationships = relationshipsData;
-            }
-          }
-
           // Validate metadata structure
           if (!this.isValidMetadata(metadata)) {
             throw new Error('Invalid metadata structure in project');
           }
 
-          // Save as ensemble.json and delete old files
+          // Save as ensemble.json and delete old metadata file
           await this.saveMetadata(projectPath, metadata);
-          if (relationshipsExists) {
-            const relationshipsPath = pathJoin(projectPath, 'relationships.json');
-            await this.electronService.deleteFile(relationshipsPath);
-          }
           await this.electronService.deleteFile(metadataPath);
         } catch (parseError) {
           throw new Error(`Invalid JSON in metadata file: ${parseError}`);
@@ -223,10 +205,10 @@ export class ProjectService {
 
       this.migrateLastSessionFromLegacy(metadata);
 
-      // Migrate legacy pinboard to new structure if needed
-      await this.migrateLegacyPinboard(metadata);
-      
-      // Save metadata if migration occurred (migration modifies metadata in place)
+      // Ensure a default pinboard exists and lastSession tracks it
+      this.ensureDefaultPinboard(metadata);
+
+      // Save metadata if initialization modified it in place
       if (metadata.pinboards && metadata.pinboards.length > 0) {
         await this.saveMetadata(projectPath, metadata);
       }
@@ -444,10 +426,6 @@ export class ProjectService {
           createdAt: new Date().toISOString(),
         },
       ],
-      relationships: {
-        nodes: [],
-        edges: [],
-      },
     };
   }
 
@@ -686,7 +664,6 @@ export class ProjectService {
     } else {
       // Fallback to project settings for backward compatibility
       project.metadata.settings.pinboardView = state;
-      project.metadata.settings.graphView = state;
     }
 
     await this.saveMetadata(project.path, project.metadata);
@@ -708,23 +685,7 @@ export class ProjectService {
     }
 
     // Fallback to project settings for backward compatibility
-    return project.metadata.settings.pinboardView || project.metadata.settings.graphView || null;
-  }
-
-  /**
-   * @deprecated Use savePinboardViewState() instead
-   * Legacy method for backward compatibility
-   */
-  async saveGraphViewState(state: GraphViewState): Promise<void> {
-    return this.savePinboardViewState(state);
-  }
-
-  /**
-   * @deprecated Use getPinboardViewState() instead
-   * Legacy method for backward compatibility
-   */
-  getGraphViewState(): GraphViewState | null {
-    return this.getPinboardViewState();
+    return project.metadata.settings.pinboardView || null;
   }
 
   /**
@@ -869,8 +830,7 @@ export class ProjectService {
   /**
    * Migrates legacy single pinboard to new multiple pinboards structure
    */
-  private async migrateLegacyPinboard(metadata: ProjectMetadata): Promise<void> {
-    // If pinboards array already exists, no migration needed
+  private ensureDefaultPinboard(metadata: ProjectMetadata): void {
     if (metadata.pinboards && metadata.pinboards.length > 0) {
       const ls = this.ensureLastSession(metadata);
       if (!ls.lastPinboardId) {
@@ -879,45 +839,17 @@ export class ProjectService {
       return;
     }
 
-    // Check for legacy relationships
-    if (metadata.relationships) {
-      const legacyData = metadata.relationships;
-      
-      // Create "Default" pinboard from legacy data
-      const defaultPinboard: Pinboard = {
+    // No pinboards, create empty default pinboard
+    metadata.pinboards = [
+      {
         id: generateId(),
         name: 'Default',
-        nodes: legacyData.nodes || [],
-        edges: legacyData.edges || [],
+        nodes: [],
+        edges: [],
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-
-      // Migrate view state if it exists
-      if (metadata.settings?.pinboardView) {
-        defaultPinboard.viewState = metadata.settings.pinboardView;
-      } else if (metadata.settings?.graphView) {
-        defaultPinboard.viewState = metadata.settings.graphView;
-      }
-
-      metadata.pinboards = [defaultPinboard];
-      this.ensureLastSession(metadata).lastPinboardId = defaultPinboard.id;
-      
-      // Keep relationships temporarily for rollback safety
-      // Will be removed after stable period
-    } else {
-      // No legacy data, create empty default pinboard
-      metadata.pinboards = [
-        {
-          id: generateId(),
-          name: 'Default',
-          nodes: [],
-          edges: [],
-          createdAt: new Date().toISOString(),
-        },
-      ];
-      this.ensureLastSession(metadata).lastPinboardId = metadata.pinboards[0].id;
-    }
+      },
+    ];
+    this.ensureLastSession(metadata).lastPinboardId = metadata.pinboards[0].id;
   }
 
   /**
@@ -1126,10 +1058,7 @@ export class ProjectService {
         edges: currentPinboard.edges,
       };
     }
-    
-    // Fallback to legacy relationships for backward compatibility
-    const project = this.currentProjectSubject.value;
-    return project?.metadata.relationships || { nodes: [], edges: [] };
+    return { nodes: [], edges: [] };
   }
 
   /**
@@ -1145,26 +1074,7 @@ export class ProjectService {
     if (currentPinboard) {
       await this.updatePinboardById(currentPinboard.id, pinboard);
     } else {
-      // Fallback to legacy relationships for backward compatibility
-      project.metadata.relationships = pinboard;
-      await this.saveMetadata(project.path, project.metadata);
-      this.currentProjectSubject.next({ ...project });
+      throw new Error('No active pinboard to update');
     }
-  }
-
-  /**
-   * @deprecated Use getPinboard() instead
-   * Legacy method for backward compatibility
-   */
-  getRelationships(): { nodes: GraphNode[]; edges: Relationship[] } {
-    return this.getPinboard();
-  }
-
-  /**
-   * @deprecated Use updatePinboard() instead
-   * Legacy method for backward compatibility
-   */
-  async updateRelationships(relationships: { nodes: GraphNode[]; edges: Relationship[] }): Promise<void> {
-    return this.updatePinboard(relationships);
   }
 }

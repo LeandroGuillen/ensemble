@@ -74,18 +74,6 @@ export function filenameToFieldName(filename: string): string {
 }
 
 /**
- * Generates a unique slug by appending a timestamp
- * Used for trash folder names to avoid collisions
- *
- * @param slug - The base slug
- * @returns A slug with timestamp suffix
- */
-export function slugifyWithTimestamp(slug: string): string {
-  const timestamp = Date.now();
-  return `${slug}-${timestamp}`;
-}
-
-/**
  * Next filename stem when duplicating a plot board file: increment a trailing `-123` or final digit run, else append `-2`.
  */
 export function nextPlotBoardDuplicateStem(stem: string): string {

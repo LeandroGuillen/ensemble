@@ -22,18 +22,15 @@
       </div>
       <div class="drag-placeholder" *cdkDragPlaceholder></div>
       <div class="character-thumbnail">
-        @if (getCurrentImageUrl(character)) {
+        @if (getCharacterThumbnailDataUrl(character)) {
           <img
-            [src]="getCurrentImageUrl(character)"
+            [src]="getCharacterThumbnailDataUrl(character)"
             [alt]="character.name"
             draggable="false"
             (error)="onImageError($event)"
-            class="slideshow-image"
-            [class.fade-in]="shouldFadeIn(character)"
-            [attr.data-image-key]="getImageKey(character)"
             />
         }
-        @if (!getCurrentImageUrl(character)) {
+        @if (!getCharacterThumbnailDataUrl(character)) {
           <div
             class="thumbnail-placeholder"
             [style.background-color]="getPlaceholderColor(character)"

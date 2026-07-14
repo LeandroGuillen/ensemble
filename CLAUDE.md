@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Ensemble is an Electron + Angular 17 desktop application for character management in worldbuilding and writing projects. All data is stored as **plain text files** (markdown for characters, JSON for metadata/relationships) in user-defined work folders, enabling external editing and version control.
+Ensemble is an Electron + Angular 17 desktop application for character management in worldbuilding and writing projects. All data is stored as **plain text files** (markdown for characters, JSON for project metadata) in user-defined work folders, enabling external editing and version control.
 
 ## Architecture
 
@@ -27,9 +27,11 @@ Ensemble is an Electron + Angular 17 desktop application for character managemen
 Located in `src/app/core/services/`:
 
 - **ElectronService**: IPC bridge to Electron main process for all file system operations (including directory operations)
-- **ProjectService**: Manages work folder selection and `ensemble.json` (categories, tags, settings, `lastSession`, relationships)
+- **ProjectService**: Manages work folder selection and `ensemble.json` (categories, tags, settings, `lastSession`, pinboards)
 - **CharacterService**: CRUD operations for character files (`_*.md`), recursive scan under `characters/`, flat-file format
-- **RelationshipService**: Manages relationship data (nodes/edges) and provides data for vis.js graph
+- **CastService**: CRUD operations for cast folders under the casts folder
+- **PinboardService**: Manages pinboard data (nodes/edges) across multiple pinboards stored in `ensemble.json`
+- **PlotBoardService**: Discovers and manages `*.plotboard.md` files anywhere under the project
 - **MetadataService**: Validates characters against project metadata (categories/tags)
 - **FileWatcherService**: Monitors work folder for external file changes (using chokidar)
 
@@ -37,7 +39,7 @@ Located in `src/app/core/services/`:
 
 Located in `src/app/core/utils/`:
 
-- **slug.utils.ts**: Slug generation for folder names, filename-to-field-name conversion, timestamp utilities
+- **slug.utils.ts**: Slug generation for folder names, filename-to-field-name conversion, plot-board duplicate stem utilities
 - **markdown.utils.ts**: Markdown parsing and frontmatter handling
 
 ### Data Flow
@@ -106,11 +108,12 @@ Each project has this structure:
 
 ```
 project-folder/
-├── ensemble.json           # Project metadata: categories, tags, settings, lastSession, relationships
+├── ensemble.json           # Project metadata: categories, tags, settings, lastSession, pinboards
 ├── characters/             # Character files (recursively scanned)
 │   ├── _<slug>.md          # Character file (e.g., "_dessir.md")
-│   └── <category-slug>/    # Optional subfolders
-│       └── _<slug>.md      # Character in subfolder
+│   ├── <category-slug>/    # Optional subfolders
+│   │   └── _<slug>.md      # Character in subfolder
+│   └── casts/              # Cast folders (one folder per cast)
 └── **/*.plotboard.md   # Plot boards (any subfolder; identity = path from project root)
 ```
 
@@ -142,11 +145,13 @@ Character ID is the relative file path from `characters/` (e.g., `_dessir.md` or
 
 ### Removed Features
 
-- Trash system (`_deleted/` folder, restore, empty trash)
+- Trash system (`_deleted/` folder, restore, empty trash) — including the cast trash folder
 - Folder-based character storage (each character was a folder)
 - Images library (multiple images per character)
 - Additional fields (extra `.md` files in character folders)
 - `mangamaster` field
+- Relationship visualization (`graph-view` component, `RelationshipService`, and `relationships.json`)
+- Legacy `graphView`/`GraphViewState` settings alias (pinboard view state now lives in `pinboards[].viewState` and `settings.pinboardView`)
 
 ## Key Implementation Details
 
@@ -156,12 +161,12 @@ Character ID is the relative file path from `characters/` (e.g., `_dessir.md` or
 - See `src/app/core/utils/markdown.utils.ts` for frontmatter extraction/injection
 - Character service handles conversion between markdown files and `Character` interface
 
-### Graph Visualization
+### Pinboard Visualization
 
-- Uses **vis.js Network** library for interactive relationship graphs
-- `GraphViewComponent` (`src/app/features/graph-view/`) manages vis.js integration
-- Node positions saved in `relationships.json` for persistence
-- Supports drag-and-drop, relationship editing, colors, labels
+- Uses **vis.js Network** library for interactive pinboard graphs (nodes/edges)
+- `PinboardViewComponent` (`src/app/features/pinboard-view/`) manages vis.js integration
+- Pinboard data (nodes, edges, view state) is stored in `ensemble.json` under `pinboards[]`
+- Supports multiple pinboards, drag-and-drop, edge editing, colors, labels
 
 ### IPC Security Model
 
@@ -178,8 +183,14 @@ All routes defined in `src/app/app.routes.ts`:
 - `/characters` - Character list with search/filter
 - `/character/:id` - Edit existing character
 - `/character` - Create new character
-- `/graph` - Relationship visualization (vis.js)
+- `/pinboard` - Pinboard visualization (vis.js)
 - `/metadata` - Manage categories/tags
+- `/ai-settings` - AI provider configuration
+- `/library` - Library management
+- `/backstage` - Backstage (concept/name generation)
+- `/plot-board` - Plot boards (with optional path param)
+- `/casts` - Cast list
+- `/cast/:id` - Cast detail
 
 ## File Organization
 
@@ -192,13 +203,15 @@ src/app/
 ├── features/           # Feature components (lazy-loaded)
 │   ├── character-list/
 │   ├── character-detail/
-│   ├── graph-view/
+│   ├── pinboard-view/
 │   ├── metadata-management/
 │   └── project-selector/
 └── app.routes.ts       # Route configuration
 
 main.js                 # Electron main process (IPC handlers, window management)
 ```
+
+> **Note**: This is an abbreviated view. The `features/` directory also contains `ai-settings`, `backstage`, `cast-list`, `cast-detail`, `library-management`, and `plot-board`.
 
 ## Technical Notes
 

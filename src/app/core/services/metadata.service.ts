@@ -6,7 +6,6 @@ import { ValidationResult } from '../interfaces/validation.interface';
 import { CharacterValidator } from '../validators/character.validator';
 import { ProjectValidator } from '../validators/project.validator';
 import { pathJoin } from '../utils/path.utils';
-import { COLOR_PALETTE } from '../utils/color-palette.utils';
 import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
 import { CastService } from './cast.service';
@@ -99,37 +98,6 @@ export class MetadataService {
       this.logger.error('Failed to save metadata', error);
       throw new Error(`Failed to save metadata: ${error}`);
     }
-  }
-
-  /**
-   * Creates default metadata for a new project
-   */
-  createDefaultMetadata(projectName: string): ProjectMetadata {
-    return {
-      projectName,
-      version: '1.0.0',
-      categories: [
-        { id: 'main-character', name: 'Main Character', color: COLOR_PALETTE[0], description: 'Primary characters central to the story' },
-        { id: 'supporting', name: 'Supporting Character', color: COLOR_PALETTE[1], description: 'Important characters who support the main story' },
-        { id: 'antagonist', name: 'Antagonist', color: COLOR_PALETTE[2], description: 'Characters who oppose the protagonists' },
-        { id: 'minor', name: 'Minor Character', color: COLOR_PALETTE[3], description: 'Characters with smaller roles in the story' },
-      ],
-      tags: [
-        { id: 'magic-user', name: 'Magic User', color: COLOR_PALETTE[6] },
-        { id: 'noble', name: 'Noble', color: COLOR_PALETTE[7] },
-        { id: 'warrior', name: 'Warrior', color: COLOR_PALETTE[2] },
-        { id: 'scholar', name: 'Scholar', color: COLOR_PALETTE[5] },
-      ],
-      casts: [],
-      books: [],
-      settings: {
-        defaultCategory: 'main-character',
-        autoSave: true,
-        fileWatchEnabled: true,
-        charactersFolder: 'characters',
-        castsFolder: 'characters/casts',
-      },
-    };
   }
 
   // Category Management
@@ -462,7 +430,7 @@ export class MetadataService {
 
   /**
    * Removes a cast
-   * Moves folder to trash via CastService and updates ensemble.json
+   * Deletes the cast folder via CastService and updates ensemble.json
    */
   async removeCast(id: string): Promise<void> {
     const metadata = this.metadataSubject.value;
@@ -478,7 +446,7 @@ export class MetadataService {
       throw new Error(`Cast with ID '${id}' not found`);
     }
 
-    // Move cast folder to trash via CastService
+    // Delete cast folder via CastService
     await this.castService.deleteCast(id);
 
     // Remove cast from ensemble.json

@@ -7,7 +7,7 @@ import { Observable, Subscription } from 'rxjs';
 import { take } from 'rxjs/operators';
 import { DataSet, Edge, Network, Node, Options } from 'vis-network/standalone';
 import { Character, PinboardData, PinboardConnection, Pinboard } from '../../core/interfaces';
-import { CharacterService, ProjectService, PinboardService, ElectronService, LoggingService, NotificationService, ModalService, CharacterEditDialogService } from '../../core/services';
+import { CharacterService, ProjectService, PinboardService, LoggingService, NotificationService, ModalService, CharacterEditDialogService } from '../../core/services';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { ColorSelectorComponent } from '../../shared/color-selector/color-selector.component';
 import { PinboardSidebarComponent } from '../../shared/pinboard-sidebar/pinboard-sidebar.component';
@@ -119,7 +119,6 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
     private pinboardService: PinboardService,
     private characterService: CharacterService,
     private projectService: ProjectService,
-    private electronService: ElectronService,
     private router: Router,
     private route: ActivatedRoute,
     private ngZone: NgZone,

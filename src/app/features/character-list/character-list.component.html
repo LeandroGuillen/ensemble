@@ -177,14 +177,6 @@
               <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg>
             </button>
           </div>
-
-          <button class="icon-toggle" [class.active]="slideshowEnabled" (click)="toggleSlideshow()" title="Toggle image slideshow" aria-label="Toggle image slideshow">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="2" y="3" width="12" height="10" rx="1" stroke="currentColor" fill="none" stroke-width="1.5"/>
-              <circle cx="5" cy="6" r="1" />
-              <polyline points="4,11 7,8 9,10 12,7" stroke="currentColor" fill="none" stroke-width="1.2"/>
-            </svg>
-          </button>
         </div>
       }
 
@@ -334,8 +326,6 @@
                           [dndEnabled]="isCategoryDragDropEnabled()"
                           [selectedCharacterIndex]="selectedCharacterIndex"
                           [thumbnailDataUrls]="thumbnailDataUrls"
-                          [characterImagesDataUrls]="characterImagesDataUrls"
-                          [slideshowEnabled]="slideshowEnabled"
                           (characterClick)="onViewCharacterClick($event)"
                           (characterDelete)="onViewCharacterDelete($event)"
                           (dragStarted)="onAnyCharacterDragStarted()"
@@ -387,8 +377,6 @@
                           [tags]="tags"
                           [dndEnabled]="isCategoryDragDropEnabled()"
                           [thumbnailDataUrls]="thumbnailDataUrls"
-                          [characterImagesDataUrls]="characterImagesDataUrls"
-                          [slideshowEnabled]="slideshowEnabled"
                           [thumbnailSize]="galleryThumbnailSize"
                           (characterClick)="onViewCharacterClick($event)"
                           (dragStarted)="onAnyCharacterDragStarted()"
@@ -425,8 +413,6 @@
                           [tags]="tags"
                           [selectedCharacterIndex]="selectedCharacterIndex"
                           [thumbnailDataUrls]="thumbnailDataUrls"
-                          [characterImagesDataUrls]="characterImagesDataUrls"
-                          [slideshowEnabled]="slideshowEnabled"
                           (characterClick)="onViewCharacterClick($event)"
                           (characterDelete)="onViewCharacterDelete($event)"
                         ></app-character-grid-view>
@@ -469,8 +455,6 @@
                           [characters]="group.characters"
                           [tags]="tags"
                           [thumbnailDataUrls]="thumbnailDataUrls"
-                          [characterImagesDataUrls]="characterImagesDataUrls"
-                          [slideshowEnabled]="slideshowEnabled"
                           [thumbnailSize]="galleryThumbnailSize"
                           (characterClick)="onViewCharacterClick($event)"
                         ></app-character-gallery-view>
@@ -491,8 +475,6 @@
                     [tags]="tags"
                     [selectedCharacterIndex]="selectedCharacterIndex"
                     [thumbnailDataUrls]="thumbnailDataUrls"
-                    [characterImagesDataUrls]="characterImagesDataUrls"
-                    [slideshowEnabled]="slideshowEnabled"
                     (characterClick)="onViewCharacterClick($event)"
                     (characterDelete)="onViewCharacterDelete($event)"
                   ></app-character-grid-view>
@@ -531,8 +513,6 @@
                     [characters]="filteredCharacters"
                     [tags]="tags"
                     [thumbnailDataUrls]="thumbnailDataUrls"
-                    [characterImagesDataUrls]="characterImagesDataUrls"
-                    [slideshowEnabled]="slideshowEnabled"
                     [thumbnailSize]="galleryThumbnailSize"
                     (characterClick)="onViewCharacterClick($event)"
                   ></app-character-gallery-view>

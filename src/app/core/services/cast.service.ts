@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { Cast } from '../interfaces/project.interface';
-import { slugify, slugifyWithTimestamp } from '../utils/slug.utils';
+import { slugify } from '../utils/slug.utils';
 import { generateId } from '../utils/id.utils';
 import { pathJoin } from '../utils/path.utils';
 import { assertIpcSuccess } from '../utils/ipc.utils';
@@ -85,7 +85,7 @@ export class CastService {
 
       const folderCasts: Cast[] = [];
 
-      // Load each cast folder (skip _deleted)
+      // Load each cast folder (ignore any leftover _deleted folder from the removed trash feature)
       for (const castSlug of dirContents.directories) {
         if (castSlug === '_deleted') {
           continue;
@@ -351,8 +351,7 @@ export class CastService {
   }
 
   /**
-   * Deletes a cast by moving it to the trash folder
-   * Trash folder: casts/_deleted/<cast-slug>-<timestamp>/
+   * Deletes a cast and its folder from disk.
    */
   async deleteCast(id: string): Promise<boolean> {
     const project = requireProject(this.projectService.getCurrentProject());
@@ -366,22 +365,11 @@ export class CastService {
         return false;
       }
 
-      // If cast has a folder, move it to trash
+      // If cast has a folder, delete it recursively from disk
       if (cast.folderPath) {
-        // Create trash folder if it doesn't exist
-        const castsPath = this.projectService.getCastsFolderPath();
-        const trashPath = pathJoin(castsPath, '_deleted');
-        await this.electronService.createDirectory(trashPath);
-
-        // Generate unique trash folder name with timestamp
-        const castSlug = slugify(cast.name);
-        const trashFolderName = slugifyWithTimestamp(castSlug);
-        const trashDestPath = pathJoin(trashPath, trashFolderName);
-
-        // Move cast folder to trash
-        const moveResult = await this.electronService.moveDirectory(cast.folderPath, trashDestPath);
-        if (!moveResult.success) {
-          throw new Error(`Failed to move cast to trash: ${moveResult.error}`);
+        const deleteResult = await this.electronService.deleteDirectoryRecursive(cast.folderPath);
+        if (!deleteResult.success) {
+          throw new Error(`Failed to delete cast folder: ${deleteResult.error}`);
         }
       } else {
         console.warn(`Cast '${cast.name}' has no folder to delete - removing from memory only`);

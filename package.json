@@ -26,7 +26,6 @@
     "build-icons": "node scripts/build-icons.js",
     "prebuild-electron": "npm run build-icons",
     "test": "CHROME_BIN=/usr/bin/chromium ng test --watch=false",
-    "test-electron": "electron test-electron.js",
     "verify": "node verify-setup.js",
     "lint": "ng lint",
     "e2e": "ng e2e"
