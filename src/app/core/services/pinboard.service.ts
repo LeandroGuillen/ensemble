@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { PinboardConnection, PinboardPin, PinboardData } from '../interfaces/pinboard.interface';
 import { generateId } from '../utils/id.utils';
+import { DEFAULT_CONNECTION_COLOR, DEFAULT_CONNECTION_LABEL_COLOR } from '../constants/project.constants';
 import { ProjectService } from './project.service';
 import { CharacterService } from './character.service';
 import { LoggingService } from './logging.service';
@@ -419,12 +420,12 @@ export class PinboardService {
         to: edge.target,
         label: edge.label || '', // Show label only if not empty
         color: {
-          color: edge.color || '#848484'
+          color: edge.color || DEFAULT_CONNECTION_COLOR
         },
         arrows: arrows,
         smooth: smooth,
         font: {
-          color: edge.labelColor || '#ffffff',
+          color: edge.labelColor || DEFAULT_CONNECTION_LABEL_COLOR,
           size: 12,
           strokeWidth: 2,
           strokeColor: '#000000'

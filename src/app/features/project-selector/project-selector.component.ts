@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 
 import { FormsModule } from '@angular/forms';
 import { ProjectService, ElectronService, LoggingService } from '../../core/services';
+import { LEGACY_METADATA_JSON_FILE } from '../../core/constants/project.constants';
 
 interface RecentProject {
   path: string;
@@ -91,7 +92,7 @@ export class ProjectSelectorComponent implements OnInit {
           let projectName = await this.electronService.pathBasename(projectPath);
           if (exists && isDir) {
             try {
-              const metadataPath = await this.electronService.pathJoin(projectPath, 'metadata.json');
+              const metadataPath = await this.electronService.pathJoin(projectPath, LEGACY_METADATA_JSON_FILE);
               const hasMetadata = await this.electronService.fileExists(metadataPath);
               if (hasMetadata) {
                 const result = await this.electronService.readFile(metadataPath);

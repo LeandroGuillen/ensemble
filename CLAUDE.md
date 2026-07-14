@@ -246,9 +246,10 @@ All fs operations are **atomic** where possible:
 
 ### Adding a New IPC Handler
 
-1. Add handler in `main.js`: `ipcMain.handle('handler-name', async (event, ...args) => {...})`
-2. Add method in `ElectronService`: `async methodName(...args) { return await this.ipcRenderer.invoke('handler-name', ...args); }`
-3. Call from any service/component via `this.electronService.methodName()`
+1. Add the channel to `ipc-channels.json` (project root — shared by `main.js` and the Angular bundle) **and** to the `IpcChannels` interface in `src/app/core/ipc/ipc-channels.ts`.
+2. Add handler in `main.js`: `ipcMain.handle(IPC.handlerName, async (event, ...args) => {...})`. Return `ok()` / `ok({ ...fields })` on success and `err(error.message)` on failure (never reject). If the handler cannot settle on the standard `{success, error?}` shape (e.g. `ai-request` overrides it to return `{success:false, error}` only on failure so legacy success payloads stay unchanged), document that exception in the handler comment.
+3. Add method in `ElectronService`: `async methodName(...args) { return await this.ipcRenderer.invoke(IpcChannels.handlerName, ...args); }` (with an `isElectron()` guard returning a sensible default for non-Electron environments).
+4. Call from any service/component via `this.electronService.methodName()` — never touch `ElectronService.ipcRenderer` (it is private by design).
 
 ### Working with External File Changes
 

@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
 import { ElectronService } from './electron.service';
 import { LoggingService } from './logging.service';
+import { ENSEMBLE_JSON_FILE } from '../constants/project.constants';
 
 export interface FileChangeEvent {
   type: 'add' | 'change' | 'unlink';
@@ -103,7 +104,7 @@ export class FileWatcherService {
 
   private isRelevantFile(filename: string): boolean {
     return filename.endsWith('.md') ||
-           filename === 'ensemble.json' ||
+           filename === ENSEMBLE_JSON_FILE ||
            filename.match(/\.(jpg|jpeg|png|gif|webp)$/i) !== null;
   }
 }

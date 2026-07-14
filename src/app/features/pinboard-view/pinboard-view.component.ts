@@ -7,6 +7,7 @@ import { Observable, Subscription } from 'rxjs';
 import { take } from 'rxjs/operators';
 import { DataSet, Edge, Network, Node, Options } from 'vis-network/standalone';
 import { Character, PinboardData, PinboardConnection, Pinboard } from '../../core/interfaces';
+import { DEFAULT_CONNECTION_COLOR } from '../../core/constants/project.constants';
 import { CharacterService, ProjectService, PinboardService, LoggingService, NotificationService, ModalService, CharacterEditDialogService } from '../../core/services';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { ColorSelectorComponent } from '../../shared/color-selector/color-selector.component';
@@ -93,7 +94,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
     source: '',
     target: '',
     label: '',
-    color: '#848484',
+    color: DEFAULT_CONNECTION_COLOR,
     labelColor: '#ffffff',
     arrowFrom: false,
     arrowTo: false,
@@ -1317,7 +1318,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
       source: sourceId,
       target: targetId,
       label: '',
-      color: '#848484',
+      color: DEFAULT_CONNECTION_COLOR,
       labelColor: '#ffffff',
       arrowFrom: false,
       arrowTo: false,
@@ -1433,7 +1434,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
       source: '',
       target: '',
       label: '',
-      color: '#848484',
+      color: DEFAULT_CONNECTION_COLOR,
       labelColor: '#ffffff',
       arrowFrom: false,
       arrowTo: false,

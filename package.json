@@ -104,6 +104,7 @@
     "files": [
       "dist/**/*",
       "main.js",
+      "ipc-channels.json",
       "package.json",
       "node_modules/**/*",
       "!node_modules/.cache",

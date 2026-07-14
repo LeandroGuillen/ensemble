@@ -32,11 +32,15 @@ Git: one commit per batch. Verify with `npm run build` (and `npm test` if applic
       constructor.
 - [x] (baseline) Folded in pre-existing uncommitted removals: graph-view component, trash-dialog, file.utils, migrate-to-folder-structure.js, test-electron.js, CLAUDE.md refresh. (Build verified green.)
 
-## Batch B — IPC consistency  ·  Status: [ ]
-- [ ] B1. New `core/ipc/ipc-channels.ts` shared registry; import identically in `main.js` and `electron.service.ts`. Include main→renderer events (`file-changed`, `update-status`, `browser-navigation-command`).
-- [ ] B2. Promote updater channels + `ai-request` to real `ElectronService` methods. Mark `ipcRenderer` private.
-- [ ] B3. Extract constants: `ENSEMBLE_JSON_FILE`, `LEGACY_METADATA_JSON_FILE`, `normalizeRelativeFolder`, default category/connection colors.
-- [ ] B4. Standardize `main.js` return shape with `ok()`/`err()` helpers; never reject (`ai-request`); type `stats`; cache `get-update-status`.
+## Batch B — IPC consistency  ·  Status: [x]
+- [x] B1. New `core/ipc/ipc-channels.ts` shared registry; import identically in `main.js` and `electron.service.ts`. Include main→renderer events (`file-changed`, `update-status`, `browser-navigation-command`).
+      Single source of truth: `ipc-channels.json` at project root (Node `require`s it; Angular imports it via the typed `core/ipc/ipc-channels.ts` wrapper). Added to electron-builder `files` so packaged builds include it. `main.js` and `ElectronService` no longer hardcode channel literals — every `ipcMain.handle`/`webContents.send`/`ipcRenderer.invoke`/`.on` reads from the registry.
+- [x] B2. Promote updater channels + `ai-request` to real `ElectronService` methods. Mark `ipcRenderer` private.
+      `ElectronService.ipcRenderer` is now `private`; updater methods (`onUpdateStatus`/`removeUpdateStatusListener`/`checkForUpdates`/`downloadUpdate`/`getUpdateStatus`/`quitAndInstall`/`copyUpdateToDownloads`/`openUpdateFolder`) added. `update.service.ts` and `ai.service.ts` no longer touch `ipcRenderer` directly.
+- [x] B3. Extract constants: `ENSEMBLE_JSON_FILE`, `LEGACY_METADATA_JSON_FILE`, `normalizeRelativeFolder`, default category/connection colors.
+      New `core/constants/project.constants.ts` exports those plus `DEFAULT_CATEGORIES`/`DEFAULT_TAGS` seeds and `DEFAULT_CONNECTION_COLOR`/`DEFAULT_CONNECTION_LABEL_COLOR`. `ProjectService`, `CastService`, `AiService`, `ImageGenerationService`, `FileWatcherService`, `ProjectSelectorComponent`, `PinboardService`, `PinboardViewComponent`, and `main.js` all consume them. `COLOR_PALETTE` import dropped from `ProjectService`.
+- [x] B4. Standardize `main.js` return shape with `ok()`/`err()` helpers; never reject (`ai-request`); type `stats`; cache `get-update-status`.
+      `ok()`/`err()` helpers + `FileStatsResult` JSDoc typedef added; fs handlers return via them. `ai-request` never rejects (resolves `{ success:false, error }` on failure) and `AiService.makeHttpRequest` translates the error payload back into a thrown exception so callers see no behaviour change. `get-update-status` caches results (5-min TTL) and is busted on manual `check-for-updates`.
 
 ## Batch C — Service-layer correctness  ·  Status: [ ]
 - [ ] C1. `AiService` → `projectService.updateMetadata(...)` instead of direct `ensemble.json` write.

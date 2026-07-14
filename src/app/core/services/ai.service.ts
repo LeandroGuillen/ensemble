@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { AiSettings } from '../interfaces/project.interface';
+import { ENSEMBLE_JSON_FILE } from '../constants/project.constants';
 import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
 
@@ -72,7 +73,7 @@ export class AiService {
       },
     };
 
-    const ensembleJsonPath = await this.electronService.pathJoin(project.path, 'ensemble.json');
+    const ensembleJsonPath = await this.electronService.pathJoin(project.path, ENSEMBLE_JSON_FILE);
     const result = await this.electronService.writeFileAtomic(
       ensembleJsonPath,
       JSON.stringify(updatedMetadata, null, 2)
@@ -321,11 +322,12 @@ export class AiService {
       throw new Error('HTTP requests are only available in Electron environment');
     }
 
-    try {
-      const response = await this.electronService.ipcRenderer.invoke('ai-request', url, options);
-      return response;
-    } catch (error) {
-      throw error;
+    const response: any = await this.electronService.aiRequest(url, options);
+    // main.js never rejects for ai-request: surface errors here as exceptions so
+    // callers (which expect a { status, headers, data } shape) behave as before.
+    if (response && response.success === false) {
+      throw new Error(response.error || 'AI request failed');
     }
+    return response;
   }
 }

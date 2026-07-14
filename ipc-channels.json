@@ -1,0 +1,56 @@
+{
+  "setBrowserNavigationInterception": "set-browser-navigation-interception",
+  "browserNavigationCommand": "browser-navigation-command",
+
+  "fileChanged": "file-changed",
+  "updateStatus": "update-status",
+
+  "selectFolder": "select-folder",
+  "selectImage": "select-image",
+  "selectImages": "select-images",
+  "getVersion": "get-version",
+
+  "getRecentProjects": "get-recent-projects",
+  "saveRecentProjects": "save-recent-projects",
+
+  "createDirectory": "create-directory",
+  "fileExists": "file-exists",
+  "isDirectory": "is-directory",
+  "readFile": "read-file",
+  "writeFile": "write-file",
+  "writeFileAtomic": "write-file-atomic",
+
+  "pathJoin": "path-join",
+  "pathBasename": "path-basename",
+  "pathDirname": "path-dirname",
+  "sanitizeFilename": "sanitize-filename",
+
+  "deleteFile": "delete-file",
+  "listDirectory": "list-directory",
+  "copyFile": "copy-file",
+  "moveFile": "move-file",
+  "getFileStats": "get-file-stats",
+  "getImageDataUrl": "get-image-data-url",
+  "moveDirectory": "move-directory",
+  "deleteDirectoryRecursive": "delete-directory-recursive",
+  "copyDirectoryRecursive": "copy-directory-recursive",
+  "readDirectoryFiles": "read-directory-files",
+  "readDirectoryRecursive": "read-directory-recursive",
+
+  "startFileWatcher": "start-file-watcher",
+  "stopFileWatcher": "stop-file-watcher",
+
+  "aiRequest": "ai-request",
+  "downloadImage": "download-image",
+
+  "openFileInEditor": "open-file-in-editor",
+  "showItemInFolder": "show-item-in-folder",
+  "openPath": "open-path",
+
+  "checkForUpdates": "check-for-updates",
+  "downloadUpdate": "download-update",
+  "getUpdateStatus": "get-update-status",
+  "quitAndInstall": "quit-and-install",
+  "copyUpdateToDownloads": "copy-update-to-downloads",
+  "openUpdateFolder": "open-update-folder"
+}

@@ -11,6 +11,7 @@ import {
   InvokeAiImageSettings,
 } from '../../interfaces/project.interface';
 import { asciiSlugify } from '../../utils/slug.utils';
+import { ENSEMBLE_JSON_FILE } from '../../constants/project.constants';
 import { ElectronService } from '../electron.service';
 import { ProjectService } from '../project.service';
 import { InvokeAiProvider } from './invokeai.provider';
@@ -47,7 +48,7 @@ export class ImageGenerationService {
         },
       },
     };
-    const path = await this.electronService.pathJoin(project.path, 'ensemble.json');
+    const path = await this.electronService.pathJoin(project.path, ENSEMBLE_JSON_FILE);
     const result = await this.electronService.writeFileAtomic(
       path,
       JSON.stringify(updatedMetadata, null, 2)

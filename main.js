@@ -4,7 +4,46 @@ const fs = require('fs').promises;
 const https = require('https');
 const http = require('http');
 const chokidar = require('chokidar');
+const IPC = require('./ipc-channels.json');
 const isDev = !app.isPackaged;
+
+/**
+ * Strip leading/trailing/duplicate slashes and fall back to `fallback` when the
+ * input is empty. Mirrors `normalizeRelativeFolder` in
+ * `src/app/core/constants/project.constants.ts`; keep both implementations in
+ * sync because main.js cannot import the TS bundle at runtime.
+ */
+function normalizeRelativeFolder(folder, fallback) {
+  const trimmed = (folder || '').trim();
+  const normalized = trimmed.replace(/^\/+|\/+$/g, '').replace(/\/+/g, '/');
+  return normalized || fallback;
+}
+
+/**
+ * Standard IPC return shape. Every `ipcMain.handle` in this file resolves to
+ * one of these two forms (never rejects).
+ *
+ *   ok()                       -> { success: true }
+ *   ok({ content, ... })       -> { success: true, content, ... }
+ *   err('boom')                -> { success: false, error: 'boom' }
+ *
+ * Renderer code should check `result.success` first, then access extra fields.
+ */
+function ok(extra) {
+  return extra ? { success: true, ...extra } : { success: true };
+}
+function err(message) {
+  return { success: false, error: typeof message === 'string' ? message : String(message) };
+}
+
+/**
+ * @typedef {Object} FileStatsResult
+ * @property {number} size
+ * @property {boolean} isFile
+ * @property {boolean} isDirectory
+ * @property {Date}   mtime
+ * @property {Date}   ctime
+ */
 
 let mainWindow;
 let fileWatcher = null;
@@ -15,6 +54,11 @@ let autoUpdater = null;
 const UPDATE_CHECK_INTERVAL = 4 * 60 * 60 * 1000;
 let updateCheckInterval = null;
 let updaterInitialized = false;
+
+// Cache for get-update-status to avoid hitting the network on every request.
+// TTL is 5 minutes; the periodic checkForUpdates() interval keeps it warm.
+const UPDATE_STATUS_CACHE_TTL = 5 * 60 * 1000;
+let updateStatusCache = null; // { updateInfo, ts }
 
 function ensureAutoUpdater() {
   if (autoUpdater) {
@@ -92,7 +136,7 @@ function createWindow() {
     ) {
       event.preventDefault();
       mainWindow.webContents.send(
-        'browser-navigation-command',
+        IPC.browserNavigationCommand,
         command === 'browser-backward' ? 'back' : 'forward'
       );
     }
@@ -147,12 +191,12 @@ app.on('activate', () => {
   }
 });
 
-ipcMain.on('set-browser-navigation-interception', (event, enabled) => {
+ipcMain.on(IPC.setBrowserNavigationInterception, (event, enabled) => {
   interceptBrowserNavigation = Boolean(enabled);
 });
 
 // Handle folder selection dialog
-ipcMain.handle('select-folder', async () => {
+ipcMain.handle(IPC.selectFolder, async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ['openDirectory'],
     title: 'Select Work Folder',
@@ -162,7 +206,7 @@ ipcMain.handle('select-folder', async () => {
 });
 
 // Handle file dialog for thumbnails (single image)
-ipcMain.handle('select-image', async () => {
+ipcMain.handle(IPC.selectImage, async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ['openFile'],
     filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp'] }],
@@ -173,7 +217,7 @@ ipcMain.handle('select-image', async () => {
 });
 
 // Handle file dialog for multiple images
-ipcMain.handle('select-images', async () => {
+ipcMain.handle(IPC.selectImages, async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ['openFile', 'multiSelections'],
     filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp'] }],
@@ -184,14 +228,14 @@ ipcMain.handle('select-images', async () => {
 });
 
 // Handle version request
-ipcMain.handle('get-version', () => {
+ipcMain.handle(IPC.getVersion, () => {
   return app.getVersion();
 });
 
 // Handle recent projects storage (persistent across app restarts)
 const recentProjectsPath = path.join(app.getPath('userData'), 'recent-projects.json');
 
-ipcMain.handle('get-recent-projects', async () => {
+ipcMain.handle(IPC.getRecentProjects, async () => {
   try {
     const data = await fs.readFile(recentProjectsPath, 'utf-8');
     const projects = JSON.parse(data);
@@ -220,13 +264,13 @@ ipcMain.handle('get-recent-projects', async () => {
   }
 });
 
-ipcMain.handle('save-recent-projects', async (event, projects) => {
+ipcMain.handle(IPC.saveRecentProjects, async (event, projects) => {
   try {
     await fs.writeFile(recentProjectsPath, JSON.stringify(projects, null, 2), 'utf-8');
-    return { success: true };
+    return ok();
   } catch (error) {
     console.error('Failed to save recent projects:', error);
-    return { success: false, error: error.message };
+    return err(error.message);
   }
 });
 
@@ -234,17 +278,17 @@ ipcMain.handle('save-recent-projects', async (event, projects) => {
 const pathModule = require('path');
 
 // Handle directory creation
-ipcMain.handle('create-directory', async (event, dirPath) => {
+ipcMain.handle(IPC.createDirectory, async (event, dirPath) => {
   try {
     await fs.mkdir(dirPath, { recursive: true });
-    return { success: true };
+    return ok();
   } catch (error) {
-    return { success: false, error: error.message };
+    return err(error.message);
   }
 });
 
 // Handle file existence check
-ipcMain.handle('file-exists', async (event, filePath) => {
+ipcMain.handle(IPC.fileExists, async (event, filePath) => {
   try {
     await fs.access(filePath);
     return true;
@@ -254,7 +298,7 @@ ipcMain.handle('file-exists', async (event, filePath) => {
 });
 
 // Handle directory check
-ipcMain.handle('is-directory', async (event, dirPath) => {
+ipcMain.handle(IPC.isDirectory, async (event, dirPath) => {
   try {
     const stats = await fs.stat(dirPath);
     return stats.isDirectory();
@@ -264,31 +308,31 @@ ipcMain.handle('is-directory', async (event, dirPath) => {
 });
 
 // Handle file reading
-ipcMain.handle('read-file', async (event, filePath) => {
+ipcMain.handle(IPC.readFile, async (event, filePath) => {
   try {
     const content = await fs.readFile(filePath, 'utf8');
-    return { success: true, content };
+    return ok({ content });
   } catch (error) {
-    return { success: false, error: error.message };
+    return err(error.message);
   }
 });
 
 // Handle file writing
-ipcMain.handle('write-file', async (event, filePath, content) => {
+ipcMain.handle(IPC.writeFile, async (event, filePath, content) => {
   try {
     // Ensure directory exists
     const dirPath = pathModule.dirname(filePath);
     await fs.mkdir(dirPath, { recursive: true });
 
     await fs.writeFile(filePath, content, 'utf8');
-    return { success: true };
+    return ok();
   } catch (error) {
-    return { success: false, error: error.message };
+    return err(error.message);
   }
 });
 
 // Handle atomic file writing (write to temp file first)
-ipcMain.handle('write-file-atomic', async (event, filePath, content) => {
+ipcMain.handle(IPC.writeFileAtomic, async (event, filePath, content) => {
   const tempFilePath = `${filePath}.tmp.${Date.now()}`;
 
   try {
@@ -308,7 +352,7 @@ ipcMain.handle('write-file-atomic', async (event, filePath, content) => {
       await fs.writeFile(filePath, content, 'utf8');
     }
 
-    return { success: true };
+    return ok();
   } catch (error) {
     // Clean up temp file if it exists
     try {
@@ -317,25 +361,25 @@ ipcMain.handle('write-file-atomic', async (event, filePath, content) => {
       // Ignore cleanup errors
     }
 
-    return { success: false, error: error.message };
+    return err(error.message);
   }
 });
 
 // Handle path operations
-ipcMain.handle('path-join', (event, ...paths) => {
+ipcMain.handle(IPC.pathJoin, (event, ...paths) => {
   return pathModule.join(...paths);
 });
 
-ipcMain.handle('path-basename', (event, filePath, ext) => {
+ipcMain.handle(IPC.pathBasename, (event, filePath, ext) => {
   return pathModule.basename(filePath, ext);
 });
 
-ipcMain.handle('path-dirname', (event, filePath) => {
+ipcMain.handle(IPC.pathDirname, (event, filePath) => {
   return pathModule.dirname(filePath);
 });
 
 // Handle filename sanitization
-ipcMain.handle('sanitize-filename', (event, filename) => {
+ipcMain.handle(IPC.sanitizeFilename, (event, filename) => {
   return filename
     .replace(/[<>:"|?*]/g, '') // Remove invalid characters
     .replace(/\s+/g, '-') // Replace spaces with hyphens
@@ -345,27 +389,27 @@ ipcMain.handle('sanitize-filename', (event, filename) => {
 });
 
 // Handle file deletion
-ipcMain.handle('delete-file', async (event, filePath) => {
+ipcMain.handle(IPC.deleteFile, async (event, filePath) => {
   try {
     await fs.unlink(filePath);
-    return { success: true };
+    return ok();
   } catch (error) {
-    return { success: false, error: error.message };
+    return err(error.message);
   }
 });
 
 // Handle directory listing
-ipcMain.handle('list-directory', async (event, dirPath) => {
+ipcMain.handle(IPC.listDirectory, async (event, dirPath) => {
   try {
     const files = await fs.readdir(dirPath);
-    return { success: true, files };
+    return ok({ files });
   } catch (error) {
-    return { success: false, error: error.message };
+    return err(error.message);
   }
 });
 
 // Handle file copying
-ipcMain.handle('copy-file', async (event, sourcePath, destPath) => {
+ipcMain.handle(IPC.copyFile, async (event, sourcePath, destPath) => {
   try {
     // Ensure destination directory exists
     const destDir = pathModule.dirname(destPath);
@@ -373,45 +417,45 @@ ipcMain.handle('copy-file', async (event, sourcePath, destPath) => {
 
     // Copy file
     await fs.copyFile(sourcePath, destPath);
-    return { success: true };
+    return ok();
   } catch (error) {
-    return { success: false, error: error.message };
+    return err(error.message);
   }
 });
 
 // Rename/move a file (same as fs.rename)
-ipcMain.handle('move-file', async (event, sourcePath, destPath) => {
+ipcMain.handle(IPC.moveFile, async (event, sourcePath, destPath) => {
   try {
     const destDir = pathModule.dirname(destPath);
     await fs.mkdir(destDir, { recursive: true });
     await fs.rename(sourcePath, destPath);
-    return { success: true };
+    return ok();
   } catch (error) {
-    return { success: false, error: error.message };
+    return err(error.message);
   }
 });
 
 // Handle file stats
-ipcMain.handle('get-file-stats', async (event, filePath) => {
+// Returns a FileStatsResult (see typedef above) under `stats`.
+ipcMain.handle(IPC.getFileStats, async (event, filePath) => {
   try {
     const stats = await fs.stat(filePath);
-    return {
-      success: true,
-      stats: {
-        size: stats.size,
-        isFile: stats.isFile(),
-        isDirectory: stats.isDirectory(),
-        mtime: stats.mtime,
-        ctime: stats.ctime,
-      },
+    /** @type {FileStatsResult} */
+    const statsResult = {
+      size: stats.size,
+      isFile: stats.isFile(),
+      isDirectory: stats.isDirectory(),
+      mtime: stats.mtime,
+      ctime: stats.ctime,
     };
+    return ok({ stats: statsResult });
   } catch (error) {
-    return { success: false, error: error.message };
+    return err(error.message);
   }
 });
 
 // Handle converting image to data URL
-ipcMain.handle('get-image-data-url', async (event, filePath) => {
+ipcMain.handle(IPC.getImageDataUrl, async (event, filePath) => {
   try {
     const imageBuffer = await fs.readFile(filePath);
     const ext = pathModule.extname(filePath).toLowerCase();
@@ -442,7 +486,7 @@ ipcMain.handle('get-image-data-url', async (event, filePath) => {
 });
 
 // Handle moving/renaming directories
-ipcMain.handle('move-directory', async (event, sourcePath, destPath) => {
+ipcMain.handle(IPC.moveDirectory, async (event, sourcePath, destPath) => {
   try {
     // Ensure destination parent directory exists
     const destDir = pathModule.dirname(destPath);
@@ -450,24 +494,24 @@ ipcMain.handle('move-directory', async (event, sourcePath, destPath) => {
 
     // Move the directory
     await fs.rename(sourcePath, destPath);
-    return { success: true };
+    return ok();
   } catch (error) {
-    return { success: false, error: error.message };
+    return err(error.message);
   }
 });
 
 // Handle recursive directory deletion
-ipcMain.handle('delete-directory-recursive', async (event, dirPath) => {
+ipcMain.handle(IPC.deleteDirectoryRecursive, async (event, dirPath) => {
   try {
     await fs.rm(dirPath, { recursive: true, force: true });
-    return { success: true };
+    return ok();
   } catch (error) {
-    return { success: false, error: error.message };
+    return err(error.message);
   }
 });
 
 // Handle recursive directory copying
-ipcMain.handle('copy-directory-recursive', async (event, sourcePath, destPath) => {
+ipcMain.handle(IPC.copyDirectoryRecursive, async (event, sourcePath, destPath) => {
   try {
     // Recursive function to copy directory and all contents
     async function copyRecursive(source, dest) {
@@ -492,14 +536,14 @@ ipcMain.handle('copy-directory-recursive', async (event, sourcePath, destPath) =
     }
 
     await copyRecursive(sourcePath, destPath);
-    return { success: true };
+    return ok();
   } catch (error) {
-    return { success: false, error: error.message };
+    return err(error.message);
   }
 });
 
 // Handle reading all files in a directory (non-recursive)
-ipcMain.handle('read-directory-files', async (event, dirPath) => {
+ipcMain.handle(IPC.readDirectoryFiles, async (event, dirPath) => {
   try {
     const entries = await fs.readdir(dirPath, { withFileTypes: true });
     const files = [];
@@ -513,16 +557,16 @@ ipcMain.handle('read-directory-files', async (event, dirPath) => {
       }
     }
 
-    return { success: true, files, directories };
+    return ok({ files, directories });
   } catch (error) {
-    return { success: false, error: error.message };
+    return err(error.message);
   }
 });
 
 // Recursively find all files matching a pattern under dirPath
 // pattern: glob-like string, e.g. '_*.md' (files starting with _ and ending with .md)
 // Returns: { success, files: [{ relativePath, absolutePath }], error? }
-ipcMain.handle('read-directory-recursive', async (event, dirPath, pattern) => {
+ipcMain.handle(IPC.readDirectoryRecursive, async (event, dirPath, pattern) => {
   try {
     const results = [];
 
@@ -552,14 +596,14 @@ ipcMain.handle('read-directory-recursive', async (event, dirPath, pattern) => {
     }
 
     await scan(dirPath, dirPath);
-    return { success: true, files: results };
+    return ok({ files: results });
   } catch (error) {
     return { success: false, error: error.message, files: [] };
   }
 });
 
 // File watching
-ipcMain.handle('start-file-watcher', async (event, projectPath, charactersFolder = 'characters') => {
+ipcMain.handle(IPC.startFileWatcher, async (event, projectPath, charactersFolder = 'characters') => {
   try {
     // Stop existing watcher if any
     if (fileWatcher) {
@@ -568,7 +612,7 @@ ipcMain.handle('start-file-watcher', async (event, projectPath, charactersFolder
     }
 
     // Watch the characters directory recursively (configurable path)
-    const normalized = (charactersFolder || 'characters').replace(/^\/+|\/+$/g, '').replace(/\/+/g, '/') || 'characters';
+    const normalized = normalizeRelativeFolder(charactersFolder, 'characters');
     const charactersPath = pathModule.join(projectPath, normalized);
 
     fileWatcher = chokidar.watch(charactersPath, {
@@ -584,7 +628,7 @@ ipcMain.handle('start-file-watcher', async (event, projectPath, charactersFolder
     fileWatcher
       .on('add', (filePath) => {
         if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('file-changed', {
+          mainWindow.webContents.send(IPC.fileChanged, {
             type: 'add',
             path: filePath,
             filename: pathModule.basename(filePath),
@@ -593,7 +637,7 @@ ipcMain.handle('start-file-watcher', async (event, projectPath, charactersFolder
       })
       .on('change', (filePath) => {
         if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('file-changed', {
+          mainWindow.webContents.send(IPC.fileChanged, {
             type: 'change',
             path: filePath,
             filename: pathModule.basename(filePath),
@@ -602,7 +646,7 @@ ipcMain.handle('start-file-watcher', async (event, projectPath, charactersFolder
       })
       .on('unlink', (filePath) => {
         if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('file-changed', {
+          mainWindow.webContents.send(IPC.fileChanged, {
             type: 'unlink',
             path: filePath,
             filename: pathModule.basename(filePath),
@@ -610,28 +654,38 @@ ipcMain.handle('start-file-watcher', async (event, projectPath, charactersFolder
         }
       });
 
-    return { success: true };
+    return ok();
   } catch (error) {
-    return { success: false, error: error.message };
+    return err(error.message);
   }
 });
 
-ipcMain.handle('stop-file-watcher', async (event) => {
+ipcMain.handle(IPC.stopFileWatcher, async (event) => {
   try {
     if (fileWatcher) {
       await fileWatcher.close();
       fileWatcher = null;
     }
-    return { success: true };
+    return ok();
   } catch (error) {
-    return { success: false, error: error.message };
+    return err(error.message);
   }
 });
 
-// Handle AI HTTP requests
-ipcMain.handle('ai-request', async (event, url, options) => {
-  return new Promise((resolve, reject) => {
-    const urlObj = new URL(url);
+// Handle AI HTTP requests.
+// Never rejects: on failure resolves to { success: false, error } so the
+// renderer can pattern-match on `success`. On success it resolves to the
+// raw HTTP response shape { status, headers, data } (no `success` field) to
+// preserve backward compatibility with AiService consumers.
+ipcMain.handle(IPC.aiRequest, async (event, url, options) => {
+  return new Promise((resolve) => {
+    let urlObj;
+    try {
+      urlObj = new URL(url);
+    } catch (e) {
+      resolve(err(`Invalid URL: ${e.message}`));
+      return;
+    }
     const protocol = urlObj.protocol === 'https:' ? https : http;
 
     // Force IPv4 for localhost to avoid IPv6 connection issues
@@ -675,18 +729,18 @@ ipcMain.handle('ai-request', async (event, url, options) => {
 
           resolve(response);
         } catch (error) {
-          reject(error);
+          resolve(err(error.message || String(error)));
         }
       });
     });
 
     req.on('error', (error) => {
-      reject(error);
+      resolve(err(error.message || String(error)));
     });
 
     req.on('timeout', () => {
       req.destroy();
-      reject(new Error('Request timeout'));
+      resolve(err('Request timeout'));
     });
 
     // Write request body if provided
@@ -699,7 +753,7 @@ ipcMain.handle('ai-request', async (event, url, options) => {
 });
 
 // Download a generated image directly to disk without passing binary data through IPC.
-ipcMain.handle('download-image', async (event, url, destinationPath, options = {}) => {
+ipcMain.handle(IPC.downloadImage, async (event, url, destinationPath, options = {}) => {
   const tempPath = `${destinationPath}.tmp.${Date.now()}`;
 
   const download = (currentUrl, redirectsLeft) => new Promise((resolve, reject) => {
@@ -743,45 +797,45 @@ ipcMain.handle('download-image', async (event, url, destinationPath, options = {
     await fs.mkdir(pathModule.dirname(destinationPath), { recursive: true });
     await fs.writeFile(tempPath, buffer);
     await fs.rename(tempPath, destinationPath);
-    return { success: true, path: destinationPath };
+    return ok({ path: destinationPath });
   } catch (error) {
     await fs.unlink(tempPath).catch(() => {});
-    return { success: false, error: error.message };
+    return err(error.message);
   }
 });
 
 // Handle opening file in system default editor
-ipcMain.handle('open-file-in-editor', async (event, filePath) => {
+ipcMain.handle(IPC.openFileInEditor, async (event, filePath) => {
   try {
     await shell.openPath(filePath);
-    return { success: true };
+    return ok();
   } catch (error) {
-    return { success: false, error: error.message };
+    return err(error.message);
   }
 });
 
 // Open file manager with the file's folder (and select the file when supported)
-ipcMain.handle('show-item-in-folder', async (event, filePath) => {
+ipcMain.handle(IPC.showItemInFolder, async (event, filePath) => {
   try {
     shell.showItemInFolder(filePath);
-    return { success: true };
+    return ok();
   } catch (error) {
-    return { success: false, error: error.message };
+    return err(error.message);
   }
 });
 
 // Open a folder in the OS file manager (opens the folder itself, not its parent)
-ipcMain.handle('open-path', async (event, folderPath) => {
+ipcMain.handle(IPC.openPath, async (event, folderPath) => {
   try {
     // Ensure the directory exists; openPath silently fails on missing folders.
     await fs.mkdir(folderPath, { recursive: true });
     const errorMessage = await shell.openPath(folderPath);
     if (errorMessage) {
-      return { success: false, error: errorMessage };
+      return err(errorMessage);
     }
-    return { success: true };
+    return ok();
   } catch (error) {
-    return { success: false, error: error.message };
+    return err(error.message);
   }
 });
 
@@ -829,17 +883,14 @@ function initializeUpdater() {
   updater.on('checking-for-update', () => {
     console.log('[Update] Event: checking-for-update');
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('update-status', {
-        status: 'checking',
-        message: 'Checking for updates...'
-      });
+      mainWindow.webContents.send(IPC.updateStatus, { status: 'checking', message: 'Checking for updates...' });
     }
   });
 
   updater.on('update-available', (info) => {
     console.log('[Update] Event: update-available', info.version);
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('update-status', {
+      mainWindow.webContents.send(IPC.updateStatus, {
         status: 'available',
         message: 'Update available',
         version: info.version,
@@ -852,7 +903,7 @@ function initializeUpdater() {
   updater.on('update-not-available', (info) => {
     console.log('[Update] Event: update-not-available', info.version);
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('update-status', {
+      mainWindow.webContents.send(IPC.updateStatus, {
         status: 'not-available',
         message: 'You are using the latest version',
         version: info.version
@@ -882,7 +933,7 @@ function initializeUpdater() {
       // Treat 404 as "no updates available" - don't show as error
       console.log('[Update] 404 error - treating as no updates available');
       if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('update-status', {
+        mainWindow.webContents.send(IPC.updateStatus, {
           status: 'not-available',
           message: 'You are using the latest version'
         });
@@ -895,7 +946,7 @@ function initializeUpdater() {
       // For other errors, show them normally
       console.error('[Update] Error checking for updates:', err);
       if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('update-status', {
+        mainWindow.webContents.send(IPC.updateStatus, {
           status: 'error',
           message: 'Error checking for updates',
           error: errorMessage
@@ -906,7 +957,7 @@ function initializeUpdater() {
 
   updater.on('download-progress', (progressObj) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('update-status', {
+      mainWindow.webContents.send(IPC.updateStatus, {
         status: 'downloading',
         message: 'Downloading update...',
         progress: {
@@ -1031,7 +1082,7 @@ function initializeUpdater() {
     }
     
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('update-status', {
+      mainWindow.webContents.send(IPC.updateStatus, {
         status: 'downloaded',
         message: 'Update downloaded and ready',
         version: info.version,
@@ -1077,9 +1128,13 @@ function checkForUpdates() {
 }
 
 // IPC handlers for update operations
-ipcMain.handle('check-for-updates', async () => {
+ipcMain.handle(IPC.checkForUpdates, async () => {
   console.log('[Update] Manual update check requested');
-  
+
+  // Bust the cached update status so the next get-update-status reflects
+  // whatever this manual check discovers.
+  updateStatusCache = null;
+
   if (isDev) {
     // In dev mode, simulate update checking for testing
     // Set ENABLE_UPDATE_TESTING=1 environment variable to enable
@@ -1100,7 +1155,7 @@ ipcMain.handle('check-for-updates', async () => {
     if (scenario === 'available') {
       // Simulate update available
       if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('update-status', {
+        mainWindow.webContents.send(IPC.updateStatus, {
           status: 'available',
           message: 'Update available',
           version: '1.2.0',
@@ -1112,7 +1167,7 @@ ipcMain.handle('check-for-updates', async () => {
     } else if (scenario === 'error') {
       // Simulate error
       if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('update-status', {
+        mainWindow.webContents.send(IPC.updateStatus, {
           status: 'error',
           message: 'Error checking for updates',
           error: 'Test error: Network connection failed'
@@ -1122,7 +1177,7 @@ ipcMain.handle('check-for-updates', async () => {
     } else {
       // Simulate no update available (default)
       if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('update-status', {
+        mainWindow.webContents.send(IPC.updateStatus, {
           status: 'not-available',
           message: 'You are using the latest version',
           version: app.getVersion()
@@ -1143,7 +1198,7 @@ ipcMain.handle('check-for-updates', async () => {
     // Manually trigger the 'checking-for-update' event to ensure UI feedback
     // This ensures the UI shows "checking" even if the event doesn't fire immediately
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('update-status', {
+      mainWindow.webContents.send(IPC.updateStatus, {
         status: 'checking',
         message: 'Checking for updates...'
       });
@@ -1174,7 +1229,7 @@ ipcMain.handle('check-for-updates', async () => {
       // Treat 404 as success (no updates available)
       console.log('[Update] 404 error - treating as no updates available');
       if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('update-status', {
+        mainWindow.webContents.send(IPC.updateStatus, {
           status: 'not-available',
           message: 'You are using the latest version'
         });
@@ -1184,7 +1239,7 @@ ipcMain.handle('check-for-updates', async () => {
     
     // Send error to UI
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('update-status', {
+      mainWindow.webContents.send(IPC.updateStatus, {
         status: 'error',
         message: 'Error checking for updates',
         error: errorMessage
@@ -1195,7 +1250,7 @@ ipcMain.handle('check-for-updates', async () => {
   }
 });
 
-ipcMain.handle('download-update', async () => {
+ipcMain.handle(IPC.downloadUpdate, async () => {
   if (isDev) {
     return { success: false, error: 'Update downloading is disabled in development mode' };
   }
@@ -1215,28 +1270,33 @@ ipcMain.handle('download-update', async () => {
   }
 });
 
-ipcMain.handle('get-update-status', async () => {
+ipcMain.handle(IPC.getUpdateStatus, async () => {
   if (isDev) {
-    return { success: false, error: 'Update status is not available in development mode' };
+    return err('Update status is not available in development mode');
   }
-  
+
+  // Serve cached result if recent enough
+  const now = Date.now();
+  if (updateStatusCache && (now - updateStatusCache.ts) < UPDATE_STATUS_CACHE_TTL) {
+    return ok({ updateInfo: updateStatusCache.updateInfo });
+  }
+
   try {
     const updater = ensureAutoUpdater();
     const updateInfo = await updater.checkForUpdates();
-    return {
-      success: true,
-      updateInfo: updateInfo ? {
-        version: updateInfo.updateInfo?.version,
-        releaseDate: updateInfo.updateInfo?.releaseDate,
-        releaseNotes: updateInfo.updateInfo?.releaseNotes
-      } : null
-    };
+    const result = updateInfo ? {
+      version: updateInfo.updateInfo?.version,
+      releaseDate: updateInfo.updateInfo?.releaseDate,
+      releaseNotes: updateInfo.updateInfo?.releaseNotes
+    } : null;
+    updateStatusCache = { updateInfo: result, ts: Date.now() };
+    return ok({ updateInfo: result });
   } catch (error) {
-    return { success: false, error: error.message };
+    return err(error.message);
   }
 });
 
-ipcMain.handle('quit-and-install', async () => {
+ipcMain.handle(IPC.quitAndInstall, async () => {
   // For AppImage, we can't auto-install, so we just quit
   // The user will need to manually replace the AppImage file
   app.quit();
@@ -1244,7 +1304,7 @@ ipcMain.handle('quit-and-install', async () => {
 });
 
 // Copy downloaded update file to Downloads folder
-ipcMain.handle('copy-update-to-downloads', async (event, updatePath) => {
+ipcMain.handle(IPC.copyUpdateToDownloads, async (event, updatePath) => {
   if (isDev) {
     return { success: false, error: 'Not available in development mode' };
   }
@@ -1376,7 +1436,7 @@ ipcMain.handle('copy-update-to-downloads', async (event, updatePath) => {
 });
 
 // Open the folder containing the downloaded update file
-ipcMain.handle('open-update-folder', async (event, updatePath) => {
+ipcMain.handle(IPC.openUpdateFolder, async (event, updatePath) => {
   if (isDev) {
     return { success: false, error: 'Not available in development mode' };
   }

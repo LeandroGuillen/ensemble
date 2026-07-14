@@ -6,6 +6,7 @@ import { generateId } from '../utils/id.utils';
 import { pathJoin } from '../utils/path.utils';
 import { assertIpcSuccess } from '../utils/ipc.utils';
 import { requireProject } from '../utils/project.utils';
+import { ENSEMBLE_JSON_FILE } from '../constants/project.constants';
 import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
 import { LoggingService } from './logging.service';
@@ -121,7 +122,7 @@ export class CastService {
   private async mergeCastsWithMetadata(folderCasts: Cast[], projectPath: string): Promise<Cast[]> {
     try {
       // Read ensemble.json to get cast metadata
-      const ensemblePath = pathJoin(projectPath, 'ensemble.json');
+      const ensemblePath = pathJoin(projectPath, ENSEMBLE_JSON_FILE);
       const ensembleExists = await this.electronService.fileExists(ensemblePath);
 
       let metadataCasts: Cast[] = [];

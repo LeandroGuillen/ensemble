@@ -15,7 +15,17 @@ import {
 import { generateId } from '../utils/id.utils';
 import { pathJoin } from '../utils/path.utils';
 import { assertIpcSuccess } from '../utils/ipc.utils';
-import { COLOR_PALETTE } from '../utils/color-palette.utils';
+import {
+  ENSEMBLE_JSON_FILE,
+  LEGACY_METADATA_JSON_FILE,
+  DEFAULT_CHARACTERS_FOLDER,
+  DEFAULT_IMAGES_FOLDER,
+  DEFAULT_CASTS_FOLDER,
+  DEFAULT_NAMES_FILE,
+  DEFAULT_CATEGORIES,
+  DEFAULT_TAGS,
+  normalizeRelativeFolder,
+} from '../constants/project.constants';
 import { ElectronService } from './electron.service';
 import { LoggingService } from './logging.service';
 
@@ -68,8 +78,8 @@ export class ProjectService {
     if (!project?.path) {
       throw new Error('No project loaded');
     }
-    const folder = project.metadata?.settings?.charactersFolder?.trim() || 'characters';
-    const normalized = folder.replace(/^\/+|\/+$/g, '').replace(/\/+/g, '/') || 'characters';
+    const folder = project.metadata?.settings?.charactersFolder?.trim() || DEFAULT_CHARACTERS_FOLDER;
+    const normalized = normalizeRelativeFolder(folder, DEFAULT_CHARACTERS_FOLDER);
     return pathJoin(project.path, normalized);
   }
 
@@ -78,8 +88,8 @@ export class ProjectService {
     if (!project?.path) {
       throw new Error('No project loaded');
     }
-    const folder = project.metadata?.settings?.imagesFolder?.trim() || 'img';
-    const normalized = folder.replace(/^\/+|\/+$/g, '').replace(/\/+/g, '/') || 'img';
+    const folder = project.metadata?.settings?.imagesFolder?.trim() || DEFAULT_IMAGES_FOLDER;
+    const normalized = normalizeRelativeFolder(folder, DEFAULT_IMAGES_FOLDER);
     return pathJoin(project.path, normalized);
   }
 
@@ -93,10 +103,10 @@ export class ProjectService {
     if (!project?.path) {
       throw new Error('No project loaded');
     }
-    const raw = project.metadata?.settings?.castsFolder?.trim() || 'characters/casts';
+    const raw = project.metadata?.settings?.castsFolder?.trim() || DEFAULT_CASTS_FOLDER;
     // Legacy: "casts" alone meant "under characters folder"
-    const relative = raw.includes('/') ? raw : `characters/${raw}`;
-    const normalized = relative.replace(/^\/+|\/+$/g, '').replace(/\/+/g, '/') || 'characters/casts';
+    const relative = raw.includes('/') ? raw : `${DEFAULT_CHARACTERS_FOLDER}/${raw}`;
+    const normalized = normalizeRelativeFolder(relative, DEFAULT_CASTS_FOLDER);
     return pathJoin(project.path, normalized);
   }
 
@@ -109,8 +119,8 @@ export class ProjectService {
     if (!project?.path) {
       throw new Error('No project loaded');
     }
-    const relative = project.metadata?.settings?.namesFile?.trim() || 'characters/names.md';
-    const normalized = relative.replace(/^\/+|\/+$/g, '').replace(/\/+/g, '/') || 'characters/names.md';
+    const relative = project.metadata?.settings?.namesFile?.trim() || DEFAULT_NAMES_FILE;
+    const normalized = normalizeRelativeFolder(relative, DEFAULT_NAMES_FILE);
     return pathJoin(project.path, normalized);
   }
 
@@ -120,9 +130,8 @@ export class ProjectService {
   getCharactersFolderName(): string {
     const project = this.currentProjectSubject.value;
     const folder = project?.metadata?.settings?.charactersFolder?.trim();
-    if (!folder) return 'characters';
-    const normalized = folder.replace(/^\/+|\/+$/g, '').replace(/\/+/g, '/');
-    return normalized || 'characters';
+    if (!folder) return DEFAULT_CHARACTERS_FOLDER;
+    return normalizeRelativeFolder(folder, DEFAULT_CHARACTERS_FOLDER);
   }
 
   /**
@@ -149,8 +158,8 @@ export class ProjectService {
       }
 
       // Load ensemble.json (or fallback to metadata.json for migration)
-      const ensemblePath = pathJoin(projectPath, 'ensemble.json');
-      const metadataPath = pathJoin(projectPath, 'metadata.json');
+      const ensemblePath = pathJoin(projectPath, ENSEMBLE_JSON_FILE);
+      const metadataPath = pathJoin(projectPath, LEGACY_METADATA_JSON_FILE);
       const ensembleExists = await this.electronService.fileExists(ensemblePath);
       const metadataExists = await this.electronService.fileExists(metadataPath);
 
@@ -200,7 +209,7 @@ export class ProjectService {
       }
 
       // Ensure required directories exist
-      const charactersFolder = metadata.settings?.charactersFolder?.trim() || 'characters';
+      const charactersFolder = metadata.settings?.charactersFolder?.trim() || DEFAULT_CHARACTERS_FOLDER;
       await this.ensureProjectStructure(projectPath, charactersFolder);
 
       this.migrateLastSessionFromLegacy(metadata);
@@ -242,7 +251,7 @@ export class ProjectService {
         }
 
         // Check if it's already a project (has metadata.json)
-        const metadataPath = pathJoin(projectPath, 'metadata.json');
+        const metadataPath = pathJoin(projectPath, LEGACY_METADATA_JSON_FILE);
         const hasMetadata = await this.electronService.fileExists(metadataPath);
         if (hasMetadata) {
           throw new Error(`Directory already contains a project: ${projectPath}`);
@@ -288,8 +297,8 @@ export class ProjectService {
       }
 
       // Check if source has ensemble.json or metadata.json (valid project)
-      const sourceEnsemblePath = pathJoin(sourceProjectPath, 'ensemble.json');
-      const sourceMetadataPath = pathJoin(sourceProjectPath, 'metadata.json');
+      const sourceEnsemblePath = pathJoin(sourceProjectPath, ENSEMBLE_JSON_FILE);
+      const sourceMetadataPath = pathJoin(sourceProjectPath, LEGACY_METADATA_JSON_FILE);
       const hasEnsemble = await this.electronService.fileExists(sourceEnsemblePath);
       const hasMetadata = await this.electronService.fileExists(sourceMetadataPath);
       
@@ -303,8 +312,8 @@ export class ProjectService {
       
       const destExists = await this.electronService.fileExists(destProjectPath);
       if (destExists) {
-        const destEnsemblePath = pathJoin(destProjectPath, 'ensemble.json');
-        const destMetadataPath = pathJoin(destProjectPath, 'metadata.json');
+        const destEnsemblePath = pathJoin(destProjectPath, ENSEMBLE_JSON_FILE);
+        const destMetadataPath = pathJoin(destProjectPath, LEGACY_METADATA_JSON_FILE);
         const destHasEnsemble = await this.electronService.fileExists(destEnsemblePath);
         const destHasMetadata = await this.electronService.fileExists(destMetadataPath);
         
@@ -320,8 +329,8 @@ export class ProjectService {
       }
 
       // Load the duplicated project's ensemble.json (or metadata.json for legacy)
-      const destEnsemblePath = pathJoin(destProjectPath, 'ensemble.json');
-      const destMetadataPath = pathJoin(destProjectPath, 'metadata.json');
+      const destEnsemblePath = pathJoin(destProjectPath, ENSEMBLE_JSON_FILE);
+      const destMetadataPath = pathJoin(destProjectPath, LEGACY_METADATA_JSON_FILE);
       const destHasEnsemble = await this.electronService.fileExists(destEnsemblePath);
       const destHasMetadata = await this.electronService.fileExists(destMetadataPath);
 
@@ -374,7 +383,7 @@ export class ProjectService {
       );
 
       // Create characters subdirectory (configurable path)
-      const normalized = charactersFolder.replace(/^\/+|\/+$/g, '').replace(/\/+/g, '/') || 'characters';
+      const normalized = normalizeRelativeFolder(charactersFolder, DEFAULT_CHARACTERS_FOLDER);
       const charactersPath = pathJoin(projectPath, normalized);
       assertIpcSuccess(
         await this.electronService.createDirectory(charactersPath),
@@ -395,27 +404,17 @@ export class ProjectService {
     return {
       projectName,
       version: '1.0.0',
-      categories: [
-        { id: 'main-character', name: 'Main Character', color: COLOR_PALETTE[0] },
-        { id: 'supporting', name: 'Supporting Character', color: COLOR_PALETTE[1] },
-        { id: 'antagonist', name: 'Antagonist', color: COLOR_PALETTE[2] },
-        { id: 'minor', name: 'Minor Character', color: COLOR_PALETTE[3] },
-      ],
-      tags: [
-        { id: 'magic-user', name: 'Magic User', color: COLOR_PALETTE[6] },
-        { id: 'noble', name: 'Noble', color: COLOR_PALETTE[7] },
-        { id: 'warrior', name: 'Warrior', color: COLOR_PALETTE[2] },
-        { id: 'scholar', name: 'Scholar', color: COLOR_PALETTE[5] },
-      ],
+      categories: DEFAULT_CATEGORIES.map(c => ({ ...c })),
+      tags: DEFAULT_TAGS.map(t => ({ ...t })),
       casts: [],
       books: [],
       settings: {
-        defaultCategory: 'main-character',
+        defaultCategory: DEFAULT_CATEGORIES[0].id,
         autoSave: true,
         fileWatchEnabled: true,
-        charactersFolder: 'characters',
-        castsFolder: 'characters/casts',
-        imagesFolder: 'img',
+        charactersFolder: DEFAULT_CHARACTERS_FOLDER,
+        castsFolder: DEFAULT_CASTS_FOLDER,
+        imagesFolder: DEFAULT_IMAGES_FOLDER,
       },
       pinboards: [
         {
@@ -433,7 +432,7 @@ export class ProjectService {
    * Saves metadata to the project's ensemble.json file
    */
   private async saveMetadata(projectPath: string, metadata: ProjectMetadata): Promise<void> {
-    const ensemblePath = pathJoin(projectPath, 'ensemble.json');
+    const ensemblePath = pathJoin(projectPath, ENSEMBLE_JSON_FILE);
     const content = JSON.stringify(metadata, null, 2);
     assertIpcSuccess(
       await this.electronService.writeFileAtomic(ensemblePath, content),

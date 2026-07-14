@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { IpcChannels } from '../ipc/ipc-channels';
 import { LoggingService } from './logging.service';
 
 declare global {
@@ -7,11 +8,18 @@ declare global {
   }
 }
 
+/** Standard return shape for IPC handlers in `main.js` (see B4). */
+export interface IpcResult<T = void> {
+  success: boolean;
+  error?: string;
+  data?: T;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class ElectronService {
-  public ipcRenderer: any;
+  private ipcRenderer: any;
 
   constructor(private logger: LoggingService) {
     if (this.isElectron()) {
@@ -28,42 +36,42 @@ export class ElectronService {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
-    return await this.ipcRenderer.invoke('create-directory', dirPath);
+    return await this.ipcRenderer.invoke(IpcChannels.createDirectory, dirPath);
   }
 
   async fileExists(filePath: string): Promise<boolean> {
     if (!this.isElectron()) {
       return false;
     }
-    return await this.ipcRenderer.invoke('file-exists', filePath);
+    return await this.ipcRenderer.invoke(IpcChannels.fileExists, filePath);
   }
 
   async isDirectory(dirPath: string): Promise<boolean> {
     if (!this.isElectron()) {
       return false;
     }
-    return await this.ipcRenderer.invoke('is-directory', dirPath);
+    return await this.ipcRenderer.invoke(IpcChannels.isDirectory, dirPath);
   }
 
   async readFile(filePath: string): Promise<{ success: boolean; content?: string; error?: string }> {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
-    return await this.ipcRenderer.invoke('read-file', filePath);
+    return await this.ipcRenderer.invoke(IpcChannels.readFile, filePath);
   }
 
   async writeFile(filePath: string, content: string): Promise<{ success: boolean; error?: string }> {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
-    return await this.ipcRenderer.invoke('write-file', filePath, content);
+    return await this.ipcRenderer.invoke(IpcChannels.writeFile, filePath, content);
   }
 
   async writeFileAtomic(filePath: string, content: string): Promise<{ success: boolean; error?: string }> {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
-    return await this.ipcRenderer.invoke('write-file-atomic', filePath, content);
+    return await this.ipcRenderer.invoke(IpcChannels.writeFileAtomic, filePath, content);
   }
 
   // Path operations
@@ -71,7 +79,7 @@ export class ElectronService {
     if (!this.isElectron()) {
       return paths.join('/'); // Fallback for non-Electron environments
     }
-    return await this.ipcRenderer.invoke('path-join', ...paths);
+    return await this.ipcRenderer.invoke(IpcChannels.pathJoin, ...paths);
   }
 
   async pathBasename(filePath: string, ext?: string): Promise<string> {
@@ -83,7 +91,7 @@ export class ElectronService {
       }
       return basename;
     }
-    return await this.ipcRenderer.invoke('path-basename', filePath, ext);
+    return await this.ipcRenderer.invoke(IpcChannels.pathBasename, filePath, ext);
   }
 
   async pathDirname(filePath: string): Promise<string> {
@@ -91,7 +99,7 @@ export class ElectronService {
       const parts = filePath.split('/');
       return parts.slice(0, -1).join('/');
     }
-    return await this.ipcRenderer.invoke('path-dirname', filePath);
+    return await this.ipcRenderer.invoke(IpcChannels.pathDirname, filePath);
   }
 
   async sanitizeFilename(filename: string): Promise<string> {
@@ -103,7 +111,7 @@ export class ElectronService {
         .toLowerCase()
         .substring(0, 255);
     }
-    return await this.ipcRenderer.invoke('sanitize-filename', filename);
+    return await this.ipcRenderer.invoke(IpcChannels.sanitizeFilename, filename);
   }
 
   // Dialog operations
@@ -111,28 +119,28 @@ export class ElectronService {
     if (!this.isElectron()) {
       return null;
     }
-    return await this.ipcRenderer.invoke('select-folder');
+    return await this.ipcRenderer.invoke(IpcChannels.selectFolder);
   }
 
   async selectImage(): Promise<string | null> {
     if (!this.isElectron()) {
       return null;
     }
-    return await this.ipcRenderer.invoke('select-image');
+    return await this.ipcRenderer.invoke(IpcChannels.selectImage);
   }
 
   async selectImages(): Promise<string[]> {
     if (!this.isElectron()) {
       return [];
     }
-    return await this.ipcRenderer.invoke('select-images');
+    return await this.ipcRenderer.invoke(IpcChannels.selectImages);
   }
 
   async getVersion(): Promise<string> {
     if (!this.isElectron()) {
       return '1.0.0';
     }
-    return await this.ipcRenderer.invoke('get-version');
+    return await this.ipcRenderer.invoke(IpcChannels.getVersion);
   }
 
   // Additional file operations needed for character management
@@ -140,35 +148,35 @@ export class ElectronService {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
-    return await this.ipcRenderer.invoke('delete-file', filePath);
+    return await this.ipcRenderer.invoke(IpcChannels.deleteFile, filePath);
   }
 
   async listDirectory(dirPath: string): Promise<{ success: boolean; files?: string[]; error?: string }> {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
-    return await this.ipcRenderer.invoke('list-directory', dirPath);
+    return await this.ipcRenderer.invoke(IpcChannels.listDirectory, dirPath);
   }
 
   async copyFile(sourcePath: string, destPath: string): Promise<{ success: boolean; error?: string }> {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
-    return await this.ipcRenderer.invoke('copy-file', sourcePath, destPath);
+    return await this.ipcRenderer.invoke(IpcChannels.copyFile, sourcePath, destPath);
   }
 
   async moveFile(sourcePath: string, destPath: string): Promise<{ success: boolean; error?: string }> {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
-    return await this.ipcRenderer.invoke('move-file', sourcePath, destPath);
+    return await this.ipcRenderer.invoke(IpcChannels.moveFile, sourcePath, destPath);
   }
 
   async getFileStats(filePath: string): Promise<{ success: boolean; stats?: any; error?: string }> {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
-    return await this.ipcRenderer.invoke('get-file-stats', filePath);
+    return await this.ipcRenderer.invoke(IpcChannels.getFileStats, filePath);
   }
 
   async getImageAsDataUrl(filePath: string): Promise<string | null> {
@@ -177,7 +185,7 @@ export class ElectronService {
     }
 
     try {
-      return await this.ipcRenderer.invoke('get-image-data-url', filePath);
+      return await this.ipcRenderer.invoke(IpcChannels.getImageDataUrl, filePath);
     } catch (error) {
       this.logger.error('Failed to get image as data URL', error);
       return null;
@@ -188,7 +196,7 @@ export class ElectronService {
     if (!this.isElectron()) {
       throw new Error('AI requests are only available in Electron');
     }
-    return await this.ipcRenderer.invoke('ai-request', url, options);
+    return await this.ipcRenderer.invoke(IpcChannels.aiRequest, url, options);
   }
 
   async downloadImage(
@@ -199,35 +207,35 @@ export class ElectronService {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
-    return await this.ipcRenderer.invoke('download-image', url, destinationPath, options);
+    return await this.ipcRenderer.invoke(IpcChannels.downloadImage, url, destinationPath, options);
   }
 
   async moveDirectory(sourcePath: string, destPath: string): Promise<{ success: boolean; error?: string }> {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
-    return await this.ipcRenderer.invoke('move-directory', sourcePath, destPath);
+    return await this.ipcRenderer.invoke(IpcChannels.moveDirectory, sourcePath, destPath);
   }
 
   async deleteDirectoryRecursive(dirPath: string): Promise<{ success: boolean; error?: string }> {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
-    return await this.ipcRenderer.invoke('delete-directory-recursive', dirPath);
+    return await this.ipcRenderer.invoke(IpcChannels.deleteDirectoryRecursive, dirPath);
   }
 
   async copyDirectoryRecursive(sourcePath: string, destPath: string): Promise<{ success: boolean; error?: string }> {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
-    return await this.ipcRenderer.invoke('copy-directory-recursive', sourcePath, destPath);
+    return await this.ipcRenderer.invoke(IpcChannels.copyDirectoryRecursive, sourcePath, destPath);
   }
 
   async readDirectoryFiles(dirPath: string): Promise<{ success: boolean; files?: string[]; directories?: string[]; error?: string }> {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
-    return await this.ipcRenderer.invoke('read-directory-files', dirPath);
+    return await this.ipcRenderer.invoke(IpcChannels.readDirectoryFiles, dirPath);
   }
 
   async readDirectoryRecursive(
@@ -237,7 +245,7 @@ export class ElectronService {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron', files: [] };
     }
-    return await this.ipcRenderer.invoke('read-directory-recursive', dirPath, pattern);
+    return await this.ipcRenderer.invoke(IpcChannels.readDirectoryRecursive, dirPath, pattern);
   }
 
   // File watching
@@ -245,31 +253,31 @@ export class ElectronService {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
-    return await this.ipcRenderer.invoke('start-file-watcher', projectPath, charactersFolder);
+    return await this.ipcRenderer.invoke(IpcChannels.startFileWatcher, projectPath, charactersFolder);
   }
 
   async stopFileWatcher(): Promise<{ success: boolean; error?: string }> {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
-    return await this.ipcRenderer.invoke('stop-file-watcher');
+    return await this.ipcRenderer.invoke(IpcChannels.stopFileWatcher);
   }
 
   onFileChanged(callback: (event: any, data: { type: string; path: string; filename: string }) => void): void {
     if (this.isElectron()) {
-      this.ipcRenderer.on('file-changed', callback);
+      this.ipcRenderer.on(IpcChannels.fileChanged, callback);
     }
   }
 
   removeFileChangedListener(callback: (event: any, data: any) => void): void {
     if (this.isElectron()) {
-      this.ipcRenderer.removeListener('file-changed', callback);
+      this.ipcRenderer.removeListener(IpcChannels.fileChanged, callback);
     }
   }
 
   setBrowserNavigationInterception(enabled: boolean): void {
     if (this.isElectron()) {
-      this.ipcRenderer.send('set-browser-navigation-interception', enabled);
+      this.ipcRenderer.send(IpcChannels.setBrowserNavigationInterception, enabled);
     }
   }
 
@@ -277,7 +285,7 @@ export class ElectronService {
     callback: (event: any, direction: 'back' | 'forward') => void
   ): void {
     if (this.isElectron()) {
-      this.ipcRenderer.on('browser-navigation-command', callback);
+      this.ipcRenderer.on(IpcChannels.browserNavigationCommand, callback);
     }
   }
 
@@ -285,7 +293,7 @@ export class ElectronService {
     callback: (event: any, direction: 'back' | 'forward') => void
   ): void {
     if (this.isElectron()) {
-      this.ipcRenderer.removeListener('browser-navigation-command', callback);
+      this.ipcRenderer.removeListener(IpcChannels.browserNavigationCommand, callback);
     }
   }
 
@@ -294,28 +302,28 @@ export class ElectronService {
     if (!this.isElectron()) {
       return [];
     }
-    return await this.ipcRenderer.invoke('get-recent-projects');
+    return await this.ipcRenderer.invoke(IpcChannels.getRecentProjects);
   }
 
   async saveRecentProjects(projects: Array<{ path: string; lastAccessed: string }>): Promise<{ success: boolean; error?: string }> {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
-    return await this.ipcRenderer.invoke('save-recent-projects', projects);
+    return await this.ipcRenderer.invoke(IpcChannels.saveRecentProjects, projects);
   }
 
   async openFileInEditor(filePath: string): Promise<{ success: boolean; error?: string }> {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
-    return await this.ipcRenderer.invoke('open-file-in-editor', filePath);
+    return await this.ipcRenderer.invoke(IpcChannels.openFileInEditor, filePath);
   }
 
   async showItemInFolder(filePath: string): Promise<{ success: boolean; error?: string }> {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
-    return await this.ipcRenderer.invoke('show-item-in-folder', filePath);
+    return await this.ipcRenderer.invoke(IpcChannels.showItemInFolder, filePath);
   }
 
   /** Opens a folder in the OS file manager (opens the folder itself, not its parent). */
@@ -323,6 +331,65 @@ export class ElectronService {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
-    return await this.ipcRenderer.invoke('open-path', folderPath);
+    return await this.ipcRenderer.invoke(IpcChannels.openPath, folderPath);
+  }
+
+  // ==================== Auto-updater (B2) ====================
+  // These wrap the updater IPC handlers in main.js. Renderer code should
+  // always go through here rather than touching `ipcRenderer` directly.
+
+  /** Subscribe to `update-status` events pushed from the main process. */
+  onUpdateStatus(callback: (event: any, status: any) => void): void {
+    if (this.isElectron()) {
+      this.ipcRenderer.on(IpcChannels.updateStatus, callback);
+    }
+  }
+
+  removeUpdateStatusListener(callback: (event: any, status: any) => void): void {
+    if (this.isElectron()) {
+      this.ipcRenderer.removeListener(IpcChannels.updateStatus, callback);
+    }
+  }
+
+  async checkForUpdates(): Promise<{ success: boolean; error?: string }> {
+    if (!this.isElectron()) {
+      return { success: false, error: 'Not running in Electron' };
+    }
+    return await this.ipcRenderer.invoke(IpcChannels.checkForUpdates);
+  }
+
+  async downloadUpdate(): Promise<{ success: boolean; error?: string }> {
+    if (!this.isElectron()) {
+      return { success: false, error: 'Not running in Electron' };
+    }
+    return await this.ipcRenderer.invoke(IpcChannels.downloadUpdate);
+  }
+
+  async getUpdateStatus(): Promise<{ success: boolean; updateInfo?: any; error?: string }> {
+    if (!this.isElectron()) {
+      return { success: false, error: 'Not running in Electron' };
+    }
+    return await this.ipcRenderer.invoke(IpcChannels.getUpdateStatus);
+  }
+
+  async quitAndInstall(): Promise<{ success: boolean; error?: string }> {
+    if (!this.isElectron()) {
+      return { success: false, error: 'Not running in Electron' };
+    }
+    return await this.ipcRenderer.invoke(IpcChannels.quitAndInstall);
+  }
+
+  async copyUpdateToDownloads(updatePath: string): Promise<{ success: boolean; path?: string; error?: string }> {
+    if (!this.isElectron()) {
+      return { success: false, error: 'Not running in Electron' };
+    }
+    return await this.ipcRenderer.invoke(IpcChannels.copyUpdateToDownloads, updatePath);
+  }
+
+  async openUpdateFolder(updatePath: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.isElectron()) {
+      return { success: false, error: 'Not running in Electron' };
+    }
+    return await this.ipcRenderer.invoke(IpcChannels.openUpdateFolder, updatePath);
   }
 }

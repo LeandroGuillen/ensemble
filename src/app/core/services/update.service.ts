@@ -25,7 +25,7 @@ export class UpdateService {
   private updateStatusSubject = new BehaviorSubject<UpdateStatus>({
     status: 'idle'
   });
-  
+
   public updateStatus$: Observable<UpdateStatus> = this.updateStatusSubject.asObservable();
 
   constructor(
@@ -34,7 +34,7 @@ export class UpdateService {
   ) {
     // Listen for update status events from Electron
     if (this.electronService.isElectron()) {
-      this.electronService.ipcRenderer.on('update-status', (event: any, status: UpdateStatus) => {
+      this.electronService.onUpdateStatus((event: any, status: UpdateStatus) => {
         this.updateStatusSubject.next(status);
         this.logger.log('Update status changed:', status);
       });
@@ -50,8 +50,7 @@ export class UpdateService {
     }
 
     try {
-      const result = await this.electronService.ipcRenderer.invoke('check-for-updates');
-      return result;
+      return await this.electronService.checkForUpdates();
     } catch (error: any) {
       this.logger.error('Error checking for updates', error);
       return { success: false, error: error.message || 'Unknown error' };
@@ -67,8 +66,7 @@ export class UpdateService {
     }
 
     try {
-      const result = await this.electronService.ipcRenderer.invoke('download-update');
-      return result;
+      return await this.electronService.downloadUpdate();
     } catch (error: any) {
       this.logger.error('Error downloading update', error);
       return { success: false, error: error.message || 'Unknown error' };
@@ -84,8 +82,7 @@ export class UpdateService {
     }
 
     try {
-      const result = await this.electronService.ipcRenderer.invoke('get-update-status');
-      return result;
+      return await this.electronService.getUpdateStatus();
     } catch (error: any) {
       this.logger.error('Error getting update status', error);
       return { success: false, error: error.message || 'Unknown error' };
@@ -101,8 +98,7 @@ export class UpdateService {
     }
 
     try {
-      const result = await this.electronService.ipcRenderer.invoke('quit-and-install');
-      return result;
+      return await this.electronService.quitAndInstall();
     } catch (error: any) {
       this.logger.error('Error quitting for install', error);
       return { success: false, error: error.message || 'Unknown error' };
@@ -125,8 +121,7 @@ export class UpdateService {
     }
 
     try {
-      const result = await this.electronService.ipcRenderer.invoke('copy-update-to-downloads', updatePath);
-      return result;
+      return await this.electronService.copyUpdateToDownloads(updatePath);
     } catch (error: any) {
       this.logger.error('Error copying update to Downloads', error);
       return { success: false, error: error.message || 'Unknown error' };
@@ -142,12 +137,10 @@ export class UpdateService {
     }
 
     try {
-      const result = await this.electronService.ipcRenderer.invoke('open-update-folder', updatePath);
-      return result;
+      return await this.electronService.openUpdateFolder(updatePath);
     } catch (error: any) {
       this.logger.error('Error opening update folder', error);
       return { success: false, error: error.message || 'Unknown error' };
     }
   }
 }
-
