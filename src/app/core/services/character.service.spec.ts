@@ -238,6 +238,39 @@ describe('CharacterService', () => {
       expect(updated).toBeNull();
     });
 
+    it('should clear thumbnail when an empty thumbnail is saved', async () => {
+      const project = createValidProject();
+      projectService.getCurrentProject.and.returnValue(project);
+      (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
+
+      const existingCharacter: Character = {
+        id: 'main-character/_test-character.md',
+        name: 'Test Character',
+        category: 'main-character',
+        tags: [],
+        books: [],
+        thumbnail: '[[img/portrait.png]]',
+        content: '',
+        created: new Date(),
+        modified: new Date(),
+        filePath: '/test/project/characters/main-character/_test-character.md',
+      };
+
+      (service as any).charactersSubject.next([existingCharacter]);
+
+      electronService.fileExists.and.returnValue(Promise.resolve(true));
+      electronService.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));
+
+      const updated = await service.updateCharacter('main-character/_test-character.md', {
+        thumbnail: '',
+      });
+
+      expect(updated?.thumbnail).toBeUndefined();
+      expect(electronService.writeFileAtomic).toHaveBeenCalled();
+      const savedContent = electronService.writeFileAtomic.calls.mostRecent().args[1] as string;
+      expect(savedContent).not.toContain('thumbnail:');
+    });
+
     it('should not move character file when category changes', async () => {
       const project = createValidProject();
       project.metadata.categories.push({ id: 'supporting', name: 'Supporting', color: '#00FF00' });

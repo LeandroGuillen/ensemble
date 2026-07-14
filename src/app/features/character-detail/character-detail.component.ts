@@ -27,6 +27,10 @@ import {
   Character,
   CharacterFormData,
   Project,
+  ImageWorkflow,
+  ProjectImage,
+  ProjectImageDirectory,
+  ProjectImageFolder,
   Tag,
 } from "../../core/interfaces";
 import {
@@ -36,6 +40,7 @@ import {
   LoggingService,
   MetadataService,
   NotificationService,
+  ImageGenerationService,
   ProjectService,
 } from "../../core/services";
 import { ModalService } from "../../core/services/modal.service";
@@ -107,6 +112,40 @@ export class CharacterDetailComponent
 
   // Thumbnail preview (resolved from img/ path)
   thumbnailPreviewUrl: string | null = null;
+  imageGenerationEnabled = false;
+  showGeneratePortraitDialog = false;
+  showImagePickerDialog = false;
+  imageWorkflows: ImageWorkflow[] = [];
+  selectedImageWorkflowId = '';
+  positiveImagePrompt = '';
+  negativeImagePrompt = '';
+  isGeneratingPortrait = false;
+
+  get selectedImageWorkflow(): ImageWorkflow | undefined {
+    return this.imageWorkflows.find((workflow) => workflow.id === this.selectedImageWorkflowId);
+  }
+
+  isLoadingImages = false;
+  projectImages: ProjectImage[] = [];
+  imageDirectories: ProjectImageFolder[] = [];
+  currentImageDirectory = '';
+  imageSearch = '';
+  private imagePickerHistory: string[] = [];
+  private imagePickerHistoryIndex = -1;
+  private imageDirectoryCache = new Map<string, ProjectImageDirectory>();
+  private lastExternalPickerNavigation: {
+    direction: 'back' | 'forward';
+    timestamp: number;
+  } | null = null;
+  private browserNavigationCommandListener = (
+    _event: unknown,
+    direction: 'back' | 'forward'
+  ) => {
+    if (!this.showImagePickerDialog) return;
+    this.ngZone.run(() => {
+      this.handleExternalPickerNavigation(direction);
+    });
+  };
 
   /** True while a text input/textarea in this form has focus — CD is detached to avoid wasted work. */
   private textInputFocused = false;
@@ -131,6 +170,7 @@ export class CharacterDetailComponent
     private modalService: ModalService,
     private logger: LoggingService,
     private notificationService: NotificationService,
+    private imageGenerationService: ImageGenerationService,
     private ngZone: NgZone
   ) {
     this.characterForm = this.createForm();
@@ -145,6 +185,8 @@ export class CharacterDetailComponent
         this.categories = this.projectService.getCategories();
         this.tags = this.projectService.getTags();
         this.books = this.metadataService.getBooks();
+        this.imageGenerationEnabled =
+          project?.metadata.settings.imageGeneration?.enabled || false;
 
         // Update cached category options (avoids creating new array on every CD)
         this.categoryToggleOptions = this.categories.map((cat) => ({
@@ -273,6 +315,10 @@ export class CharacterDetailComponent
 
   ngOnDestroy(): void {
     document.removeEventListener('keydown', this.keydownListener);
+    this.electronService.setBrowserNavigationInterception(false);
+    this.electronService.removeBrowserNavigationCommandListener(
+      this.browserNavigationCommandListener
+    );
     if (this.focusedElement) {
       this.focusedElement.removeEventListener('input', this.inputEventStopper, true);
       this.focusedElement.removeEventListener('beforeinput', this.inputEventStopper, true);
@@ -286,10 +332,31 @@ export class CharacterDetailComponent
   }
 
   private keydownListener = (event: KeyboardEvent) => {
+    if (
+      this.showImagePickerDialog &&
+      event.altKey &&
+      (event.key === 'ArrowLeft' || event.key === 'ArrowRight')
+    ) {
+      event.preventDefault();
+      this.ngZone.run(() => {
+        event.key === 'ArrowLeft'
+          ? this.goBackInImagePicker()
+          : this.goForwardInImagePicker();
+      });
+      return;
+    }
     if (event.key === "Escape") {
       event.preventDefault();
       this.ngZone.run(() => {
         this.reattachIfDetached();
+        if (this.showImagePickerDialog) {
+          this.closeImagePicker();
+          return;
+        }
+        if (this.showGeneratePortraitDialog) {
+          this.closeGeneratePortrait();
+          return;
+        }
         this.onCancel();
       });
       return;
@@ -319,6 +386,9 @@ export class CharacterDetailComponent
     this.ngZone.runOutsideAngular(() => {
       document.addEventListener('keydown', this.keydownListener);
     });
+    this.electronService.onBrowserNavigationCommand(
+      this.browserNavigationCommandListener
+    );
   }
 
   private reattachIfDetached(): void {
@@ -559,7 +629,7 @@ export class CharacterDetailComponent
         category: this.characterForm.value.category,
         tags: this.characterForm.value.tags || [],
         books: this.characterForm.value.books || [],
-        thumbnail: this.characterForm.value.thumbnail || undefined,
+        thumbnail: (this.characterForm.value.thumbnail || '').trim(),
         content: this.characterForm.value.content || '',
       };
 
@@ -948,6 +1018,281 @@ export class CharacterDetailComponent
       this.isGeneratingName = false;
       this.cdr.markForCheck();
     }
+  }
+
+  async openGeneratePortrait(): Promise<void> {
+    if (!this.imageGenerationEnabled) {
+      this.error = 'Image generation is not enabled. Configure it in AI Settings first.';
+      return;
+    }
+    this.error = null;
+    this.showGeneratePortraitDialog = true;
+    try {
+      this.imageWorkflows = await this.imageGenerationService.listWorkflows();
+      const configured = this.imageGenerationService.getSettings().invokeai.defaultWorkflowId;
+      this.selectedImageWorkflowId =
+        (configured && this.imageWorkflows.some((workflow) => workflow.id === configured)
+          ? configured
+          : this.imageWorkflows[0]?.id) || '';
+    } catch (error) {
+      this.showGeneratePortraitDialog = false;
+      this.error = error instanceof Error ? error.message : 'Failed to load image workflows';
+    }
+    this.cdr.markForCheck();
+  }
+
+  closeGeneratePortrait(): void {
+    if (!this.isGeneratingPortrait) {
+      this.showGeneratePortraitDialog = false;
+    }
+  }
+
+  async generatePortrait(): Promise<void> {
+    if (!this.selectedImageWorkflowId || !this.positiveImagePrompt.trim()) return;
+    const characterName = this.characterForm.get('name')?.value?.trim() || 'character';
+    this.isGeneratingPortrait = true;
+    this.error = null;
+    this.cdr.markForCheck();
+    try {
+      const relativePath = await this.imageGenerationService.generateAndSave({
+        workflowId: this.selectedImageWorkflowId,
+        positivePrompt: this.positiveImagePrompt.trim(),
+        negativePrompt: this.negativeImagePrompt.trim(),
+        characterName,
+      });
+      this.characterForm.patchValue({ thumbnail: `[[${relativePath}]]` });
+      this.characterForm.markAsDirty();
+      this.showGeneratePortraitDialog = false;
+      this.notificationService.showSuccess(`Portrait saved to ${relativePath}`);
+    } catch (error) {
+      this.error = error instanceof Error ? error.message : 'Failed to generate portrait';
+    } finally {
+      this.isGeneratingPortrait = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  async openImagePicker(): Promise<void> {
+    this.showImagePickerDialog = true;
+    this.electronService.setBrowserNavigationInterception(true);
+    this.imageSearch = '';
+    this.projectImages = [];
+    this.imageDirectories = [];
+    this.currentImageDirectory = '';
+    this.imageDirectoryCache.clear();
+    this.imagePickerHistory = [];
+    this.imagePickerHistoryIndex = -1;
+    this.lastExternalPickerNavigation = null;
+    this.cdr.markForCheck();
+    const initialDirectory = this.getInitialImagePickerDirectory();
+    let loaded = await this.loadImageDirectory(initialDirectory, false);
+    if (!loaded && initialDirectory) {
+      this.error = null;
+      loaded = await this.loadImageDirectory('', false);
+    }
+    if (loaded && this.showImagePickerDialog) {
+      this.initializeImagePickerHistory(this.currentImageDirectory);
+    }
+  }
+
+  async loadImageDirectory(relativeDirectory: string, addToHistory = false): Promise<boolean> {
+    const cachedListing = this.imageDirectoryCache.get(relativeDirectory);
+    if (cachedListing) {
+      this.applyImageDirectory(cachedListing);
+      if (addToHistory) {
+        this.recordImagePickerHistory(cachedListing.relativeDirectory);
+      }
+      this.cdr.markForCheck();
+      return true;
+    }
+
+    this.isLoadingImages = true;
+    this.imageSearch = '';
+    this.cdr.markForCheck();
+    try {
+      const listing =
+        await this.imageGenerationService.browseProjectImageDirectory(relativeDirectory);
+      this.imageDirectoryCache.set(listing.relativeDirectory, listing);
+      this.applyImageDirectory(listing);
+      if (addToHistory) {
+        this.recordImagePickerHistory(listing.relativeDirectory);
+      }
+      return true;
+    } catch (error) {
+      this.error = error instanceof Error ? error.message : 'Failed to load project images';
+      return false;
+    } finally {
+      this.isLoadingImages = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  private getInitialImagePickerDirectory(): string {
+    const thumbnail = parseThumbnailReference(
+      this.characterForm.get('thumbnail')?.value || ''
+    );
+    if (!thumbnail) return '';
+
+    const imagesFolder = (
+      this.currentProject?.metadata?.settings?.imagesFolder?.trim() || 'img'
+    )
+      .replace(/\\/g, '/')
+      .replace(/^\.?\/+|\/+$/g, '');
+    const thumbnailPath = thumbnail
+      .replace(/\\/g, '/')
+      .replace(/^\.?\/+/, '');
+    const prefix = `${imagesFolder}/`;
+    if (!thumbnailPath.startsWith(prefix)) return '';
+
+    const parts = thumbnailPath.slice(prefix.length).split('/').filter(Boolean);
+    parts.pop();
+    return parts.join('/');
+  }
+
+  private applyImageDirectory(listing: ProjectImageDirectory): void {
+    this.imageSearch = '';
+    this.currentImageDirectory = listing.relativeDirectory;
+    this.imageDirectories = listing.directories;
+    this.projectImages = listing.images;
+  }
+
+  openImageDirectory(name: string): void {
+    const path = this.currentImageDirectory
+      ? `${this.currentImageDirectory}/${name}`
+      : name;
+    void this.loadImageDirectory(path, true);
+  }
+
+  goToParentImageDirectory(): void {
+    const parts = this.currentImageDirectory.split('/').filter(Boolean);
+    parts.pop();
+    void this.loadImageDirectory(parts.join('/'), true);
+  }
+
+  navigateImageDirectory(path: string): void {
+    if (path !== this.currentImageDirectory) {
+      void this.loadImageDirectory(path, true);
+    }
+  }
+
+  get canGoBackInImagePicker(): boolean {
+    return this.showImagePickerDialog && this.imagePickerHistoryIndex >= 0;
+  }
+
+  get canGoForwardInImagePicker(): boolean {
+    return this.imagePickerHistoryIndex < this.imagePickerHistory.length - 1;
+  }
+
+  goBackInImagePicker(): void {
+    if (this.imagePickerHistoryIndex <= 0) {
+      this.closeImagePicker();
+      return;
+    }
+    void this.restoreImagePickerHistory(this.imagePickerHistoryIndex - 1);
+  }
+
+  goForwardInImagePicker(): void {
+    void this.restoreImagePickerHistory(this.imagePickerHistoryIndex + 1);
+  }
+
+  closeImagePicker(): void {
+    this.showImagePickerDialog = false;
+    this.electronService.setBrowserNavigationInterception(false);
+    this.cdr.markForCheck();
+  }
+
+  handlePickerNavigationAway(): boolean {
+    if (this.showImagePickerDialog) {
+      this.handleExternalPickerNavigation('back');
+      return false;
+    }
+    return !(
+      this.lastExternalPickerNavigation?.direction === 'back' &&
+      Date.now() - this.lastExternalPickerNavigation.timestamp < 300
+    );
+  }
+
+  private handleExternalPickerNavigation(direction: 'back' | 'forward'): void {
+    const timestamp = Date.now();
+    if (
+      this.lastExternalPickerNavigation?.direction === direction &&
+      timestamp - this.lastExternalPickerNavigation.timestamp < 300
+    ) {
+      return;
+    }
+    this.lastExternalPickerNavigation = { direction, timestamp };
+    direction === 'back'
+      ? this.goBackInImagePicker()
+      : this.goForwardInImagePicker();
+  }
+
+  private recordImagePickerHistory(path: string): void {
+    this.imagePickerHistory = this.imagePickerHistory.slice(
+      0,
+      this.imagePickerHistoryIndex + 1
+    );
+    this.imagePickerHistory.push(path);
+    this.imagePickerHistoryIndex = this.imagePickerHistory.length - 1;
+  }
+
+  private initializeImagePickerHistory(path: string): void {
+    this.imagePickerHistory = [path];
+    this.imagePickerHistoryIndex = 0;
+  }
+
+  private async restoreImagePickerHistory(index: number): Promise<void> {
+    if (index < 0 || index >= this.imagePickerHistory.length || this.isLoadingImages) return;
+    const path = this.imagePickerHistory[index];
+    const listing = this.imageDirectoryCache.get(path);
+    if (listing) {
+      this.imagePickerHistoryIndex = index;
+      this.applyImageDirectory(listing);
+      this.cdr.markForCheck();
+      return;
+    }
+    if (await this.loadImageDirectory(path, false)) {
+      this.imagePickerHistoryIndex = index;
+    }
+  }
+
+  get imageBreadcrumbs(): Array<{ label: string; path: string }> {
+    const parts = this.currentImageDirectory.split('/').filter(Boolean);
+    return parts.map((label, index) => ({
+      label,
+      path: parts.slice(0, index + 1).join('/'),
+    }));
+  }
+
+  get filteredProjectImages(): ProjectImage[] {
+    const query = this.imageSearch.trim().toLowerCase();
+    return query
+      ? this.projectImages.filter((image) => image.relativePath.toLowerCase().includes(query))
+      : this.projectImages;
+  }
+
+  get filteredImageDirectories(): ProjectImageFolder[] {
+    const query = this.imageSearch.trim().toLowerCase();
+    return query
+      ? this.imageDirectories.filter((directory) => directory.name.toLowerCase().includes(query))
+      : this.imageDirectories;
+  }
+
+  selectProjectImage(image: ProjectImage): void {
+    this.characterForm.patchValue({ thumbnail: `[[${image.relativePath}]]` });
+    this.characterForm.markAsDirty();
+    this.closeImagePicker();
+  }
+
+  removeThumbnail(): void {
+    if (!this.characterForm.get('thumbnail')?.value?.trim()) return;
+    this.characterForm.patchValue({ thumbnail: '' });
+    this.characterForm.markAsDirty();
+    this.thumbnailPreviewUrl = null;
+    this.cdr.markForCheck();
+  }
+
+  getProjectImageName(image: ProjectImage): string {
+    return image.relativePath.split('/').pop() || image.relativePath;
   }
 
   /** Open the folder containing the character file in the system file manager. */

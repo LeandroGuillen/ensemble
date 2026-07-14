@@ -486,6 +486,28 @@ export class ProjectValidator {
       }
     }
 
+    if (settings.imagesFolder !== undefined && settings.imagesFolder !== null) {
+      if (typeof settings.imagesFolder !== 'string') {
+        errors.push({
+          field: 'imagesFolder',
+          message: 'Images folder must be a string',
+          code: 'INVALID_TYPE'
+        });
+      } else if (settings.imagesFolder.includes('..')) {
+        errors.push({
+          field: 'imagesFolder',
+          message: 'Images folder cannot contain parent path (..)',
+          code: 'INVALID_VALUE'
+        });
+      } else if (/[<>:"|?*]/.test(settings.imagesFolder)) {
+        errors.push({
+          field: 'imagesFolder',
+          message: 'Images folder contains invalid characters',
+          code: 'INVALID_VALUE'
+        });
+      }
+    }
+
     return {
       isValid: errors.length === 0,
       errors

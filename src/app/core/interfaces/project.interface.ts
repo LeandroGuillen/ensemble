@@ -113,6 +113,19 @@ export interface AiSettings {
   maxTokens: number;
 }
 
+export type ImageGenerationProviderId = 'invokeai';
+
+export interface InvokeAiImageSettings {
+  baseUrl: string;
+  defaultWorkflowId?: string;
+}
+
+export interface ImageGenerationSettings {
+  enabled: boolean;
+  provider: ImageGenerationProviderId;
+  invokeai: InvokeAiImageSettings;
+}
+
 export interface ProjectSettings {
   defaultCategory: string;
   autoSave: boolean;
@@ -123,9 +136,12 @@ export interface ProjectSettings {
   castsFolder?: string;
   /** Relative path from project root for the names/list file (default: 'characters/names.md') */
   namesFile?: string;
+  /** Relative path from project root containing project images (default: 'img') */
+  imagesFolder?: string;
   graphView?: PinboardViewState; // Legacy name for backward compatibility
   pinboardView?: PinboardViewState;
   ai?: AiSettings;
+  imageGeneration?: ImageGenerationSettings;
   theme?: string; // Theme ID (e.g., "blue-gold")
   colorPalette?: import('./color-palette.interface').ColorPaletteConfig;
 }

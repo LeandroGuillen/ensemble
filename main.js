@@ -8,6 +8,7 @@ const isDev = !app.isPackaged;
 
 let mainWindow;
 let fileWatcher = null;
+let interceptBrowserNavigation = false;
 let autoUpdater = null;
 
 // Update check interval (4 hours in milliseconds)
@@ -84,6 +85,19 @@ function createWindow() {
     autoHideMenuBar: true,
   });
 
+  mainWindow.on('app-command', (event, command) => {
+    if (
+      interceptBrowserNavigation &&
+      (command === 'browser-backward' || command === 'browser-forward')
+    ) {
+      event.preventDefault();
+      mainWindow.webContents.send(
+        'browser-navigation-command',
+        command === 'browser-backward' ? 'back' : 'forward'
+      );
+    }
+  });
+
   // Remove menu completely to prevent Alt key from showing it
   // mainWindow.setMenu(null);
 
@@ -106,6 +120,7 @@ function createWindow() {
   // Handle window closed
   mainWindow.on('closed', () => {
     mainWindow = null;
+    interceptBrowserNavigation = false;
   });
 }
 
@@ -130,6 +145,10 @@ app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
   }
+});
+
+ipcMain.on('set-browser-navigation-interception', (event, enabled) => {
+  interceptBrowserNavigation = Boolean(enabled);
 });
 
 // Handle folder selection dialog
@@ -677,6 +696,58 @@ ipcMain.handle('ai-request', async (event, url, options) => {
 
     req.end();
   });
+});
+
+// Download a generated image directly to disk without passing binary data through IPC.
+ipcMain.handle('download-image', async (event, url, destinationPath, options = {}) => {
+  const tempPath = `${destinationPath}.tmp.${Date.now()}`;
+
+  const download = (currentUrl, redirectsLeft) => new Promise((resolve, reject) => {
+    const urlObj = new URL(currentUrl);
+    if (!['http:', 'https:'].includes(urlObj.protocol)) {
+      reject(new Error('Only HTTP(S) image downloads are supported'));
+      return;
+    }
+    const protocol = urlObj.protocol === 'https:' ? https : http;
+    const request = protocol.get(currentUrl, {
+      headers: options.headers || {},
+      timeout: options.timeout || 120000,
+    }, (response) => {
+      if (
+        response.statusCode >= 300 &&
+        response.statusCode < 400 &&
+        response.headers.location &&
+        redirectsLeft > 0
+      ) {
+        response.resume();
+        resolve(download(new URL(response.headers.location, currentUrl).toString(), redirectsLeft - 1));
+        return;
+      }
+      if (response.statusCode !== 200) {
+        response.resume();
+        reject(new Error(`Image download returned status ${response.statusCode}`));
+        return;
+      }
+
+      const chunks = [];
+      response.on('data', (chunk) => chunks.push(chunk));
+      response.on('end', () => resolve(Buffer.concat(chunks)));
+      response.on('error', reject);
+    });
+    request.on('timeout', () => request.destroy(new Error('Image download timed out')));
+    request.on('error', reject);
+  });
+
+  try {
+    const buffer = await download(url, 5);
+    await fs.mkdir(pathModule.dirname(destinationPath), { recursive: true });
+    await fs.writeFile(tempPath, buffer);
+    await fs.rename(tempPath, destinationPath);
+    return { success: true, path: destinationPath };
+  } catch (error) {
+    await fs.unlink(tempPath).catch(() => {});
+    return { success: false, error: error.message };
+  }
 });
 
 // Handle opening file in system default editor

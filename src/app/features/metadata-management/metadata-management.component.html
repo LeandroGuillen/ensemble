@@ -693,9 +693,12 @@
           <section class="section">
             <div class="section-header">
               <h2>Project Settings</h2>
+              <span class="settings-autosave-status">
+                {{ savingSettings ? 'Saving changes…' : 'Changes save automatically' }}
+              </span>
             </div>
             <div class="form-card">
-              <form [formGroup]="settingsForm" (ngSubmit)="saveSettings()">
+              <form [formGroup]="settingsForm">
                 <div class="form-group">
                   <label for="defaultCategory">Default Category</label>
                   <select
@@ -786,6 +789,23 @@
                   <small class="form-help">Relative path from project root for the backstage names list file (default: characters/names.md). Can be any path, e.g. notes/names.md.</small>
                 </div>
                 <div class="form-group">
+                  <label for="imagesFolder">Images Folder</label>
+                  <input
+                    type="text"
+                    id="imagesFolder"
+                    formControlName="imagesFolder"
+                    class="form-control"
+                    placeholder="img"
+                    [class.error]="getFieldError(settingsForm, 'imagesFolder')"
+                    />
+                  @if (getFieldError(settingsForm, 'imagesFolder')) {
+                    <div class="field-error">
+                      {{ getFieldError(settingsForm, 'imagesFolder') }}
+                    </div>
+                  }
+                  <small class="form-help">Relative path from project root containing project images. Generated portraits are saved under its @new folder.</small>
+                </div>
+                <div class="form-group">
                   <label for="theme">Theme</label>
                   <select
                     id="theme"
@@ -845,14 +865,6 @@
                     }
                   </div>
                   <small class="form-help">Check if a new version of the application is available.</small>
-                </div>
-                <div class="form-actions">
-                  <button type="submit" class="btn btn-primary" [disabled]="saving || settingsForm.invalid">
-                    @if (saving) {
-                      <span class="spinner-small"></span>
-                    }
-                    Save Settings
-                  </button>
                 </div>
               </form>
             </div>

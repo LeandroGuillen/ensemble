@@ -16,3 +16,4 @@ export { CharacterEditDialogService } from "./character-edit-dialog.service";
 export { CharacterPickerService } from "./character-picker.service";
 export { UpdateService } from "./update.service";
 export { ZoomService } from "./zoom.service";
+export { ImageGenerationService } from "./image-generation/image-generation.service";

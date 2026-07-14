@@ -1,5 +1,6 @@
 import { Routes } from "@angular/router";
 import { projectGuard } from "./core/guards/project.guard";
+import { characterPickerGuard } from "./core/guards/character-picker.guard";
 
 export const routes: Routes = [
   // Don't redirect '' immediately - let app.component handle initial navigation
@@ -26,6 +27,7 @@ export const routes: Routes = [
         (m) => m.CharacterDetailComponent
       ),
     canActivate: [projectGuard],
+    canDeactivate: [characterPickerGuard],
   },
   {
     path: "character",
@@ -34,6 +36,7 @@ export const routes: Routes = [
         (m) => m.CharacterDetailComponent
       ),
     canActivate: [projectGuard],
+    canDeactivate: [characterPickerGuard],
   },
   {
     path: "pinboard",

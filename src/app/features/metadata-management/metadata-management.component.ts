@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Subject, takeUntil } from 'rxjs';
+import { debounceTime, Subject, takeUntil } from 'rxjs';
 import { MetadataService } from '../../core/services/metadata.service';
 import { LoggingService } from '../../core/services/logging.service';
 import { ProjectService } from '../../core/services/project.service';
@@ -70,6 +70,8 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
   // Loading states
   loading = false;
   saving = false;
+  savingSettings = false;
+  private settingsSaveChain: Promise<void> = Promise.resolve();
   
   // Error handling
   error: string | null = null;
@@ -124,6 +126,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
       charactersFolder: ['', [Validators.maxLength(200)]],
       castsFolder: ['', [Validators.maxLength(200)]],
       namesFile: ['', [Validators.maxLength(500)]],
+      imagesFolder: ['', [Validators.maxLength(200)]],
       theme: ['']
     });
   }
@@ -181,6 +184,12 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
           this.updateSettingsForm();
         }
       });
+
+    this.settingsForm.valueChanges
+      .pipe(debounceTime(600), takeUntil(this.destroy$))
+      .subscribe(() => {
+        void this.saveSettings();
+      });
   }
 
   ngOnDestroy(): void {
@@ -209,15 +218,19 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
 
   private updateSettingsForm(): void {
     if (this.settings) {
-      this.settingsForm.patchValue({
-        defaultCategory: this.settings.defaultCategory,
-        autoSave: this.settings.autoSave,
-        fileWatchEnabled: this.settings.fileWatchEnabled,
-        charactersFolder: this.settings.charactersFolder ?? 'characters',
-        castsFolder: this.settings.castsFolder ?? 'characters/casts',
-        namesFile: this.settings.namesFile ?? 'characters/names.md',
-        theme: this.settings.theme || 'blue-gold'
-      });
+      this.settingsForm.patchValue(
+        {
+          defaultCategory: this.settings.defaultCategory,
+          autoSave: this.settings.autoSave,
+          fileWatchEnabled: this.settings.fileWatchEnabled,
+          charactersFolder: this.settings.charactersFolder ?? 'characters',
+          castsFolder: this.settings.castsFolder ?? 'characters/casts',
+          namesFile: this.settings.namesFile ?? 'characters/names.md',
+          imagesFolder: this.settings.imagesFolder ?? 'img',
+          theme: this.settings.theme || 'blue-gold'
+        },
+        { emitEvent: false }
+      );
     }
   }
 
@@ -398,57 +411,56 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
 
   async saveSettings(): Promise<void> {
     if (this.settingsForm.invalid) {
-      this.markFormGroupTouched(this.settingsForm);
       return;
     }
 
-    try {
-      this.saving = true;
-      this.error = null;
-      
-      const formData = this.settingsForm.value;
+    const formData = this.settingsForm.getRawValue();
+    const previousSettings = this.settings;
+    const save = async () => {
+      try {
+        this.savingSettings = true;
+        this.error = null;
 
-      // Normalize charactersFolder: empty or whitespace = default 'characters'
-      const charactersFolder = formData.charactersFolder?.trim() || 'characters';
-      // Normalize castsFolder: empty or whitespace = default 'characters/casts' (project-relative)
-      const castsFolder = formData.castsFolder?.trim() || 'characters/casts';
-      // Normalize namesFile: empty or whitespace = default 'characters/names.md'
-      const namesFile = formData.namesFile?.trim() || 'characters/names.md';
-      const settingsUpdate = {
-        ...formData,
-        charactersFolder,
-        castsFolder,
-        namesFile
-      };
+        // Normalize empty paths to their defaults.
+        const charactersFolder = formData.charactersFolder?.trim() || 'characters';
+        const castsFolder = formData.castsFolder?.trim() || 'characters/casts';
+        const namesFile = formData.namesFile?.trim() || 'characters/names.md';
+        const imagesFolder = formData.imagesFolder?.trim() || 'img';
+        const settingsUpdate = {
+          ...formData,
+          charactersFolder,
+          castsFolder,
+          namesFile,
+          imagesFolder
+        };
 
-      // If theme changed, apply it immediately
-      if (formData.theme) {
-        await this.themeService.setTheme(formData.theme);
-      }
+        if (formData.theme && formData.theme !== previousSettings?.theme) {
+          await this.themeService.setTheme(formData.theme);
+        }
 
-      const previousCharactersFolder = this.settings?.charactersFolder?.trim() || 'characters';
-      const previousCastsFolder = this.settings?.castsFolder?.trim() || 'casts';
-      const previousNamesFile = this.settings?.namesFile?.trim() || 'characters/names.md';
-      await this.metadataService.updateSettings(settingsUpdate);
+        const previousCharactersFolder = previousSettings?.charactersFolder?.trim() || 'characters';
+        const previousCastsFolder = previousSettings?.castsFolder?.trim() || 'characters/casts';
+        const previousNamesFile = previousSettings?.namesFile?.trim() || 'characters/names.md';
+        await this.metadataService.updateSettings(settingsUpdate);
 
-      // Reload characters if folder path changed
-      if (charactersFolder !== previousCharactersFolder) {
-        await this.characterService.forceReloadCharacters();
+        if (charactersFolder !== previousCharactersFolder) {
+          await this.characterService.forceReloadCharacters();
+        }
+        if (castsFolder !== previousCastsFolder) {
+          await this.castService.forceReloadCasts();
+        }
+        if (namesFile !== previousNamesFile) {
+          await this.backstageService.loadBackstageData();
+        }
+      } catch (error) {
+        this.logger.error('Failed to save settings:', error);
+        this.error = `Failed to save settings: ${error}`;
+      } finally {
+        this.savingSettings = false;
       }
-      // Reload casts if casts folder path changed (project-relative)
-      if (castsFolder !== previousCastsFolder) {
-        await this.castService.forceReloadCasts();
-      }
-      // Reload backstage name lists if names file path changed
-      if (namesFile !== previousNamesFile) {
-        await this.backstageService.loadBackstageData();
-      }
-    } catch (error) {
-      this.logger.error('Failed to save settings:', error);
-      this.error = `Failed to save settings: ${error}`;
-    } finally {
-      this.saving = false;
-    }
+    };
+    this.settingsSaveChain = this.settingsSaveChain.then(save, save);
+    await this.settingsSaveChain;
   }
 
   // Color Management

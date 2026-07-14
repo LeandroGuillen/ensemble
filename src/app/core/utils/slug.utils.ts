@@ -30,6 +30,26 @@ export function slugify(text: string): string {
 }
 
 /**
+ * ASCII-only slug for generated assets (images, downloads) that must work on any OS.
+ * Accented letters are transliterated (José → jose); other non-ASCII letters are dropped.
+ */
+export function asciiSlugify(text: string): string {
+  return text
+    .toString()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[<>:"|?*\/\\]/g, '')
+    .replace(/[^a-z0-9\-_]+/g, '')
+    .replace(/\-\-+/g, '-')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '')
+    .substring(0, 100);
+}
+
+/**
  * Converts a filename to a human-readable field name
  * Examples:
  * - "another-file.md" → "Another File"

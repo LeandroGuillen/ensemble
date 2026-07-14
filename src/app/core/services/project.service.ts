@@ -76,6 +76,16 @@ export class ProjectService {
     return pathJoin(project.path, normalized);
   }
 
+  getImagesFolderPath(): string {
+    const project = this.currentProjectSubject.value;
+    if (!project?.path) {
+      throw new Error('No project loaded');
+    }
+    const folder = project.metadata?.settings?.imagesFolder?.trim() || 'img';
+    const normalized = folder.replace(/^\/+|\/+$/g, '').replace(/\/+/g, '/') || 'img';
+    return pathJoin(project.path, normalized);
+  }
+
   /**
    * Returns the absolute path to the casts folder for the current project.
    * Uses settings.castsFolder relative to project root (default: 'characters/casts').
@@ -423,6 +433,7 @@ export class ProjectService {
         fileWatchEnabled: true,
         charactersFolder: 'characters',
         castsFolder: 'characters/casts',
+        imagesFolder: 'img',
       },
       pinboards: [
         {

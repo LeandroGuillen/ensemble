@@ -1,9 +1,11 @@
 
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Subject, takeUntil } from 'rxjs';
+import { debounceTime, merge, Subject, takeUntil } from 'rxjs';
 import { AiSettings } from '../../core/interfaces/project.interface';
+import { ImageWorkflow } from '../../core/interfaces/image-generation.interface';
 import { AiService, AiTestConnectionResult } from '../../core/services/ai.service';
+import { ImageGenerationService } from '../../core/services/image-generation/image-generation.service';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 
 @Component({
@@ -16,11 +18,16 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   aiForm: FormGroup;
+  imageForm: FormGroup;
   saving = false;
   testing = false;
   testResult: AiTestConnectionResult | null = null;
   error: string | null = null;
   successMessage: string | null = null;
+  imageTesting = false;
+  imageTestMessage: string | null = null;
+  imageWorkflows: ImageWorkflow[] = [];
+  private saveChain: Promise<void> = Promise.resolve();
 
   providers = [
     { id: 'ollama', name: 'Ollama (Local)', description: 'Free local AI server' },
@@ -29,12 +36,43 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
     { id: 'anthropic', name: 'Anthropic (Cloud)', description: 'Requires API key', disabled: true },
   ];
 
-  constructor(private fb: FormBuilder, private aiService: AiService) {
+  constructor(
+    private fb: FormBuilder,
+    private aiService: AiService,
+    private imageGenerationService: ImageGenerationService
+  ) {
     this.aiForm = this.createForm();
+    const imageSettings = this.imageGenerationService.getSettings();
+    this.imageForm = this.fb.group({
+      enabled: [imageSettings.enabled],
+      baseUrl: [imageSettings.invokeai.baseUrl, Validators.required],
+      defaultWorkflowId: [imageSettings.invokeai.defaultWorkflowId || ''],
+    });
   }
 
   ngOnInit(): void {
     this.loadSettings();
+    this.loadImageSettings();
+    merge(this.aiForm.valueChanges, this.imageForm.valueChanges)
+      .pipe(debounceTime(600), takeUntil(this.destroy$))
+      .subscribe(() => {
+        void this.saveSettings(true);
+      });
+  }
+
+  private loadImageSettings(): void {
+    const settings = this.imageGenerationService.getSettings();
+    this.imageForm.patchValue(
+      {
+        enabled: settings.enabled,
+        baseUrl: settings.invokeai.baseUrl,
+        defaultWorkflowId: settings.invokeai.defaultWorkflowId || '',
+      },
+      { emitEvent: false }
+    );
+    if (settings.enabled) {
+      void this.refreshImageWorkflows(false);
+    }
   }
 
   ngOnDestroy(): void {
@@ -60,7 +98,7 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe((settings) => {
         if (settings) {
-          this.aiForm.patchValue(settings);
+          this.aiForm.patchValue(settings, { emitEvent: false });
           this.onProviderChange(); // Update URL placeholder based on provider
         }
       });
@@ -125,29 +163,69 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
   }
 
   async saveSettings(showMessage = true): Promise<void> {
-    if (this.aiForm.invalid) {
-      this.markFormGroupTouched(this.aiForm);
+    if (this.aiForm.invalid || this.imageForm.invalid) {
       return;
     }
 
-    this.saving = true;
+    const formData: AiSettings = this.aiForm.getRawValue();
+    const imageData = this.imageForm.getRawValue();
+    const save = async () => {
+      this.saving = true;
+      this.error = null;
+      this.successMessage = null;
+      try {
+        await this.aiService.updateAiSettings(formData);
+        await this.imageGenerationService.updateSettings({
+          enabled: !!imageData.enabled,
+          provider: 'invokeai',
+          invokeai: {
+            baseUrl: imageData.baseUrl,
+            defaultWorkflowId: imageData.defaultWorkflowId || undefined,
+          },
+        });
+        if (showMessage) {
+          this.successMessage = 'Settings saved';
+          setTimeout(() => {
+            this.successMessage = null;
+          }, 1800);
+        }
+      } catch (error) {
+        this.error = error instanceof Error ? error.message : 'Failed to save AI settings';
+      } finally {
+        this.saving = false;
+      }
+    };
+    this.saveChain = this.saveChain.then(save, save);
+    await this.saveChain;
+  }
+
+  async refreshImageWorkflows(showResult = true): Promise<void> {
+    if (this.imageForm.get('baseUrl')?.invalid) return;
+    this.imageTesting = true;
+    this.imageTestMessage = null;
     this.error = null;
-    this.successMessage = null;
-
     try {
-      const formData: AiSettings = this.aiForm.value;
-      await this.aiService.updateAiSettings(formData);
-
-      if (showMessage) {
-        this.successMessage = 'AI settings saved successfully!';
-        setTimeout(() => {
-          this.successMessage = null;
-        }, 3000);
+      const invokeai = {
+        baseUrl: this.imageForm.value.baseUrl,
+        defaultWorkflowId: this.imageForm.value.defaultWorkflowId || undefined,
+      };
+      const connection = await this.imageGenerationService.testConnection(invokeai);
+      if (!connection.success) {
+        throw new Error(connection.error || 'Could not connect to InvokeAI');
+      }
+      this.imageWorkflows = await this.imageGenerationService.listWorkflows(invokeai);
+      this.imageTestMessage = showResult
+        ? `Connected to InvokeAI ${connection.version || ''}. Found ${this.imageWorkflows.length} compatible workflow(s).`
+        : null;
+      const current = this.imageForm.value.defaultWorkflowId;
+      if (current && !this.imageWorkflows.some((workflow) => workflow.id === current)) {
+        this.imageForm.patchValue({ defaultWorkflowId: '' });
       }
     } catch (error) {
-      this.error = error instanceof Error ? error.message : 'Failed to save AI settings';
+      this.error = error instanceof Error ? error.message : 'Failed to load InvokeAI workflows';
+      this.imageWorkflows = [];
     } finally {
-      this.saving = false;
+      this.imageTesting = false;
     }
   }
 
@@ -176,13 +254,6 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
   isCloudProvider(): boolean {
     const provider = this.aiForm.get('provider')?.value;
     return provider === 'openai' || provider === 'anthropic';
-  }
-
-  private markFormGroupTouched(formGroup: FormGroup): void {
-    Object.keys(formGroup.controls).forEach((key) => {
-      const control = formGroup.get(key);
-      control?.markAsTouched();
-    });
   }
 
   getFieldError(fieldName: string): string | null {

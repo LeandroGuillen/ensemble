@@ -184,6 +184,24 @@ export class ElectronService {
     }
   }
 
+  async aiRequest(url: string, options: any): Promise<any> {
+    if (!this.isElectron()) {
+      throw new Error('AI requests are only available in Electron');
+    }
+    return await this.ipcRenderer.invoke('ai-request', url, options);
+  }
+
+  async downloadImage(
+    url: string,
+    destinationPath: string,
+    options: { headers?: Record<string, string>; timeout?: number } = {}
+  ): Promise<{ success: boolean; path?: string; error?: string }> {
+    if (!this.isElectron()) {
+      return { success: false, error: 'Not running in Electron' };
+    }
+    return await this.ipcRenderer.invoke('download-image', url, destinationPath, options);
+  }
+
   async moveDirectory(sourcePath: string, destPath: string): Promise<{ success: boolean; error?: string }> {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
@@ -246,6 +264,28 @@ export class ElectronService {
   removeFileChangedListener(callback: (event: any, data: any) => void): void {
     if (this.isElectron()) {
       this.ipcRenderer.removeListener('file-changed', callback);
+    }
+  }
+
+  setBrowserNavigationInterception(enabled: boolean): void {
+    if (this.isElectron()) {
+      this.ipcRenderer.send('set-browser-navigation-interception', enabled);
+    }
+  }
+
+  onBrowserNavigationCommand(
+    callback: (event: any, direction: 'back' | 'forward') => void
+  ): void {
+    if (this.isElectron()) {
+      this.ipcRenderer.on('browser-navigation-command', callback);
+    }
+  }
+
+  removeBrowserNavigationCommandListener(
+    callback: (event: any, direction: 'back' | 'forward') => void
+  ): void {
+    if (this.isElectron()) {
+      this.ipcRenderer.removeListener('browser-navigation-command', callback);
     }
   }
 

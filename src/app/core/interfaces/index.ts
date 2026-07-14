@@ -4,3 +4,4 @@ export * from "./pinboard.interface";
 export * from "./validation.interface";
 export * from "./backstage.interface";
 export * from "./plot-board.interface";
+export * from "./image-generation.interface";

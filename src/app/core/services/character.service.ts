@@ -351,7 +351,7 @@ export class CharacterService {
         category: data.category,
         tags: data.tags || [],
         books: data.books || [],
-        thumbnail: data.thumbnail,
+        thumbnail: data.thumbnail?.trim() || undefined,
         content: data.content || '',
         created: now,
         modified: now,
@@ -435,7 +435,7 @@ export class CharacterService {
         category: data.category ?? existingCharacter.category,
         tags: data.tags ?? existingCharacter.tags,
         books: data.books ?? existingCharacter.books,
-        thumbnail: data.thumbnail !== undefined ? data.thumbnail : existingCharacter.thumbnail,
+        thumbnail: 'thumbnail' in data ? (data.thumbnail?.trim() || undefined) : existingCharacter.thumbnail,
         content: data.content !== undefined ? data.content : existingCharacter.content,
         modified: new Date(),
         filePath: newFilePath,
@@ -443,6 +443,18 @@ export class CharacterService {
 
       // Save updated character to file
       await this.saveCharacterToFile(updatedCharacter);
+
+      // A thumbnail path change must invalidate the persistent data URL cache.
+      // Otherwise the character list reuses the previous image after navigation.
+      if (
+        newId !== id ||
+        (data.thumbnail !== undefined && data.thumbnail !== existingCharacter.thumbnail)
+      ) {
+        this.removeCachedThumbnail(id);
+        if (newId !== id) {
+          this.removeCachedThumbnail(newId);
+        }
+      }
 
       // Update in-memory list
       characters[index] = updatedCharacter;
@@ -539,7 +551,7 @@ export class CharacterService {
         category: character.category,
         tags: character.tags,
         books: character.books,
-        thumbnail: character.thumbnail,
+        ...(character.thumbnail ? { thumbnail: character.thumbnail } : {}),
         created: character.created.toISOString(),
         modified: character.modified.toISOString(),
       };
