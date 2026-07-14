@@ -2,6 +2,8 @@ export { CharacterService } from "./character.service";
 export { CastService } from "./cast.service";
 export { ProjectService } from "./project.service";
 export { PinboardService } from "./pinboard.service";
+export { PinboardStoreService } from "./pinboard-store.service";
+export { RecentProjectsService } from "./recent-projects.service";
 export { FileWatcherService } from "./file-watcher.service";
 export { ElectronService } from "./electron.service";
 export { MetadataService } from "./metadata.service";

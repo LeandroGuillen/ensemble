@@ -29,6 +29,8 @@ import {
 import { ElectronService } from './electron.service';
 import { LoggingService } from './logging.service';
 import { requireProject } from '../utils/project.utils';
+import { PinboardStoreService } from './pinboard-store.service';
+import { RecentProjectsService } from './recent-projects.service';
 
 @Injectable({
   providedIn: 'root',
@@ -36,17 +38,12 @@ import { requireProject } from '../utils/project.utils';
 export class ProjectService {
   private currentProjectSubject = new BehaviorSubject<Project | null>(null);
   public currentProject$ = this.currentProjectSubject.asObservable();
-  private recentProjects: Array<{ path: string; lastAccessed: string }> = [];
-
   constructor(
     private electronService: ElectronService,
-    private logger: LoggingService
-  ) {
-    // Load recent projects asynchronously
-    this.loadRecentProjects().catch(err => {
-      this.logger.error('Failed to load recent projects on init', err);
-    });
-  }
+    private logger: LoggingService,
+    private pinboardStore: PinboardStoreService,
+    private recentProjects: RecentProjectsService
+  ) {}
 
   getCurrentProject(): Project | null {
     return this.currentProjectSubject.value;
@@ -54,11 +51,11 @@ export class ProjectService {
 
   getRecentProjects(): string[] {
     // Return just the paths for backward compatibility
-    return this.recentProjects.map(p => p.path);
+    return this.recentProjects.getAll().map(p => p.path);
   }
 
   getRecentProjectsWithTimestamps(): Array<{ path: string; lastAccessed: Date }> {
-    return this.recentProjects
+    return this.recentProjects.getAll()
       .filter(p => p && typeof p.path === 'string' && p.path.trim().length > 0)
       .map(p => ({
         path: p.path,
@@ -67,7 +64,7 @@ export class ProjectService {
   }
 
   getMostRecentProject(): string | null {
-    return this.recentProjects.length > 0 ? this.recentProjects[0].path : null;
+    return this.recentProjects.getAll()[0]?.path || null;
   }
 
   /**
@@ -223,7 +220,7 @@ export class ProjectService {
       };
 
       this.currentProjectSubject.next(project);
-      this.addToRecentProjects(projectPath);
+      this.recentProjects.add(projectPath);
 
       return project;
     } catch (error) {
@@ -266,7 +263,7 @@ export class ProjectService {
       };
 
       this.currentProjectSubject.next(project);
-      this.addToRecentProjects(projectPath);
+      this.recentProjects.add(projectPath);
 
       return project;
     } catch (error) {
@@ -435,6 +432,16 @@ export class ProjectService {
     );
   }
 
+  private async mutateMetadata(mutator: (metadata: ProjectMetadata) => void): Promise<Project> {
+    const project = requireProject(this.currentProjectSubject.value);
+    const metadata = { ...project.metadata };
+    mutator(metadata);
+    const updatedProject = { ...project, metadata };
+    await this.saveMetadata(updatedProject.path, metadata);
+    this.currentProjectSubject.next(updatedProject);
+    return updatedProject;
+  }
+
   /**
    * Validates metadata structure
    */
@@ -471,19 +478,14 @@ export class ProjectService {
    * Adds a new category to the current project
    */
   async addCategory(category: Omit<Category, 'id'>): Promise<Category | null> {
-    const project = this.currentProjectSubject.value;
-    if (!project) {
-      throw new Error('No project loaded');
-    }
-
     const newCategory: Category = {
       id: generateId(),
       ...category,
     };
 
-    project.metadata.categories.push(newCategory);
-    await this.saveMetadata(project.path, project.metadata);
-    this.currentProjectSubject.next({ ...project });
+    await this.mutateMetadata((metadata) => {
+      metadata.categories = [...metadata.categories, newCategory];
+    });
 
     return newCategory;
   }
@@ -492,19 +494,14 @@ export class ProjectService {
    * Adds a new tag to the current project
    */
   async addTag(tag: Omit<Tag, 'id'>): Promise<Tag | null> {
-    const project = this.currentProjectSubject.value;
-    if (!project) {
-      throw new Error('No project loaded');
-    }
-
     const newTag: Tag = {
       id: generateId(),
       ...tag,
     };
 
-    project.metadata.tags.push(newTag);
-    await this.saveMetadata(project.path, project.metadata);
-    this.currentProjectSubject.next({ ...project });
+    await this.mutateMetadata((metadata) => {
+      metadata.tags = [...metadata.tags, newTag];
+    });
 
     return newTag;
   }
@@ -513,120 +510,39 @@ export class ProjectService {
    * Updates project metadata
    */
   async updateMetadata(updates: Partial<ProjectMetadata>): Promise<void> {
-    const project = this.currentProjectSubject.value;
-    if (!project) {
-      throw new Error('No project loaded');
-    }
-
-    project.metadata = { ...project.metadata, ...updates };
-    await this.saveMetadata(project.path, project.metadata);
-    this.currentProjectSubject.next({ ...project });
+    await this.mutateMetadata((metadata) => Object.assign(metadata, updates));
   }
 
   /**
    * Removes a category from the current project
    */
   async removeCategory(categoryId: string): Promise<void> {
-    const project = this.currentProjectSubject.value;
-    if (!project) {
-      throw new Error('No project loaded');
-    }
-
-    project.metadata.categories = project.metadata.categories.filter((cat) => cat.id !== categoryId);
-    await this.saveMetadata(project.path, project.metadata);
-    this.currentProjectSubject.next({ ...project });
+    await this.mutateMetadata((metadata) => {
+      metadata.categories = metadata.categories.filter((cat) => cat.id !== categoryId);
+    });
   }
 
   /**
    * Removes a tag from the current project
    */
   async removeTag(tagId: string): Promise<void> {
-    const project = this.currentProjectSubject.value;
-    if (!project) {
-      throw new Error('No project loaded');
-    }
-
-    project.metadata.tags = project.metadata.tags.filter((tag) => tag.id !== tagId);
-    await this.saveMetadata(project.path, project.metadata);
-    this.currentProjectSubject.next({ ...project });
-  }
-
-  /**
-   * Manages recent projects list
-   */
-  private addToRecentProjects(projectPath: string): void {
-    // Remove if already exists
-    this.recentProjects = this.recentProjects.filter((p) => p.path !== projectPath);
-
-    // Add to beginning with current timestamp
-    this.recentProjects.unshift({
-      path: projectPath,
-      lastAccessed: new Date().toISOString()
+    await this.mutateMetadata((metadata) => {
+      metadata.tags = metadata.tags.filter((tag) => tag.id !== tagId);
     });
-
-    // Keep only last 10
-    this.recentProjects = this.recentProjects.slice(0, 10);
-
-    // Save asynchronously (fire and forget)
-    this.saveRecentProjects().catch(err => {
-      this.logger.error('Failed to save recent projects', err);
-    });
-  }
-
-  /**
-   * Loads recent projects from persistent storage (file-based in Electron)
-   */
-  private async loadRecentProjects(): Promise<void> {
-    try {
-      const projects = await this.electronService.getRecentProjects();
-      // The electron service already handles backward compatibility
-      // and returns Array<{ path: string; lastAccessed: string }>
-      if (Array.isArray(projects)) {
-        // Filter out invalid entries where path is not a string
-        this.recentProjects = projects.filter(
-          p => p && typeof p.path === 'string' && p.path.trim().length > 0
-        );
-      } else {
-        this.recentProjects = [];
-      }
-    } catch (error) {
-      this.logger.warn('Failed to load recent projects:', error);
-      this.recentProjects = [];
-    }
-  }
-
-  /**
-   * Saves recent projects to persistent storage (file-based in Electron)
-   */
-  private async saveRecentProjects(): Promise<void> {
-    try {
-      const result = await this.electronService.saveRecentProjects(this.recentProjects);
-      if (!result.success) {
-        this.logger.error('Failed to save recent projects', result.error);
-      }
-    } catch (error) {
-      this.logger.warn('Failed to save recent projects:', error);
-    }
   }
 
   /**
    * Removes a project from recent projects list
    */
   removeFromRecentProjects(projectPath: string): void {
-    this.recentProjects = this.recentProjects.filter((p) => p.path !== projectPath);
-    this.saveRecentProjects().catch(err => {
-      this.logger.error('Failed to save recent projects', err);
-    });
+    this.recentProjects.remove(projectPath);
   }
 
   /**
    * Clears all recent projects
    */
   clearRecentProjects(): void {
-    this.recentProjects = [];
-    this.saveRecentProjects().catch(err => {
-      this.logger.error('Failed to save recent projects', err);
-    });
+    this.recentProjects.clear();
   }
 
 
@@ -634,33 +550,8 @@ export class ProjectService {
    * Saves pinboard view state to the current pinboard's viewState
    */
   async savePinboardViewState(state: PinboardViewState, pinboardId?: string): Promise<void> {
-    const project = this.currentProjectSubject.value;
-    if (!project) {
-      throw new Error('No project loaded');
-    }
-
-    const targetPinboard = pinboardId 
-      ? project.metadata.pinboards?.find(p => p.id === pinboardId)
-      : this.getCurrentPinboard();
-    
-    if (targetPinboard) {
-      // Save to target pinboard's viewState
-      const pinboards = project.metadata.pinboards || [];
-      const pinboardIndex = pinboards.findIndex(p => p.id === targetPinboard.id);
-      if (pinboardIndex !== -1) {
-        pinboards[pinboardIndex] = {
-          ...pinboards[pinboardIndex],
-          viewState: state,
-          updatedAt: new Date().toISOString(),
-        };
-        project.metadata.pinboards = pinboards;
-      }
-    } else {
-      // Fallback to project settings for backward compatibility
-      project.metadata.settings.pinboardView = state;
-    }
-
-    await this.saveMetadata(project.path, project.metadata);
+    const project = requireProject(this.currentProjectSubject.value);
+    await this.pinboardStore.saveViewState(project, state, pinboardId);
     this.currentProjectSubject.next({ ...project });
   }
 
@@ -862,42 +753,15 @@ export class ProjectService {
     if (!project) {
       return null;
     }
-
-    const pinboards = project.metadata.pinboards || [];
-    const currentId = project.metadata.lastSession?.lastPinboardId;
-
-    if (currentId) {
-      const pinboard = pinboards.find(p => p.id === currentId);
-      if (pinboard) {
-        return pinboard;
-      }
-    }
-
-    // Fallback to first pinboard if current not found
-    if (pinboards.length > 0) {
-      return pinboards[0];
-    }
-
-    return null;
+    return this.pinboardStore.getCurrent(project);
   }
 
   /**
    * Sets the current active pinboard
    */
   async setCurrentPinboard(id: string): Promise<void> {
-    const project = this.currentProjectSubject.value;
-    if (!project) {
-      throw new Error('No project loaded');
-    }
-
-    const pinboards = project.metadata.pinboards || [];
-    const pinboard = pinboards.find(p => p.id === id);
-    if (!pinboard) {
-      throw new Error(`Pinboard with id ${id} not found`);
-    }
-
-    this.ensureLastSession(project.metadata).lastPinboardId = id;
-    await this.saveMetadata(project.path, project.metadata);
+    const project = requireProject(this.currentProjectSubject.value);
+    await this.pinboardStore.setCurrent(project, id);
     this.currentProjectSubject.next({ ...project });
   }
 
@@ -905,47 +769,8 @@ export class ProjectService {
    * Creates a new pinboard
    */
   async createPinboard(name: string, duplicateFromId?: string): Promise<Pinboard> {
-    const project = this.currentProjectSubject.value;
-    if (!project) {
-      throw new Error('No project loaded');
-    }
-
-    const pinboards = project.metadata.pinboards || [];
-    
-    // Check for duplicate name
-    if (pinboards.some(p => p.name === name)) {
-      throw new Error(`A pinboard named "${name}" already exists`);
-    }
-
-    const newPinboard: Pinboard = {
-      id: generateId(),
-      name,
-      nodes: [],
-      edges: [],
-      createdAt: new Date().toISOString(),
-    };
-
-    // Optionally duplicate from another pinboard
-    if (duplicateFromId) {
-      const sourcePinboard = pinboards.find(p => p.id === duplicateFromId);
-      if (sourcePinboard) {
-        newPinboard.nodes = JSON.parse(JSON.stringify(sourcePinboard.nodes));
-        newPinboard.edges = JSON.parse(JSON.stringify(sourcePinboard.edges));
-        if (sourcePinboard.viewState) {
-          newPinboard.viewState = JSON.parse(JSON.stringify(sourcePinboard.viewState));
-        }
-      }
-    }
-
-    pinboards.push(newPinboard);
-    project.metadata.pinboards = pinboards;
-    
-    // Set as current if it's the first pinboard
-    if (pinboards.length === 1) {
-      this.ensureLastSession(project.metadata).lastPinboardId = newPinboard.id;
-    }
-
-    await this.saveMetadata(project.path, project.metadata);
+    const project = requireProject(this.currentProjectSubject.value);
+    const newPinboard = await this.pinboardStore.create(project, name, duplicateFromId);
     this.currentProjectSubject.next({ ...project });
 
     return newPinboard;
@@ -955,27 +780,8 @@ export class ProjectService {
    * Updates pinboard data (nodes and edges) for a specific pinboard by ID
    */
   async updatePinboardById(id: string, data: { nodes: PinboardPin[]; edges: PinboardConnection[] }): Promise<void> {
-    const project = this.currentProjectSubject.value;
-    if (!project) {
-      throw new Error('No project loaded');
-    }
-
-    const pinboards = project.metadata.pinboards || [];
-    const pinboardIndex = pinboards.findIndex(p => p.id === id);
-    
-    if (pinboardIndex === -1) {
-      throw new Error(`Pinboard with id ${id} not found`);
-    }
-
-    pinboards[pinboardIndex] = {
-      ...pinboards[pinboardIndex],
-      nodes: data.nodes,
-      edges: data.edges,
-      updatedAt: new Date().toISOString(),
-    };
-
-    project.metadata.pinboards = pinboards;
-    await this.saveMetadata(project.path, project.metadata);
+    const project = requireProject(this.currentProjectSubject.value);
+    await this.pinboardStore.updateData(project, id, data);
     this.currentProjectSubject.next({ ...project });
   }
 
@@ -983,31 +789,8 @@ export class ProjectService {
    * Updates pinboard name
    */
   async updatePinboardName(id: string, name: string): Promise<void> {
-    const project = this.currentProjectSubject.value;
-    if (!project) {
-      throw new Error('No project loaded');
-    }
-
-    const pinboards = project.metadata.pinboards || [];
-    const pinboardIndex = pinboards.findIndex(p => p.id === id);
-    
-    if (pinboardIndex === -1) {
-      throw new Error(`Pinboard with id ${id} not found`);
-    }
-
-    // Check for duplicate name
-    if (pinboards.some((p, idx) => p.name === name && idx !== pinboardIndex)) {
-      throw new Error(`A pinboard named "${name}" already exists`);
-    }
-
-    pinboards[pinboardIndex] = {
-      ...pinboards[pinboardIndex],
-      name,
-      updatedAt: new Date().toISOString(),
-    };
-
-    project.metadata.pinboards = pinboards;
-    await this.saveMetadata(project.path, project.metadata);
+    const project = requireProject(this.currentProjectSubject.value);
+    await this.pinboardStore.updateName(project, id, name);
     this.currentProjectSubject.next({ ...project });
   }
 
@@ -1015,29 +798,8 @@ export class ProjectService {
    * Deletes a pinboard
    */
   async deletePinboard(id: string): Promise<void> {
-    const project = this.currentProjectSubject.value;
-    if (!project) {
-      throw new Error('No project loaded');
-    }
-
-    const pinboards = project.metadata.pinboards || [];
-
-    const pinboardIndex = pinboards.findIndex(p => p.id === id);
-    if (pinboardIndex === -1) {
-      throw new Error(`Pinboard with id ${id} not found`);
-    }
-
-    // Remove the pinboard
-    pinboards.splice(pinboardIndex, 1);
-    project.metadata.pinboards = pinboards;
-
-    // If deleted pinboard was current, switch to first available
-    const ls = project.metadata.lastSession;
-    if (ls?.lastPinboardId === id) {
-      ls.lastPinboardId = pinboards.length > 0 ? pinboards[0].id : undefined;
-    }
-
-    await this.saveMetadata(project.path, project.metadata);
+    const project = requireProject(this.currentProjectSubject.value);
+    await this.pinboardStore.delete(project, id);
     this.currentProjectSubject.next({ ...project });
   }
 
@@ -1059,12 +821,8 @@ export class ProjectService {
    * Updates pinboard data in the current active pinboard
    */
   async updatePinboard(pinboard: { nodes: PinboardPin[]; edges: PinboardConnection[] }): Promise<void> {
-    const project = this.currentProjectSubject.value;
-    if (!project) {
-      throw new Error('No project loaded');
-    }
-
-    const currentPinboard = this.getCurrentPinboard();
+    const project = requireProject(this.currentProjectSubject.value);
+    const currentPinboard = this.pinboardStore.getCurrent(project);
     if (currentPinboard) {
       await this.updatePinboardById(currentPinboard.id, pinboard);
     } else {

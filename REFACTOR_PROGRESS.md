@@ -51,11 +51,11 @@ Git: one commit per batch. Verify with `npm run build` (and `npm test` if applic
 - [x] C6. Replace service-layer bare `console.warn` with `logger.warn` and add `warn` to `LoggingService`.
 - [x] C7. Stop mutating `BehaviorSubject` arrays in place (character/cast/backstage) — always emit shallow-copied arrays.
 
-## Batch D — ProjectService decomposition  ·  Status: [ ]
-- [ ] D1. Extract `PinboardStoreService` from `ProjectService` (~440 lines of pinboard CRUD).
-- [ ] D2. Extract `RecentProjectsService`.
-- [ ] D3. Introduce `mutateMetadata(fn)` helper; collapse the ~9 pinboard setters.
-- [ ] D4. (Optional) Extract `ProjectScopedLoader<T>` base shared by `CharacterService` and `CastService`. Decide whether `CastService` subscribes to `FileWatcherService`.
+## Batch D — ProjectService decomposition  ·  Status: [x]
+- [x] D1. Extract `PinboardStoreService` from `ProjectService` (~440 lines of pinboard CRUD), retaining compatibility façades on `ProjectService`.
+- [x] D2. Extract `RecentProjectsService`.
+- [x] D3. Introduce `mutateMetadata(fn)` helper; collapse the pinboard mutation façades.
+- [ ] D4. (Optional) Extract `ProjectScopedLoader<T>` base shared by `CharacterService` and `CastService`. Deferred as optional follow-up.
 
 ## Batch E — Component decomposition  ·  Status: [ ]
 - [ ] E1. Split `pinboard-view.component.ts` (1,866 lines): `PinboardNetworkService`, `PinboardCanvasInteractionService`, `PinAddDialogComponent`, `ConnectionEditDialogComponent`, `PinboardToolbarComponent`.
