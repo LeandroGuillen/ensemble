@@ -6,7 +6,6 @@ import { generateId } from '../utils/id.utils';
 import { pathJoin } from '../utils/path.utils';
 import { assertIpcSuccess } from '../utils/ipc.utils';
 import { requireProject } from '../utils/project.utils';
-import { ENSEMBLE_JSON_FILE } from '../constants/project.constants';
 import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
 import { LoggingService } from './logging.service';
@@ -99,7 +98,7 @@ export class CastService {
             folderCasts.push(cast);
           }
         } catch (error) {
-          console.warn(`Failed to load cast from ${castSlug}:`, error);
+          this.logger.warn(`Failed to load cast from ${castSlug}:`, error);
         }
       }
 
@@ -119,24 +118,9 @@ export class CastService {
   /**
    * Merges folder-detected casts with metadata from ensemble.json
    */
-  private async mergeCastsWithMetadata(folderCasts: Cast[], projectPath: string): Promise<Cast[]> {
+  private async mergeCastsWithMetadata(folderCasts: Cast[], _projectPath: string): Promise<Cast[]> {
     try {
-      // Read ensemble.json to get cast metadata
-      const ensemblePath = pathJoin(projectPath, ENSEMBLE_JSON_FILE);
-      const ensembleExists = await this.electronService.fileExists(ensemblePath);
-
-      let metadataCasts: Cast[] = [];
-      if (ensembleExists) {
-        const readResult = await this.electronService.readFile(ensemblePath);
-        if (readResult.success && readResult.content) {
-          try {
-            const metadata = JSON.parse(readResult.content);
-            metadataCasts = metadata.casts || [];
-          } catch (error) {
-            console.warn('Failed to parse ensemble.json:', error);
-          }
-        }
-      }
+      const metadataCasts = this.projectService.getCurrentProject()?.metadata.casts || [];
 
       // Create a map of metadata casts by ID for quick lookup
       const metadataMap = new Map<string, Cast>();
@@ -171,7 +155,7 @@ export class CastService {
                 const castIdPath = pathJoin(folderCast.folderPath, '.castid');
                 await this.electronService.writeFileAtomic(castIdPath, matchingMetadataCast.id);
               } catch (error) {
-                console.warn(`Failed to create .castid file for cast ${folderCast.name}:`, error);
+                this.logger.warn(`Failed to create .castid file for cast ${folderCast.name}:`, error);
               }
             }
 
@@ -194,7 +178,7 @@ export class CastService {
       // Add any metadata-only casts (casts in ensemble.json but no folder)
       // These might be casts that were created but their folders were deleted
       for (const [id, metadataCast] of metadataMap) {
-        console.warn(`Cast "${metadataCast.name}" exists in metadata but has no folder`);
+        this.logger.warn(`Cast "${metadataCast.name}" exists in metadata but has no folder`);
         // Add it anyway but without folder data
         mergedCasts.push({
           ...metadataCast,
@@ -340,8 +324,9 @@ export class CastService {
       };
 
       // Update in-memory list
-      casts[index] = updatedCast;
-      const sortedCasts = [...casts].sort((a, b) => a.name.localeCompare(b.name));
+      const updatedCasts = [...casts];
+      updatedCasts[index] = updatedCast;
+      const sortedCasts = updatedCasts.sort((a, b) => a.name.localeCompare(b.name));
       this.castsSubject.next(sortedCasts);
 
       return updatedCast;
@@ -362,7 +347,7 @@ export class CastService {
       const cast = casts.find((c) => c.id === id);
 
       if (!cast) {
-        console.warn(`Cast with ID '${id}' not found in CastService`);
+        this.logger.warn(`Cast with ID '${id}' not found in CastService`);
         return false;
       }
 
@@ -373,7 +358,7 @@ export class CastService {
           throw new Error(`Failed to delete cast folder: ${deleteResult.error}`);
         }
       } else {
-        console.warn(`Cast '${cast.name}' has no folder to delete - removing from memory only`);
+        this.logger.warn(`Cast '${cast.name}' has no folder to delete - removing from memory only`);
       }
 
       // Update in-memory list (remove cast regardless of whether it had a folder)
@@ -415,8 +400,9 @@ export class CastService {
       const casts = this.castsSubject.value;
       const index = casts.findIndex((c) => c.id === castId);
       if (index !== -1) {
-        casts[index] = { ...casts[index], thumbnail: thumbnailFilename };
-        this.castsSubject.next([...casts]);
+        const updatedCasts = [...casts];
+        updatedCasts[index] = { ...updatedCasts[index], thumbnail: thumbnailFilename };
+        this.castsSubject.next(updatedCasts);
       }
 
       return thumbnailFilename;
@@ -443,7 +429,7 @@ export class CastService {
       if (exists) {
         const deleteResult = await this.electronService.deleteFile(thumbnailPath);
         if (!deleteResult.success) {
-          console.warn('Failed to delete thumbnail:', deleteResult.error);
+          this.logger.warn('Failed to delete thumbnail:', deleteResult.error);
         }
       }
 
@@ -454,11 +440,12 @@ export class CastService {
       const casts = this.castsSubject.value;
       const index = casts.findIndex((c) => c.id === castId);
       if (index !== -1) {
-        casts[index] = {
-          ...casts[index],
+        const updatedCasts = [...casts];
+        updatedCasts[index] = {
+          ...updatedCasts[index],
           thumbnail: newThumbnail || undefined,
         };
-        this.castsSubject.next([...casts]);
+        this.castsSubject.next(updatedCasts);
       }
 
       return true;

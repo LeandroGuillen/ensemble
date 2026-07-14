@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { AiSettings } from '../interfaces/project.interface';
-import { ENSEMBLE_JSON_FILE } from '../constants/project.constants';
 import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
+import { requireProject } from '../utils/project.utils';
 
 export interface AiGenerationOptions {
   context?: string;
@@ -60,10 +60,7 @@ export class AiService {
     const updatedSettings = { ...currentSettings, ...settings };
 
     // Update in project metadata
-    const project = this.projectService.getCurrentProject();
-    if (!project) {
-      throw new Error('No project loaded');
-    }
+    const project = requireProject(this.projectService.getCurrentProject());
 
     const updatedMetadata = {
       ...project.metadata,
@@ -73,19 +70,8 @@ export class AiService {
       },
     };
 
-    const ensembleJsonPath = await this.electronService.pathJoin(project.path, ENSEMBLE_JSON_FILE);
-    const result = await this.electronService.writeFileAtomic(
-      ensembleJsonPath,
-      JSON.stringify(updatedMetadata, null, 2)
-    );
-
-    if (result.success) {
-      this.aiSettings$.next(updatedSettings);
-      // Reload the project to get the updated metadata
-      await this.projectService.loadProject(project.path);
-    } else {
-      throw new Error(result.error || 'Failed to save AI settings');
-    }
+    await this.projectService.updateMetadata(updatedMetadata);
+    this.aiSettings$.next(updatedSettings);
   }
 
   async testConnection(): Promise<AiTestConnectionResult> {

@@ -11,7 +11,7 @@ import {
   InvokeAiImageSettings,
 } from '../../interfaces/project.interface';
 import { asciiSlugify } from '../../utils/slug.utils';
-import { ENSEMBLE_JSON_FILE } from '../../constants/project.constants';
+import { requireProject } from '../../utils/project.utils';
 import { ElectronService } from '../electron.service';
 import { ProjectService } from '../project.service';
 import { InvokeAiProvider } from './invokeai.provider';
@@ -33,8 +33,7 @@ export class ImageGenerationService {
   }
 
   async updateSettings(settings: ImageGenerationSettings): Promise<void> {
-    const project = this.projectService.getCurrentProject();
-    if (!project) throw new Error('No project loaded');
+    const project = requireProject(this.projectService.getCurrentProject());
     const updatedMetadata = {
       ...project.metadata,
       settings: {
@@ -48,13 +47,7 @@ export class ImageGenerationService {
         },
       },
     };
-    const path = await this.electronService.pathJoin(project.path, ENSEMBLE_JSON_FILE);
-    const result = await this.electronService.writeFileAtomic(
-      path,
-      JSON.stringify(updatedMetadata, null, 2)
-    );
-    if (!result.success) throw new Error(result.error || 'Failed to save image generation settings');
-    await this.projectService.loadProject(project.path);
+    await this.projectService.updateMetadata(updatedMetadata);
   }
 
   async testConnection(settings?: InvokeAiImageSettings) {
@@ -66,8 +59,7 @@ export class ImageGenerationService {
   }
 
   async generateAndSave(request: ImageGenerationRequest): Promise<string> {
-    const project = this.projectService.getCurrentProject();
-    if (!project) throw new Error('No project loaded');
+    const project = requireProject(this.projectService.getCurrentProject());
     const settings = this.getSettings();
     if (!settings.enabled) throw new Error('Image generation is not enabled');
 
@@ -88,8 +80,7 @@ export class ImageGenerationService {
   }
 
   async listProjectImages(loadPreviews = true): Promise<ProjectImage[]> {
-    const project = this.projectService.getCurrentProject();
-    if (!project) throw new Error('No project loaded');
+    const project = requireProject(this.projectService.getCurrentProject());
     const imagesRoot = this.projectService.getImagesFolderPath();
     if (!(await this.electronService.fileExists(imagesRoot))) return [];
 
@@ -123,8 +114,7 @@ export class ImageGenerationService {
   async browseProjectImageDirectory(
     relativeDirectory = ''
   ): Promise<ProjectImageDirectory> {
-    const project = this.projectService.getCurrentProject();
-    if (!project) throw new Error('No project loaded');
+    const project = requireProject(this.projectService.getCurrentProject());
 
     const normalizedDirectory = normalizeRelativeDirectory(relativeDirectory);
     const imagesRoot = this.projectService.getImagesFolderPath();

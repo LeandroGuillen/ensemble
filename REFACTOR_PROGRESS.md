@@ -42,14 +42,14 @@ Git: one commit per batch. Verify with `npm run build` (and `npm test` if applic
 - [x] B4. Standardize `main.js` return shape with `ok()`/`err()` helpers; never reject (`ai-request`); type `stats`; cache `get-update-status`.
       `ok()`/`err()` helpers + `FileStatsResult` JSDoc typedef added; fs handlers return via them. `ai-request` never rejects (resolves `{ success:false, error }` on failure) and `AiService.makeHttpRequest` translates the error payload back into a thrown exception so callers see no behaviour change. `get-update-status` caches results (5-min TTL) and is busted on manual `check-for-updates`.
 
-## Batch C — Service-layer correctness  ·  Status: [ ]
-- [ ] C1. `AiService` → `projectService.updateMetadata(...)` instead of direct `ensemble.json` write.
-- [ ] C2. `CastService.mergeCastsWithMetadata` → use `projectService.getCurrentProject()?.metadata.casts`.
-- [ ] C3. `MetadataService` hand-rolled frontmatter parser → `MarkdownUtils.parseMarkdown` / `generateMarkdown`.
-- [ ] C4. Delete `MetadataService.generateId` (use `slugify`); migrate `metadata.service.ts:843` non-atomic write to `writeFileAtomic`.
-- [ ] C5. Use `requireProject()` in the 30+ "No project loaded" sites; unify silent-return vs throw.
-- [ ] C6. Replace bare `console.warn` with `logger.warn` (add `warn` to `LoggingService`).
-- [ ] C7. Stop mutating `BehaviorSubject` arrays in place (character/cast/backstage) — always `.next([...shallow copy])`.
+## Batch C — Service-layer correctness  ·  Status: [~]
+- [x] C1. `AiService` → `projectService.updateMetadata(...)` instead of direct `ensemble.json` write.
+- [x] C2. `CastService.mergeCastsWithMetadata` → use `projectService.getCurrentProject()?.metadata.casts`.
+- [x] C3. `MetadataService` book-reference cleanup → `MarkdownUtils.parseMarkdown` / `generateMarkdown`.
+- [x] C4. Delete `MetadataService.generateId` (use `slugify`); migrate the cleanup write to `writeFileAtomic`.
+- [~] C5. Use `requireProject()` in the 30+ "No project loaded" sites; service-layer guards migrated where touched in this batch. Remaining guards need an operation-by-operation silent-return/throw decision.
+- [x] C6. Replace service-layer bare `console.warn` with `logger.warn` and add `warn` to `LoggingService`.
+- [x] C7. Stop mutating `BehaviorSubject` arrays in place (character/cast/backstage) — always emit shallow-copied arrays.
 
 ## Batch D — ProjectService decomposition  ·  Status: [ ]
 - [ ] D1. Extract `PinboardStoreService` from `ProjectService` (~440 lines of pinboard CRUD).

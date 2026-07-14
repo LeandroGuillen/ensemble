@@ -28,6 +28,7 @@ import {
 } from '../constants/project.constants';
 import { ElectronService } from './electron.service';
 import { LoggingService } from './logging.service';
+import { requireProject } from '../utils/project.utils';
 
 @Injectable({
   providedIn: 'root',
@@ -74,20 +75,14 @@ export class ProjectService {
    * Uses settings.charactersFolder if set, otherwise defaults to 'characters'.
    */
   getCharactersFolderPath(): string {
-    const project = this.currentProjectSubject.value;
-    if (!project?.path) {
-      throw new Error('No project loaded');
-    }
+    const project = requireProject(this.currentProjectSubject.value);
     const folder = project.metadata?.settings?.charactersFolder?.trim() || DEFAULT_CHARACTERS_FOLDER;
     const normalized = normalizeRelativeFolder(folder, DEFAULT_CHARACTERS_FOLDER);
     return pathJoin(project.path, normalized);
   }
 
   getImagesFolderPath(): string {
-    const project = this.currentProjectSubject.value;
-    if (!project?.path) {
-      throw new Error('No project loaded');
-    }
+    const project = requireProject(this.currentProjectSubject.value);
     const folder = project.metadata?.settings?.imagesFolder?.trim() || DEFAULT_IMAGES_FOLDER;
     const normalized = normalizeRelativeFolder(folder, DEFAULT_IMAGES_FOLDER);
     return pathJoin(project.path, normalized);
@@ -595,7 +590,7 @@ export class ProjectService {
         this.recentProjects = [];
       }
     } catch (error) {
-      console.warn('Failed to load recent projects:', error);
+      this.logger.warn('Failed to load recent projects:', error);
       this.recentProjects = [];
     }
   }
@@ -610,7 +605,7 @@ export class ProjectService {
         this.logger.error('Failed to save recent projects', result.error);
       }
     } catch (error) {
-      console.warn('Failed to save recent projects:', error);
+      this.logger.warn('Failed to save recent projects:', error);
     }
   }
 

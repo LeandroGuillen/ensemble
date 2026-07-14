@@ -7,7 +7,7 @@ import { NotificationService } from './notification.service';
  * 
  * - console.log: Only in development mode
  * - console.error: Always logged + user notification
- * - console.warn: Kept as-is for development warnings
+ * - console.warn: Warnings are logged only in development
  */
 @Injectable({
   providedIn: 'root'
@@ -21,6 +21,12 @@ export class LoggingService {
   log(message: string, ...args: any[]): void {
     if (!environment.production) {
       console.log(message, ...args);
+    }
+  }
+
+  warn(message: string, ...args: any[]): void {
+    if (!environment.production) {
+      console.warn(message, ...args);
     }
   }
 
@@ -54,4 +60,3 @@ export class LoggingService {
     return message;
   }
 }
-

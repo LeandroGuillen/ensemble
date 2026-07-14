@@ -274,9 +274,9 @@ export class BackstageService {
   // Concept methods
   async addConcept(concept: CharacterConcept): Promise<void> {
     const data = this.backstageData$.value;
-    data.concepts.push(concept);
-    await this.saveConcepts(data.concepts);
-    this.backstageData$.next(data);
+    const concepts = [...data.concepts, concept];
+    await this.saveConcepts(concepts);
+    this.backstageData$.next({ ...data, concepts });
   }
 
   async updateConcept(index: number, updates: Partial<CharacterConcept>): Promise<void> {
@@ -285,20 +285,21 @@ export class BackstageService {
       throw new Error('Concept not found');
     }
 
-    data.concepts[index] = {
+    const concepts = [...data.concepts];
+    concepts[index] = {
       ...data.concepts[index],
       ...updates,
     };
 
-    await this.saveConcepts(data.concepts);
-    this.backstageData$.next(data);
+    await this.saveConcepts(concepts);
+    this.backstageData$.next({ ...data, concepts });
   }
 
   async deleteConcept(index: number): Promise<void> {
     const data = this.backstageData$.value;
-    data.concepts.splice(index, 1);
-    await this.saveConcepts(data.concepts);
-    this.backstageData$.next(data);
+    const concepts = data.concepts.filter((_, i) => i !== index);
+    await this.saveConcepts(concepts);
+    this.backstageData$.next({ ...data, concepts });
   }
 
   // Name list methods
@@ -313,9 +314,9 @@ export class BackstageService {
           : name
       ),
     };
-    data.nameLists.push(normalizedNameList);
-    await this.saveNameLists(data.nameLists);
-    this.backstageData$.next(data);
+    const nameLists = [...data.nameLists, normalizedNameList];
+    await this.saveNameLists(nameLists);
+    this.backstageData$.next({ ...data, nameLists });
   }
 
   async updateNameList(index: number, updates: Partial<NameList>): Promise<void> {
@@ -324,19 +325,20 @@ export class BackstageService {
       throw new Error('Name list not found');
     }
 
-    data.nameLists[index] = {
+    const nameLists = [...data.nameLists];
+    nameLists[index] = {
       ...data.nameLists[index],
       ...updates,
     };
 
-    await this.saveNameLists(data.nameLists);
-    this.backstageData$.next(data);
+    await this.saveNameLists(nameLists);
+    this.backstageData$.next({ ...data, nameLists });
   }
 
   async deleteNameList(index: number): Promise<void> {
     const data = this.backstageData$.value;
-    data.nameLists.splice(index, 1);
-    await this.saveNameLists(data.nameLists);
-    this.backstageData$.next(data);
+    const nameLists = data.nameLists.filter((_, i) => i !== index);
+    await this.saveNameLists(nameLists);
+    this.backstageData$.next({ ...data, nameLists });
   }
 }

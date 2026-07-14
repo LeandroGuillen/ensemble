@@ -179,7 +179,7 @@ export class CharacterService {
    * @deprecated Legacy method - use forceReloadCharacters instead
    */
   async loadSpecificCharacterFile(filename: string): Promise<Character | null> {
-    console.warn('loadSpecificCharacterFile is deprecated - use forceReloadCharacters instead');
+    this.logger.warn('loadSpecificCharacterFile is deprecated - use forceReloadCharacters instead');
     await this.forceReloadCharacters();
     return null;
   }
@@ -189,7 +189,7 @@ export class CharacterService {
    * @deprecated Legacy method - use forceReloadCharacters instead
    */
   async scanForExistingCharacters(): Promise<number> {
-    console.warn('scanForExistingCharacters is deprecated - use forceReloadCharacters instead');
+    this.logger.warn('scanForExistingCharacters is deprecated - use forceReloadCharacters instead');
     await this.forceReloadCharacters();
     return this.charactersSubject.value.length;
   }
@@ -454,8 +454,9 @@ export class CharacterService {
       }
 
       // Update in-memory list
-      characters[index] = updatedCharacter;
-      const sortedCharacters = [...characters].sort((a, b) => a.name.localeCompare(b.name));
+      const updatedCharacters = [...characters];
+      updatedCharacters[index] = updatedCharacter;
+      const sortedCharacters = updatedCharacters.sort((a, b) => a.name.localeCompare(b.name));
       this.charactersSubject.next(sortedCharacters);
 
       return updatedCharacter;
@@ -526,8 +527,9 @@ export class CharacterService {
       // Update in-memory list
       const index = characters.findIndex((char) => char.id === id);
       if (index !== -1) {
-        characters[index] = refreshedCharacter;
-        const sortedCharacters = [...characters].sort((a, b) => a.name.localeCompare(b.name));
+        const updatedCharacters = [...characters];
+        updatedCharacters[index] = refreshedCharacter;
+        const sortedCharacters = updatedCharacters.sort((a, b) => a.name.localeCompare(b.name));
         this.charactersSubject.next(sortedCharacters);
       }
 

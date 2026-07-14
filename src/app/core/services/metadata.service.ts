@@ -6,6 +6,8 @@ import { ValidationResult } from '../interfaces/validation.interface';
 import { CharacterValidator } from '../validators/character.validator';
 import { ProjectValidator } from '../validators/project.validator';
 import { pathJoin } from '../utils/path.utils';
+import { slugify } from '../utils/slug.utils';
+import { MarkdownUtils } from '../utils/markdown.utils';
 import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
 import { CastService } from './cast.service';
@@ -128,7 +130,7 @@ export class MetadataService {
     }
 
     // Generate unique ID
-    const id = this.generateId(categoryData.name);
+    const id = slugify(categoryData.name);
     const newCategory: Category = { id, ...categoryData };
 
     // Validate the new category
@@ -246,7 +248,7 @@ export class MetadataService {
     }
 
     // Generate unique ID
-    const id = this.generateId(tagData.name);
+    const id = slugify(tagData.name);
     const newTag: Tag = { id, ...tagData };
 
     // Validate the new tag
@@ -489,7 +491,7 @@ export class MetadataService {
     const books = metadata.books || [];
 
     // Generate unique ID
-    const id = this.generateId(bookData.name);
+    const id = slugify(bookData.name);
     const newBook: Book = { id, ...bookData };
 
     // Validate the new book
@@ -762,18 +764,6 @@ export class MetadataService {
   // Utility Methods
 
   /**
-   * Generates a kebab-case ID from a name
-   */
-  private generateId(name: string): string {
-    return name
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
-      .replace(/\s+/g, '-') // Replace spaces with hyphens
-      .replace(/-+/g, '-') // Replace multiple hyphens with single
-      .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
-  }
-
-  /**
    * Cleans up references to a book from all character files
    */
   private async cleanupBookReferencesFromCharacters(bookId: string): Promise<void> {
@@ -786,7 +776,7 @@ export class MetadataService {
       const scanResult = await this.electronService.readDirectoryRecursive(charactersPath, '_*.md');
       
       if (!scanResult.success || !scanResult.files) {
-        console.warn('Failed to list character files:', scanResult.error);
+        this.logger.warn('Failed to list character files:', scanResult.error);
         return;
       }
       
@@ -794,24 +784,30 @@ export class MetadataService {
         const readResult = await this.electronService.readFile(filePath);
         
         if (!readResult.success || !readResult.content) {
-          console.warn(`Failed to read character file ${filePath}:`, readResult.error);
+          this.logger.warn(`Failed to read character file ${filePath}:`, readResult.error);
           continue;
         }
         
         // Parse frontmatter to check if this character references the book
-        const { frontmatter } = this.parseFrontmatter(readResult.content);
+        const parsed = MarkdownUtils.parseMarkdown(readResult.content);
+        if (!parsed.success || !parsed.data) {
+          this.logger.warn(`Failed to parse character file ${filePath}:`, parsed.error);
+          continue;
+        }
+        const frontmatter = parsed.data.frontmatter as Record<string, any>;
         
-        if (frontmatter.books && Array.isArray(frontmatter.books) && frontmatter.books.includes(bookId)) {
+        const books = frontmatter['books'];
+        if (books && Array.isArray(books) && books.includes(bookId)) {
           // Remove the book reference
-          const updatedBooks = frontmatter.books.filter((id: string) => id !== bookId);
+          const updatedBooks = books.filter((id: string) => id !== bookId);
           const updatedFrontmatter = { ...frontmatter, books: updatedBooks };
           
           // Update the file
-          const updatedContent = this.generateMarkdownWithFrontmatter(updatedFrontmatter, readResult.content);
-          const writeResult = await this.electronService.writeFile(filePath, updatedContent);
+          const updatedContent = MarkdownUtils.generateMarkdown(updatedFrontmatter, parsed.data.content);
+          const writeResult = await this.electronService.writeFileAtomic(filePath, updatedContent);
           
           if (!writeResult.success) {
-            console.warn(`Failed to update character file ${filePath}:`, writeResult.error);
+            this.logger.warn(`Failed to update character file ${filePath}:`, writeResult.error);
           }
         }
       }

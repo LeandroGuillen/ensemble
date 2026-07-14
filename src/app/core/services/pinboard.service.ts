@@ -561,7 +561,7 @@ export class PinboardService {
 
     // Check if pin already exists
     if (currentData.nodes.some(node => node.id === character.id)) {
-      console.warn('Pin already exists for character:', character.name);
+      this.logger.warn('Pin already exists for character:', character.name);
       return;
     }
 
@@ -628,4 +628,3 @@ export class PinboardService {
   }
 
   }
-
