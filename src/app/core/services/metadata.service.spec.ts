@@ -378,6 +378,7 @@ describe('MetadataService', () => {
         category: 'main-character',
         tags: ['magic-user'],
         books: [],
+        prompts: [],
         content: '',
         created: new Date(),
         modified: new Date(),
@@ -395,6 +396,7 @@ describe('MetadataService', () => {
         category: 'non-existent',
         tags: [],
         books: [],
+        prompts: [],
         content: '',
         created: new Date(),
         modified: new Date(),
@@ -411,6 +413,7 @@ describe('MetadataService', () => {
         category: 'main-character',
         tags: ['magic-user'],
         books: [],
+        prompts: [],
         content: ''
       };
 
@@ -427,6 +430,7 @@ describe('MetadataService', () => {
         category: 'main-character',
         tags: [],
         books: [],
+        prompts: [],
         content: '',
         created: new Date(),
         modified: new Date(),

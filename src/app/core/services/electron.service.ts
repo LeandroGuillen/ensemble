@@ -317,4 +317,12 @@ export class ElectronService {
     }
     return await this.ipcRenderer.invoke('show-item-in-folder', filePath);
   }
+
+  /** Opens a folder in the OS file manager (opens the folder itself, not its parent). */
+  async openPath(folderPath: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.isElectron()) {
+      return { success: false, error: 'Not running in Electron' };
+    }
+    return await this.ipcRenderer.invoke('open-path', folderPath);
+  }
 }

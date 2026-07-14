@@ -10,6 +10,7 @@ describe('CharacterValidator', () => {
       category: 'main-character',
       tags: ['magic-user'],
       books: [],
+      prompts: [],
       content: 'Test content',
       created: new Date('2024-01-01'),
       modified: new Date('2024-01-02'),
@@ -120,6 +121,7 @@ describe('CharacterValidator', () => {
       category: 'main-character',
       tags: ['magic-user'],
       books: [],
+      prompts: [],
       content: 'Test content'
     });
 
@@ -212,6 +214,7 @@ describe('CharacterValidator', () => {
       category: 'main-character',
       tags: ['magic-user'],
       books: [],
+      prompts: [],
       content: '',
       created: new Date(),
       modified: new Date(),

@@ -19,6 +19,12 @@ export interface ImageGenerationRequest {
   positivePrompt: string;
   negativePrompt: string;
   characterName: string;
+  /**
+   * Optional project-relative directory (e.g. "img/_pjs/zzz_all_cast") where the
+   * generated image should be saved. When omitted, the image is saved under
+   * `<imagesFolder>/@new/`.
+   */
+  outputDirectory?: string;
 }
 
 export interface GeneratedImage {

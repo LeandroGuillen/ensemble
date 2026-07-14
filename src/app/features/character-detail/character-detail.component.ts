@@ -32,6 +32,7 @@ import {
   ProjectImageDirectory,
   ProjectImageFolder,
   Tag,
+  CharacterPrompt,
 } from "../../core/interfaces";
 import {
   AiService,
@@ -120,6 +121,13 @@ export class CharacterDetailComponent
   positiveImagePrompt = '';
   negativeImagePrompt = '';
   isGeneratingPortrait = false;
+
+  /** Image-generation prompts for this character. The first one is the default. */
+  prompts: CharacterPrompt[] = [];
+  /** Index of the prompt currently being edited. */
+  selectedPromptIndex = 0;
+  /** Set while a quick-generate from a character prompt is in progress. */
+  generatingPromptIndex: number | null = null;
 
   get selectedImageWorkflow(): ImageWorkflow | undefined {
     return this.imageWorkflows.find((workflow) => workflow.id === this.selectedImageWorkflowId);
@@ -244,6 +252,8 @@ export class CharacterDetailComponent
           this.isEditing = false;
           this.character = null;
           this.characterForm.reset();
+          this.prompts = [];
+          this.selectedPromptIndex = -1;
           this.contentTabs = [{ id: 'main', label: 'Main' }];
           this.cdr.markForCheck();
         }
@@ -471,6 +481,9 @@ export class CharacterDetailComponent
           content: this.character.content || '',
         });
 
+        this.prompts = (this.character.prompts || []).map((p) => ({ ...p }));
+        this.selectedPromptIndex = this.prompts.length > 0 ? 0 : -1;
+
         this.activeContentTab = 'main';
         this.updateContentTabs();
         await this.loadBookPages();
@@ -630,6 +643,11 @@ export class CharacterDetailComponent
         tags: this.characterForm.value.tags || [],
         books: this.characterForm.value.books || [],
         thumbnail: (this.characterForm.value.thumbnail || '').trim(),
+        prompts: this.prompts.map((p) => ({
+          name: p.name,
+          positive: p.positive,
+          negative: p.negative,
+        })),
         content: this.characterForm.value.content || '',
       };
 
@@ -1201,6 +1219,20 @@ export class CharacterDetailComponent
     this.cdr.markForCheck();
   }
 
+  /** Opens the directory currently shown in the image picker in the OS file explorer. */
+  async openCurrentImageDirectoryInExplorer(): Promise<void> {
+    if (!this.currentProject?.path || !this.electronService.isElectron()) return;
+    const imagesRoot = this.projectService.getImagesFolderPath();
+    const absolutePath = this.currentImageDirectory
+      ? await this.electronService.pathJoin(imagesRoot, ...this.currentImageDirectory.split('/'))
+      : imagesRoot;
+    const result = await this.electronService.openPath(absolutePath);
+    if (!result.success) {
+      this.error = result.error ?? 'Failed to open folder';
+      this.cdr.markForCheck();
+    }
+  }
+
   handlePickerNavigationAway(): boolean {
     if (this.showImagePickerDialog) {
       this.handleExternalPickerNavigation('back');
@@ -1289,6 +1321,159 @@ export class CharacterDetailComponent
     this.characterForm.markAsDirty();
     this.thumbnailPreviewUrl = null;
     this.cdr.markForCheck();
+  }
+
+  // --- Prompts ---------------------------------------------------------------
+
+  /** Display label for a prompt entry (falls back to "Prompt N"). */
+  getPromptLabel(prompt: CharacterPrompt, index: number): string {
+    return prompt.name?.trim() || `Prompt ${index + 1}`;
+  }
+
+  /** The prompt currently selected for editing, or null. */
+  get selectedPrompt(): CharacterPrompt | null {
+    if (this.selectedPromptIndex < 0 || this.selectedPromptIndex >= this.prompts.length) {
+      return null;
+    }
+    return this.prompts[this.selectedPromptIndex];
+  }
+
+  selectPrompt(index: number): void {
+    if (index >= 0 && index < this.prompts.length) {
+      this.selectedPromptIndex = index;
+      this.cdr.markForCheck();
+    }
+  }
+
+  addPrompt(): void {
+    const newPrompt: CharacterPrompt = { name: '', positive: '', negative: '' };
+    this.prompts = [...this.prompts, newPrompt];
+    this.selectedPromptIndex = this.prompts.length - 1;
+    this.characterForm.markAsDirty();
+    this.cdr.markForCheck();
+  }
+
+  removePrompt(index: number): void {
+    if (index < 0 || index >= this.prompts.length) return;
+    this.prompts = this.prompts.filter((_, i) => i !== index);
+    if (this.prompts.length === 0) {
+      this.selectedPromptIndex = -1;
+    } else if (this.selectedPromptIndex >= this.prompts.length) {
+      this.selectedPromptIndex = this.prompts.length - 1;
+    }
+    this.characterForm.markAsDirty();
+    this.cdr.markForCheck();
+  }
+
+  /** Promotes a prompt to position 0, making it the default. No-op if already first. */
+  setPromptAsDefault(index: number): void {
+    if (index <= 0 || index >= this.prompts.length) return;
+    const next = [...this.prompts];
+    const [item] = next.splice(index, 1);
+    next.unshift(item);
+    this.prompts = next;
+    this.selectedPromptIndex = this.selectedPromptIndex === index ? 0 : this.selectedPromptIndex;
+    this.characterForm.markAsDirty();
+    this.cdr.markForCheck();
+  }
+
+  onPromptFieldChange(): void {
+    this.characterForm.markAsDirty();
+    this.cdr.markForCheck();
+  }
+
+  /** True when the prompt-clear generate action is unavailable. */
+  get promptGenerateDisabled(): boolean {
+    return (
+      !this.imageGenerationEnabled ||
+      this.generatingPromptIndex !== null ||
+      !this.selectedPrompt ||
+      !this.selectedPrompt.positive.trim()
+    );
+  }
+
+  /** Title text for the prompt-generate button, explaining why it may be disabled. */
+  get promptGenerateTitle(): string {
+    if (!this.imageGenerationEnabled) {
+      return 'Enable image generation in AI Settings to generate from this prompt';
+    }
+    if (!this.selectedPrompt || !this.selectedPrompt.positive.trim()) {
+      return 'Enter positive text to enable generation';
+    }
+    const dir = this.getThumbnailOutputDirectory();
+    return dir
+      ? `Generate with this prompt and save beside the current thumbnail (${dir})`
+      : 'Generate with this prompt';
+  }
+
+  /**
+   * Quick-generates an image using the selected character prompt and the default
+   * workflow. The image is saved into the same folder as the current thumbnail
+   * (when one is set) and becomes the new thumbnail.
+   */
+  async generateFromPrompt(prompt: CharacterPrompt): Promise<void> {
+    if (!this.imageGenerationEnabled || !prompt.positive.trim()) return;
+    if (this.generatingPromptIndex !== null) return;
+    this.generatingPromptIndex = this.selectedPromptIndex;
+    this.error = null;
+    this.cdr.markForCheck();
+    try {
+      const workflowId = await this.resolveDefaultWorkflowId();
+      if (!workflowId) {
+        throw new Error('No image workflows configured');
+      }
+      const characterName =
+        this.characterForm.get('name')?.value?.trim() || 'character';
+      const outputDirectory = this.getThumbnailOutputDirectory();
+      const relativePath = await this.imageGenerationService.generateAndSave({
+        workflowId,
+        positivePrompt: prompt.positive.trim(),
+        negativePrompt: prompt.negative.trim(),
+        characterName,
+        ...(outputDirectory ? { outputDirectory } : {}),
+      });
+      this.characterForm.patchValue({ thumbnail: `[[${relativePath}]]` });
+      this.characterForm.markAsDirty();
+      this.notificationService.showSuccess(`Image saved to ${relativePath}`);
+    } catch (error) {
+      this.error = error instanceof Error ? error.message : 'Failed to generate image';
+    } finally {
+      this.generatingPromptIndex = null;
+      this.cdr.markForCheck();
+    }
+  }
+
+  /**
+   * Resolves the workflow id to use for quick generation: the configured default
+   * if available, otherwise the first workflow (loaded on demand).
+   */
+  private async resolveDefaultWorkflowId(): Promise<string> {
+    if (this.selectedImageWorkflowId) {
+      return this.selectedImageWorkflowId;
+    }
+    const configured = this.imageGenerationService.getSettings().invokeai.defaultWorkflowId;
+    const workflows = this.imageWorkflows.length
+      ? this.imageWorkflows
+      : (this.imageWorkflows = await this.imageGenerationService.listWorkflows());
+    const id =
+      (configured && workflows.some((w) => w.id === configured)
+        ? configured
+        : workflows[0]?.id) || '';
+    this.selectedImageWorkflowId = id;
+    return id;
+  }
+
+  /**
+   * Returns the project-relative directory containing the current thumbnail, or
+   * null when no thumbnail is set.
+   */
+  private getThumbnailOutputDirectory(): string | null {
+    const raw = this.characterForm.get('thumbnail')?.value || '';
+    const parsed = parseThumbnailReference(raw);
+    if (!parsed) return null;
+    const normalized = parsed.replace(/\\/g, '/');
+    const lastSlash = normalized.lastIndexOf('/');
+    return lastSlash > 0 ? normalized.slice(0, lastSlash) : null;
   }
 
   getProjectImageName(image: ProjectImage): string {

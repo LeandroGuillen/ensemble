@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { Character, CharacterFormData, CharacterFrontmatter } from '../interfaces/character.interface';
+import { Character, CharacterFormData, CharacterFrontmatter, CharacterPrompt } from '../interfaces/character.interface';
 import { Category } from '../interfaces/project.interface';
 import { MarkdownUtils } from '../utils/markdown.utils';
 import { slugify } from '../utils/slug.utils';
@@ -12,6 +12,16 @@ import { ElectronService } from './electron.service';
 import { FileWatcherService } from './file-watcher.service';
 import { ProjectService } from './project.service';
 import { LoggingService } from './logging.service';
+
+/** Coerces a raw frontmatter `prompts` value into a clean CharacterPrompt[]. */
+function normalizePrompts(raw: unknown): CharacterPrompt[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((item: any) => ({
+    name: typeof item?.name === 'string' ? item.name : '',
+    positive: typeof item?.positive === 'string' ? item.positive : '',
+    negative: typeof item?.negative === 'string' ? item.negative : '',
+  }));
+}
 
 @Injectable({
   providedIn: 'root',
@@ -311,6 +321,7 @@ export class CharacterService {
         tags: frontmatter.tags || [],
         books: frontmatter.books || [],
         thumbnail: frontmatter.thumbnail,
+        prompts: normalizePrompts(frontmatter.prompts),
         content: content || '',
         created: frontmatter.created ? new Date(frontmatter.created) : new Date(),
         modified: frontmatter.modified ? new Date(frontmatter.modified) : new Date(),
@@ -352,6 +363,7 @@ export class CharacterService {
         tags: data.tags || [],
         books: data.books || [],
         thumbnail: data.thumbnail?.trim() || undefined,
+        prompts: normalizePrompts(data.prompts),
         content: data.content || '',
         created: now,
         modified: now,
@@ -436,6 +448,7 @@ export class CharacterService {
         tags: data.tags ?? existingCharacter.tags,
         books: data.books ?? existingCharacter.books,
         thumbnail: 'thumbnail' in data ? (data.thumbnail?.trim() || undefined) : existingCharacter.thumbnail,
+        prompts: data.prompts !== undefined ? normalizePrompts(data.prompts) : existingCharacter.prompts,
         content: data.content !== undefined ? data.content : existingCharacter.content,
         modified: new Date(),
         filePath: newFilePath,
@@ -552,6 +565,7 @@ export class CharacterService {
         tags: character.tags,
         books: character.books,
         ...(character.thumbnail ? { thumbnail: character.thumbnail } : {}),
+        ...(character.prompts && character.prompts.length > 0 ? { prompts: character.prompts } : {}),
         created: character.created.toISOString(),
         modified: character.modified.toISOString(),
       };

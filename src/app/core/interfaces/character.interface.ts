@@ -1,3 +1,9 @@
+export interface CharacterPrompt {
+  name: string;
+  positive: string;
+  negative: string;
+}
+
 export interface Character {
   id: string; // Derived at runtime from relative file path (e.g., "_dessir.md" or "subdir/_dessir.md")
   name: string;
@@ -5,6 +11,7 @@ export interface Character {
   tags: string[];
   books: string[];
   thumbnail?: string; // Opaque string (e.g., wiki-link [[path/to/image.jpg]])
+  prompts: CharacterPrompt[]; // Image-generation prompts; first is the default
   content: string; // Full markdown body below frontmatter
   created: Date;
   modified: Date;
@@ -17,6 +24,7 @@ export interface CharacterFormData {
   tags: string[];
   books: string[];
   thumbnail?: string;
+  prompts: CharacterPrompt[];
   content: string;
 }
 
@@ -26,6 +34,7 @@ export interface CharacterFrontmatter {
   tags: string[];
   books: string[];
   thumbnail?: string;
+  prompts?: CharacterPrompt[];
   created?: string;
   modified?: string;
 }

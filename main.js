@@ -770,6 +770,21 @@ ipcMain.handle('show-item-in-folder', async (event, filePath) => {
   }
 });
 
+// Open a folder in the OS file manager (opens the folder itself, not its parent)
+ipcMain.handle('open-path', async (event, folderPath) => {
+  try {
+    // Ensure the directory exists; openPath silently fails on missing folders.
+    await fs.mkdir(folderPath, { recursive: true });
+    const errorMessage = await shell.openPath(folderPath);
+    if (errorMessage) {
+      return { success: false, error: errorMessage };
+    }
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 // Cleanup watcher on app quit
 app.on('before-quit', async () => {
   if (fileWatcher) {

@@ -43,6 +43,7 @@ describe('CharacterService', () => {
     category: 'main-character',
     tags: ['magic-user'],
     books: [],
+    prompts: [],
     content: 'Test content'
   });
 
@@ -112,6 +113,7 @@ describe('CharacterService', () => {
         category: 'main-character',
         tags: [],
         books: [],
+        prompts: [],
         content: '',
         created: new Date(),
         modified: new Date(),
@@ -203,6 +205,7 @@ describe('CharacterService', () => {
         category: 'main-character',
         tags: [],
         books: [],
+        prompts: [],
         content: '',
         created: new Date(),
         modified: new Date(),
@@ -249,6 +252,7 @@ describe('CharacterService', () => {
         category: 'main-character',
         tags: [],
         books: [],
+        prompts: [],
         thumbnail: '[[img/portrait.png]]',
         content: '',
         created: new Date(),
@@ -283,6 +287,7 @@ describe('CharacterService', () => {
         category: 'main-character',
         tags: [],
         books: [],
+        prompts: [],
         content: '',
         created: new Date(),
         modified: new Date(),
@@ -316,6 +321,7 @@ describe('CharacterService', () => {
         category: 'main-character',
         tags: [],
         books: [],
+        prompts: [],
         content: '',
         created: new Date(),
         modified: new Date(),

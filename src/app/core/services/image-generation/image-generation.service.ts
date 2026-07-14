@@ -77,7 +77,8 @@ export class ImageGenerationService {
       imagesFolder,
       request.characterName,
       image.extension,
-      new Date()
+      new Date(),
+      request.outputDirectory
     );
     const relativePath = await this.findAvailableRelativePath(project.path, baseRelativePath);
     const absolutePath = await this.electronService.pathJoin(project.path, relativePath);
@@ -230,7 +231,8 @@ export function buildGeneratedImagePath(
   imagesFolder: string,
   characterName: string,
   extension: string,
-  date: Date
+  date: Date,
+  directory?: string
 ): string {
   const pad = (value: number) => String(value).padStart(2, '0');
   const stamp =
@@ -238,6 +240,9 @@ export function buildGeneratedImagePath(
     `${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
   const safeName = asciiSlugify(characterName) || 'character';
   const safeExtension = extension.toLowerCase().replace(/[^a-z0-9]/g, '') || 'png';
-  const root = (imagesFolder || 'img').trim().replace(/^\/+|\/+$/g, '') || 'img';
-  return `${root}/@new/${safeName}-${stamp}.${safeExtension}`;
+  const root = (directory ?? `${imagesFolder || 'img'}/@new`)
+    .trim()
+    .replace(/^\/+|\/+$/g, '')
+    .replace(/\/{2,}/g, '/');
+  return `${root}/${safeName}-${stamp}.${safeExtension}`;
 }

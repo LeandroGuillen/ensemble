@@ -34,6 +34,17 @@ describe('ImageGenerationService path helpers', () => {
     expect(path).toBe('img/@new/jose-garcia-20260713-155100.png');
   });
 
+  it('writes into the provided thumbnail directory when one is given', () => {
+    const path = buildGeneratedImagePath(
+      'img',
+      'Dessir Galsea',
+      'png',
+      new Date(2026, 6, 13, 15, 51, 0),
+      'img/_pjs/zzz_all_cast/'
+    );
+    expect(path).toBe('img/_pjs/zzz_all_cast/dessir-galsea-20260713-155100.png');
+  });
+
   it('normalizes image-browser directories without allowing traversal', () => {
     expect(normalizeRelativeDirectory('/characters\\main/')).toBe('characters/main');
     expect(() => normalizeRelativeDirectory('../outside')).toThrowError(
