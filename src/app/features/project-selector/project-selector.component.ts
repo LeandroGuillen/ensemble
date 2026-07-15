@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ProjectService, ElectronService, LoggingService } from '../../core/services';
 import { LEGACY_METADATA_JSON_FILE } from '../../core/constants/project.constants';
+import { ModalService } from '../../core/services/modal.service';
 
 interface RecentProject {
   path: string;
@@ -36,6 +37,7 @@ export class ProjectSelectorComponent implements OnInit {
     private electronService: ElectronService,
     private router: Router,
     private logger: LoggingService
+    , private modalService: ModalService
   ) {}
 
   async ngOnInit(): Promise<void> {
@@ -263,8 +265,8 @@ export class ProjectSelectorComponent implements OnInit {
   /**
    * Clears all recent projects
    */
-  clearRecentProjects(): void {
-    if (confirm('Are you sure you want to clear all recent projects?')) {
+  async clearRecentProjects(): Promise<void> {
+    if (await this.modalService.confirm('Are you sure you want to clear all recent projects?')) {
       this.projectService.clearRecentProjects();
       this.recentProjects = [];
     }

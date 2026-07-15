@@ -1124,10 +1124,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
     this.pinboardService.debugLogPinboardState();
 
     // Compare them
-    const currentData = this.pinboardService.getPinboardData();
-    let storedData: any = null;
-    const sub = currentData.subscribe((data) => (storedData = data));
-    sub.unsubscribe();
+    const storedData = this.pinboardService.getCurrentPinboardDataSnapshot();
   }
 
   private redrawGrid(): void {
@@ -1458,14 +1455,8 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   updateFilteredCharacters(): void {
-    const currentPinboardData = this.pinboardService.getPinboardData();
-    let pinboardPins: string[] = [];
-
-    // Get current pins synchronously
-    const sub = currentPinboardData.subscribe(data => {
-      pinboardPins = data.nodes.map(node => node.id);
-    });
-    sub.unsubscribe();
+    const pinboardPins = this.pinboardService
+      .getCurrentPinboardDataSnapshot().nodes.map(node => node.id);
 
     // Filter out characters that are already on the pinboard
     let availableCharacters = this.characters.filter(char => !pinboardPins.includes(char.id));
@@ -1542,17 +1533,11 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
    */
   getUsedConnectionColors(): string[] {
     // Get current pinboard data from the observable
-    let colors: string[] = [];
-    const subscription = this.pinboardData$.pipe(take(1)).subscribe((data) => {
-      colors = [...new Set(
-        data.edges
-          .map(edge => edge.color)
-          .filter(color => color && color.trim() !== '')
-      )];
-    });
-    subscription.unsubscribe();
-    
-    return colors;
+    return [...new Set(
+      this.pinboardService.getCurrentPinboardDataSnapshot().edges
+        .map(edge => edge.color)
+        .filter(color => color && color.trim() !== '')
+    )];
   }
 
   /**
@@ -1560,17 +1545,11 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
    */
   getUsedLabelColors(): string[] {
     // Get current pinboard data from the observable
-    let colors: string[] = [];
-    const subscription = this.pinboardData$.pipe(take(1)).subscribe((data) => {
-      colors = [...new Set(
-        data.edges
-          .map(edge => edge.labelColor)
-          .filter((color): color is string => !!color && color.trim() !== '')
-      )];
-    });
-    subscription.unsubscribe();
-    
-    return colors;
+    return [...new Set(
+      this.pinboardService.getCurrentPinboardDataSnapshot().edges
+        .map(edge => edge.labelColor)
+        .filter((color): color is string => !!color && color.trim() !== '')
+    )];
   }
 
   private async loadThumbnailDataUrls(characters: Character[]): Promise<void> {
@@ -1606,18 +1585,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
    */
   private async refreshPinboardData(): Promise<void> {
     // Get current pinboard data
-    const currentPinboardData = this.pinboardService.getPinboardData();
-    let pinboardData: PinboardData | null = null;
-
-    // Get the current value synchronously
-    const subscription = currentPinboardData.subscribe((data) => {
-      pinboardData = data;
-    });
-    subscription.unsubscribe();
-
-    if (pinboardData) {
-      await this.updatePinboard(pinboardData);
-    }
+    await this.updatePinboard(this.pinboardService.getCurrentPinboardDataSnapshot());
   }
 
   /**

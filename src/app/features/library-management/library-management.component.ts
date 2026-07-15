@@ -12,6 +12,7 @@ import { MetadataService } from "../../core/services/metadata.service";
 import { ProjectService } from "../../core/services/project.service";
 import { LoggingService } from "../../core/services/logging.service";
 import { NotificationService } from "../../core/services/notification.service";
+import { ModalService } from "../../core/services/modal.service";
 import { Book } from "../../core/interfaces/project.interface";
 import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
 import { BookEditorComponent } from "./components/book-editor/book-editor.component";
@@ -101,6 +102,7 @@ export class LibraryManagementComponent implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private logger: LoggingService,
     private notificationService: NotificationService
+    , private modalService: ModalService
   ) {
     this.bookForm = this.fb.group({
       name: ["", [Validators.required, Validators.maxLength(200)]],
@@ -250,9 +252,9 @@ export class LibraryManagementComponent implements OnInit, OnDestroy {
 
   async deleteBook(book: Book): Promise<void> {
     if (
-      !confirm(
+      !(await this.modalService.confirm(
         `Are you sure you want to delete the book "${book.name}"?\n\nThis will remove the book from all characters that reference it. Characters themselves will not be deleted.`
-      )
+      ))
     ) {
       return;
     }

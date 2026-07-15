@@ -9,6 +9,7 @@ import { BackstageService } from "../../core/services/backstage.service";
 import { CharacterEditDialogService } from "../../core/services/character-edit-dialog.service";
 import { ElectronService } from "../../core/services/electron.service";
 import { LoggingService } from "../../core/services/logging.service";
+import { ModalService } from "../../core/services/modal.service";
 import {
   CharacterConcept,
   NameList,
@@ -69,6 +70,7 @@ export class BackstageComponent implements OnInit, OnDestroy {
     private sanitizer: DomSanitizer,
     private logger: LoggingService,
     private characterEditDialog: CharacterEditDialogService
+    , private modalService: ModalService
   ) {}
 
   ngOnInit(): void {
@@ -579,7 +581,7 @@ export class BackstageComponent implements OnInit, OnDestroy {
   }
 
   async deleteConcept(index: number): Promise<void> {
-    if (confirm("Are you sure you want to delete this concept?")) {
+    if (await this.modalService.confirm("Are you sure you want to delete this concept?")) {
       try {
         await this.backstageService.deleteConcept(index);
         // Clear selection if deleted item was selected
@@ -627,7 +629,7 @@ export class BackstageComponent implements OnInit, OnDestroy {
   }
 
   async deleteNameList(index: number): Promise<void> {
-    if (confirm("Are you sure you want to delete this name list?")) {
+    if (await this.modalService.confirm("Are you sure you want to delete this name list?")) {
       try {
         await this.backstageService.deleteNameList(index);
         // Clear selection if deleted item was selected

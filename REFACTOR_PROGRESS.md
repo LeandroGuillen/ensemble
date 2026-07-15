@@ -57,13 +57,13 @@ Git: one commit per batch. Verify with `npm run build` (and `npm test` if applic
 - [x] D3. Introduce `mutateMetadata(fn)` helper; collapse the pinboard mutation façades.
 - [ ] D4. (Optional) Extract `ProjectScopedLoader<T>` base shared by `CharacterService` and `CastService`. Deferred as optional follow-up.
 
-## Batch E — Component decomposition  ·  Status: [ ]
+## Batch E — Component decomposition  ·  Status: [~]
 - [ ] E1. Split `pinboard-view.component.ts` (1,866 lines): `PinboardNetworkService`, `PinboardCanvasInteractionService`, `PinAddDialogComponent`, `ConnectionEditDialogComponent`, `PinboardToolbarComponent`.
 - [ ] E2. Split `plot-board.component.ts` (1,616 lines): `PlotBoardSidebarComponent`, `ThreadToolbarDirective`, `CellEditorPopoverComponent`, shared `EmojiPickerComponent` / `ColorSwatchPickerComponent`, `PlotBoardReorderService`.
 - [ ] E3. Promote `character-detail` image picker to `shared/image-picker-dialog` + `ImagePickerService`; extract `CharacterPromptsEditorComponent`, `GeneratePortraitDialogComponent`.
-- [ ] E4. Replace 17 native `confirm()` with `modalService.confirm(...)`.
-- [ ] E5. Unify duplicated `getCategoryName/Color/Tooltip`, `getTagName/Color`, `getBookName/Color` via `MetadataHelperService`.
-- [ ] E6. Add `PinboardService.getCurrentPinboardDataSnapshot()`; remove 5 subscribe-then-unsubscribe blocks.
+- [~] E4. Replace native `confirm()` with `modalService.confirm(...)`; migrated confirmations in backstage, cast list/detail, library management, metadata management, and project selector. Remaining confirmations need follow-up.
+- [~] E5. `MetadataHelperService` is now used by character-list; remaining input-scoped component helpers need follow-up.
+- [x] E6. Add `PinboardService.getCurrentPinboardDataSnapshot()`; remove temporary subscribe-then-unsubscribe blocks from pinboard view.
 - [ ] E7. Pick one drag-drop mechanism (CDK or `ReorderableDirective`); collapse metadata-management category/tag duplicate.
 
 ## Batch F — Shared UI infra  ·  Status: [ ]

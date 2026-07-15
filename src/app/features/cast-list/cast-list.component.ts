@@ -18,6 +18,7 @@ import {
   ElectronService,
   ProjectService,
   LoggingService,
+  ModalService,
 } from "../../core/services";
 import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
 
@@ -53,6 +54,7 @@ export class CastListComponent implements OnInit, OnDestroy {
     private ngZone: NgZone,
     private cdr: ChangeDetectorRef,
     private logger: LoggingService
+    , private modalService: ModalService
   ) {}
 
   ngOnInit(): void {
@@ -255,7 +257,7 @@ export class CastListComponent implements OnInit, OnDestroy {
     event.stopPropagation();
 
     if (
-      confirm(
+      await this.modalService.confirm(
         `Are you sure you want to delete the cast "${cast.name}"?\n\nThis will not delete the characters themselves.`
       )
     ) {

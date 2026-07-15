@@ -13,6 +13,7 @@ import { ThemeService } from '../../core/services/theme.service';
 import { ColorPaletteService } from '../../core/services/color-palette.service';
 import { UpdateService, UpdateStatus } from '../../core/services/update.service';
 import { ZoomService } from '../../core/services/zoom.service';
+import { ModalService } from '../../core/services/modal.service';
 import { Category, Tag, ProjectSettings, CategoryFolderMode } from '../../core/interfaces/project.interface';
 import { Character } from '../../core/interfaces/character.interface';
 import { Theme } from '../../core/interfaces/theme.interface';
@@ -105,6 +106,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
     public zoomService: ZoomService,
     private fb: FormBuilder,
     private logger: LoggingService
+    , private modalService: ModalService
   ) {
     this.categoryForm = this.fb.group({
       name: ['', [Validators.required, Validators.maxLength(100)]],
@@ -295,7 +297,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
   }
 
   async deleteCategory(category: Category): Promise<void> {
-    if (!confirm(`Are you sure you want to delete the category "${category.name}"?`)) {
+    if (!(await this.modalService.confirm(`Are you sure you want to delete the category "${category.name}"?`))) {
       return;
     }
 
@@ -367,7 +369,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
   }
 
   async deleteTag(tag: Tag): Promise<void> {
-    if (!confirm(`Are you sure you want to delete the tag "${tag.name}"?`)) {
+    if (!(await this.modalService.confirm(`Are you sure you want to delete the tag "${tag.name}"?`))) {
       return;
     }
 
@@ -714,7 +716,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
   }
 
   async resetBaseColors(): Promise<void> {
-    if (!confirm('Reset all base colors to defaults? This cannot be undone.')) {
+    if (!(await this.modalService.confirm('Reset all base colors to defaults? This cannot be undone.'))) {
       return;
     }
     try {
@@ -748,7 +750,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
   }
 
   async removeExtraColor(color: string): Promise<void> {
-    if (!confirm(`Remove color ${color}?`)) {
+    if (!(await this.modalService.confirm(`Remove color ${color}?`))) {
       return;
     }
     try {
@@ -784,7 +786,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
     if (!this.currentTheme) {
       return;
     }
-    if (!confirm(`Remove color overrides for ${this.currentTheme.name} theme?`)) {
+    if (!(await this.modalService.confirm(`Remove color overrides for ${this.currentTheme.name} theme?`))) {
       return;
     }
     try {

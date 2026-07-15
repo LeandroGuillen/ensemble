@@ -76,6 +76,12 @@ export class PinboardService {
     return this.pinboardData$;
   }
 
+  /** Returns the current pinboard data without a temporary subscription. */
+  getCurrentPinboardDataSnapshot(): PinboardData {
+    const data = this.pinboardDataSubject.value;
+    return { nodes: [...data.nodes], edges: [...data.edges] };
+  }
+
   /**
    * Creates a new connection and saves to ensemble.json
    */

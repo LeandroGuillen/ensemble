@@ -25,6 +25,7 @@ import {
   CastService,
   LoggingService,
   NotificationService,
+  ModalService,
 } from "../../core/services";
 import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
 
@@ -78,6 +79,7 @@ export class CastDetailComponent implements OnInit, OnDestroy {
     private cdr: ChangeDetectorRef,
     private logger: LoggingService,
     private notificationService: NotificationService
+    , private modalService: ModalService
   ) {
     this.castForm = this.fb.group({
       name: ["", [Validators.required, Validators.maxLength(100)]],
@@ -439,7 +441,7 @@ export class CastDetailComponent implements OnInit, OnDestroy {
     if (!this.cast) return;
 
     if (
-      confirm(
+      await this.modalService.confirm(
         `Are you sure you want to delete the cast "${this.cast.name}"?\n\nThis will not delete the characters themselves.`
       )
     ) {
@@ -549,7 +551,7 @@ export class CastDetailComponent implements OnInit, OnDestroy {
   async removeThumbnail(): Promise<void> {
     if (!this.castThumbnail) return;
 
-    if (!confirm("Are you sure you want to remove the cast thumbnail?")) {
+    if (!(await this.modalService.confirm("Are you sure you want to remove the cast thumbnail?"))) {
       return;
     }
 
