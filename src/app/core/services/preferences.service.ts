@@ -43,11 +43,11 @@ export class PreferencesService {
     localStorage.setItem('characterSortDirection', direction);
   }
 
-  getGroupBy(): 'none' | 'category' | 'tag' {
+  getGroupBy(): 'none' | 'category' | 'tag' | 'cast' | 'book' {
     return (localStorage.getItem('characterGroupBy') as any) || 'none';
   }
 
-  setGroupBy(groupBy: 'none' | 'category' | 'tag'): void {
+  setGroupBy(groupBy: 'none' | 'category' | 'tag' | 'cast' | 'book'): void {
     localStorage.setItem('characterGroupBy', groupBy);
   }
 

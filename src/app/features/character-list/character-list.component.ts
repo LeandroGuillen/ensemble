@@ -84,7 +84,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   columns: 1 | 2 = 2; // Column count for views
   sortBy: 'name' | 'category' = 'name';
   sortDirection: 'asc' | 'desc' = 'asc';
-  groupBy: 'none' | 'category' | 'tag' = 'none'; // Group characters by category or tag
+  groupBy: 'none' | 'category' | 'tag' | 'cast' | 'book' = 'none';
   selectedCharacterIndex = -1; // Track selected character for keyboard navigation
   filterExpanded = false; // Track filter expanded state
   filtersSidebarOpen = true;
@@ -97,6 +97,8 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   isDraggingCharacter = false;
   private groupedCharacters: Array<{ categoryId: string; characters: Character[] }> = [];
   private groupedByTag: Array<{ tagId: string; characters: Character[] }> = [];
+  private groupedByCast: Array<{ castId: string; characters: Character[] }> = [];
+  private groupedByBook: Array<{ bookId: string; characters: Character[] }> = [];
 
   constructor(
     private characterService: CharacterService,
@@ -140,8 +142,20 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     }
 
     // Load saved groupBy preference
-    const savedGroupBy = localStorage.getItem('characterGroupBy') as 'none' | 'category' | 'tag';
-    if (savedGroupBy) {
+    const savedGroupBy = localStorage.getItem('characterGroupBy') as
+      | 'none'
+      | 'category'
+      | 'tag'
+      | 'cast'
+      | 'book'
+      | null;
+    if (
+      savedGroupBy === 'none' ||
+      savedGroupBy === 'category' ||
+      savedGroupBy === 'tag' ||
+      savedGroupBy === 'cast' ||
+      savedGroupBy === 'book'
+    ) {
       this.groupBy = savedGroupBy;
     }
 
@@ -891,7 +905,7 @@ getFilterSummary(): string {
     this.applyFilters();
   }
 
-  setGroupBy(groupBy: 'none' | 'category' | 'tag'): void {
+  setGroupBy(groupBy: 'none' | 'category' | 'tag' | 'cast' | 'book'): void {
     this.groupBy = groupBy;
     localStorage.setItem('characterGroupBy', this.groupBy);
     this.activeDropCategoryId = null;
@@ -966,6 +980,8 @@ getFilterSummary(): string {
   private recomputeGroups(): void {
     this.groupedCharacters = this.computeGroupedCharacters();
     this.groupedByTag = this.computeGroupedByTag();
+    this.groupedByCast = this.computeGroupedByCast();
+    this.groupedByBook = this.computeGroupedByBook();
   }
 
   private computeGroupedCharacters(): Array<{
@@ -1054,6 +1070,14 @@ getFilterSummary(): string {
     return this.groupedByTag;
   }
 
+  getGroupedByCast(): Array<{ castId: string; characters: Character[] }> {
+    return this.groupedByCast;
+  }
+
+  getGroupedByBook(): Array<{ bookId: string; characters: Character[] }> {
+    return this.groupedByBook;
+  }
+
   private computeGroupedByTag(): Array<{ tagId: string; characters: Character[] }> {
     const grouped = new Map<string, Character[]>();
 
@@ -1093,6 +1117,98 @@ getFilterSummary(): string {
       result.push({
         tagId: 'untagged',
         characters: grouped.get('untagged')!,
+      });
+    }
+
+    return result;
+  }
+
+  private computeGroupedByCast(): Array<{ castId: string; characters: Character[] }> {
+    const grouped = new Map<string, Character[]>();
+    const characterCastIds = new Map<string, string[]>();
+
+    for (const cast of this.casts) {
+      for (const characterId of cast.characterIds) {
+        const existing = characterCastIds.get(characterId) || [];
+        existing.push(cast.id);
+        characterCastIds.set(characterId, existing);
+      }
+    }
+
+    // Group characters by cast (characters can appear in multiple groups)
+    for (const character of this.filteredCharacters) {
+      const castIds = characterCastIds.get(character.id) || [];
+      if (castIds.length > 0) {
+        for (const castId of castIds) {
+          if (!grouped.has(castId)) {
+            grouped.set(castId, []);
+          }
+          grouped.get(castId)!.push(character);
+        }
+      } else {
+        if (!grouped.has('no-cast')) {
+          grouped.set('no-cast', []);
+        }
+        grouped.get('no-cast')!.push(character);
+      }
+    }
+
+    const result: Array<{ castId: string; characters: Character[] }> = [];
+
+    for (const cast of this.casts) {
+      if (grouped.has(cast.id)) {
+        result.push({
+          castId: cast.id,
+          characters: grouped.get(cast.id)!,
+        });
+      }
+    }
+
+    if (grouped.has('no-cast')) {
+      result.push({
+        castId: 'no-cast',
+        characters: grouped.get('no-cast')!,
+      });
+    }
+
+    return result;
+  }
+
+  private computeGroupedByBook(): Array<{ bookId: string; characters: Character[] }> {
+    const grouped = new Map<string, Character[]>();
+
+    // Group characters by book (characters can appear in multiple groups)
+    for (const character of this.filteredCharacters) {
+      if (character.books && character.books.length > 0) {
+        for (const bookId of character.books) {
+          if (!grouped.has(bookId)) {
+            grouped.set(bookId, []);
+          }
+          grouped.get(bookId)!.push(character);
+        }
+      } else {
+        if (!grouped.has('no-book')) {
+          grouped.set('no-book', []);
+        }
+        grouped.get('no-book')!.push(character);
+      }
+    }
+
+    const result: Array<{ bookId: string; characters: Character[] }> = [];
+
+    for (const book of this.books) {
+      if (grouped.has(book.id)) {
+        result.push({
+          bookId: book.id,
+          characters: grouped.get(book.id)!,
+        });
+      }
+    }
+
+    if (grouped.has('no-book')) {
+      result.push({
+        bookId: 'no-book',
+        characters: grouped.get('no-book')!,
       });
     }
 

@@ -47,6 +47,7 @@ export class MetadataHelperService {
 
   // Book helpers
   getBookName(bookId: string): string {
+    if (bookId === 'no-book') return 'No book';
     const books = this.projectService.getBooks();
     return books.find(b => b.id === bookId)?.name || bookId;
   }
@@ -58,9 +59,14 @@ export class MetadataHelperService {
 
   // Cast helpers
   getCastName(castId: string): string {
+    if (castId === 'no-cast') return 'No cast';
     const project = this.projectService.getCurrentProject();
     if (!project) return castId;
     const cast = project.metadata.casts?.find(c => c.id === castId);
     return cast?.name || castId;
+  }
+
+  getCastColor(castId: string): string {
+    return '#95a5a6';
   }
 }

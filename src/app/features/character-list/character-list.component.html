@@ -135,6 +135,8 @@
               <button class="toggle-option" [class.active]="groupBy === 'none'" (click)="setGroupBy('none')" title="No grouping">Flat</button>
               <button class="toggle-option" [class.active]="groupBy === 'category'" (click)="setGroupBy('category')" title="Group by category">Category</button>
               <button class="toggle-option" [class.active]="groupBy === 'tag'" (click)="setGroupBy('tag')" title="Group by tag">Tag</button>
+              <button class="toggle-option" [class.active]="groupBy === 'cast'" (click)="setGroupBy('cast')" title="Group by cast">Cast</button>
+              <button class="toggle-option" [class.active]="groupBy === 'book'" (click)="setGroupBy('book')" title="Group by book">Book</button>
             </div>
           </div>
 
@@ -469,6 +471,138 @@
                         ></app-character-compact-view>
                       }
                       <!-- Gallery View -->
+                      @if (viewMode === 'gallery') {
+                        <app-character-gallery-view
+                          [characters]="group.characters"
+                          [tags]="tags"
+                          [thumbnailDataUrls]="thumbnailDataUrls"
+                          [thumbnailSize]="galleryThumbnailSize"
+                          (characterClick)="onViewCharacterClick($event)"
+                        ></app-character-gallery-view>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+            <!-- Grouped View by Cast -->
+            @if (filteredCharacters.length > 0 && groupBy === 'cast') {
+              <div class="grouped-view">
+                @for (group of getGroupedByCast(); track group.castId) {
+                  <div class="category-group">
+                    <div
+                      class="category-tab"
+                      [style.background-color]="metadataHelper.getCastColor(group.castId)"
+                      [style.color]="getContrastTextColor(metadataHelper.getCastColor(group.castId))"
+                      >
+                      <div class="category-label-content">
+                        <span class="category-name">{{ metadataHelper.getCastName(group.castId) }}</span>
+                      </div>
+                    </div>
+                    <div class="category-content">
+                      @if (viewMode === 'grid') {
+                        <app-character-grid-view
+                          [characters]="group.characters"
+                          [categories]="categories"
+                          [tags]="tags"
+                          [selectedCharacterIndex]="selectedCharacterIndex"
+                          [thumbnailDataUrls]="thumbnailDataUrls"
+                          (characterClick)="onViewCharacterClick($event)"
+                          (characterDelete)="onViewCharacterDelete($event)"
+                        ></app-character-grid-view>
+                      }
+                      @if (viewMode === 'list') {
+                        <app-character-list-view
+                          [characters]="group.characters"
+                          [categories]="categories"
+                          [tags]="tags"
+                          [columns]="columns"
+                          [selectedCharacterIndex]="selectedCharacterIndex"
+                          [thumbnailDataUrls]="thumbnailDataUrls"
+                          (characterClick)="onViewCharacterClick($event)"
+                          (characterDelete)="onViewCharacterDelete($event)"
+                          (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
+                        ></app-character-list-view>
+                      }
+                      @if (viewMode === 'compact') {
+                        <app-character-compact-view
+                          [characters]="group.characters"
+                          [categories]="categories"
+                          [tags]="tags"
+                          [columns]="columns"
+                          [selectedCharacterIndex]="selectedCharacterIndex"
+                          [thumbnailDataUrls]="thumbnailDataUrls"
+                          (characterClick)="onViewCharacterClick($event)"
+                          (characterDelete)="onViewCharacterDelete($event)"
+                          (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
+                        ></app-character-compact-view>
+                      }
+                      @if (viewMode === 'gallery') {
+                        <app-character-gallery-view
+                          [characters]="group.characters"
+                          [tags]="tags"
+                          [thumbnailDataUrls]="thumbnailDataUrls"
+                          [thumbnailSize]="galleryThumbnailSize"
+                          (characterClick)="onViewCharacterClick($event)"
+                        ></app-character-gallery-view>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+            <!-- Grouped View by Book -->
+            @if (filteredCharacters.length > 0 && groupBy === 'book') {
+              <div class="grouped-view">
+                @for (group of getGroupedByBook(); track group.bookId) {
+                  <div class="category-group">
+                    <div
+                      class="category-tab"
+                      [style.background-color]="metadataHelper.getBookColor(group.bookId)"
+                      [style.color]="getContrastTextColor(metadataHelper.getBookColor(group.bookId))"
+                      >
+                      <div class="category-label-content">
+                        <span class="category-name">{{ metadataHelper.getBookName(group.bookId) }}</span>
+                      </div>
+                    </div>
+                    <div class="category-content">
+                      @if (viewMode === 'grid') {
+                        <app-character-grid-view
+                          [characters]="group.characters"
+                          [categories]="categories"
+                          [tags]="tags"
+                          [selectedCharacterIndex]="selectedCharacterIndex"
+                          [thumbnailDataUrls]="thumbnailDataUrls"
+                          (characterClick)="onViewCharacterClick($event)"
+                          (characterDelete)="onViewCharacterDelete($event)"
+                        ></app-character-grid-view>
+                      }
+                      @if (viewMode === 'list') {
+                        <app-character-list-view
+                          [characters]="group.characters"
+                          [categories]="categories"
+                          [tags]="tags"
+                          [columns]="columns"
+                          [selectedCharacterIndex]="selectedCharacterIndex"
+                          [thumbnailDataUrls]="thumbnailDataUrls"
+                          (characterClick)="onViewCharacterClick($event)"
+                          (characterDelete)="onViewCharacterDelete($event)"
+                          (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
+                        ></app-character-list-view>
+                      }
+                      @if (viewMode === 'compact') {
+                        <app-character-compact-view
+                          [characters]="group.characters"
+                          [categories]="categories"
+                          [tags]="tags"
+                          [columns]="columns"
+                          [selectedCharacterIndex]="selectedCharacterIndex"
+                          [thumbnailDataUrls]="thumbnailDataUrls"
+                          (characterClick)="onViewCharacterClick($event)"
+                          (characterDelete)="onViewCharacterDelete($event)"
+                          (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
+                        ></app-character-compact-view>
+                      }
                       @if (viewMode === 'gallery') {
                         <app-character-gallery-view
                           [characters]="group.characters"
