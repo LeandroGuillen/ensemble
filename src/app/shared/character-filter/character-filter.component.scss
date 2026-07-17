@@ -280,6 +280,10 @@
   .section-cast { z-index: 30; }
   .section-book { z-index: 20; }
   .section-pictures { z-index: 10; }
+
+  .pov-filter-row {
+    margin-top: 6px;
+  }
 }
 
 .sidebar-mode .filter-body {
@@ -307,6 +311,10 @@
     .filter-label {
       flex-shrink: 0;
     }
+  }
+
+  .pov-filter-row {
+    margin-top: 4px;
   }
 
   ::ng-deep {

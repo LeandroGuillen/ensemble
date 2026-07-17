@@ -97,6 +97,8 @@ export interface Book {
   publicationDate?: string;
   isbn?: string;
   coverImage?: string;
+  /** Character IDs that are PoV for this book (independent of category/tags). */
+  povCharacterIds?: string[];
 }
 
 export interface AiSettings {

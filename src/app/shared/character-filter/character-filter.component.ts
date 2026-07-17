@@ -15,6 +15,7 @@ export interface FilterState {
   selectedBook: string;
   /** '' = all, 'with' = has portrait for active style, 'without' = missing portrait */
   selectedPictureFilter: '' | 'with' | 'without';
+  povOnly: boolean;
 }
 
 @Component({
@@ -44,6 +45,7 @@ export class CharacterFilterComponent {
   @Input() selectedCast = '';
   @Input() selectedBook = '';
   @Input() selectedPictureFilter: '' | 'with' | 'without' = '';
+  @Input() povOnly = false;
   @Input() isExpanded = false;
   @Input() sidebar = false;
 
@@ -53,12 +55,17 @@ export class CharacterFilterComponent {
   @Output() castChange = new EventEmitter<string>();
   @Output() bookChange = new EventEmitter<string>();
   @Output() pictureFilterChange = new EventEmitter<'' | 'with' | 'without'>();
+  @Output() povOnlyChange = new EventEmitter<boolean>();
   @Output() clearFilters = new EventEmitter<void>();
   @Output() expandedChange = new EventEmitter<boolean>();
 
   readonly pictureFilterOptions: ToggleOption[] = [
     { id: 'with', name: 'With', tooltip: 'Characters that have a portrait for the current style' },
     { id: 'without', name: 'Without', tooltip: 'Characters missing a portrait for the current style' },
+  ];
+
+  readonly povFilterOptions: ToggleOption[] = [
+    { id: 'pov', name: 'PoV only', tooltip: 'Show only point-of-view characters for the selected book (or any book)' },
   ];
 
   constructor(private host: ElementRef<HTMLElement>) {}
@@ -112,6 +119,10 @@ export class CharacterFilterComponent {
   onPictureFilterChange(value: string): void {
     const next = value === 'with' || value === 'without' ? value : '';
     this.pictureFilterChange.emit(next);
+  }
+
+  onPovFilterChange(value: string): void {
+    this.povOnlyChange.emit(value === 'pov');
   }
 
   onClearFilters(): void {
@@ -190,6 +201,10 @@ export class CharacterFilterComponent {
       filters.push(this.getBookName(this.selectedBook));
     }
 
+    if (this.povOnly) {
+      filters.push('PoV only');
+    }
+
     if (this.selectedPictureFilter === 'with') {
       filters.push('With pictures');
     } else if (this.selectedPictureFilter === 'without') {
@@ -205,6 +220,7 @@ export class CharacterFilterComponent {
       this.selectedTags.length > 0 ||
       this.selectedCast ||
       this.selectedBook ||
+      this.povOnly ||
       this.selectedPictureFilter
     );
   }

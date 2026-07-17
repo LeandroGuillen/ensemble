@@ -70,6 +70,11 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   selectedCast = '';
   selectedBook = '';
   selectedPictureFilter: '' | 'with' | 'without' = '';
+  povOnly = false;
+  /** Character IDs that should show a PoV badge under current book context. */
+  povCharacterIdSet = new Set<string>();
+  /** Badge color for PoV pills (book color when a book is selected, else accent). */
+  povBadgeColor = 'var(--color-accent-primary)';
   selectedCharacterIds: string[] = [];
   showCastNameForm = false;
   newCastName = '';
@@ -196,6 +201,10 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     if (savedPictureFilter === 'with' || savedPictureFilter === 'without') {
       this.selectedPictureFilter = savedPictureFilter;
     }
+    const savedPovOnly = localStorage.getItem('characterPovOnly');
+    if (savedPovOnly === 'true') {
+      this.povOnly = true;
+    }
 
     // Register command palette commands
     this.registerCommands();
@@ -207,6 +216,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       this.tags = this.projectService.getTags();
       this.casts = this.metadataService.getCasts();
       this.books = this.metadataService.getBooks();
+      this.recomputePovBadgeState();
       this.recomputeGroups();
       this.updateCategoryDropListIds();
 
@@ -530,6 +540,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   onBookChange(): void {
     // Save selected book to localStorage
     localStorage.setItem('characterSelectedBook', this.selectedBook);
+    this.recomputePovBadgeState();
     this.applyFilters();
   }
 
@@ -538,6 +549,16 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       localStorage.setItem('characterPictureFilter', this.selectedPictureFilter);
     } else {
       localStorage.removeItem('characterPictureFilter');
+    }
+    this.applyFilters();
+  }
+
+  onPovOnlyChange(povOnly: boolean): void {
+    this.povOnly = povOnly;
+    if (povOnly) {
+      localStorage.setItem('characterPovOnly', 'true');
+    } else {
+      localStorage.removeItem('characterPovOnly');
     }
     this.applyFilters();
   }
@@ -560,6 +581,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     this.selectedCast = '';
     this.selectedBook = '';
     this.selectedPictureFilter = '';
+    this.povOnly = false;
     // Clear saved filter state
     localStorage.removeItem('characterSearchTerm');
     localStorage.removeItem('characterSelectedCategory');
@@ -567,6 +589,8 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     localStorage.removeItem('characterSelectedCast');
     localStorage.removeItem('characterSelectedBook');
     localStorage.removeItem('characterPictureFilter');
+    localStorage.removeItem('characterPovOnly');
+    this.recomputePovBadgeState();
     this.applyFilters();
   }
 
@@ -634,8 +658,16 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       }
 
       // Book filter - character must be assigned to the selected book
-      if (this.selectedBook) {
+      // Skipped when PoV-only is on: the PoV list for that book is authoritative.
+      if (this.selectedBook && !this.povOnly) {
         if (!character.books || !character.books.includes(this.selectedBook)) {
+          return false;
+        }
+      }
+
+      // PoV-only filter
+      if (this.povOnly) {
+        if (!this.isCharacterPov(character.id)) {
           return false;
         }
       }
@@ -656,6 +688,30 @@ export class CharacterListComponent implements OnInit, OnDestroy {
 
       return true;
     });
+  }
+
+  /** Whether a character is PoV under the current book filter context. */
+  isCharacterPov(characterId: string): boolean {
+    return this.povCharacterIdSet.has(characterId);
+  }
+
+  private recomputePovBadgeState(): void {
+    const ids = new Set<string>();
+    if (this.selectedBook) {
+      const book = this.books.find((b) => b.id === this.selectedBook);
+      for (const id of book?.povCharacterIds || []) {
+        ids.add(id);
+      }
+      this.povBadgeColor = book?.color || 'var(--color-accent-primary)';
+    } else {
+      for (const book of this.books) {
+        for (const id of book.povCharacterIds || []) {
+          ids.add(id);
+        }
+      }
+      this.povBadgeColor = 'var(--color-accent-primary)';
+    }
+    this.povCharacterIdSet = ids;
   }
 
 

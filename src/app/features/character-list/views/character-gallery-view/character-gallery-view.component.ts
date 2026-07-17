@@ -15,12 +15,20 @@ export class CharacterGalleryViewComponent {
   @Input() thumbnailDataUrls: Map<string, string> = new Map();
   @Input() thumbnailSize: 'big' | 'medium' | 'small' = 'big';
   @Input() dndEnabled = false;
+  /** Character IDs that are PoV under the current book filter context. */
+  @Input() povCharacterIds: Set<string> = new Set();
+  /** Color for the PoV badge pill. */
+  @Input() povBadgeColor = 'var(--color-accent-primary)';
 
   @Output() characterClick = new EventEmitter<Character>();
   @Output() dragStarted = new EventEmitter<void>();
   @Output() dragEnded = new EventEmitter<void>();
 
   private dragInProgress = false;
+
+  isPov(character: Character): boolean {
+    return this.povCharacterIds.has(character.id);
+  }
 
   getCharacterThumbnailDataUrl(character: Character): string | null {
     return this.thumbnailDataUrls.get(character.id) || null;

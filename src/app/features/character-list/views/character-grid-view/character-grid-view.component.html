@@ -43,7 +43,12 @@
         }
       </div>
       <div class="character-info">
-        <h3 class="character-name">{{ character.name }}</h3>
+        <h3 class="character-name">
+          {{ character.name }}
+          @if (isPov(character)) {
+            <span class="pov-star" [style.color]="povBadgeColor" title="Point of view character" aria-label="Point of view character">★</span>
+          }
+        </h3>
         <p
           class="character-category"
           [style.color]="getCategoryColor(getDisplayCategoryId(character))"

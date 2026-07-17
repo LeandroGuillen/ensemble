@@ -557,6 +557,39 @@ export class MetadataService {
   }
 
   /**
+   * Removes a character id from every book's povCharacterIds (e.g. after character delete).
+   */
+  async removeCharacterFromBookPovs(characterId: string): Promise<void> {
+    const metadata = this.metadataSubject.value;
+    if (!metadata) {
+      return;
+    }
+
+    const books = metadata.books || [];
+    let changed = false;
+    const updatedBooks = books.map((book) => {
+      const ids = book.povCharacterIds;
+      if (!ids || !ids.includes(characterId)) {
+        return book;
+      }
+      changed = true;
+      return {
+        ...book,
+        povCharacterIds: ids.filter((id) => id !== characterId),
+      };
+    });
+
+    if (!changed) {
+      return;
+    }
+
+    await this.saveMetadata({
+      ...metadata,
+      books: updatedBooks,
+    });
+  }
+
+  /**
    * Removes a book and cleans up character references
    */
   async removeBook(id: string): Promise<void> {

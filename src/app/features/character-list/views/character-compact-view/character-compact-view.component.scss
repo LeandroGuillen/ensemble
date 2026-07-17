@@ -110,6 +110,17 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 200px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.pov-star {
+  flex-shrink: 0;
+  display: inline-block;
+  font-size: 0.8125rem;
+  line-height: 1;
+  cursor: default;
 }
 
 .compact-item-category {

@@ -2,6 +2,10 @@ import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChange
 
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Book } from '../../../../core/interfaces/project.interface';
+import { Character } from '../../../../core/interfaces/character.interface';
+import { CharacterPickerService } from '../../../../core/services/character-picker.service';
+import { CharacterService } from '../../../../core/services/character.service';
+import { ProjectService } from '../../../../core/services/project.service';
 
 interface BookFormData {
   name: string;
@@ -11,6 +15,13 @@ interface BookFormData {
   publicationDate?: string;
   isbn?: string;
   coverImage?: string;
+  povCharacterIds?: string[];
+}
+
+interface PovCharacterDisplay {
+  id: string;
+  name: string;
+  thumbnail: string | null;
 }
 
 @Component({
@@ -30,6 +41,9 @@ export class BookEditorComponent implements OnInit, OnChanges {
   bookForm: FormGroup;
   isEditMode = false;
   private mouseDownOnOverlay = false;
+  povCharacterIds: string[] = [];
+  povCharacters: PovCharacterDisplay[] = [];
+  pickingPov = false;
 
   // Color presets - distinct and visually unique colors
   colorPresets = [
@@ -59,7 +73,12 @@ export class BookEditorComponent implements OnInit, OnChanges {
     { value: 'on-hold', label: 'On Hold' }
   ];
 
-  constructor(private fb: FormBuilder) {
+  constructor(
+    private fb: FormBuilder,
+    private characterPicker: CharacterPickerService,
+    private characterService: CharacterService,
+    private projectService: ProjectService
+  ) {
     this.bookForm = this.fb.group({
       name: ['', [Validators.required, Validators.maxLength(200)]],
       color: ['#3498db', [Validators.required, Validators.pattern(/^#[0-9A-Fa-f]{6}$/)]],
@@ -73,7 +92,7 @@ export class BookEditorComponent implements OnInit, OnChanges {
 
   @HostListener('document:keydown.escape', ['$event'])
   onEscapeKey(event: Event): void {
-    if (this.isVisible) {
+    if (this.isVisible && !this.pickingPov) {
       event.preventDefault();
       this.onCancel();
     }
@@ -91,7 +110,7 @@ export class BookEditorComponent implements OnInit, OnChanges {
 
   private initializeForm(): void {
     this.isEditMode = !!this.book;
-    
+
     if (this.book) {
       this.bookForm.patchValue({
         name: this.book.name,
@@ -102,6 +121,7 @@ export class BookEditorComponent implements OnInit, OnChanges {
         isbn: this.book.isbn || '',
         coverImage: this.book.coverImage || ''
       });
+      this.povCharacterIds = [...(this.book.povCharacterIds || [])];
     } else {
       this.bookForm.reset({
         name: '',
@@ -112,7 +132,62 @@ export class BookEditorComponent implements OnInit, OnChanges {
         isbn: '',
         coverImage: ''
       });
+      this.povCharacterIds = [];
     }
+
+    void this.refreshPovCharacters();
+  }
+
+  private async refreshPovCharacters(): Promise<void> {
+    const project = this.projectService.getCurrentProject();
+    if (project?.path) {
+      await this.characterService.loadCharacters(project.path);
+    }
+
+    const styleId = this.projectService.getDefaultCharacterStyle();
+    const known: Character[] = [];
+
+    for (const id of this.povCharacterIds) {
+      const character = this.characterService.getCharacterById(id);
+      if (character) {
+        known.push(character);
+      }
+    }
+
+    if (known.length > 0) {
+      await this.characterService.loadThumbnailsForCharacters(known);
+    }
+
+    this.povCharacters = this.povCharacterIds.map((id) => {
+      const character = this.characterService.getCharacterById(id);
+      if (!character) {
+        return { id, name: id, thumbnail: null };
+      }
+      return {
+        id,
+        name: character.name,
+        thumbnail: this.characterService.getCachedThumbnail(id, styleId) || null,
+      };
+    });
+  }
+
+  async onAddPovCharacter(): Promise<void> {
+    this.pickingPov = true;
+    try {
+      const picked = await this.characterPicker.pick();
+      if (!picked || this.povCharacterIds.includes(picked.id)) {
+        return;
+      }
+      this.povCharacterIds = [...this.povCharacterIds, picked.id];
+      await this.refreshPovCharacters();
+    } finally {
+      this.pickingPov = false;
+    }
+  }
+
+  onRemovePovCharacter(characterId: string): void {
+    this.povCharacterIds = this.povCharacterIds.filter((id) => id !== characterId);
+    this.povCharacters = this.povCharacters.filter((c) => c.id !== characterId);
   }
 
   onSave(): void {
@@ -121,7 +196,10 @@ export class BookEditorComponent implements OnInit, OnChanges {
       return;
     }
 
-    const formData: BookFormData = this.bookForm.value;
+    const formData: BookFormData = {
+      ...this.bookForm.value,
+      povCharacterIds: [...this.povCharacterIds],
+    };
     this.save.emit(formData);
   }
 

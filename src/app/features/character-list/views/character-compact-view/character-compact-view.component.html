@@ -42,7 +42,12 @@
       </div>
       <div class="compact-item-content">
         <div class="compact-item-main">
-          <h3 class="compact-item-name">{{ character.name }}</h3>
+          <h3 class="compact-item-name">
+            {{ character.name }}
+            @if (isPov(character)) {
+              <span class="pov-star" [style.color]="povBadgeColor" title="Point of view character" aria-label="Point of view character">★</span>
+            }
+          </h3>
           <span class="compact-item-category" [style.color]="getCategoryColor(getDisplayCategoryId(character))">
             {{ getCategoryName(getDisplayCategoryId(character)) }}
           </span>

@@ -6,6 +6,7 @@ import { ProjectService } from './project.service';
 import { FileWatcherService } from './file-watcher.service';
 import { LoggingService } from './logging.service';
 import { NotificationService } from './notification.service';
+import { MetadataService } from './metadata.service';
 import { Project, ProjectMetadata } from '../interfaces/project.interface';
 import { Character, CharacterFormData } from '../interfaces/character.interface';
 
@@ -16,6 +17,7 @@ describe('CharacterService', () => {
   let fileWatcherService: jasmine.SpyObj<FileWatcherService>;
   let loggingService: jasmine.SpyObj<LoggingService>;
   let notificationService: jasmine.SpyObj<NotificationService>;
+  let metadataService: jasmine.SpyObj<MetadataService>;
 
   const createValidProject = (): Project => ({
     path: '/test/project',
@@ -76,6 +78,8 @@ describe('CharacterService', () => {
     });
     const loggingSpy = jasmine.createSpyObj('LoggingService', ['log', 'error']);
     const notificationSpy = jasmine.createSpyObj('NotificationService', ['showError']);
+    const metadataSpy = jasmine.createSpyObj('MetadataService', ['removeCharacterFromBookPovs']);
+    metadataSpy.removeCharacterFromBookPovs.and.returnValue(Promise.resolve());
 
     TestBed.configureTestingModule({
       providers: [
@@ -84,7 +88,8 @@ describe('CharacterService', () => {
         { provide: ProjectService, useValue: projectSpy },
         { provide: FileWatcherService, useValue: fileWatcherSpy },
         { provide: LoggingService, useValue: loggingSpy },
-        { provide: NotificationService, useValue: notificationSpy }
+        { provide: NotificationService, useValue: notificationSpy },
+        { provide: MetadataService, useValue: metadataSpy }
       ]
     });
 
@@ -94,6 +99,7 @@ describe('CharacterService', () => {
     fileWatcherService = TestBed.inject(FileWatcherService) as jasmine.SpyObj<FileWatcherService>;
     loggingService = TestBed.inject(LoggingService) as jasmine.SpyObj<LoggingService>;
     notificationService = TestBed.inject(NotificationService) as jasmine.SpyObj<NotificationService>;
+    metadataService = TestBed.inject(MetadataService) as jasmine.SpyObj<MetadataService>;
 
     electronService.isElectron.and.returnValue(true);
     projectService.getCharactersFolderPath.and.returnValue('/test/project/characters');
@@ -416,6 +422,7 @@ describe('CharacterService', () => {
       const characters = (service as any).charactersSubject.value;
       expect(characters.find((c: Character) => c.id === 'main-character/_test-character.md')).toBeUndefined();
       expect(electronService.deleteFile).toHaveBeenCalled();
+      expect(metadataService.removeCharacterFromBookPovs).toHaveBeenCalledWith('main-character/_test-character.md');
     });
 
     it('should return false when character does not exist', async () => {

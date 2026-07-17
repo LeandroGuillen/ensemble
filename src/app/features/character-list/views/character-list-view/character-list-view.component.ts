@@ -21,6 +21,10 @@ export class CharacterListViewComponent {
   @Input() thumbnailDataUrls: Map<string, string> = new Map();
   /** When set, category labels use the book-specific override if present. */
   @Input() categoryContextBookId = '';
+  /** Character IDs that are PoV under the current book filter context. */
+  @Input() povCharacterIds: Set<string> = new Set();
+  /** Color for the PoV badge pill. */
+  @Input() povBadgeColor = 'var(--color-accent-primary)';
 
   @Output() characterClick = new EventEmitter<Character>();
   @Output() characterDelete = new EventEmitter<{ character: Character; event: Event }>();
@@ -35,6 +39,10 @@ export class CharacterListViewComponent {
 
   getDisplayCategoryId(character: Character): string {
     return resolveEffectiveCategory(character, this.categoryContextBookId);
+  }
+
+  isPov(character: Character): boolean {
+    return this.povCharacterIds.has(character.id);
   }
 
   getCategoryName(categoryId: string): string {

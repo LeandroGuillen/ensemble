@@ -152,6 +152,49 @@
           }
         </div>
 
+        <!-- PoV Characters -->
+        <div class="form-group pov-section">
+          <div class="pov-header">
+            <label>PoV Characters</label>
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm"
+              (click)="onAddPovCharacter()"
+              [disabled]="saving || pickingPov"
+              >
+              {{ pickingPov ? 'Picking…' : 'Add' }}
+            </button>
+          </div>
+          @if (povCharacters.length === 0) {
+            <p class="pov-empty">No PoV characters assigned yet.</p>
+          }
+          @if (povCharacters.length > 0) {
+            <ul class="pov-list">
+              @for (character of povCharacters; track character.id) {
+                <li class="pov-item">
+                  <div class="pov-thumb">
+                    @if (character.thumbnail) {
+                      <img [src]="character.thumbnail" [alt]="character.name" />
+                    } @else {
+                      <div class="pov-thumb-placeholder">👤</div>
+                    }
+                  </div>
+                  <span class="pov-name" [title]="character.id">{{ character.name }}</span>
+                  <button
+                    type="button"
+                    class="pov-remove"
+                    (click)="onRemovePovCharacter(character.id)"
+                    title="Remove PoV"
+                    aria-label="Remove PoV"
+                    >
+                    ×
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+
         <!-- Form Actions -->
         <div class="form-actions">
           <div class="action-group">

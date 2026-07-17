@@ -13,6 +13,7 @@ import { ElectronService } from './electron.service';
 import { FileWatcherService } from './file-watcher.service';
 import { ProjectService } from './project.service';
 import { LoggingService } from './logging.service';
+import { MetadataService } from './metadata.service';
 
 /** Coerces a raw frontmatter `prompts` value into a clean CharacterPrompt[]. */
 function normalizePrompts(raw: unknown): CharacterPrompt[] {
@@ -41,7 +42,8 @@ export class CharacterService {
     private electronService: ElectronService,
     private projectService: ProjectService,
     private fileWatcherService: FileWatcherService,
-    private logger: LoggingService
+    private logger: LoggingService,
+    private metadataService: MetadataService
   ) {
     // Subscribe to file changes to auto-reload characters
     this.fileWatcherService.fileChanges$.subscribe((event) => {
@@ -501,6 +503,12 @@ export class CharacterService {
       // Update in-memory list
       const filteredCharacters = characters.filter((char) => char.id !== id);
       this.charactersSubject.next(filteredCharacters);
+
+      try {
+        await this.metadataService.removeCharacterFromBookPovs(id);
+      } catch (cleanupError) {
+        this.logger.error('Failed to remove deleted character from book PoV lists', cleanupError);
+      }
 
       return true;
     } catch (error) {

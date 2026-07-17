@@ -22,10 +22,11 @@ interface BookFormData {
   name: string;
   color: string;
   description?: string;
-  status?: "draft" | "in-progress" | "published" | "archived";
+  status?: "draft" | "in-progress" | "complete" | "published" | "on-hold" | "archived";
   publicationDate?: string;
   isbn?: string;
   coverImage?: string;
+  povCharacterIds?: string[];
 }
 
 @Component({
@@ -187,9 +188,9 @@ export class LibraryManagementComponent implements OnInit, OnDestroy {
     this.showEditBookForm(book);
   }
 
-  onEditorSave(formData: any): void {
+  onEditorSave(formData: BookFormData): void {
     this.bookForm.patchValue(formData);
-    this.saveBook();
+    this.saveBook(formData);
   }
 
   onEditorCancel(): void {
@@ -221,8 +222,8 @@ export class LibraryManagementComponent implements OnInit, OnDestroy {
     this.bookForm.reset();
   }
 
-  async saveBook(): Promise<void> {
-    if (this.bookForm.invalid) {
+  async saveBook(editorData?: BookFormData): Promise<void> {
+    if (this.bookForm.invalid && !editorData) {
       this.markFormGroupTouched(this.bookForm);
       return;
     }
@@ -231,13 +232,31 @@ export class LibraryManagementComponent implements OnInit, OnDestroy {
       this.saving = true;
       this.error = null;
 
-      const formData: BookFormData = this.bookForm.value;
+      const formData: BookFormData = {
+        ...this.bookForm.value,
+        ...(editorData || {}),
+        povCharacterIds: editorData?.povCharacterIds ?? this.editingBook?.povCharacterIds ?? [],
+      };
+
+      // Map editor-only status values onto Book.status
+      const statusMap: Record<string, Book['status']> = {
+        draft: 'draft',
+        'in-progress': 'in-progress',
+        published: 'published',
+        archived: 'archived',
+        complete: 'published',
+        'on-hold': 'archived',
+      };
+      const bookPayload = {
+        ...formData,
+        status: formData.status ? statusMap[formData.status] : undefined,
+      };
 
       if (this.editingBook) {
-        await this.metadataService.updateBook(this.editingBook.id, formData);
+        await this.metadataService.updateBook(this.editingBook.id, bookPayload);
         this.notificationService.showSuccess("Book updated successfully");
       } else {
-        await this.metadataService.addBook(formData);
+        await this.metadataService.addBook(bookPayload);
         this.notificationService.showSuccess("Book created successfully");
       }
 

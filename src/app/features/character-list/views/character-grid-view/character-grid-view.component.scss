@@ -81,6 +81,17 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pov-star {
+  flex-shrink: 0;
+  display: inline-block;
+  font-size: 0.875rem;
+  line-height: 1;
+  cursor: default;
 }
 
 .character-category {

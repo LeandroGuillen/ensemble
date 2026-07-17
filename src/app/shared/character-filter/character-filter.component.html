@@ -111,6 +111,14 @@
             [characterCounts]="getBookCharacterCounts()"
             (bookChange)="selectedBook = $event; onBookChange()"
           ></app-book-selector>
+          <div class="pov-filter-row">
+            <app-category-toggle
+              [options]="povFilterOptions"
+              [selectedValue]="povOnly ? 'pov' : ''"
+              [emptyLabel]="'All'"
+              (valueChange)="onPovFilterChange($event)"
+            ></app-category-toggle>
+          </div>
         </div>
       }
       <!-- Picture Filter -->

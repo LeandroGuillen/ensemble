@@ -405,6 +405,23 @@ export class ProjectValidator {
       }
     }
 
+    // PoV character IDs (optional string array)
+    if (book.povCharacterIds !== undefined && book.povCharacterIds !== null) {
+      if (!Array.isArray(book.povCharacterIds)) {
+        errors.push({
+          field: 'povCharacterIds',
+          message: 'PoV character IDs must be an array',
+          code: 'INVALID_TYPE'
+        });
+      } else if (book.povCharacterIds.some((id) => typeof id !== 'string' || id.trim().length === 0)) {
+        errors.push({
+          field: 'povCharacterIds',
+          message: 'PoV character IDs must be non-empty strings',
+          code: 'INVALID_VALUE'
+        });
+      }
+    }
+
     return {
       isValid: errors.length === 0,
       errors

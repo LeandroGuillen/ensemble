@@ -114,6 +114,18 @@
       color: rgba(255, 255, 255, 0.4);
     }
   }
+
+  .gallery-pov-star {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    z-index: 2;
+    display: inline-block;
+    font-size: 1.125rem;
+    line-height: 1;
+    cursor: default;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+  }
 }
 
 .gallery-name {

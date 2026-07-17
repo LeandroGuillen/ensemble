@@ -80,12 +80,14 @@
             [selectedCast]="selectedCast"
             [selectedBook]="selectedBook"
             [selectedPictureFilter]="selectedPictureFilter"
+            [povOnly]="povOnly"
             (searchTermChange)="searchTerm = $event; onSearchChange()"
             (categoryChange)="selectedCategory = $event; onCategoryChange()"
             (tagsChange)="selectedTags = $event; onTagsSelectionChange($event)"
             (castChange)="selectedCast = $event; onCastChange()"
             (bookChange)="selectedBook = $event; onBookChange()"
             (pictureFilterChange)="selectedPictureFilter = $event; onPictureFilterChange()"
+            (povOnlyChange)="onPovOnlyChange($event)"
             (clearFilters)="clearFilters()"
           ></app-character-filter>
         </div>
@@ -348,6 +350,8 @@
                           [dndEnabled]="isCategoryDragDropEnabled()"
                           [selectedCharacterIndex]="selectedCharacterIndex"
                           [thumbnailDataUrls]="thumbnailDataUrls"
+                          [povCharacterIds]="povCharacterIdSet"
+                          [povBadgeColor]="povBadgeColor"
                           (characterClick)="onViewCharacterClick($event)"
                           (characterDelete)="onViewCharacterDelete($event)"
                           (dragStarted)="onAnyCharacterDragStarted()"
@@ -365,6 +369,8 @@
                           [columns]="columns"
                           [selectedCharacterIndex]="selectedCharacterIndex"
                           [thumbnailDataUrls]="thumbnailDataUrls"
+                          [povCharacterIds]="povCharacterIdSet"
+                          [povBadgeColor]="povBadgeColor"
                           (characterClick)="onViewCharacterClick($event)"
                           (characterDelete)="onViewCharacterDelete($event)"
               (characterSelectionToggle)="
@@ -385,6 +391,8 @@
                           [columns]="columns"
                           [selectedCharacterIndex]="selectedCharacterIndex"
                           [thumbnailDataUrls]="thumbnailDataUrls"
+                          [povCharacterIds]="povCharacterIdSet"
+                          [povBadgeColor]="povBadgeColor"
                           (characterClick)="onViewCharacterClick($event)"
                           (characterDelete)="onViewCharacterDelete($event)"
               (characterSelectionToggle)="
@@ -401,6 +409,8 @@
                           [tags]="tags"
                           [dndEnabled]="isCategoryDragDropEnabled()"
                           [thumbnailDataUrls]="thumbnailDataUrls"
+                          [povCharacterIds]="povCharacterIdSet"
+                          [povBadgeColor]="povBadgeColor"
                           [thumbnailSize]="galleryThumbnailSize"
                           (characterClick)="onViewCharacterClick($event)"
                           (dragStarted)="onAnyCharacterDragStarted()"
@@ -438,6 +448,8 @@
                           [tags]="tags"
                           [selectedCharacterIndex]="selectedCharacterIndex"
                           [thumbnailDataUrls]="thumbnailDataUrls"
+                          [povCharacterIds]="povCharacterIdSet"
+                          [povBadgeColor]="povBadgeColor"
                           (characterClick)="onViewCharacterClick($event)"
                           (characterDelete)="onViewCharacterDelete($event)"
                         ></app-character-grid-view>
@@ -452,6 +464,8 @@
                           [columns]="columns"
                           [selectedCharacterIndex]="selectedCharacterIndex"
                           [thumbnailDataUrls]="thumbnailDataUrls"
+                          [povCharacterIds]="povCharacterIdSet"
+                          [povBadgeColor]="povBadgeColor"
                           (characterClick)="onViewCharacterClick($event)"
                           (characterDelete)="onViewCharacterDelete($event)"
               (characterSelectionToggle)="
@@ -469,6 +483,8 @@
                           [columns]="columns"
                           [selectedCharacterIndex]="selectedCharacterIndex"
                           [thumbnailDataUrls]="thumbnailDataUrls"
+                          [povCharacterIds]="povCharacterIdSet"
+                          [povBadgeColor]="povBadgeColor"
                           (characterClick)="onViewCharacterClick($event)"
                           (characterDelete)="onViewCharacterDelete($event)"
               (characterSelectionToggle)="
@@ -482,6 +498,8 @@
                           [characters]="group.characters"
                           [tags]="tags"
                           [thumbnailDataUrls]="thumbnailDataUrls"
+                          [povCharacterIds]="povCharacterIdSet"
+                          [povBadgeColor]="povBadgeColor"
                           [thumbnailSize]="galleryThumbnailSize"
                           (characterClick)="onViewCharacterClick($event)"
                         ></app-character-gallery-view>
@@ -514,6 +532,8 @@
                           [tags]="tags"
                           [selectedCharacterIndex]="selectedCharacterIndex"
                           [thumbnailDataUrls]="thumbnailDataUrls"
+                          [povCharacterIds]="povCharacterIdSet"
+                          [povBadgeColor]="povBadgeColor"
                           (characterClick)="onViewCharacterClick($event)"
                           (characterDelete)="onViewCharacterDelete($event)"
                         ></app-character-grid-view>
@@ -527,6 +547,8 @@
                           [columns]="columns"
                           [selectedCharacterIndex]="selectedCharacterIndex"
                           [thumbnailDataUrls]="thumbnailDataUrls"
+                          [povCharacterIds]="povCharacterIdSet"
+                          [povBadgeColor]="povBadgeColor"
                           (characterClick)="onViewCharacterClick($event)"
                           (characterDelete)="onViewCharacterDelete($event)"
                           (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
@@ -541,6 +563,8 @@
                           [columns]="columns"
                           [selectedCharacterIndex]="selectedCharacterIndex"
                           [thumbnailDataUrls]="thumbnailDataUrls"
+                          [povCharacterIds]="povCharacterIdSet"
+                          [povBadgeColor]="povBadgeColor"
                           (characterClick)="onViewCharacterClick($event)"
                           (characterDelete)="onViewCharacterDelete($event)"
                           (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
@@ -551,6 +575,8 @@
                           [characters]="group.characters"
                           [tags]="tags"
                           [thumbnailDataUrls]="thumbnailDataUrls"
+                          [povCharacterIds]="povCharacterIdSet"
+                          [povBadgeColor]="povBadgeColor"
                           [thumbnailSize]="galleryThumbnailSize"
                           (characterClick)="onViewCharacterClick($event)"
                         ></app-character-gallery-view>
@@ -583,6 +609,8 @@
                           [tags]="tags"
                           [selectedCharacterIndex]="selectedCharacterIndex"
                           [thumbnailDataUrls]="thumbnailDataUrls"
+                          [povCharacterIds]="povCharacterIdSet"
+                          [povBadgeColor]="povBadgeColor"
                           (characterClick)="onViewCharacterClick($event)"
                           (characterDelete)="onViewCharacterDelete($event)"
                         ></app-character-grid-view>
@@ -596,6 +624,8 @@
                           [columns]="columns"
                           [selectedCharacterIndex]="selectedCharacterIndex"
                           [thumbnailDataUrls]="thumbnailDataUrls"
+                          [povCharacterIds]="povCharacterIdSet"
+                          [povBadgeColor]="povBadgeColor"
                           (characterClick)="onViewCharacterClick($event)"
                           (characterDelete)="onViewCharacterDelete($event)"
                           (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
@@ -610,6 +640,8 @@
                           [columns]="columns"
                           [selectedCharacterIndex]="selectedCharacterIndex"
                           [thumbnailDataUrls]="thumbnailDataUrls"
+                          [povCharacterIds]="povCharacterIdSet"
+                          [povBadgeColor]="povBadgeColor"
                           (characterClick)="onViewCharacterClick($event)"
                           (characterDelete)="onViewCharacterDelete($event)"
                           (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
@@ -620,6 +652,8 @@
                           [characters]="group.characters"
                           [tags]="tags"
                           [thumbnailDataUrls]="thumbnailDataUrls"
+                          [povCharacterIds]="povCharacterIdSet"
+                          [povBadgeColor]="povBadgeColor"
                           [thumbnailSize]="galleryThumbnailSize"
                           (characterClick)="onViewCharacterClick($event)"
                         ></app-character-gallery-view>
@@ -641,6 +675,8 @@
                     [tags]="tags"
                     [selectedCharacterIndex]="selectedCharacterIndex"
                     [thumbnailDataUrls]="thumbnailDataUrls"
+                    [povCharacterIds]="povCharacterIdSet"
+                    [povBadgeColor]="povBadgeColor"
                     (characterClick)="onViewCharacterClick($event)"
                     (characterDelete)="onViewCharacterDelete($event)"
                   ></app-character-grid-view>
@@ -655,6 +691,8 @@
                     [columns]="columns"
                     [selectedCharacterIndex]="selectedCharacterIndex"
                     [thumbnailDataUrls]="thumbnailDataUrls"
+                    [povCharacterIds]="povCharacterIdSet"
+                    [povBadgeColor]="povBadgeColor"
                     (characterClick)="onViewCharacterClick($event)"
                     (characterDelete)="onViewCharacterDelete($event)"
                     (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
@@ -670,6 +708,8 @@
                     [columns]="columns"
                     [selectedCharacterIndex]="selectedCharacterIndex"
                     [thumbnailDataUrls]="thumbnailDataUrls"
+                    [povCharacterIds]="povCharacterIdSet"
+                    [povBadgeColor]="povBadgeColor"
                     (characterClick)="onViewCharacterClick($event)"
                     (characterDelete)="onViewCharacterDelete($event)"
                     (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
@@ -681,6 +721,8 @@
                     [characters]="filteredCharacters"
                     [tags]="tags"
                     [thumbnailDataUrls]="thumbnailDataUrls"
+                    [povCharacterIds]="povCharacterIdSet"
+                    [povBadgeColor]="povBadgeColor"
                     [thumbnailSize]="galleryThumbnailSize"
                     (characterClick)="onViewCharacterClick($event)"
                   ></app-character-gallery-view>
@@ -697,7 +739,9 @@
                   selectedCategory ||
                   selectedTags.length > 0 ||
                   selectedCast ||
-                  selectedBook
+                  selectedBook ||
+                  povOnly ||
+                  selectedPictureFilter
                   ) {
                   <h3
                     >
@@ -709,7 +753,9 @@
                   !selectedCategory &&
                   selectedTags.length === 0 &&
                   !selectedCast &&
-                  !selectedBook
+                  !selectedBook &&
+                  !povOnly &&
+                  !selectedPictureFilter
                   ) {
                   <h3
                     >
@@ -721,7 +767,9 @@
                   selectedCategory ||
                   selectedTags.length > 0 ||
                   selectedCast ||
-                  selectedBook
+                  selectedBook ||
+                  povOnly ||
+                  selectedPictureFilter
                   ) {
                   <p
                     >
