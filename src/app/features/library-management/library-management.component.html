@@ -7,7 +7,7 @@
           [class.active]="viewMode === 'gallery'"
           (click)="setViewMode('gallery')"
           title="Gallery view"
-          >
+        >
           Gallery
         </button>
         <button
@@ -15,16 +15,31 @@
           [class.active]="viewMode === 'list'"
           (click)="setViewMode('list')"
           title="List view"
-          >
+        >
           List
         </button>
       </div>
 
       <button
+        class="btn btn-secondary"
+        (click)="showAddSeriesForm()"
+        [disabled]="saving"
+      >
+        Add Series
+      </button>
+      <button
+        class="btn btn-secondary"
+        (click)="showAddSagaForm()"
+        [disabled]="saving || seriesList.length === 0"
+        title="{{ seriesList.length === 0 ? 'Create a series first' : 'Add saga' }}"
+      >
+        Add Saga
+      </button>
+      <button
         class="btn btn-primary add-book-btn"
         (click)="showAddBookForm()"
         [disabled]="saving"
-        >
+      >
         <span class="plus-glyph" aria-hidden="true">+</span>
         Add Book
       </button>
@@ -33,7 +48,6 @@
 
   <div class="library-content">
     <div class="library-inner">
-      <!-- Loading State -->
       @if (loading) {
         <div class="loading">
           <div class="spinner"></div>
@@ -41,7 +55,6 @@
         </div>
       }
 
-      <!-- Error Display -->
       @if (error) {
         <div class="error-banner">
           <div class="error-content">
@@ -52,102 +65,313 @@
         </div>
       }
 
-      <!-- Main Content -->
       @if (!loading) {
         <div class="content">
-          <!-- Books Section -->
           <section class="section books-section">
-            <!-- Gallery View -->
-            @if (viewMode === 'gallery') {
-              <div class="books-library">
-                <div
-                  class="bookshelf"
-                  (dragover)="onGlobalDragOver($event)"
-                  (drop)="onGlobalDrop($event)"
-                  >
-                  <!-- Book Items with Smart Drop Zones -->
-                  @for (book of books; track book; let i = $index) {
-                    <div
-                      class="book-slot"
-                      [class.drag-active]="draggedIndex !== null"
-                      [class.drag-over-left]="
-                        dragOverIndex === i &&
-                        dragOverSide === 'left' &&
-                        draggedIndex !== null
-                      "
-                      [class.drag-over-right]="
-                        dragOverIndex === i &&
-                        dragOverSide === 'right' &&
-                        draggedIndex !== null
-                      "
-                      >
-                      <div
-                        class="drop-zone-left"
-                        (dragover)="onDragOver($event, i, 'left')"
-                        (dragenter)="onDragEnter($event, i, 'left')"
-                        (dragleave)="onDragLeave($event)"
-                        (drop)="onDrop($event, i)"
-                      ></div>
-                      <div
-                        class="drop-zone-right"
-                        (dragover)="onDragOver($event, i, 'right')"
-                        (dragenter)="onDragEnter($event, i, 'right')"
-                        (dragleave)="onDragLeave($event)"
-                        (drop)="onDrop($event, i + 1)"
-                      ></div>
-                      <app-book-item
-                        [book]="book"
-                        [isSelected]="selectedBook?.id === book.id"
-                        [isDragging]="draggedIndex === i"
-                        [dragIndex]="i"
-                        (bookClick)="onBookClick($event)"
-                        (dragStart)="onDragStart($event, i)"
-                        (dragEndEvent)="onDragEnd()"
-                        >
-                      </app-book-item>
-                    </div>
-                  }
-                </div>
-              </div>
-            }
-
-            <!-- List View -->
-            @if (viewMode === 'list' && books.length > 0) {
-              <div class="books-list">
-                @for (book of books; track book) {
-                  <div
-                    class="book-row"
-                    [class.selected]="selectedBook?.id === book.id"
-                    (click)="onBookClick(book)"
-                    >
-                    <span class="book-color-swatch" [style.background]="book.color"></span>
-                    <div class="book-row-main">
-                      <div class="book-row-title-line">
-                        <span class="book-row-title">{{ book.name }}</span>
-                        @if (book.status) {
-                          <span class="book-row-status">{{ getStatusLabel(book.status) }}</span>
-                        }
-                      </div>
-                      @if (book.description) {
-                        <span class="book-row-description">{{ book.description }}</span>
-                      }
-                    </div>
-                  </div>
-                }
-              </div>
-            }
-
-            <!-- Empty State -->
-            @if (books.length === 0) {
+            @if (
+              books.length === 0 &&
+              seriesList.length === 0 &&
+              sagasList.length === 0
+            ) {
               <div class="empty-bookshelf">
                 <div class="empty-book-placeholder">
                   <div class="placeholder-icon">📖</div>
                   <p>Your library is empty</p>
                   <p class="empty-subtitle">
-                    Add your first book to get started
+                    Add a book, or create a series to start grouping
                   </p>
                 </div>
               </div>
+            } @else {
+              <!-- Series shelves -->
+              @for (group of grouping.seriesGroups; track group.series.id) {
+                <article
+                  class="series-shelf"
+                  [class.drag-over]="dragOverSeriesId === group.series.id"
+                  [style.--series-accent]="getSeriesAccent(group.series)"
+                  (dragover)="onSeriesDragOver($event, group.series.id)"
+                  (drop)="onSeriesDrop($event, group.series.id)"
+                >
+                  <div class="series-header">
+                    <span
+                      class="drag-handle"
+                      draggable="true"
+                      title="Drag to reorder series"
+                      (dragstart)="onSeriesDragStart($event, group.series.id)"
+                      (dragend)="onSeriesDragEnd()"
+                      >⠿</span
+                    >
+                    <div class="series-title-block">
+                      <h2 class="series-name">{{ group.series.name }}</h2>
+                      <span class="series-count"
+                        >{{ group.bookCount }}
+                        {{ group.bookCount === 1 ? "book" : "books" }}</span
+                      >
+                    </div>
+                    <div class="series-actions">
+                      <button
+                        type="button"
+                        class="btn-text"
+                        draggable="false"
+                        (click)="showAddSagaForm(group.series.id)"
+                        [disabled]="saving"
+                      >
+                        + Saga
+                      </button>
+                      <button
+                        type="button"
+                        class="btn-text"
+                        draggable="false"
+                        (click)="showEditSeriesForm(group.series)"
+                        [disabled]="saving"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        class="btn-text danger"
+                        draggable="false"
+                        (click)="deleteSeries(group.series)"
+                        [disabled]="saving"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+
+                  @if (viewMode === 'gallery') {
+                    <div class="shelf-bay">
+                      <div class="shelf-back">
+                        <div class="shelf-row">
+                          @for (
+                            shelf of group.sagas;
+                            track shelf.saga!.id;
+                            let last = $last
+                          ) {
+                            <div
+                              class="saga-segment"
+                              [class.drag-over]="
+                                dragOverSagaId === shelf.saga!.id
+                              "
+                              (dragover)="onSagaDragOver($event, shelf.saga!)"
+                              (drop)="onSagaDrop($event, shelf.saga!)"
+                            >
+                              <div class="saga-header">
+                                <span
+                                  class="drag-handle"
+                                  draggable="true"
+                                  title="Drag to reorder saga"
+                                  (dragstart)="
+                                    onSagaDragStart($event, shelf.saga!.id)
+                                  "
+                                  (dragend)="onSagaDragEnd()"
+                                  >⠿</span
+                                >
+                                <h3 class="saga-name">
+                                  {{ shelf.saga!.name }}
+                                </h3>
+                                <div class="saga-actions">
+                                  <button
+                                    type="button"
+                                    class="btn-text"
+                                    draggable="false"
+                                    (click)="showEditSagaForm(shelf.saga!)"
+                                    [disabled]="saving"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    class="btn-text danger"
+                                    draggable="false"
+                                    (click)="deleteSaga(shelf.saga!)"
+                                    [disabled]="saving"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </div>
+                              <ng-container
+                                *ngTemplateOutlet="
+                                  galleryShelf;
+                                  context: {
+                                    books: shelf.books,
+                                    placement: {
+                                      seriesId: group.series.id,
+                                      sagaId: shelf.saga!.id
+                                    },
+                                    alwaysShow: true
+                                  }
+                                "
+                              ></ng-container>
+                            </div>
+                            @if (
+                              !last ||
+                              group.looseBooks.length > 0 ||
+                              isDraggingBook
+                            ) {
+                              <div
+                                class="shelf-gap"
+                                aria-hidden="true"
+                              ></div>
+                            }
+                          }
+
+                          @if (
+                            group.looseBooks.length > 0 ||
+                            group.sagas.length === 0 ||
+                            isDraggingBook
+                          ) {
+                            <div class="saga-segment loose-segment">
+                              @if (group.sagas.length > 0) {
+                                <div class="saga-header loose-header">
+                                  <h3 class="saga-name">Other</h3>
+                                </div>
+                              }
+                              <ng-container
+                                *ngTemplateOutlet="
+                                  galleryShelf;
+                                  context: {
+                                    books: group.looseBooks,
+                                    placement: { seriesId: group.series.id },
+                                    alwaysShow: true
+                                  }
+                                "
+                              ></ng-container>
+                            </div>
+                          }
+                        </div>
+                      </div>
+                      <div class="shelf-plank" aria-hidden="true"></div>
+                    </div>
+                  } @else {
+                    <!-- List view: stacked groups -->
+                    @for (shelf of group.sagas; track shelf.saga!.id) {
+                      <div
+                        class="saga-band"
+                        [class.drag-over]="dragOverSagaId === shelf.saga!.id"
+                        (dragover)="onSagaDragOver($event, shelf.saga!)"
+                        (drop)="onSagaDrop($event, shelf.saga!)"
+                      >
+                        <div class="saga-header">
+                          <span
+                            class="drag-handle"
+                            draggable="true"
+                            (dragstart)="
+                              onSagaDragStart($event, shelf.saga!.id)
+                            "
+                            (dragend)="onSagaDragEnd()"
+                            >⠿</span
+                          >
+                          <h3 class="saga-name">{{ shelf.saga!.name }}</h3>
+                          <div class="saga-actions">
+                            <button
+                              type="button"
+                              class="btn-text"
+                              draggable="false"
+                              (click)="showEditSagaForm(shelf.saga!)"
+                              [disabled]="saving"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              class="btn-text danger"
+                              draggable="false"
+                              (click)="deleteSaga(shelf.saga!)"
+                              [disabled]="saving"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                        <ng-container
+                          *ngTemplateOutlet="
+                            listShelf;
+                            context: {
+                              books: shelf.books,
+                              placement: {
+                                seriesId: group.series.id,
+                                sagaId: shelf.saga!.id
+                              },
+                              alwaysShow: true
+                            }
+                          "
+                        ></ng-container>
+                      </div>
+                    }
+                    @if (
+                      group.sagas.length > 0 &&
+                      (group.looseBooks.length > 0 || isDraggingBook)
+                    ) {
+                      <div class="loose-label">Other books in this series</div>
+                    }
+                    @if (
+                      group.looseBooks.length > 0 ||
+                      group.sagas.length === 0 ||
+                      isDraggingBook
+                    ) {
+                      <ng-container
+                        *ngTemplateOutlet="
+                          listShelf;
+                          context: {
+                            books: group.looseBooks,
+                            placement: { seriesId: group.series.id },
+                            alwaysShow: true
+                          }
+                        "
+                      ></ng-container>
+                    }
+                  }
+                </article>
+              }
+
+              <!-- Bottom shelf: ungrouped -->
+              @if (showUngroupedSection) {
+                <article class="series-shelf ungrouped-shelf">
+                  <div class="ungrouped-header">
+                    <h2 class="ungrouped-name">Ungrouped</h2>
+                    <span class="series-count"
+                      >{{ grouping.ungrouped.length }}
+                      {{
+                        grouping.ungrouped.length === 1 ? "book" : "books"
+                      }}</span
+                    >
+                  </div>
+                  @if (viewMode === 'gallery') {
+                    <div class="shelf-bay">
+                      <div class="shelf-back">
+                        <div class="shelf-row">
+                          <div class="saga-segment loose-segment">
+                            <ng-container
+                              *ngTemplateOutlet="
+                                galleryShelf;
+                                context: {
+                                  books: grouping.ungrouped,
+                                  placement: {},
+                                  alwaysShow: true
+                                }
+                              "
+                            ></ng-container>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="shelf-plank" aria-hidden="true"></div>
+                    </div>
+                  } @else {
+                    <ng-container
+                      *ngTemplateOutlet="
+                        listShelf;
+                        context: {
+                          books: grouping.ungrouped,
+                          placement: {},
+                          alwaysShow: true
+                        }
+                      "
+                    ></ng-container>
+                  }
+                </article>
+              }
             }
           </section>
         </div>
@@ -155,14 +379,284 @@
     </div>
   </div>
 
+  <!-- Gallery shelf template -->
+  <ng-template
+    #galleryShelf
+    let-books="books"
+    let-placement="placement"
+    let-alwaysShow="alwaysShow"
+  >
+    @if (books.length > 0 || alwaysShow || isDraggingBook) {
+      <div
+        class="shelf-panel"
+        [class.drop-target]="
+          isDraggingBook &&
+          dragOverPlacementKey === placementKeyFor(placement)
+        "
+        (dragover)="onShelfDragOver($event, placement)"
+        (drop)="onShelfDrop($event, placement, books.length)"
+      >
+        <div class="bookshelf">
+          @for (book of books; track book.id; let i = $index) {
+            <div
+              class="book-slot"
+              [class.drag-active]="isDraggingBook"
+              [class.drag-over-left]="isDropHighlight(placement, i, 'left')"
+              [class.drag-over-right]="isDropHighlight(placement, i, 'right')"
+            >
+              <div
+                class="drop-zone-left"
+                (dragover)="onBookDragOver($event, placement, i, 'left')"
+                (dragenter)="onBookDragEnter($event, placement, i, 'left')"
+                (dragleave)="onBookDragLeave($event)"
+                (drop)="onBookDrop($event, placement, i)"
+              ></div>
+              <div
+                class="drop-zone-right"
+                (dragover)="onBookDragOver($event, placement, i, 'right')"
+                (dragenter)="onBookDragEnter($event, placement, i, 'right')"
+                (dragleave)="onBookDragLeave($event)"
+                (drop)="onBookDrop($event, placement, i + 1)"
+              ></div>
+              <app-book-item
+                [book]="book"
+                [isSelected]="selectedBook?.id === book.id"
+                [isDragging]="isBookDragging(book)"
+                [dragIndex]="i"
+                (bookClick)="onBookClick($event)"
+                (dragStart)="onBookDragStart($event, book)"
+                (dragEndEvent)="onBookDragEnd()"
+              >
+              </app-book-item>
+            </div>
+          }
+          @if (books.length === 0) {
+            <div class="shelf-empty-hint">Drop books here</div>
+          }
+        </div>
+      </div>
+    }
+  </ng-template>
+
+  <!-- List shelf template -->
+  <ng-template
+    #listShelf
+    let-books="books"
+    let-placement="placement"
+    let-alwaysShow="alwaysShow"
+  >
+    @if (books.length > 0 || alwaysShow || isDraggingBook) {
+      <div
+        class="books-list shelf-panel"
+        [class.drop-target]="
+          isDraggingBook &&
+          dragOverPlacementKey === placementKeyFor(placement)
+        "
+        (dragover)="onShelfDragOver($event, placement)"
+        (drop)="onShelfDrop($event, placement, books.length)"
+      >
+        @for (book of books; track book.id; let i = $index) {
+          <div
+            class="book-row"
+            draggable="true"
+            [class.selected]="selectedBook?.id === book.id"
+            [class.dragging]="isBookDragging(book)"
+            (click)="onBookClick(book)"
+            (dragstart)="onBookDragStart($event, book)"
+            (dragend)="onBookDragEnd()"
+            (dragover)="onBookDragOver($event, placement, i, 'left')"
+            (drop)="onBookDrop($event, placement, i)"
+          >
+            <span
+              class="book-color-swatch"
+              [style.background]="book.color"
+            ></span>
+            <div class="book-row-main">
+              <div class="book-row-title-line">
+                @if (book.code) {
+                  <span class="book-row-code">{{ book.code }}</span>
+                }
+                <span class="book-row-title">{{ getBookTitle(book) }}</span>
+                @if (book.status) {
+                  <span class="book-row-status">{{
+                    getStatusLabel(book.status)
+                  }}</span>
+                }
+              </div>
+              @if (book.description) {
+                <span class="book-row-description">{{ book.description }}</span>
+              }
+            </div>
+          </div>
+        }
+        @if (books.length === 0) {
+          <div class="shelf-empty-hint list-hint">Drop books here</div>
+        }
+      </div>
+    }
+  </ng-template>
+
   <!-- Book Editor Modal -->
   <app-book-editor
     [book]="editingBook"
+    [seriesList]="seriesList"
+    [sagasList]="sagasList"
     [isVisible]="showBookForm"
     [saving]="saving"
     (save)="onEditorSave($event)"
     (cancel)="onEditorCancel()"
     (delete)="onEditorDelete($event)"
-    >
+  >
   </app-book-editor>
+
+  <!-- Series form overlay -->
+  @if (showSeriesForm) {
+    <div class="simple-overlay" (click)="cancelSeriesForm()">
+      <div class="simple-modal" (click)="$event.stopPropagation()">
+        <h2>{{ editingSeries ? "Edit Series" : "New Series" }}</h2>
+        <form [formGroup]="seriesForm" (ngSubmit)="saveSeries()">
+          <div class="form-group">
+            <label for="seriesName">Name *</label>
+            <input
+              id="seriesName"
+              type="text"
+              formControlName="name"
+              class="form-control"
+              placeholder="e.g. Harry Potter"
+            />
+          </div>
+          <div class="form-group">
+            <label for="seriesColor">Accent color</label>
+            <div class="series-color-picker">
+              <input
+                id="seriesColor"
+                type="color"
+                formControlName="color"
+                class="series-color-native"
+                title="Pick a custom color"
+              />
+              <div class="color-preset-swatches">
+                @for (color of colorPresets; track color) {
+                  <button
+                    type="button"
+                    class="color-preset"
+                    [style.background-color]="color"
+                    [class.selected]="seriesForm.get('color')?.value === color"
+                    [title]="color"
+                    (click)="selectSeriesColor(color)"
+                  ></button>
+                }
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="seriesDescription">Description</label>
+            <textarea
+              id="seriesDescription"
+              formControlName="description"
+              class="form-control"
+              rows="3"
+            ></textarea>
+          </div>
+          <div class="simple-actions">
+            @if (editingSeries) {
+              <button
+                type="button"
+                class="btn btn-danger"
+                (click)="deleteSeries(editingSeries)"
+                [disabled]="saving"
+              >
+                Delete
+              </button>
+            }
+            <div class="spacer"></div>
+            <button
+              type="button"
+              class="btn btn-secondary"
+              (click)="cancelSeriesForm()"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="btn btn-primary"
+              [disabled]="saving || seriesForm.invalid"
+            >
+              {{ editingSeries ? "Update" : "Create" }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Saga form overlay -->
+  @if (showSagaForm) {
+    <div class="simple-overlay" (click)="cancelSagaForm()">
+      <div class="simple-modal" (click)="$event.stopPropagation()">
+        <h2>{{ editingSaga ? "Edit Saga" : "New Saga" }}</h2>
+        <form [formGroup]="sagaForm" (ngSubmit)="saveSaga()">
+          <div class="form-group">
+            <label for="sagaSeries">Series *</label>
+            <select
+              id="sagaSeries"
+              formControlName="seriesId"
+              class="form-control"
+              [disabled]="!!editingSaga"
+            >
+              @for (s of seriesList; track s.id) {
+                <option [value]="s.id">{{ s.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="sagaName">Name *</label>
+            <input
+              id="sagaName"
+              type="text"
+              formControlName="name"
+              class="form-control"
+              placeholder="e.g. Zamasu Saga"
+            />
+          </div>
+          <div class="form-group">
+            <label for="sagaDescription">Description</label>
+            <textarea
+              id="sagaDescription"
+              formControlName="description"
+              class="form-control"
+              rows="3"
+            ></textarea>
+          </div>
+          <div class="simple-actions">
+            @if (editingSaga) {
+              <button
+                type="button"
+                class="btn btn-danger"
+                (click)="deleteSaga(editingSaga)"
+                [disabled]="saving"
+              >
+                Delete
+              </button>
+            }
+            <div class="spacer"></div>
+            <button
+              type="button"
+              class="btn btn-secondary"
+              (click)="cancelSagaForm()"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="btn btn-primary"
+              [disabled]="saving || sagaForm.invalid"
+            >
+              {{ editingSaga ? "Update" : "Create" }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
 </div>

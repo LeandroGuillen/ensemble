@@ -410,6 +410,8 @@ export class ProjectService {
       tags: DEFAULT_TAGS.map(t => ({ ...t })),
       casts: [],
       books: [],
+      series: [],
+      sagas: [],
       settings: {
         defaultCategory: DEFAULT_CATEGORIES[0].id,
         charactersFolder: DEFAULT_CHARACTERS_FOLDER,

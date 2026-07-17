@@ -1,6 +1,6 @@
 {
   "name": "ensemble",
-  "version": "1.7.5",
+  "version": "1.8.0",
   "description": "Character management application for writers and worldbuilders",
   "main": "main.js",
   "scripts": {
@@ -56,7 +56,7 @@
     "@types/node": "^22.19.19",
     "autoprefixer": "^10.4.22",
     "concurrently": "^8.2.2",
-    "electron": "^42.0.0",
+    "electron": "^43.1.1",
     "electron-builder": "^26.0.0",
     "electron-icon-builder": "^2.0.1",
     "jasmine-core": "^6.2.0",

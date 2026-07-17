@@ -1,7 +1,11 @@
-
 import { Component, EventEmitter, Input, Output } from "@angular/core";
 import { Book } from "@app/core";
 import { LoggingService } from "@app/core/services/logging.service";
+import {
+  getBookCoverTitle,
+  getBookSpineLabel,
+  getBookSubtitle,
+} from "@app/core/utils/book-display.utils";
 
 @Component({
     selector: "app-book-item",
@@ -27,8 +31,16 @@ export class BookItemComponent {
     }
   }
 
-  getBookTitle(): string {
-    return this.book.name || "Untitled";
+  getCoverTitle(): string {
+    return getBookCoverTitle(this.book);
+  }
+
+  getCoverSubtitle(): string {
+    return getBookSubtitle(this.book);
+  }
+
+  getSpineLabel(): string {
+    return getBookSpineLabel(this.book);
   }
 
   getBookColor(): string {
@@ -92,7 +104,7 @@ export class BookItemComponent {
       .padStart(2, "0")}${newB.toString(16).padStart(2, "0")}`;
   }
   onDragStart(event: DragEvent): void {
-    this.logger.log("Book drag start triggered!", this.book.name);
+    this.logger.log("Book drag start triggered!", getBookSpineLabel(this.book));
     this.dragStart.emit(event);
   }
 
