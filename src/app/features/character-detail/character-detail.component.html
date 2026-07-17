@@ -283,6 +283,37 @@
                   }
                 </section>
 
+                @if (getSelectedBooksForCategoryOverrides().length > 0) {
+                  <section class="meta-group">
+                    <header class="meta-group-header">
+                      <h4 class="meta-group-title">Category by book</h4>
+                      <span class="meta-group-hint">Optional overrides</span>
+                    </header>
+                    <div class="book-category-overrides">
+                      @for (book of getSelectedBooksForCategoryOverrides(); track book.id) {
+                        <div class="book-category-row">
+                          <label class="book-category-label" [attr.for]="'book-category-' + book.id">
+                            <span class="book-category-swatch" [style.background-color]="book.color"></span>
+                            {{ book.name }}
+                          </label>
+                          <select
+                            class="form-control book-category-select"
+                            [id]="'book-category-' + book.id"
+                            [ngModel]="getBookCategoryOverride(book.id)"
+                            (ngModelChange)="onBookCategoryOverrideChange(book.id, $event)"
+                            [ngModelOptions]="{standalone: true}"
+                          >
+                            <option value="">Same as default</option>
+                            @for (category of categories; track category.id) {
+                              <option [value]="category.id">{{ category.name }}</option>
+                            }
+                          </select>
+                        </div>
+                      }
+                    </div>
+                  </section>
+                }
+
                 <section class="meta-group">
                   <header class="meta-group-header">
                     <h4 class="meta-group-title">Portraits</h4>

@@ -52,6 +52,7 @@ import {
   resolveThumbnailForStyle,
   formatThumbnailWikiLink,
 } from "../../core/utils/thumbnail.utils";
+import { normalizeBookCategories } from "../../core/utils/character-category.utils";
 import {
   CategoryToggleComponent,
   ToggleOption,
@@ -113,6 +114,8 @@ export class CharacterDetailComponent
   bookPageData: Record<string, { exists: boolean; content: string }> = {};
   /** Last saved content per book (for dirty check). Key = bookId. */
   bookPageOriginalContent: Record<string, string> = {};
+  /** Per-book category overrides for the form. Key = bookId. */
+  bookCategoriesMap: Record<string, string> = {};
 
   // AI features
   isGeneratingName = false;
@@ -305,7 +308,8 @@ export class CharacterDetailComponent
     this.characterForm
       .get("books")
       ?.valueChanges.pipe(takeUntil(this.destroy$))
-      .subscribe(() => {
+      .subscribe((bookIds: string[]) => {
+        this.pruneBookCategories(bookIds || []);
         this.updateContentTabs();
         this.cdr.markForCheck();
       });
@@ -471,6 +475,7 @@ export class CharacterDetailComponent
         });
 
         this.thumbnailsMap = { ...(this.character.thumbnails || {}) };
+        this.bookCategoriesMap = { ...(this.character.bookCategories || {}) };
         this.pickerTargetStyleId = this.defaultCharacterStyle;
         await this.refreshThumbnailPreviews();
 
@@ -635,6 +640,10 @@ export class CharacterDetailComponent
         category: this.characterForm.value.category,
         tags: this.characterForm.value.tags || [],
         books: this.characterForm.value.books || [],
+        bookCategories: normalizeBookCategories(
+          this.bookCategoriesMap,
+          this.characterForm.value.books || []
+        ),
         thumbnails: { ...this.thumbnailsMap },
         prompts: this.prompts.map((p) => ({
           name: p.name,
@@ -789,7 +798,44 @@ export class CharacterDetailComponent
 
   onBooksSelectionChange(selectedIds: string[]): void {
     this.characterForm.patchValue({ books: selectedIds });
+    this.pruneBookCategories(selectedIds);
     this.characterForm.markAsDirty();
+  }
+
+  /** Selected books in project metadata order, for the category-by-book UI. */
+  getSelectedBooksForCategoryOverrides(): Book[] {
+    const selectedIds: string[] = this.characterForm.get('books')?.value || [];
+    if (!selectedIds.length) return [];
+    const selected = new Set(selectedIds);
+    return this.books.filter((book) => selected.has(book.id));
+  }
+
+  getBookCategoryOverride(bookId: string): string {
+    return this.bookCategoriesMap[bookId] || '';
+  }
+
+  onBookCategoryOverrideChange(bookId: string, categoryId: string): void {
+    if (!categoryId) {
+      delete this.bookCategoriesMap[bookId];
+    } else {
+      this.bookCategoriesMap[bookId] = categoryId;
+    }
+    this.characterForm.markAsDirty();
+    this.cdr.markForCheck();
+  }
+
+  private pruneBookCategories(assignedBookIds: string[]): void {
+    const assigned = new Set(assignedBookIds);
+    let changed = false;
+    for (const bookId of Object.keys(this.bookCategoriesMap)) {
+      if (!assigned.has(bookId)) {
+        delete this.bookCategoriesMap[bookId];
+        changed = true;
+      }
+    }
+    if (changed) {
+      this.cdr.markForCheck();
+    }
   }
 
   getTagName(tagId: string): string {

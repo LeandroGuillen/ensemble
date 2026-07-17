@@ -46,9 +46,9 @@
         <h3 class="character-name">{{ character.name }}</h3>
         <p
           class="character-category"
-          [style.color]="getCategoryColor(character.category)"
+          [style.color]="getCategoryColor(getDisplayCategoryId(character))"
           >
-          {{ getCategoryName(character.category) }}
+          {{ getCategoryName(getDisplayCategoryId(character)) }}
         </p>
         @if (character.tags.length > 0) {
           <div class="character-tags">

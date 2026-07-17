@@ -2,6 +2,7 @@ import { Component, Input, Output, EventEmitter } from "@angular/core";
 
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { Character, Tag, Category } from "../../../../core/interfaces";
+import { resolveEffectiveCategory } from "../../../../core/utils/character-category.utils";
 
 @Component({
     selector: "app-character-grid-view",
@@ -16,6 +17,8 @@ export class CharacterGridViewComponent {
   @Input() selectedCharacterIndex = -1;
   @Input() dndEnabled = false;
   @Input() thumbnailDataUrls: Map<string, string> = new Map();
+  /** When set, category labels use the book-specific override if present. */
+  @Input() categoryContextBookId = '';
 
   @Output() characterClick = new EventEmitter<Character>();
   @Output() characterDelete = new EventEmitter<{
@@ -26,6 +29,10 @@ export class CharacterGridViewComponent {
   @Output() dragEnded = new EventEmitter<void>();
 
   private dragInProgress = false;
+
+  getDisplayCategoryId(character: Character): string {
+    return resolveEffectiveCategory(character, this.categoryContextBookId);
+  }
 
   getCategoryName(categoryId: string): string {
     const category = this.categories.find((cat) => cat.id === categoryId);

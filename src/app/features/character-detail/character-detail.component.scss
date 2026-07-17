@@ -614,6 +614,39 @@
   font-style: italic;
 }
 
+.book-category-overrides {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.book-category-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.book-category-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8125rem;
+  color: var(--color-text-primary);
+}
+
+.book-category-swatch {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.book-category-select {
+  font-size: 0.8125rem;
+  padding: 0.35rem 0.5rem;
+  min-height: 0;
+}
+
 .thumbnail-actions {
   display: flex;
   flex-wrap: wrap;

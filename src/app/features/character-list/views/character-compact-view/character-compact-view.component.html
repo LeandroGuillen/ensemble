@@ -43,8 +43,8 @@
       <div class="compact-item-content">
         <div class="compact-item-main">
           <h3 class="compact-item-name">{{ character.name }}</h3>
-          <span class="compact-item-category" [style.color]="getCategoryColor(character.category)">
-            {{ getCategoryName(character.category) }}
+          <span class="compact-item-category" [style.color]="getCategoryColor(getDisplayCategoryId(character))">
+            {{ getCategoryName(getDisplayCategoryId(character)) }}
           </span>
         </div>
         @if (character.tags.length > 0) {

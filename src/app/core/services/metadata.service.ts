@@ -714,6 +714,36 @@ export class MetadataService {
       });
     }
 
+    // Validate book category overrides
+    if (formData.bookCategories && typeof formData.bookCategories === 'object') {
+      const bookIds = new Set((metadata.books || []).map((book) => book.id));
+      const categoryIds = new Set(metadata.categories.map((cat) => cat.id));
+      const assignedBooks = new Set(formData.books || []);
+
+      for (const [bookId, categoryId] of Object.entries(formData.bookCategories)) {
+        if (!bookIds.has(bookId)) {
+          errors.push({
+            field: 'bookCategories',
+            message: `Book '${bookId}' does not exist in project metadata`,
+            code: 'INVALID_REFERENCE',
+          });
+        } else if (!assignedBooks.has(bookId)) {
+          errors.push({
+            field: 'bookCategories',
+            message: `Book category override for '${bookId}' is not in the character's books list`,
+            code: 'INVALID_REFERENCE',
+          });
+        }
+        if (!categoryIds.has(categoryId)) {
+          errors.push({
+            field: 'bookCategories',
+            message: `Category '${categoryId}' for book '${bookId}' does not exist in project metadata`,
+            code: 'INVALID_REFERENCE',
+          });
+        }
+      }
+    }
+
     return {
       isValid: errors.length === 0,
       errors,

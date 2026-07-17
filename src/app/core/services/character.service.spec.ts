@@ -314,6 +314,78 @@ describe('CharacterService', () => {
       expect(updated?.category).toBe('supporting');
       expect(electronService.moveDirectory).not.toHaveBeenCalled();
     });
+
+    it('should persist bookCategories and prune overrides for removed books', async () => {
+      const project = createValidProject();
+      project.metadata.categories.push({ id: 'supporting', name: 'Supporting', color: '#00FF00' });
+      project.metadata.books = [
+        { id: 'book-1', name: 'Book 1', color: '#111' },
+        { id: 'book-2', name: 'Book 2', color: '#222' },
+      ];
+      projectService.getCurrentProject.and.returnValue(project);
+      (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
+
+      const existingCharacter: Character = {
+        id: '_test-character.md',
+        name: 'Test Character',
+        category: 'main-character',
+        tags: [],
+        books: ['book-1', 'book-2'],
+        bookCategories: { 'book-1': 'supporting', 'book-2': 'main-character' },
+        prompts: [],
+        content: '',
+        created: new Date(),
+        modified: new Date(),
+        filePath: '/test/project/characters/_test-character.md',
+      };
+
+      (service as any).charactersSubject.next([existingCharacter]);
+      electronService.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));
+
+      const updated = await service.updateCharacter('_test-character.md', {
+        books: ['book-2'],
+        bookCategories: { 'book-1': 'supporting', 'book-2': 'supporting' },
+      });
+
+      expect(updated?.books).toEqual(['book-2']);
+      expect(updated?.bookCategories).toEqual({ 'book-2': 'supporting' });
+      const savedContent = electronService.writeFileAtomic.calls.mostRecent().args[1] as string;
+      expect(savedContent).toContain('bookCategories:');
+      expect(savedContent).toContain('book-2: supporting');
+      expect(savedContent).not.toContain('book-1:');
+    });
+
+    it('should omit empty bookCategories from saved frontmatter', async () => {
+      const project = createValidProject();
+      project.metadata.books = [{ id: 'book-1', name: 'Book 1', color: '#111' }];
+      projectService.getCurrentProject.and.returnValue(project);
+      (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
+
+      const existingCharacter: Character = {
+        id: '_test-character.md',
+        name: 'Test Character',
+        category: 'main-character',
+        tags: [],
+        books: ['book-1'],
+        bookCategories: { 'book-1': 'main-character' },
+        prompts: [],
+        content: '',
+        created: new Date(),
+        modified: new Date(),
+        filePath: '/test/project/characters/_test-character.md',
+      };
+
+      (service as any).charactersSubject.next([existingCharacter]);
+      electronService.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));
+
+      const updated = await service.updateCharacter('_test-character.md', {
+        bookCategories: {},
+      });
+
+      expect(updated?.bookCategories).toBeUndefined();
+      const savedContent = electronService.writeFileAtomic.calls.mostRecent().args[1] as string;
+      expect(savedContent).not.toContain('bookCategories:');
+    });
   });
 
   describe('deleteCharacter', () => {
@@ -427,6 +499,55 @@ describe('CharacterService', () => {
       await service.forceReloadCharacters();
 
       expect(electronService.readDirectoryRecursive).toHaveBeenCalled();
+    });
+
+    it('should load bookCategories from character frontmatter', async () => {
+      const project = createValidProject();
+      project.metadata.categories.push({ id: 'supporting', name: 'Supporting', color: '#00FF00' });
+      project.metadata.books = [
+        { id: 'book-1', name: 'Book 1', color: '#111' },
+        { id: 'book-2', name: 'Book 2', color: '#222' },
+      ];
+      projectService.getCurrentProject.and.returnValue(project);
+      (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
+
+      electronService.fileExists.and.returnValue(Promise.resolve(true));
+      electronService.readDirectoryRecursive.and.returnValue(
+        Promise.resolve({
+          success: true,
+          files: [
+            {
+              relativePath: '_dessir.md',
+              absolutePath: '/test/project/characters/_dessir.md',
+            },
+          ],
+        })
+      );
+      electronService.readFile.and.returnValue(
+        Promise.resolve({
+          success: true,
+          content: `---
+name: Dessir
+category: antagonist
+books:
+  - book-1
+  - book-2
+bookCategories:
+  book-2: supporting
+---
+
+Body text
+`,
+        })
+      );
+
+      await service.forceReloadCharacters();
+
+      const characters = (service as any).charactersSubject.value as Character[];
+      expect(characters.length).toBe(1);
+      expect(characters[0].category).toBe('antagonist');
+      expect(characters[0].books).toEqual(['book-1', 'book-2']);
+      expect(characters[0].bookCategories).toEqual({ 'book-2': 'supporting' });
     });
   });
 });

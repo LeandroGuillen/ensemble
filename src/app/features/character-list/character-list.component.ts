@@ -12,6 +12,7 @@ import { MetadataHelperService } from '../../core/services/metadata-helper.servi
 import { ModalService } from '../../core/services/modal.service';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { resolveThumbnailForStyle } from '../../core/utils/thumbnail.utils';
+import { resolveEffectiveCategory } from '../../core/utils/character-category.utils';
 import { ToggleOption } from '../../shared/category-toggle/category-toggle.component';
 import { CharacterFilterComponent } from '../../shared/character-filter/character-filter.component';
 import { CommandPaletteService } from '../../shared/command-palette/command-palette.service';
@@ -595,7 +596,9 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       // Search term filter - search names, categories, tags, and books
       if (this.searchTerm) {
         const searchLower = this.searchTerm.toLowerCase();
-        const categoryName = this.metadataHelper.getCategoryName(character.category).toLowerCase();
+        const categoryName = this.metadataHelper
+          .getCategoryName(resolveEffectiveCategory(character, this.selectedBook))
+          .toLowerCase();
         const tagNames = character.tags.map((tagId) => this.metadataHelper.getTagName(tagId).toLowerCase());
         const bookNames = character.books.map((bookId) => this.metadataHelper.getBookName(bookId).toLowerCase());
 
@@ -608,9 +611,12 @@ export class CharacterListComponent implements OnInit, OnDestroy {
         if (!matchesSearch) return false;
       }
 
-      // Category filter
-      if (this.selectedCategory && character.category !== this.selectedCategory) {
-        return false;
+      // Category filter (uses effective category when a book is selected)
+      if (this.selectedCategory) {
+        const effectiveCategory = resolveEffectiveCategory(character, this.selectedBook);
+        if (effectiveCategory !== this.selectedCategory) {
+          return false;
+        }
       }
 
       // Tags filter - character must have ALL selected tags
@@ -913,7 +919,9 @@ getFilterSummary(): string {
   }
 
   isCategoryDragDropEnabled(): boolean {
-    return this.groupBy === 'category' && !this.isUpdatingCategory;
+    // Disable while a book filter is active — drag would ambiguously change
+    // the default category rather than the book-specific override.
+    return this.groupBy === 'category' && !this.isUpdatingCategory && !this.selectedBook;
   }
 
   getCategoryDropListId(categoryId: string): string {
@@ -933,10 +941,14 @@ getFilterSummary(): string {
         return this.sortDirection === 'asc' ? comparison : -comparison;
       });
     } else if (this.sortBy === 'category') {
-      // Sort by category position in the categories array
+      // Sort by category position in the categories array (effective when book filter set)
       sorted.sort((a, b) => {
-        const aCategoryIndex = this.categories.findIndex((cat) => cat.id === a.category);
-        const bCategoryIndex = this.categories.findIndex((cat) => cat.id === b.category);
+        const aCategoryIndex = this.categories.findIndex(
+          (cat) => cat.id === resolveEffectiveCategory(a, this.selectedBook)
+        );
+        const bCategoryIndex = this.categories.findIndex(
+          (cat) => cat.id === resolveEffectiveCategory(b, this.selectedBook)
+        );
 
         // If category not found, put at end
         const aIndex = aCategoryIndex === -1 ? 9999 : aCategoryIndex;
@@ -990,9 +1002,10 @@ getFilterSummary(): string {
   }> {
     const grouped = new Map<string, Character[]>();
 
-    // Group characters by category
+    // Group characters by effective category (book override when book filter set)
     for (const character of this.filteredCharacters) {
-      const categoryId = character.category || 'uncategorized';
+      const categoryId =
+        resolveEffectiveCategory(character, this.selectedBook) || 'uncategorized';
       if (!grouped.has(categoryId)) {
         grouped.set(categoryId, []);
       }

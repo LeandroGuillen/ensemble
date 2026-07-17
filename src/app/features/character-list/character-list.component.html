@@ -343,6 +343,7 @@
                         <app-character-grid-view
                           [characters]="group.characters"
                           [categories]="categories"
+                          [categoryContextBookId]="selectedBook"
                           [tags]="tags"
                           [dndEnabled]="isCategoryDragDropEnabled()"
                           [selectedCharacterIndex]="selectedCharacterIndex"
@@ -358,6 +359,7 @@
                         <app-character-list-view
                           [characters]="group.characters"
                           [categories]="categories"
+                          [categoryContextBookId]="selectedBook"
                           [tags]="tags"
                           [dndEnabled]="isCategoryDragDropEnabled()"
                           [columns]="columns"
@@ -377,6 +379,7 @@
                         <app-character-compact-view
                           [characters]="group.characters"
                           [categories]="categories"
+                          [categoryContextBookId]="selectedBook"
                           [tags]="tags"
                           [dndEnabled]="isCategoryDragDropEnabled()"
                           [columns]="columns"
@@ -431,6 +434,7 @@
                         <app-character-grid-view
                           [characters]="group.characters"
                           [categories]="categories"
+                          [categoryContextBookId]="selectedBook"
                           [tags]="tags"
                           [selectedCharacterIndex]="selectedCharacterIndex"
                           [thumbnailDataUrls]="thumbnailDataUrls"
@@ -443,6 +447,7 @@
                         <app-character-list-view
                           [characters]="group.characters"
                           [categories]="categories"
+                          [categoryContextBookId]="selectedBook"
                           [tags]="tags"
                           [columns]="columns"
                           [selectedCharacterIndex]="selectedCharacterIndex"
@@ -459,6 +464,7 @@
                         <app-character-compact-view
                           [characters]="group.characters"
                           [categories]="categories"
+                          [categoryContextBookId]="selectedBook"
                           [tags]="tags"
                           [columns]="columns"
                           [selectedCharacterIndex]="selectedCharacterIndex"
@@ -504,6 +510,7 @@
                         <app-character-grid-view
                           [characters]="group.characters"
                           [categories]="categories"
+                          [categoryContextBookId]="selectedBook"
                           [tags]="tags"
                           [selectedCharacterIndex]="selectedCharacterIndex"
                           [thumbnailDataUrls]="thumbnailDataUrls"
@@ -515,6 +522,7 @@
                         <app-character-list-view
                           [characters]="group.characters"
                           [categories]="categories"
+                          [categoryContextBookId]="selectedBook"
                           [tags]="tags"
                           [columns]="columns"
                           [selectedCharacterIndex]="selectedCharacterIndex"
@@ -528,6 +536,7 @@
                         <app-character-compact-view
                           [characters]="group.characters"
                           [categories]="categories"
+                          [categoryContextBookId]="selectedBook"
                           [tags]="tags"
                           [columns]="columns"
                           [selectedCharacterIndex]="selectedCharacterIndex"
@@ -570,6 +579,7 @@
                         <app-character-grid-view
                           [characters]="group.characters"
                           [categories]="categories"
+                          [categoryContextBookId]="selectedBook"
                           [tags]="tags"
                           [selectedCharacterIndex]="selectedCharacterIndex"
                           [thumbnailDataUrls]="thumbnailDataUrls"
@@ -581,6 +591,7 @@
                         <app-character-list-view
                           [characters]="group.characters"
                           [categories]="categories"
+                          [categoryContextBookId]="selectedBook"
                           [tags]="tags"
                           [columns]="columns"
                           [selectedCharacterIndex]="selectedCharacterIndex"
@@ -594,6 +605,7 @@
                         <app-character-compact-view
                           [characters]="group.characters"
                           [categories]="categories"
+                          [categoryContextBookId]="selectedBook"
                           [tags]="tags"
                           [columns]="columns"
                           [selectedCharacterIndex]="selectedCharacterIndex"
@@ -625,6 +637,7 @@
                   <app-character-grid-view
                     [characters]="filteredCharacters"
                     [categories]="categories"
+                    [categoryContextBookId]="selectedBook"
                     [tags]="tags"
                     [selectedCharacterIndex]="selectedCharacterIndex"
                     [thumbnailDataUrls]="thumbnailDataUrls"
@@ -637,6 +650,7 @@
                   <app-character-list-view
                     [characters]="filteredCharacters"
                     [categories]="categories"
+                    [categoryContextBookId]="selectedBook"
                     [tags]="tags"
                     [columns]="columns"
                     [selectedCharacterIndex]="selectedCharacterIndex"
@@ -651,6 +665,7 @@
                   <app-character-compact-view
                     [characters]="filteredCharacters"
                     [categories]="categories"
+                    [categoryContextBookId]="selectedBook"
                     [tags]="tags"
                     [columns]="columns"
                     [selectedCharacterIndex]="selectedCharacterIndex"

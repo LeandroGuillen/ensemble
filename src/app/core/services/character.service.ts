@@ -6,6 +6,7 @@ import { MarkdownUtils } from '../utils/markdown.utils';
 import { slugify } from '../utils/slug.utils';
 import { pathJoin, pathBasename, pathDirname } from '../utils/path.utils';
 import { parseThumbnailReference, resolveThumbnailPath, resolveThumbnailForStyle, normalizeThumbnailsMap, thumbnailCacheKey } from '../utils/thumbnail.utils';
+import { normalizeBookCategories } from '../utils/character-category.utils';
 import { assertIpcSuccess, withIpcError } from '../utils/ipc.utils';
 import { requireProject } from '../utils/project.utils';
 import { ElectronService } from './electron.service';
@@ -298,12 +299,14 @@ export class CharacterService {
         return null;
       }
 
+      const books = frontmatter.books || [];
       const character: Character = {
         id: relativePath,
         name: frontmatter.name,
         category: frontmatter.category || 'uncategorized',
         tags: frontmatter.tags || [],
-        books: frontmatter.books || [],
+        books,
+        bookCategories: normalizeBookCategories(frontmatter.bookCategories, books),
         thumbnails: normalizeThumbnailsMap(frontmatter.thumbnails),
         prompts: normalizePrompts(frontmatter.prompts),
         content: content || '',
@@ -327,8 +330,11 @@ export class CharacterService {
    */
   async createCharacter(data: CharacterFormData): Promise<Character> {
     try {
+      const books = data.books || [];
       // Validate book references
-      await this.validateBookReferences(data.books);
+      await this.validateBookReferences(books);
+      const bookCategories = normalizeBookCategories(data.bookCategories, books);
+      await this.validateBookCategoryReferences(bookCategories);
 
       const slug = slugify(data.name);
       const filename = `_${slug}.md`;
@@ -345,7 +351,8 @@ export class CharacterService {
         name: data.name,
         category: data.category,
         tags: data.tags || [],
-        books: data.books || [],
+        books,
+        bookCategories,
         thumbnails: normalizeThumbnailsMap(data.thumbnails),
         prompts: normalizePrompts(data.prompts),
         content: data.content || '',
@@ -423,6 +430,13 @@ export class CharacterService {
         newFilePath = destFilePath;
       }
 
+      const nextBooks = data.books ?? existingCharacter.books;
+      const nextBookCategories = normalizeBookCategories(
+        'bookCategories' in data ? data.bookCategories : existingCharacter.bookCategories,
+        nextBooks
+      );
+      await this.validateBookCategoryReferences(nextBookCategories);
+
       // Create updated character
       const updatedCharacter: Character = {
         ...existingCharacter,
@@ -430,7 +444,8 @@ export class CharacterService {
         name: data.name ?? existingCharacter.name,
         category: data.category ?? existingCharacter.category,
         tags: data.tags ?? existingCharacter.tags,
-        books: data.books ?? existingCharacter.books,
+        books: nextBooks,
+        bookCategories: nextBookCategories,
         thumbnails: 'thumbnails' in data
           ? normalizeThumbnailsMap(data.thumbnails)
           : existingCharacter.thumbnails,
@@ -550,6 +565,9 @@ export class CharacterService {
         category: character.category,
         tags: character.tags,
         books: character.books,
+        ...(character.bookCategories && Object.keys(character.bookCategories).length > 0
+          ? { bookCategories: character.bookCategories }
+          : {}),
         ...(character.thumbnails && Object.keys(character.thumbnails).length > 0
           ? { thumbnails: character.thumbnails }
           : {}),
@@ -589,6 +607,38 @@ export class CharacterService {
     for (const bookId of books) {
       if (!availableBookIds.includes(bookId)) {
         throw new Error(`Referenced book '${bookId}' does not exist in project metadata`);
+      }
+    }
+  }
+
+  /**
+   * Validates that bookCategories keys are known books and values are known categories.
+   */
+  private async validateBookCategoryReferences(
+    bookCategories?: Record<string, string>
+  ): Promise<void> {
+    if (!bookCategories || Object.keys(bookCategories).length === 0) {
+      return;
+    }
+
+    const project = this.projectService.getCurrentProject();
+    if (!project || !project.metadata) {
+      throw new Error('No project metadata available for book category validation');
+    }
+
+    const availableBookIds = new Set((project.metadata.books || []).map((book) => book.id));
+    const availableCategoryIds = new Set(
+      (project.metadata.categories || []).map((category) => category.id)
+    );
+
+    for (const [bookId, categoryId] of Object.entries(bookCategories)) {
+      if (!availableBookIds.has(bookId)) {
+        throw new Error(`Referenced book '${bookId}' does not exist in project metadata`);
+      }
+      if (!availableCategoryIds.has(categoryId)) {
+        throw new Error(
+          `Book category override '${categoryId}' for book '${bookId}' does not exist in project metadata`
+        );
       }
     }
   }

@@ -10,6 +10,8 @@ export interface Character {
   category: string;
   tags: string[];
   books: string[];
+  /** Optional per-book category overrides; missing keys fall back to `category`. */
+  bookCategories?: Record<string, string>;
   /** Map of character-style id → opaque wiki-link / path string */
   thumbnails?: Record<string, string>;
   prompts: CharacterPrompt[]; // Image-generation prompts; first is the default
@@ -24,6 +26,8 @@ export interface CharacterFormData {
   category: string;
   tags: string[];
   books: string[];
+  /** Optional per-book category overrides; missing keys fall back to `category`. */
+  bookCategories?: Record<string, string>;
   thumbnails?: Record<string, string>;
   prompts: CharacterPrompt[];
   content: string;
@@ -34,6 +38,8 @@ export interface CharacterFrontmatter {
   category: string;
   tags: string[];
   books: string[];
+  /** Optional per-book category overrides; missing keys fall back to `category`. */
+  bookCategories?: Record<string, string>;
   thumbnails?: Record<string, string>;
   prompts?: CharacterPrompt[];
   created?: string;

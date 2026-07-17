@@ -2,6 +2,7 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
 
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { Character, Tag, Category } from '../../../../core/interfaces';
+import { resolveEffectiveCategory } from '../../../../core/utils/character-category.utils';
 
 @Component({
     selector: 'app-character-list-view',
@@ -18,6 +19,8 @@ export class CharacterListViewComponent {
   @Input() dndEnabled = false;
   @Input() selectedCharacterIds: string[] = [];
   @Input() thumbnailDataUrls: Map<string, string> = new Map();
+  /** When set, category labels use the book-specific override if present. */
+  @Input() categoryContextBookId = '';
 
   @Output() characterClick = new EventEmitter<Character>();
   @Output() characterDelete = new EventEmitter<{ character: Character; event: Event }>();
@@ -28,6 +31,10 @@ export class CharacterListViewComponent {
 
   getCharacterLink(character: Character): string[] {
     return ['/character', encodeURIComponent(character.id)];
+  }
+
+  getDisplayCategoryId(character: Character): string {
+    return resolveEffectiveCategory(character, this.categoryContextBookId);
   }
 
   getCategoryName(categoryId: string): string {

@@ -268,6 +268,50 @@ describe('CharacterValidator', () => {
       
       expect(result.isValid).toBe(true);
     });
+
+    it('should validate bookCategories against metadata and assigned books', () => {
+      const character = createValidCharacter();
+      const metadata = createValidMetadata();
+      metadata.books = [
+        { id: 'book-1', name: 'Book 1', color: '#111' },
+        { id: 'book-2', name: 'Book 2', color: '#222' },
+      ];
+      character.books = ['book-1', 'book-2'];
+      character.bookCategories = { 'book-2': 'supporting' };
+
+      const result = CharacterValidator.validateAgainstMetadata(character, metadata);
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should fail when bookCategories references an unknown category', () => {
+      const character = createValidCharacter();
+      const metadata = createValidMetadata();
+      metadata.books = [{ id: 'book-1', name: 'Book 1', color: '#111' }];
+      character.books = ['book-1'];
+      character.bookCategories = { 'book-1': 'not-a-category' };
+
+      const result = CharacterValidator.validateAgainstMetadata(character, metadata);
+      expect(result.isValid).toBe(false);
+      expect(
+        result.errors.some((e) => e.field === 'bookCategories' && e.code === 'INVALID_REFERENCE')
+      ).toBe(true);
+    });
+
+    it('should fail when bookCategories references a book not assigned to the character', () => {
+      const character = createValidCharacter();
+      const metadata = createValidMetadata();
+      metadata.books = [
+        { id: 'book-1', name: 'Book 1', color: '#111' },
+        { id: 'book-2', name: 'Book 2', color: '#222' },
+      ];
+      character.books = ['book-1'];
+      character.bookCategories = { 'book-2': 'supporting' };
+
+      const result = CharacterValidator.validateAgainstMetadata(character, metadata);
+      expect(result.isValid).toBe(false);
+      expect(
+        result.errors.some((e) => e.field === 'bookCategories' && e.code === 'INVALID_REFERENCE')
+      ).toBe(true);
+    });
   });
 });
-
