@@ -1,5 +1,8 @@
-import { ProjectMetadata, Category, Tag, ProjectSettings, Book } from '../interfaces/project.interface';
+import { ProjectMetadata, Category, Tag, ProjectSettings, Book, Series, Saga } from '../interfaces/project.interface';
 import { ValidationResult, ValidationError } from '../interfaces/validation.interface';
+
+const KEBAB_CASE_REGEX = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+const HEX_COLOR_REGEX = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
 
 export class ProjectValidator {
   static validateProjectMetadata(metadata: ProjectMetadata): ValidationResult {
@@ -89,6 +92,80 @@ export class ProjectValidator {
       }
     }
 
+    // Series validation (optional array)
+    if (metadata.series !== undefined && metadata.series !== null && !Array.isArray(metadata.series)) {
+      errors.push({
+        field: 'series',
+        message: 'Series must be an array',
+        code: 'INVALID_TYPE'
+      });
+    } else if (metadata.series) {
+      metadata.series.forEach((series, index) => {
+        const seriesValidation = this.validateSeries(series);
+        if (!seriesValidation.isValid) {
+          seriesValidation.errors.forEach(error => {
+            errors.push({
+              field: `series[${index}].${error.field}`,
+              message: error.message,
+              code: error.code
+            });
+          });
+        }
+      });
+
+      const seriesIds = metadata.series.map(s => s.id);
+      const duplicateSeriesIds = seriesIds.filter((id, index) => seriesIds.indexOf(id) !== index);
+      if (duplicateSeriesIds.length > 0) {
+        errors.push({
+          field: 'series',
+          message: `Duplicate series IDs found: ${[...new Set(duplicateSeriesIds)].join(', ')}`,
+          code: 'DUPLICATE_ID'
+        });
+      }
+    }
+
+    // Sagas validation (optional array)
+    if (metadata.sagas !== undefined && metadata.sagas !== null && !Array.isArray(metadata.sagas)) {
+      errors.push({
+        field: 'sagas',
+        message: 'Sagas must be an array',
+        code: 'INVALID_TYPE'
+      });
+    } else if (metadata.sagas) {
+      const seriesIdSet = new Set((metadata.series || []).map(s => s.id));
+
+      metadata.sagas.forEach((saga, index) => {
+        const sagaValidation = this.validateSaga(saga);
+        if (!sagaValidation.isValid) {
+          sagaValidation.errors.forEach(error => {
+            errors.push({
+              field: `sagas[${index}].${error.field}`,
+              message: error.message,
+              code: error.code
+            });
+          });
+        }
+
+        if (saga.seriesId && !seriesIdSet.has(saga.seriesId)) {
+          errors.push({
+            field: `sagas[${index}].seriesId`,
+            message: `Saga series '${saga.seriesId}' does not exist`,
+            code: 'INVALID_REFERENCE'
+          });
+        }
+      });
+
+      const sagaIds = metadata.sagas.map(s => s.id);
+      const duplicateSagaIds = sagaIds.filter((id, index) => sagaIds.indexOf(id) !== index);
+      if (duplicateSagaIds.length > 0) {
+        errors.push({
+          field: 'sagas',
+          message: `Duplicate saga IDs found: ${[...new Set(duplicateSagaIds)].join(', ')}`,
+          code: 'DUPLICATE_ID'
+        });
+      }
+    }
+
     // Books validation (optional array)
     if (metadata.books && !Array.isArray(metadata.books)) {
       errors.push({
@@ -97,6 +174,9 @@ export class ProjectValidator {
         code: 'INVALID_TYPE'
       });
     } else if (metadata.books) {
+      const seriesIdSet = new Set((metadata.series || []).map(s => s.id));
+      const sagaById = new Map((metadata.sagas || []).map(s => [s.id, s]));
+
       // Validate each book
       metadata.books.forEach((book, index) => {
         const bookValidation = this.validateBook(book);
@@ -109,6 +189,39 @@ export class ProjectValidator {
             });
           });
         }
+
+        if (book.seriesId) {
+          if (!seriesIdSet.has(book.seriesId)) {
+            errors.push({
+              field: `books[${index}].seriesId`,
+              message: `Book series '${book.seriesId}' does not exist`,
+              code: 'INVALID_REFERENCE'
+            });
+          }
+        }
+
+        if (book.sagaId) {
+          const saga = sagaById.get(book.sagaId);
+          if (!saga) {
+            errors.push({
+              field: `books[${index}].sagaId`,
+              message: `Book saga '${book.sagaId}' does not exist`,
+              code: 'INVALID_REFERENCE'
+            });
+          } else if (book.seriesId && book.seriesId !== saga.seriesId) {
+            errors.push({
+              field: `books[${index}].sagaId`,
+              message: `Book saga '${book.sagaId}' belongs to series '${saga.seriesId}', not '${book.seriesId}'`,
+              code: 'INVALID_REFERENCE'
+            });
+          } else if (!book.seriesId) {
+            errors.push({
+              field: `books[${index}].seriesId`,
+              message: `Book with saga '${book.sagaId}' must also set seriesId to '${saga.seriesId}'`,
+              code: 'INVALID_REFERENCE'
+            });
+          }
+        }
       });
 
       // Check for duplicate book IDs
@@ -119,6 +232,19 @@ export class ProjectValidator {
           field: 'books',
           message: `Duplicate book IDs found: ${duplicateBookIds.join(', ')}`,
           code: 'DUPLICATE_ID'
+        });
+      }
+
+      // Check for duplicate book codes (case-insensitive, only when set)
+      const bookCodes = metadata.books
+        .map(book => book.code?.trim().toLowerCase())
+        .filter((code): code is string => !!code);
+      const duplicateBookCodes = bookCodes.filter((code, index) => bookCodes.indexOf(code) !== index);
+      if (duplicateBookCodes.length > 0) {
+        errors.push({
+          field: 'books',
+          message: `Duplicate book codes found: ${[...new Set(duplicateBookCodes)].join(', ')}`,
+          code: 'DUPLICATE_CODE'
         });
       }
     }
@@ -176,7 +302,6 @@ export class ProjectValidator {
   static validateCategory(category: Category): ValidationResult {
     const errors: ValidationError[] = [];
 
-    // Required field validations
     if (!category.id || category.id.trim().length === 0) {
       errors.push({
         field: 'id',
@@ -201,31 +326,22 @@ export class ProjectValidator {
       });
     }
 
-    // ID format validation (kebab-case)
-    if (category.id) {
-      const kebabCaseRegex = /^[a-z0-9]+(-[a-z0-9]+)*$/;
-      if (!kebabCaseRegex.test(category.id)) {
-        errors.push({
-          field: 'id',
-          message: 'Category ID must be in kebab-case format (e.g., main-character)',
-          code: 'INVALID_FORMAT'
-        });
-      }
+    if (category.id && !KEBAB_CASE_REGEX.test(category.id)) {
+      errors.push({
+        field: 'id',
+        message: 'Category ID must be in kebab-case format (e.g., main-character)',
+        code: 'INVALID_FORMAT'
+      });
     }
 
-    // Color format validation (hex color)
-    if (category.color) {
-      const hexColorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
-      if (!hexColorRegex.test(category.color)) {
-        errors.push({
-          field: 'color',
-          message: 'Color must be a valid hex color (e.g., #FF0000)',
-          code: 'INVALID_FORMAT'
-        });
-      }
+    if (category.color && !HEX_COLOR_REGEX.test(category.color)) {
+      errors.push({
+        field: 'color',
+        message: 'Color must be a valid hex color (e.g., #FF0000)',
+        code: 'INVALID_FORMAT'
+      });
     }
 
-    // Description length validation (optional field)
     if (category.description && category.description.length > 500) {
       errors.push({
         field: 'description',
@@ -243,7 +359,6 @@ export class ProjectValidator {
   static validateTag(tag: Tag): ValidationResult {
     const errors: ValidationError[] = [];
 
-    // Required field validations
     if (!tag.id || tag.id.trim().length === 0) {
       errors.push({
         field: 'id',
@@ -268,28 +383,128 @@ export class ProjectValidator {
       });
     }
 
-    // ID format validation (kebab-case)
-    if (tag.id) {
-      const kebabCaseRegex = /^[a-z0-9]+(-[a-z0-9]+)*$/;
-      if (!kebabCaseRegex.test(tag.id)) {
-        errors.push({
-          field: 'id',
-          message: 'Tag ID must be in kebab-case format (e.g., magic-user)',
-          code: 'INVALID_FORMAT'
-        });
-      }
+    if (tag.id && !KEBAB_CASE_REGEX.test(tag.id)) {
+      errors.push({
+        field: 'id',
+        message: 'Tag ID must be in kebab-case format (e.g., magic-user)',
+        code: 'INVALID_FORMAT'
+      });
     }
 
-    // Color format validation (hex color)
-    if (tag.color) {
-      const hexColorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
-      if (!hexColorRegex.test(tag.color)) {
-        errors.push({
-          field: 'color',
-          message: 'Color must be a valid hex color (e.g., #FF0000)',
-          code: 'INVALID_FORMAT'
-        });
-      }
+    if (tag.color && !HEX_COLOR_REGEX.test(tag.color)) {
+      errors.push({
+        field: 'color',
+        message: 'Color must be a valid hex color (e.g., #FF0000)',
+        code: 'INVALID_FORMAT'
+      });
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  }
+
+  static validateSeries(series: Series): ValidationResult {
+    const errors: ValidationError[] = [];
+
+    if (!series.id || series.id.trim().length === 0) {
+      errors.push({
+        field: 'id',
+        message: 'Series ID is required',
+        code: 'REQUIRED_FIELD'
+      });
+    } else if (!KEBAB_CASE_REGEX.test(series.id)) {
+      errors.push({
+        field: 'id',
+        message: 'Series ID must be in kebab-case format (e.g., harry-potter)',
+        code: 'INVALID_FORMAT'
+      });
+    }
+
+    if (!series.name || series.name.trim().length === 0) {
+      errors.push({
+        field: 'name',
+        message: 'Series name is required',
+        code: 'REQUIRED_FIELD'
+      });
+    }
+
+    if (series.description && series.description.length > 1000) {
+      errors.push({
+        field: 'description',
+        message: 'Series description must be 1000 characters or less',
+        code: 'INVALID_LENGTH'
+      });
+    }
+
+    if (series.color && !HEX_COLOR_REGEX.test(series.color)) {
+      errors.push({
+        field: 'color',
+        message: 'Color must be a valid hex color (e.g., #FF0000)',
+        code: 'INVALID_FORMAT'
+      });
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  }
+
+  static validateSaga(saga: Saga): ValidationResult {
+    const errors: ValidationError[] = [];
+
+    if (!saga.id || saga.id.trim().length === 0) {
+      errors.push({
+        field: 'id',
+        message: 'Saga ID is required',
+        code: 'REQUIRED_FIELD'
+      });
+    } else if (!KEBAB_CASE_REGEX.test(saga.id)) {
+      errors.push({
+        field: 'id',
+        message: 'Saga ID must be in kebab-case format (e.g., zamasu-saga)',
+        code: 'INVALID_FORMAT'
+      });
+    }
+
+    if (!saga.name || saga.name.trim().length === 0) {
+      errors.push({
+        field: 'name',
+        message: 'Saga name is required',
+        code: 'REQUIRED_FIELD'
+      });
+    }
+
+    if (!saga.seriesId || saga.seriesId.trim().length === 0) {
+      errors.push({
+        field: 'seriesId',
+        message: 'Saga must belong to a series',
+        code: 'REQUIRED_FIELD'
+      });
+    } else if (!KEBAB_CASE_REGEX.test(saga.seriesId)) {
+      errors.push({
+        field: 'seriesId',
+        message: 'Saga series ID must be in kebab-case format',
+        code: 'INVALID_FORMAT'
+      });
+    }
+
+    if (saga.description && saga.description.length > 1000) {
+      errors.push({
+        field: 'description',
+        message: 'Saga description must be 1000 characters or less',
+        code: 'INVALID_LENGTH'
+      });
+    }
+
+    if (saga.color && !HEX_COLOR_REGEX.test(saga.color)) {
+      errors.push({
+        field: 'color',
+        message: 'Color must be a valid hex color (e.g., #FF0000)',
+        code: 'INVALID_FORMAT'
+      });
     }
 
     return {
@@ -301,7 +516,6 @@ export class ProjectValidator {
   static validateBook(book: Book): ValidationResult {
     const errors: ValidationError[] = [];
 
-    // Required field validations
     if (!book.id || book.id.trim().length === 0) {
       errors.push({
         field: 'id',
@@ -310,10 +524,12 @@ export class ProjectValidator {
       });
     }
 
-    if (!book.name || book.name.trim().length === 0) {
+    const hasCode = !!(book.code && book.code.trim().length > 0);
+    const hasName = !!(book.name && book.name.trim().length > 0);
+    if (!hasCode && !hasName) {
       errors.push({
         field: 'name',
-        message: 'Book name is required',
+        message: 'Either book code or title is required',
         code: 'REQUIRED_FIELD'
       });
     }
@@ -326,31 +542,30 @@ export class ProjectValidator {
       });
     }
 
-    // ID format validation (kebab-case)
-    if (book.id) {
-      const kebabCaseRegex = /^[a-z0-9]+(-[a-z0-9]+)*$/;
-      if (!kebabCaseRegex.test(book.id)) {
-        errors.push({
-          field: 'id',
-          message: 'Book ID must be in kebab-case format (e.g., first-chronicle)',
-          code: 'INVALID_FORMAT'
-        });
-      }
+    if (book.id && !KEBAB_CASE_REGEX.test(book.id)) {
+      errors.push({
+        field: 'id',
+        message: 'Book ID must be in kebab-case format (e.g., first-chronicle)',
+        code: 'INVALID_FORMAT'
+      });
     }
 
-    // Color format validation (hex color)
-    if (book.color) {
-      const hexColorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
-      if (!hexColorRegex.test(book.color)) {
-        errors.push({
-          field: 'color',
-          message: 'Color must be a valid hex color (e.g., #FF0000)',
-          code: 'INVALID_FORMAT'
-        });
-      }
+    if (book.color && !HEX_COLOR_REGEX.test(book.color)) {
+      errors.push({
+        field: 'color',
+        message: 'Color must be a valid hex color (e.g., #FF0000)',
+        code: 'INVALID_FORMAT'
+      });
     }
 
-    // Optional field validations
+    if (book.code && book.code.trim().length > 50) {
+      errors.push({
+        field: 'code',
+        message: 'Book code must be 50 characters or less',
+        code: 'INVALID_LENGTH'
+      });
+    }
+
     if (book.description && book.description.length > 1000) {
       errors.push({
         field: 'description',
@@ -359,7 +574,6 @@ export class ProjectValidator {
       });
     }
 
-    // Status validation
     if (book.status) {
       const validStatuses = ['draft', 'in-progress', 'published', 'archived'];
       if (!validStatuses.includes(book.status)) {
@@ -371,7 +585,6 @@ export class ProjectValidator {
       }
     }
 
-    // Publication date format validation (YYYY-MM-DD)
     if (book.publicationDate) {
       const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
       if (!dateRegex.test(book.publicationDate)) {
@@ -381,7 +594,6 @@ export class ProjectValidator {
           code: 'INVALID_FORMAT'
         });
       } else {
-        // Validate it's a real date
         const date = new Date(book.publicationDate);
         if (isNaN(date.getTime())) {
           errors.push({
@@ -393,7 +605,6 @@ export class ProjectValidator {
       }
     }
 
-    // ISBN validation (basic format check)
     if (book.isbn) {
       const isbnRegex = /^(?:ISBN(?:-1[03])?:? )?(?=[0-9X]{10}$|(?=(?:[0-9]+[- ]){3})[- 0-9X]{13}$|97[89][0-9]{10}$|(?=(?:[0-9]+[- ]){4})[- 0-9]{17}$)(?:97[89][- ]?)?[0-9]{1,5}[- ]?[0-9]+[- ]?[0-9]+[- ]?[0-9X]$/;
       if (!isbnRegex.test(book.isbn.replace(/[- ]/g, ''))) {
@@ -405,7 +616,6 @@ export class ProjectValidator {
       }
     }
 
-    // PoV character IDs (optional string array)
     if (book.povCharacterIds !== undefined && book.povCharacterIds !== null) {
       if (!Array.isArray(book.povCharacterIds)) {
         errors.push({
@@ -431,7 +641,6 @@ export class ProjectValidator {
   static validateProjectSettings(settings: ProjectSettings): ValidationResult {
     const errors: ValidationError[] = [];
 
-    // Required field validations
     if (!settings.defaultCategory || settings.defaultCategory.trim().length === 0) {
       errors.push({
         field: 'defaultCategory',
@@ -440,7 +649,6 @@ export class ProjectValidator {
       });
     }
 
-    // charactersFolder: optional string, no parent path traversal
     if (settings.charactersFolder !== undefined && settings.charactersFolder !== null) {
       if (typeof settings.charactersFolder !== 'string') {
         errors.push({
@@ -463,7 +671,6 @@ export class ProjectValidator {
       }
     }
 
-    // castsFolder: optional string, relative to project root, no parent path traversal
     if (settings.castsFolder !== undefined && settings.castsFolder !== null) {
       if (typeof settings.castsFolder !== 'string') {
         errors.push({

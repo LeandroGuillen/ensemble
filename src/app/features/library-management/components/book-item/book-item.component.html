@@ -8,12 +8,14 @@
 >
   <div class="book">
     <div class="book-cover" [style.background]="getBookGradient()">
-      <div class="book-title">{{ book.name }}</div>
+      <div class="book-title">{{ getCoverTitle() }}</div>
       <div class="ornament"></div>
-      <div class="book-author">{{ book.description }}</div>
+      @if (getCoverSubtitle()) {
+        <div class="book-author">{{ getCoverSubtitle() }}</div>
+      }
     </div>
     <div class="book-spine" [style.background]="getSpineGradient()">
-      <div class="spine-text">{{ book.name.toUpperCase() }}</div>
+      <div class="spine-text">{{ getSpineLabel().toUpperCase() }}</div>
     </div>
 
     <div class="book-back" [style.background]="getBackGradient()"></div>

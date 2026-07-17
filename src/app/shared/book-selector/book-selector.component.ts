@@ -1,7 +1,12 @@
-
 import { Component, EventEmitter, Input, Output, HostListener, ElementRef } from "@angular/core";
 import { Book } from "@app/core";
 import { trigger, transition, style, animate } from "@angular/animations";
+import {
+  getBookCoverTitle,
+  getBookDisplayName,
+  getBookSpineLabel,
+  getBookSubtitle,
+} from "@app/core/utils/book-display.utils";
 
 @Component({
     selector: "app-book-selector",
@@ -51,6 +56,22 @@ export class BookSelectorComponent {
   getSelectedBookObject(): Book | null {
     if (!this.selectedBook) return null;
     return this.books.find(b => b.id === this.selectedBook) || null;
+  }
+
+  getCoverTitle(book: Book): string {
+    return getBookCoverTitle(book);
+  }
+
+  getCoverSubtitle(book: Book): string {
+    return getBookSubtitle(book);
+  }
+
+  getSpineLabel(book: Book): string {
+    return getBookSpineLabel(book);
+  }
+
+  getDisplayName(book: Book): string {
+    return getBookDisplayName(book);
   }
 
   getBookGradient(book: Book): string {

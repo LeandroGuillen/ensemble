@@ -28,15 +28,32 @@
       <form [formGroup]="bookForm" (ngSubmit)="onSave()">
         <!-- Title and Color Row -->
         <div class="form-row">
+          <div class="form-group code-group">
+            <label for="bookCode">Code</label>
+            <input
+              id="bookCode"
+              type="text"
+              formControlName="code"
+              placeholder="e.g. n23, s99"
+              class="form-control"
+              [class.error]="getFieldError('code') || identityError"
+              />
+            @if (getFieldError('code')) {
+              <div class="field-error">
+                {{ getFieldError("code") }}
+              </div>
+            }
+          </div>
+
           <div class="form-group title-group">
-            <label for="bookName">Title *</label>
+            <label for="bookName">Title</label>
             <input
               id="bookName"
               type="text"
               formControlName="name"
-              placeholder="Enter book title"
+              placeholder="Untitled"
               class="form-control"
-              [class.error]="getFieldError('name')"
+              [class.error]="getFieldError('name') || identityError"
               />
             @if (getFieldError('name')) {
               <div class="field-error">
@@ -58,7 +75,7 @@
                 type="text"
                 formControlName="color"
                 placeholder="#3498db"
-                class="color-text"
+                class="form-control color-text"
                 [class.error]="getFieldError('color')"
                 />
             </div>
@@ -69,20 +86,27 @@
             }
           </div>
         </div>
+        @if (identityError) {
+          <div class="field-error identity-error">
+            {{ identityError }}
+          </div>
+        }
 
         <!-- Color Presets -->
         <div class="color-presets">
-          <span class="preset-label">Quick colors:</span>
-          @for (color of colorPresets; track color) {
-            <button
-              type="button"
-              class="color-preset"
-              [style.background-color]="color"
-              (click)="selectColor(color)"
-              [title]="color"
-              [class.selected]="getCurrentColor() === color"
-            ></button>
-          }
+          <span class="preset-label">Quick colors</span>
+          <div class="color-preset-swatches">
+            @for (color of colorPresets; track color) {
+              <button
+                type="button"
+                class="color-preset"
+                [style.background-color]="color"
+                (click)="selectColor(color)"
+                [title]="color"
+                [class.selected]="getCurrentColor() === color"
+              ></button>
+            }
+          </div>
         </div>
 
         <!-- Description -->
@@ -101,6 +125,37 @@
               {{ getFieldError("description") }}
             </div>
           }
+        </div>
+
+        <!-- Placement: Series / Saga -->
+        <div class="form-row">
+          <div class="form-group">
+            <label for="bookSeries">Series</label>
+            <select
+              id="bookSeries"
+              formControlName="seriesId"
+              class="form-control"
+              >
+              <option value="">None (ungrouped)</option>
+              @for (series of seriesList; track series.id) {
+                <option [value]="series.id">{{ series.name }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="bookSaga">Saga</label>
+            <select
+              id="bookSaga"
+              formControlName="sagaId"
+              class="form-control"
+              >
+              <option value="">None (in series only)</option>
+              @for (saga of availableSagas; track saga.id) {
+                <option [value]="saga.id">{{ saga.name }}</option>
+              }
+            </select>
+          </div>
         </div>
 
         <!-- Status and Date Row -->

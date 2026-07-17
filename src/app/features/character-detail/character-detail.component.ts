@@ -53,6 +53,7 @@ import {
   formatThumbnailWikiLink,
 } from "../../core/utils/thumbnail.utils";
 import { normalizeBookCategories } from "../../core/utils/character-category.utils";
+import { getBookDisplayName } from "../../core/utils/book-display.utils";
 import {
   CategoryToggleComponent,
   ToggleOption,
@@ -231,7 +232,7 @@ export class CharacterDetailComponent
         }));
         this.booksSelectableItems = this.books.map((book) => ({
           id: book.id,
-          name: book.name,
+          name: this.formatBookLabel(book),
           color: book.color,
         }));
 
@@ -544,7 +545,11 @@ export class CharacterDetailComponent
 
   getBookName(bookId: string): string {
     const book = this.books.find((b) => b.id === bookId);
-    return book?.name ?? bookId;
+    return book ? this.formatBookLabel(book) : bookId;
+  }
+
+  private formatBookLabel(book: Book): string {
+    return getBookDisplayName(book);
   }
 
   getBookPageContent(bookId: string): string {

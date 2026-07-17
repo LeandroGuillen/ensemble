@@ -1,14 +1,16 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, HostListener } from '@angular/core';
 
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Book } from '../../../../core/interfaces/project.interface';
+import { AbstractControl, FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
+import { Book, Saga, Series } from '../../../../core/interfaces/project.interface';
 import { Character } from '../../../../core/interfaces/character.interface';
 import { CharacterPickerService } from '../../../../core/services/character-picker.service';
 import { CharacterService } from '../../../../core/services/character.service';
 import { ProjectService } from '../../../../core/services/project.service';
+import { getBookDisplayName } from '../../../../core/utils/book-display.utils';
 
 interface BookFormData {
   name: string;
+  code?: string;
   color: string;
   description?: string;
   status?: 'draft' | 'in-progress' | 'complete' | 'published' | 'on-hold';
@@ -16,12 +18,22 @@ interface BookFormData {
   isbn?: string;
   coverImage?: string;
   povCharacterIds?: string[];
+  seriesId?: string;
+  sagaId?: string;
 }
 
 interface PovCharacterDisplay {
   id: string;
   name: string;
   thumbnail: string | null;
+}
+
+function codeOrTitleRequired(): ValidatorFn {
+  return (group: AbstractControl): ValidationErrors | null => {
+    const code = (group.get('code')?.value ?? '').toString().trim();
+    const name = (group.get('name')?.value ?? '').toString().trim();
+    return code || name ? null : { codeOrTitleRequired: true };
+  };
 }
 
 @Component({
@@ -32,6 +44,8 @@ interface PovCharacterDisplay {
 })
 export class BookEditorComponent implements OnInit, OnChanges {
   @Input() book: Book | null = null;
+  @Input() seriesList: Series[] = [];
+  @Input() sagasList: Saga[] = [];
   @Input() isVisible = false;
   @Input() saving = false;
   @Output() save = new EventEmitter<BookFormData>();
@@ -45,26 +59,24 @@ export class BookEditorComponent implements OnInit, OnChanges {
   povCharacters: PovCharacterDisplay[] = [];
   pickingPov = false;
 
-  // Color presets - distinct and visually unique colors
   colorPresets = [
-    '#e74c3c', // Red
-    '#3498db', // Blue
-    '#2ecc71', // Green
-    '#f39c12', // Orange
-    '#9b59b6', // Purple
-    '#1abc9c', // Teal
-    '#e91e63', // Pink
-    '#ff5722', // Deep Orange
-    '#4caf50', // Light Green
-    '#2196f3', // Light Blue
-    '#ff9800', // Amber
-    '#795548', // Brown
-    '#607d8b', // Blue Grey
-    '#ffeb3b', // Yellow
-    '#8bc34a'  // Lime
+    '#e74c3c',
+    '#3498db',
+    '#2ecc71',
+    '#f39c12',
+    '#9b59b6',
+    '#1abc9c',
+    '#e91e63',
+    '#ff5722',
+    '#4caf50',
+    '#2196f3',
+    '#ff9800',
+    '#795548',
+    '#607d8b',
+    '#ffeb3b',
+    '#8bc34a'
   ];
 
-  // Status options
   statusOptions = [
     { value: 'draft', label: 'Draft' },
     { value: 'in-progress', label: 'In Progress' },
@@ -80,14 +92,35 @@ export class BookEditorComponent implements OnInit, OnChanges {
     private projectService: ProjectService
   ) {
     this.bookForm = this.fb.group({
-      name: ['', [Validators.required, Validators.maxLength(200)]],
+      code: ['', [Validators.maxLength(50)]],
+      name: ['', [Validators.maxLength(200)]],
       color: ['#3498db', [Validators.required, Validators.pattern(/^#[0-9A-Fa-f]{6}$/)]],
       description: ['', [Validators.maxLength(1000)]],
       status: ['', []],
       publicationDate: ['', []],
       isbn: ['', [Validators.maxLength(50)]],
-      coverImage: ['', []]
-    });
+      coverImage: ['', []],
+      seriesId: [''],
+      sagaId: ['']
+    }, { validators: codeOrTitleRequired() });
+  }
+
+  get availableSagas(): Saga[] {
+    const seriesId = this.bookForm.get('seriesId')?.value;
+    if (!seriesId) {
+      return [];
+    }
+    return this.sagasList.filter((s) => s.seriesId === seriesId);
+  }
+
+  get identityError(): string | null {
+    if (
+      this.bookForm.hasError('codeOrTitleRequired') &&
+      (this.bookForm.get('code')?.touched || this.bookForm.get('name')?.touched)
+    ) {
+      return 'Either code or title is required';
+    }
+    return null;
   }
 
   @HostListener('document:keydown.escape', ['$event'])
@@ -100,6 +133,9 @@ export class BookEditorComponent implements OnInit, OnChanges {
 
   ngOnInit(): void {
     this.initializeForm();
+    this.bookForm.get('seriesId')?.valueChanges.subscribe(() => {
+      this.onSeriesChange();
+    });
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -113,29 +149,50 @@ export class BookEditorComponent implements OnInit, OnChanges {
 
     if (this.book) {
       this.bookForm.patchValue({
-        name: this.book.name,
+        code: this.book.code || '',
+        name: this.book.name === 'Untitled' ? '' : this.book.name,
         color: this.book.color,
         description: this.book.description || '',
         status: this.book.status || '',
         publicationDate: this.book.publicationDate || '',
         isbn: this.book.isbn || '',
-        coverImage: this.book.coverImage || ''
+        coverImage: this.book.coverImage || '',
+        seriesId: this.book.seriesId || '',
+        sagaId: this.book.sagaId || ''
       });
       this.povCharacterIds = [...(this.book.povCharacterIds || [])];
     } else {
       this.bookForm.reset({
+        code: '',
         name: '',
         color: '#3498db',
         description: '',
         status: '',
         publicationDate: '',
         isbn: '',
-        coverImage: ''
+        coverImage: '',
+        seriesId: '',
+        sagaId: ''
       });
       this.povCharacterIds = [];
     }
 
     void this.refreshPovCharacters();
+  }
+
+  onSeriesChange(): void {
+    const seriesId = this.bookForm.get('seriesId')?.value;
+    const sagaId = this.bookForm.get('sagaId')?.value;
+    if (!seriesId) {
+      this.bookForm.patchValue({ sagaId: '' }, { emitEvent: false });
+      return;
+    }
+    const stillValid = this.sagasList.some(
+      (s) => s.id === sagaId && s.seriesId === seriesId
+    );
+    if (!stillValid) {
+      this.bookForm.patchValue({ sagaId: '' }, { emitEvent: false });
+    }
   }
 
   private async refreshPovCharacters(): Promise<void> {
@@ -196,8 +253,15 @@ export class BookEditorComponent implements OnInit, OnChanges {
       return;
     }
 
+    const seriesId = (this.bookForm.value.seriesId || '').trim() || undefined;
+    const sagaId = seriesId
+      ? ((this.bookForm.value.sagaId || '').trim() || undefined)
+      : undefined;
+
     const formData: BookFormData = {
       ...this.bookForm.value,
+      seriesId,
+      sagaId,
       povCharacterIds: [...this.povCharacterIds],
     };
     this.save.emit(formData);
@@ -212,7 +276,6 @@ export class BookEditorComponent implements OnInit, OnChanges {
   }
 
   onOverlayClick(): void {
-    // Only close if the mouse was pressed down on the overlay
     if (this.mouseDownOnOverlay) {
       this.onCancel();
     }
@@ -220,12 +283,11 @@ export class BookEditorComponent implements OnInit, OnChanges {
   }
 
   onModalClick(): void {
-    // Reset the flag when clicking inside the modal
     this.mouseDownOnOverlay = false;
   }
 
   onDelete(): void {
-    if (this.book && confirm(`Are you sure you want to delete "${this.book.name}"?`)) {
+    if (this.book && confirm(`Are you sure you want to delete "${getBookDisplayName(this.book)}"?`)) {
       this.delete.emit(this.book);
     }
   }

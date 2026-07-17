@@ -173,6 +173,425 @@
   }
 }
 
+// Physical library shelves
+.series-shelf {
+  margin-bottom: 3rem;
+
+  &.drag-over .shelf-plank {
+    box-shadow:
+      0 0 0 2px var(--color-accent-primary),
+      0 8px 16px rgba(0, 0, 0, 0.35);
+  }
+
+  &.ungrouped-shelf {
+    --series-accent: var(--color-border);
+  }
+}
+
+.series-header,
+.saga-header,
+.ungrouped-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 0;
+  min-height: 32px;
+}
+
+.series-header,
+.ungrouped-header {
+  margin-bottom: var(--spacing-sm);
+}
+
+.series-title-block {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-sm);
+}
+
+.series-name,
+.ungrouped-name {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.series-count {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.series-actions,
+.saga-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+  opacity: 0.45;
+  transition: opacity var(--transition-fast);
+
+  .series-header:hover &,
+  .saga-header:hover & {
+    opacity: 1;
+  }
+}
+
+.btn-text {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+
+  &:hover:not(:disabled) {
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+  }
+
+  &.danger:hover:not(:disabled) {
+    color: var(--color-error);
+    background: rgba(248, 113, 113, 0.1);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.drag-handle {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  user-select: none;
+  letter-spacing: -2px;
+  opacity: 0.55;
+  cursor: grab;
+  padding: 4px 2px;
+  border-radius: var(--radius-sm);
+
+  &:hover {
+    opacity: 1;
+    background: var(--color-bg-tertiary);
+  }
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+// Shelf bay: backboard + books sitting on a plank
+.shelf-bay {
+  position: relative;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.shelf-back {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--series-accent, #607d8b) 18%, var(--color-bg-tertiary)) 0%,
+      var(--color-bg-tertiary) 55%,
+      color-mix(in srgb, var(--color-bg-primary) 40%, var(--color-bg-tertiary)) 100%
+    );
+  border: 1px solid var(--color-border-subtle);
+  border-bottom: none;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  padding: var(--spacing-md) var(--spacing-lg) 0;
+  min-height: 12rem;
+  overflow-x: auto;
+}
+
+.shelf-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-end;
+  gap: 0;
+  min-height: 11rem;
+  width: max-content;
+  min-width: 100%;
+}
+
+.saga-segment {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+  min-width: 0;
+
+  &.drag-over .bookshelf {
+    outline: 2px dashed var(--color-accent-primary);
+    outline-offset: 4px;
+    border-radius: var(--radius-sm);
+  }
+}
+
+.shelf-gap {
+  flex: 0 0 2.75rem;
+  align-self: stretch;
+  min-height: 1px;
+}
+
+.saga-header {
+  margin-bottom: 4px;
+  padding: 0 2px;
+}
+
+.loose-header .saga-name {
+  font-weight: 500;
+  font-style: italic;
+  opacity: 0.75;
+}
+
+.saga-name {
+  margin: 0;
+  flex: 1;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+// The wooden ledge books rest on
+.shelf-plank {
+  height: 14px;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--series-accent, #8b7355) 35%, #c4a574) 0%,
+      #8a6f4e 45%,
+      #5c4a34 100%
+    );
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.25);
+  position: relative;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 8%;
+    right: 8%;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.2);
+  }
+}
+
+.ungrouped-shelf .shelf-plank {
+  background:
+    linear-gradient(
+      180deg,
+      #9a8b78 0%,
+      #6e6254 50%,
+      #4a433a 100%
+    );
+}
+
+// Books sit on the plank (gallery)
+.shelf-bay .shelf-panel {
+  width: 100%;
+}
+
+.shelf-bay .bookshelf {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--spacing-md);
+  justify-content: flex-start;
+  align-items: flex-end;
+  min-height: 0;
+  padding: 0 0 2px;
+  margin: 0;
+  background: none;
+  border-radius: 0;
+
+  &::after {
+    display: none;
+  }
+}
+
+.shelf-bay .book-slot {
+  margin: 0;
+  // Perspective books overhang slightly above the plank
+  filter: drop-shadow(2px 6px 8px rgba(0, 0, 0, 0.35));
+}
+
+.shelf-empty-hint {
+  min-width: 7rem;
+  padding: var(--spacing-md);
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  border: 1px dashed var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  margin-bottom: 4px;
+  opacity: 0.7;
+
+  &.list-hint {
+    width: 100%;
+    min-width: 0;
+    padding: var(--spacing-sm) var(--spacing-md);
+  }
+}
+
+.shelf-panel.drop-target .bookshelf {
+  outline: 2px dashed var(--color-accent-primary);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm);
+}
+
+// List view saga bands (kept simple)
+.saga-band {
+  margin: var(--spacing-sm) 0 var(--spacing-md);
+  padding-left: var(--spacing-sm);
+  border-left: 2px solid
+    color-mix(in srgb, var(--series-accent, #607d8b) 55%, transparent);
+
+  &.drag-over {
+    border-left-color: var(--color-accent-primary);
+  }
+}
+
+.loose-label {
+  margin: var(--spacing-md) 0 var(--spacing-xs);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+}
+
+.book-row.dragging {
+  opacity: 0.5;
+}
+
+// Simple series/saga modals
+.simple-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--spacing-lg);
+}
+
+.simple-modal {
+  width: 100%;
+  max-width: 420px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-xl);
+  box-shadow: var(--shadow-card);
+
+  h2 {
+    margin: 0 0 var(--spacing-lg);
+    font-size: 1.25rem;
+  }
+
+  .form-group {
+    margin-bottom: var(--spacing-md);
+
+    label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 0.8125rem;
+      color: var(--color-text-secondary);
+    }
+  }
+
+  .form-control {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    font: inherit;
+  }
+}
+
+.series-color-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.series-color-native {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 48px;
+  height: 32px;
+  padding: 0;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+  overflow: hidden;
+
+  &::-webkit-color-swatch-wrapper {
+    padding: 0;
+  }
+
+  &::-webkit-color-swatch {
+    border: none;
+    border-radius: 2px;
+  }
+
+  &::-moz-color-swatch {
+    border: none;
+    border-radius: 2px;
+  }
+}
+
+.simple-modal .color-preset-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.simple-modal .color-preset {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+
+  &:hover {
+    box-shadow: var(--shadow-md);
+  }
+
+  &.selected {
+    border-color: var(--color-text-primary);
+    box-shadow: 0 0 0 2px var(--color-bg-primary), 0 0 0 4px var(--color-text-primary);
+  }
+}
+
+.simple-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-lg);
+
+  .spacer {
+    flex: 1;
+  }
+}
+
 // Smart Drop Zone Styles
 .book-slot {
   position: relative;
@@ -292,6 +711,18 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.book-row-code {
+  flex-shrink: 0;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-accent-primary);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 2px 8px;
 }
 
 .book-row-status {

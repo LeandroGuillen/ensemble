@@ -295,7 +295,7 @@
                         <div class="book-category-row">
                           <label class="book-category-label" [attr.for]="'book-category-' + book.id">
                             <span class="book-category-swatch" [style.background-color]="book.color"></span>
-                            {{ book.name }}
+                            {{ getBookName(book.id) }}
                           </label>
                           <select
                             class="form-control book-category-select"

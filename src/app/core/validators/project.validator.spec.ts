@@ -277,12 +277,32 @@ describe('ProjectValidator', () => {
       expect(result.errors.some(e => e.field === 'id' && e.code === 'REQUIRED_FIELD')).toBe(true);
     });
 
-    it('should fail validation when name is missing', () => {
+    it('should fail validation when both code and name are missing', () => {
       const book: Book = { id: 'test-book', name: '', color: '#FF0000' };
       const result = ProjectValidator.validateBook(book);
       
       expect(result.isValid).toBe(false);
       expect(result.errors.some(e => e.field === 'name' && e.code === 'REQUIRED_FIELD')).toBe(true);
+    });
+
+    it('should pass validation with code and empty name', () => {
+      const book: Book = { id: 'n23', name: '', color: '#FF0000', code: 'n23' };
+      const result = ProjectValidator.validateBook(book);
+
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should fail validation when code exceeds 50 characters', () => {
+      const book: Book = {
+        id: 'test-book',
+        name: 'Test Book',
+        color: '#FF0000',
+        code: 'a'.repeat(51),
+      };
+      const result = ProjectValidator.validateBook(book);
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors.some(e => e.field === 'code' && e.code === 'INVALID_LENGTH')).toBe(true);
     });
 
     it('should fail validation when color is missing', () => {
@@ -362,6 +382,103 @@ describe('ProjectValidator', () => {
       
       expect(result.isValid).toBe(false);
       expect(result.errors.some(e => e.field === 'description' && e.code === 'INVALID_LENGTH')).toBe(true);
+    });
+  });
+
+  describe('validateSeries', () => {
+    it('should validate valid series', () => {
+      const result = ProjectValidator.validateSeries({
+        id: 'harry-potter',
+        name: 'Harry Potter',
+        color: '#3498db'
+      });
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should fail when name is missing', () => {
+      const result = ProjectValidator.validateSeries({ id: 'harry-potter', name: '' });
+      expect(result.isValid).toBe(false);
+      expect(result.errors.some(e => e.field === 'name' && e.code === 'REQUIRED_FIELD')).toBe(true);
+    });
+
+    it('should fail when id is not kebab-case', () => {
+      const result = ProjectValidator.validateSeries({ id: 'Harry Potter', name: 'Harry Potter' });
+      expect(result.isValid).toBe(false);
+      expect(result.errors.some(e => e.field === 'id' && e.code === 'INVALID_FORMAT')).toBe(true);
+    });
+  });
+
+  describe('validateSaga', () => {
+    it('should validate valid saga', () => {
+      const result = ProjectValidator.validateSaga({
+        id: 'zamasu-saga',
+        name: 'Zamasu Saga',
+        seriesId: 'dragon-ball-super'
+      });
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should fail when seriesId is missing', () => {
+      const result = ProjectValidator.validateSaga({
+        id: 'zamasu-saga',
+        name: 'Zamasu Saga',
+        seriesId: ''
+      });
+      expect(result.isValid).toBe(false);
+      expect(result.errors.some(e => e.field === 'seriesId' && e.code === 'REQUIRED_FIELD')).toBe(true);
+    });
+  });
+
+  describe('series and saga references in metadata', () => {
+    it('should pass with matching book series and saga', () => {
+      const metadata = createValidMetadata();
+      metadata.series = [{ id: 'dbs', name: 'Dragon Ball Super', color: '#e74c3c' }];
+      metadata.sagas = [{ id: 'zamasu', name: 'Zamasu', seriesId: 'dbs' }];
+      metadata.books = [{
+        id: 'vol-1',
+        name: 'Volume 1',
+        color: '#3498db',
+        seriesId: 'dbs',
+        sagaId: 'zamasu'
+      }];
+      const result = ProjectValidator.validateProjectMetadata(metadata);
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should fail when saga references missing series', () => {
+      const metadata = createValidMetadata();
+      metadata.series = [];
+      metadata.sagas = [{ id: 'zamasu', name: 'Zamasu', seriesId: 'missing' }];
+      const result = ProjectValidator.validateProjectMetadata(metadata);
+      expect(result.isValid).toBe(false);
+      expect(result.errors.some(e => e.code === 'INVALID_REFERENCE' && e.field.includes('seriesId'))).toBe(true);
+    });
+
+    it('should fail when book saga does not match series', () => {
+      const metadata = createValidMetadata();
+      metadata.series = [
+        { id: 'dbs', name: 'Dragon Ball Super' },
+        { id: 'hp', name: 'Harry Potter' }
+      ];
+      metadata.sagas = [{ id: 'zamasu', name: 'Zamasu', seriesId: 'dbs' }];
+      metadata.books = [{
+        id: 'vol-1',
+        name: 'Volume 1',
+        color: '#3498db',
+        seriesId: 'hp',
+        sagaId: 'zamasu'
+      }];
+      const result = ProjectValidator.validateProjectMetadata(metadata);
+      expect(result.isValid).toBe(false);
+      expect(result.errors.some(e => e.field.includes('sagaId') && e.code === 'INVALID_REFERENCE')).toBe(true);
+    });
+
+    it('should allow missing series and sagas arrays', () => {
+      const metadata = createValidMetadata();
+      delete metadata.series;
+      delete metadata.sagas;
+      const result = ProjectValidator.validateProjectMetadata(metadata);
+      expect(result.isValid).toBe(true);
     });
   });
 

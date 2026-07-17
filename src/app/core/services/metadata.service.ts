@@ -1,13 +1,19 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { Character, CharacterFormData } from '../interfaces/character.interface';
-import { Book, Cast, Category, ProjectMetadata, ProjectSettings, Tag } from '../interfaces/project.interface';
+import { Book, Cast, Category, ProjectMetadata, ProjectSettings, Saga, Series, Tag } from '../interfaces/project.interface';
 import { ValidationResult } from '../interfaces/validation.interface';
 import { CharacterValidator } from '../validators/character.validator';
 import { ProjectValidator } from '../validators/project.validator';
 import { pathJoin } from '../utils/path.utils';
 import { slugify } from '../utils/slug.utils';
 import { MarkdownUtils } from '../utils/markdown.utils';
+import {
+  getBookDisplayName,
+  normalizeBookCode,
+  normalizeBookName,
+} from '../utils/book-display.utils';
+import { BookPlacement, booksInPlacement } from '../utils/library-grouping.utils';
 import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
 import { CastService } from './cast.service';
@@ -490,9 +496,29 @@ export class MetadataService {
     // Initialize books array if it doesn't exist (for backward compatibility)
     const books = metadata.books || [];
 
-    // Generate unique ID
-    const id = slugify(bookData.name);
-    const newBook: Book = { id, ...bookData };
+    const code = normalizeBookCode(bookData.code);
+    const titleInput = bookData.name?.trim() ?? '';
+    if (!code && !titleInput) {
+      throw new Error('Either book code or title is required');
+    }
+
+    const name = normalizeBookName(bookData.name);
+    // Prefer code for id when present (stable short identifier); fall back to title
+    const id = slugify(code || name);
+    if (!id) {
+      throw new Error('Either book code or title is required');
+    }
+
+    const newBook: Book = {
+      ...bookData,
+      id,
+      name,
+      code,
+    };
+    if (!code) {
+      delete newBook.code;
+    }
+    this.normalizeBookPlacement(newBook, metadata);
 
     // Validate the new book
     const validation = ProjectValidator.validateBook(newBook);
@@ -506,6 +532,8 @@ export class MetadataService {
     if (existingBook) {
       throw new Error(`Book with ID '${id}' already exists`);
     }
+
+    this.assertUniqueBookCode(books, code);
 
     // Add book and save
     const updatedMetadata = {
@@ -534,7 +562,30 @@ export class MetadataService {
       throw new Error(`Book with ID '${id}' not found`);
     }
 
-    const updatedBook = { ...books[bookIndex], ...updates };
+    const merged = { ...books[bookIndex], ...updates };
+    const code = normalizeBookCode(
+      updates.code !== undefined ? updates.code : merged.code
+    );
+    const titleInput = (
+      updates.name !== undefined ? updates.name : merged.name
+    )?.trim() ?? '';
+    if (!code && !titleInput) {
+      throw new Error('Either book code or title is required');
+    }
+
+    const name = normalizeBookName(
+      updates.name !== undefined ? updates.name : merged.name
+    );
+
+    const updatedBook: Book = {
+      ...merged,
+      name,
+      code,
+    };
+    if (!code) {
+      delete updatedBook.code;
+    }
+    this.normalizeBookPlacement(updatedBook, metadata);
 
     // Validate the updated book
     const validation = ProjectValidator.validateBook(updatedBook);
@@ -542,6 +593,8 @@ export class MetadataService {
       const errorMessages = validation.errors.map((e) => `${e.field}: ${e.message}`).join(', ');
       throw new Error(`Invalid book: ${errorMessages}`);
     }
+
+    this.assertUniqueBookCode(books, code, id);
 
     // Update book and save
     const updatedBooks = [...books];
@@ -554,6 +607,52 @@ export class MetadataService {
 
     await this.saveMetadata(updatedMetadata);
     return updatedBook;
+  }
+
+  private assertUniqueBookCode(
+    books: Book[],
+    code: string | undefined,
+    excludeId?: string
+  ): void {
+    if (!code) {
+      return;
+    }
+    const normalized = code.toLowerCase();
+    const duplicate = books.find(
+      (book) =>
+        book.id !== excludeId &&
+        book.code?.trim().toLowerCase() === normalized
+    );
+    if (duplicate) {
+      throw new Error(`Book code '${code}' is already used by another book`);
+    }
+  }
+
+  /** Clears empty placement fields and fills seriesId from saga when needed. */
+  private normalizeBookPlacement(book: Book, metadata: ProjectMetadata): void {
+    const seriesList = metadata.series || [];
+    const sagasList = metadata.sagas || [];
+
+    if (book.sagaId) {
+      const saga = sagasList.find((s) => s.id === book.sagaId);
+      if (saga) {
+        book.seriesId = saga.seriesId;
+      }
+    }
+
+    if (!book.seriesId) {
+      delete book.seriesId;
+      delete book.sagaId;
+    } else if (!seriesList.some((s) => s.id === book.seriesId)) {
+      delete book.seriesId;
+      delete book.sagaId;
+    }
+
+    if (!book.sagaId) {
+      delete book.sagaId;
+    } else if (!sagasList.some((s) => s.id === book.sagaId && s.seriesId === book.seriesId)) {
+      delete book.sagaId;
+    }
   }
 
   /**
@@ -616,6 +715,410 @@ export class MetadataService {
     };
 
     await this.saveMetadata(updatedMetadata);
+  }
+
+  /**
+   * Moves a book to a series/saga/ungrouped shelf and optionally inserts it
+   * at a local index among peers of that shelf (rewriting books[] order).
+   */
+  async moveBook(
+    bookId: string,
+    placement: BookPlacement,
+    insertIndex?: number
+  ): Promise<Book> {
+    const metadata = this.metadataSubject.value;
+    if (!metadata) {
+      throw new Error('No metadata loaded');
+    }
+
+    const books = [...(metadata.books || [])];
+    const bookIndex = books.findIndex((book) => book.id === bookId);
+    if (bookIndex === -1) {
+      throw new Error(`Book with ID '${bookId}' not found`);
+    }
+
+    const seriesList = metadata.series || [];
+    const sagasList = metadata.sagas || [];
+
+    let seriesId = placement.seriesId;
+    let sagaId = placement.sagaId;
+
+    if (sagaId) {
+      const saga = sagasList.find((s) => s.id === sagaId);
+      if (!saga) {
+        throw new Error(`Saga with ID '${sagaId}' not found`);
+      }
+      seriesId = saga.seriesId;
+    } else if (seriesId) {
+      if (!seriesList.some((s) => s.id === seriesId)) {
+        throw new Error(`Series with ID '${seriesId}' not found`);
+      }
+      sagaId = undefined;
+    } else {
+      seriesId = undefined;
+      sagaId = undefined;
+    }
+
+    const book = { ...books[bookIndex] };
+    if (seriesId) {
+      book.seriesId = seriesId;
+    } else {
+      delete book.seriesId;
+    }
+    if (sagaId) {
+      book.sagaId = sagaId;
+    } else {
+      delete book.sagaId;
+    }
+
+    books.splice(bookIndex, 1);
+
+    const targetPlacement: BookPlacement = { seriesId, sagaId };
+    const peers = booksInPlacement(books, targetPlacement);
+    let localIndex =
+      insertIndex === undefined ? peers.length : Math.max(0, Math.min(insertIndex, peers.length));
+
+    let globalInsertIndex: number;
+    if (peers.length === 0 || localIndex >= peers.length) {
+      if (peers.length === 0) {
+        globalInsertIndex = books.length;
+      } else {
+        const lastPeerId = peers[peers.length - 1].id;
+        globalInsertIndex = books.findIndex((b) => b.id === lastPeerId) + 1;
+      }
+    } else {
+      const peerId = peers[localIndex].id;
+      globalInsertIndex = books.findIndex((b) => b.id === peerId);
+    }
+
+    books.splice(globalInsertIndex, 0, book);
+
+    const updatedMetadata = {
+      ...metadata,
+      books,
+      series: seriesList,
+      sagas: sagasList,
+    };
+
+    const validation = ProjectValidator.validateProjectMetadata(updatedMetadata);
+    if (!validation.isValid) {
+      const errorMessages = validation.errors.map((e) => `${e.field}: ${e.message}`).join(', ');
+      throw new Error(`Invalid book placement: ${errorMessages}`);
+    }
+
+    await this.saveMetadata(updatedMetadata);
+    return book;
+  }
+
+  // Series Management
+
+  getSeries(): Series[] {
+    const metadata = this.metadataSubject.value;
+    return metadata?.series || [];
+  }
+
+  getSeriesById(id: string): Series | undefined {
+    return this.getSeries().find((s) => s.id === id);
+  }
+
+  async addSeries(seriesData: Omit<Series, 'id'>): Promise<Series> {
+    const metadata = this.metadataSubject.value;
+    if (!metadata) {
+      throw new Error('No metadata loaded');
+    }
+
+    const seriesList = metadata.series || [];
+    const id = slugify(seriesData.name);
+    if (!id) {
+      throw new Error('Series name is required');
+    }
+
+    const newSeries: Series = { id, ...seriesData };
+    const validation = ProjectValidator.validateSeries(newSeries);
+    if (!validation.isValid) {
+      const errorMessages = validation.errors.map((e) => `${e.field}: ${e.message}`).join(', ');
+      throw new Error(`Invalid series: ${errorMessages}`);
+    }
+
+    if (seriesList.some((s) => s.id === id)) {
+      throw new Error(`Series with ID '${id}' already exists`);
+    }
+
+    await this.saveMetadata({
+      ...metadata,
+      series: [...seriesList, newSeries],
+      sagas: metadata.sagas || [],
+    });
+    return newSeries;
+  }
+
+  async updateSeries(id: string, updates: Partial<Omit<Series, 'id'>>): Promise<Series> {
+    const metadata = this.metadataSubject.value;
+    if (!metadata) {
+      throw new Error('No metadata loaded');
+    }
+
+    const seriesList = [...(metadata.series || [])];
+    const index = seriesList.findIndex((s) => s.id === id);
+    if (index === -1) {
+      throw new Error(`Series with ID '${id}' not found`);
+    }
+
+    const updatedSeries = { ...seriesList[index], ...updates };
+    const validation = ProjectValidator.validateSeries(updatedSeries);
+    if (!validation.isValid) {
+      const errorMessages = validation.errors.map((e) => `${e.field}: ${e.message}`).join(', ');
+      throw new Error(`Invalid series: ${errorMessages}`);
+    }
+
+    seriesList[index] = updatedSeries;
+    await this.saveMetadata({
+      ...metadata,
+      series: seriesList,
+    });
+    return updatedSeries;
+  }
+
+  async removeSeries(id: string): Promise<void> {
+    const metadata = this.metadataSubject.value;
+    if (!metadata) {
+      throw new Error('No metadata loaded');
+    }
+
+    const seriesList = metadata.series || [];
+    if (!seriesList.some((s) => s.id === id)) {
+      throw new Error(`Series with ID '${id}' not found`);
+    }
+
+    const sagasList = (metadata.sagas || []).filter((s) => s.seriesId !== id);
+    const books = (metadata.books || []).map((book) => {
+      if (book.seriesId !== id) {
+        return book;
+      }
+      const next = { ...book };
+      delete next.seriesId;
+      delete next.sagaId;
+      return next;
+    });
+
+    await this.saveMetadata({
+      ...metadata,
+      series: seriesList.filter((s) => s.id !== id),
+      sagas: sagasList,
+      books,
+    });
+  }
+
+  async reorderSeries(orderedIds: string[]): Promise<void> {
+    const metadata = this.metadataSubject.value;
+    if (!metadata) {
+      throw new Error('No metadata loaded');
+    }
+
+    const seriesList = metadata.series || [];
+    if (orderedIds.length !== seriesList.length) {
+      throw new Error('Series reorder list length mismatch');
+    }
+
+    const byId = new Map(seriesList.map((s) => [s.id, s]));
+    const reordered: Series[] = [];
+    for (const id of orderedIds) {
+      const item = byId.get(id);
+      if (!item) {
+        throw new Error(`Series with ID '${id}' not found`);
+      }
+      reordered.push(item);
+    }
+
+    await this.saveMetadata({
+      ...metadata,
+      series: reordered,
+    });
+  }
+
+  // Saga Management
+
+  getSagas(): Saga[] {
+    const metadata = this.metadataSubject.value;
+    return metadata?.sagas || [];
+  }
+
+  getSagaById(id: string): Saga | undefined {
+    return this.getSagas().find((s) => s.id === id);
+  }
+
+  async addSaga(sagaData: Omit<Saga, 'id'>): Promise<Saga> {
+    const metadata = this.metadataSubject.value;
+    if (!metadata) {
+      throw new Error('No metadata loaded');
+    }
+
+    const seriesList = metadata.series || [];
+    if (!seriesList.some((s) => s.id === sagaData.seriesId)) {
+      throw new Error(`Series with ID '${sagaData.seriesId}' not found`);
+    }
+
+    const sagasList = metadata.sagas || [];
+    const id = slugify(sagaData.name);
+    if (!id) {
+      throw new Error('Saga name is required');
+    }
+
+    const newSaga: Saga = { id, ...sagaData };
+    const validation = ProjectValidator.validateSaga(newSaga);
+    if (!validation.isValid) {
+      const errorMessages = validation.errors.map((e) => `${e.field}: ${e.message}`).join(', ');
+      throw new Error(`Invalid saga: ${errorMessages}`);
+    }
+
+    if (sagasList.some((s) => s.id === id)) {
+      throw new Error(`Saga with ID '${id}' already exists`);
+    }
+
+    await this.saveMetadata({
+      ...metadata,
+      series: seriesList,
+      sagas: [...sagasList, newSaga],
+    });
+    return newSaga;
+  }
+
+  async updateSaga(id: string, updates: Partial<Omit<Saga, 'id'>>): Promise<Saga> {
+    const metadata = this.metadataSubject.value;
+    if (!metadata) {
+      throw new Error('No metadata loaded');
+    }
+
+    const sagasList = [...(metadata.sagas || [])];
+    const index = sagasList.findIndex((s) => s.id === id);
+    if (index === -1) {
+      throw new Error(`Saga with ID '${id}' not found`);
+    }
+
+    const updatedSaga = { ...sagasList[index], ...updates };
+    const seriesList = metadata.series || [];
+    if (!seriesList.some((s) => s.id === updatedSaga.seriesId)) {
+      throw new Error(`Series with ID '${updatedSaga.seriesId}' not found`);
+    }
+
+    const validation = ProjectValidator.validateSaga(updatedSaga);
+    if (!validation.isValid) {
+      const errorMessages = validation.errors.map((e) => `${e.field}: ${e.message}`).join(', ');
+      throw new Error(`Invalid saga: ${errorMessages}`);
+    }
+
+    // If saga moves to another series, update book seriesIds that reference this saga
+    const previous = sagasList[index];
+    let books = metadata.books || [];
+    if (previous.seriesId !== updatedSaga.seriesId) {
+      books = books.map((book) => {
+        if (book.sagaId !== id) {
+          return book;
+        }
+        return { ...book, seriesId: updatedSaga.seriesId };
+      });
+    }
+
+    sagasList[index] = updatedSaga;
+    await this.saveMetadata({
+      ...metadata,
+      sagas: sagasList,
+      books,
+    });
+    return updatedSaga;
+  }
+
+  async removeSaga(id: string): Promise<void> {
+    const metadata = this.metadataSubject.value;
+    if (!metadata) {
+      throw new Error('No metadata loaded');
+    }
+
+    const sagasList = metadata.sagas || [];
+    if (!sagasList.some((s) => s.id === id)) {
+      throw new Error(`Saga with ID '${id}' not found`);
+    }
+
+    const books = (metadata.books || []).map((book) => {
+      if (book.sagaId !== id) {
+        return book;
+      }
+      const next = { ...book };
+      delete next.sagaId;
+      return next;
+    });
+
+    await this.saveMetadata({
+      ...metadata,
+      sagas: sagasList.filter((s) => s.id !== id),
+      books,
+    });
+  }
+
+  async reorderSagas(orderedIds: string[]): Promise<void> {
+    const metadata = this.metadataSubject.value;
+    if (!metadata) {
+      throw new Error('No metadata loaded');
+    }
+
+    const sagasList = metadata.sagas || [];
+    if (orderedIds.length !== sagasList.length) {
+      throw new Error('Saga reorder list length mismatch');
+    }
+
+    const byId = new Map(sagasList.map((s) => [s.id, s]));
+    const reordered: Saga[] = [];
+    for (const id of orderedIds) {
+      const item = byId.get(id);
+      if (!item) {
+        throw new Error(`Saga with ID '${id}' not found`);
+      }
+      reordered.push(item);
+    }
+
+    await this.saveMetadata({
+      ...metadata,
+      sagas: reordered,
+    });
+  }
+
+  /**
+   * Reorders sagas within a single series while preserving other series' saga order.
+   */
+  async reorderSagasInSeries(seriesId: string, orderedIdsInSeries: string[]): Promise<void> {
+    const metadata = this.metadataSubject.value;
+    if (!metadata) {
+      throw new Error('No metadata loaded');
+    }
+
+    const sagasList = metadata.sagas || [];
+    const inSeries = sagasList.filter((s) => s.seriesId === seriesId);
+    if (orderedIdsInSeries.length !== inSeries.length) {
+      throw new Error('Saga reorder list length mismatch for series');
+    }
+
+    const byId = new Map(inSeries.map((s) => [s.id, s]));
+    const reorderedInSeries: Saga[] = [];
+    for (const id of orderedIdsInSeries) {
+      const item = byId.get(id);
+      if (!item) {
+        throw new Error(`Saga with ID '${id}' not found in series '${seriesId}'`);
+      }
+      reorderedInSeries.push(item);
+    }
+
+    let cursor = 0;
+    const reordered = sagasList.map((saga) => {
+      if (saga.seriesId !== seriesId) {
+        return saga;
+      }
+      return reorderedInSeries[cursor++];
+    });
+
+    await this.saveMetadata({
+      ...metadata,
+      sagas: reordered,
+    });
   }
 
   // Settings Management
@@ -816,7 +1319,7 @@ export class MetadataService {
   getBookOptions(): { id: string; name: string; color: string }[] {
     return this.getBooks().map((book) => ({
       id: book.id,
-      name: book.name,
+      name: getBookDisplayName(book),
       color: book.color,
     }));
   }

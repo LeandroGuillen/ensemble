@@ -2,6 +2,7 @@
 import { Component, ElementRef, EventEmitter, HostListener, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Book, Cast, Category, Character, Tag } from '../../core/interfaces';
+import { getBookDisplayName } from '../../core/utils/book-display.utils';
 import { BookSelectorComponent } from '../book-selector/book-selector.component';
 import { CastDropdownComponent } from '../cast-dropdown/cast-dropdown.component';
 import { CategoryToggleComponent, ToggleOption } from '../category-toggle/category-toggle.component';
@@ -162,7 +163,7 @@ export class CharacterFilterComponent {
 
   getBookName(bookId: string): string {
     const book = this.books.find((b) => b.id === bookId);
-    return book?.name || bookId;
+    return book ? getBookDisplayName(book) : bookId;
   }
 
   getBookCharacterCounts(): Map<string, number> {

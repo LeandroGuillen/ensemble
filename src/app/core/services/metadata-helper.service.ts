@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Character } from '../interfaces/character.interface';
+import { getBookDisplayName } from '../utils/book-display.utils';
 import { resolveEffectiveCategory } from '../utils/character-category.utils';
 import { ProjectService } from './project.service';
 
@@ -61,7 +62,8 @@ export class MetadataHelperService {
   getBookName(bookId: string): string {
     if (bookId === 'no-book') return 'No book';
     const books = this.projectService.getBooks();
-    return books.find(b => b.id === bookId)?.name || bookId;
+    const book = books.find(b => b.id === bookId);
+    return book ? getBookDisplayName(book) : bookId;
   }
 
   getBookColor(bookId: string): string {

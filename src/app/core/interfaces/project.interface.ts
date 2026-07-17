@@ -34,6 +34,10 @@ export interface ProjectMetadata {
   tags: Tag[];
   casts: Cast[];
   books: Book[];
+  /** Ordered series shelves; optional for backward compatibility. */
+  series?: Series[];
+  /** Ordered sagas (each belongs to a series); optional for backward compatibility. */
+  sagas?: Saga[];
   settings: ProjectSettings;
   pinboards?: Pinboard[];  // New: array of pinboards
   /** @deprecated Migrated to lastSession.lastPinboardId on load; do not write. */
@@ -88,10 +92,32 @@ export interface Cast {
   folderPath?: string;        // Absolute path to cast folder
 }
 
-export interface Book {
+/** Grouping of books that tell a cohesive story (e.g. Harry Potter, Dragon Ball Super). */
+export interface Series {
   id: string;
   name: string;
+  description?: string;
+  /** Accent color for shelf chrome on the Library page. */
+  color?: string;
+}
+
+/** Sub-grouping of books within a series (e.g. Zamasu saga within Dragon Ball Super). */
+export interface Saga {
+  id: string;
+  name: string;
+  /** Parent series; required — a saga always belongs to a series. */
+  seriesId: string;
+  description?: string;
+  color?: string;
+}
+
+export interface Book {
+  id: string;
+  /** Display title; stored as "Untitled" when not set. Either code or name must identify the book. */
+  name: string;
   color: string;
+  /** Short free-text identifier (e.g. "n23", "s99"). Unique when set. */
+  code?: string;
   description?: string;
   status?: 'draft' | 'in-progress' | 'published' | 'archived';
   publicationDate?: string;
@@ -99,6 +125,10 @@ export interface Book {
   coverImage?: string;
   /** Character IDs that are PoV for this book (independent of category/tags). */
   povCharacterIds?: string[];
+  /** Optional series membership (Library grouping). */
+  seriesId?: string;
+  /** Optional saga membership; when set, seriesId must match the saga's series. */
+  sagaId?: string;
 }
 
 export interface AiSettings {
