@@ -47,20 +47,22 @@ export const routes: Routes = [
     canActivate: [projectGuard],
   },
   {
-    path: "metadata",
+    path: "settings",
     loadComponent: () =>
-      import(
-        "./features/metadata-management/metadata-management.component"
-      ).then((m) => m.MetadataManagementComponent),
+      import("./features/settings/settings.component").then(
+        (m) => m.SettingsComponent
+      ),
     canActivate: [projectGuard],
   },
   {
+    path: "metadata",
+    redirectTo: () => "/settings?section=general",
+    pathMatch: "full",
+  },
+  {
     path: "ai-settings",
-    loadComponent: () =>
-      import("./features/ai-settings/ai-settings.component").then(
-        (m) => m.AiSettingsComponent
-      ),
-    canActivate: [projectGuard],
+    redirectTo: () => "/settings?section=ai",
+    pathMatch: "full",
   },
   {
     path: "library",

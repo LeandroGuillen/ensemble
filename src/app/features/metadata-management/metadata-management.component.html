@@ -1,38 +1,31 @@
-<div class="metadata-management">
-  <app-page-header [title]="'Settings'"></app-page-header>
+<div class="metadata-management metadata-panel">
+  <!-- Loading State -->
+  @if (loading) {
+    <div class="loading">
+      <div class="spinner"></div>
+      <p>Loading settings...</p>
+    </div>
+  }
 
-  <div class="metadata-content">
-    <div class="metadata-inner">
-      <p class="page-subtitle">Manage categories, tags, and project settings for your character database.</p>
+  <!-- Error Display -->
+  @if (error) {
+    <div class="error-banner">
+      <div class="error-content">
+        <span class="error-icon">⚠️</span>
+        <span class="error-message">{{ error }}</span>
+        <button class="error-close" (click)="error = null">×</button>
+      </div>
+    </div>
+  }
 
-      <!-- Loading State -->
-      @if (loading) {
-        <div class="loading">
-          <div class="spinner"></div>
-          <p>Loading metadata...</p>
-        </div>
-      }
-
-      <!-- Error Display -->
-      @if (error) {
-        <div class="error-banner">
-          <div class="error-content">
-            <span class="error-icon">⚠️</span>
-            <span class="error-message">{{ error }}</span>
-            <button class="error-close" (click)="error = null">×</button>
-          </div>
-        </div>
-      }
-
-      <!-- Main Content -->
-      @if (!loading) {
-        <div class="content">
-          <!-- Categories and Tags Container -->
-          <div class="categories-tags-container">
+  <!-- Main Content -->
+  @if (!loading) {
+    <div class="content">
+      @if (activeSection === 'categories') {
+            <div class="categories-tags-container single-column">
             <!-- Categories Section -->
-            <section class="section categories-section">
+            <section class="section categories-section" [settingsSearchable]="['Categories', 'folder mode', categoryNamesSearch]">
               <div class="section-header">
-                <h2>Categories</h2>
                 <button class="btn btn-primary" (click)="showAddCategoryForm()" [disabled]="saving">
                   <span class="icon">+</span>
                   Add Category
@@ -325,10 +318,40 @@
                 }
               </div>
             </section>
+          </div>
+
+            <section class="section">
+                <form [formGroup]="settingsForm">
+                <div class="form-group" [settingsSearchable]="['Default Category', 'pre-selected', defaultCategorySearchLabel]">
+                  <label for="defaultCategory">Default Category</label>
+                  <select
+                    id="defaultCategory"
+                    formControlName="defaultCategory"
+                    class="form-control"
+                    [class.error]="getFieldError(settingsForm, 'defaultCategory')"
+                    >
+                    <option value="">Select default category</option>
+                    @for (category of categories; track category) {
+                      <option [value]="category.id" [title]="category.description || category.name">
+                        {{ category.name }}{{ category.description ? ' - ' + category.description : '' }}
+                      </option>
+                    }
+                  </select>
+                  @if (getFieldError(settingsForm, 'defaultCategory')) {
+                    <div class="field-error">
+                      {{ getFieldError(settingsForm, 'defaultCategory') }}
+                    </div>
+                  }
+                  <small class="form-help">This category will be pre-selected when creating new characters.</small>
+                </div>
+                </form>
+            </section>
+      }
+      @if (activeSection === 'tags') {
+            <div class="categories-tags-container single-column">
             <!-- Tags Section -->
-            <section class="section tags-section">
+            <section class="section tags-section" [settingsSearchable]="['Tags', tagNamesSearch]">
               <div class="section-header">
-                <h2>Tags</h2>
                 <button class="btn btn-primary" (click)="showAddTagForm()" [disabled]="saving">
                   <span class="icon">+</span>
                   Add Tag
@@ -525,31 +548,152 @@
               </div>
             </section>
           </div>
-          <!-- Color Palette Management Section -->
-          @if (colorPalette) {
-            <section class="section">
+      }
+
+      @if (activeSection === 'character-styles') {
+            <div class="categories-tags-container single-column">
+            <section class="section" id="character-styles" [settingsSearchable]="['Character Styles', 'portrait', 'anime', 'default style', characterStylesLabel]">
               <div class="section-header">
-                <button
-                  class="section-toggle"
-                  (click)="colorPaletteExpanded = !colorPaletteExpanded"
-                  [attr.aria-expanded]="colorPaletteExpanded"
-                  >
-                  <h2>Color Palette</h2>
-                  <span class="toggle-icon" [class.expanded]="colorPaletteExpanded">▼</span>
+                <button class="btn btn-primary" (click)="showAddCharacterStyleForm()" [disabled]="saving">
+                  <span class="icon">+</span>
+                  Add Style
                 </button>
-                @if (colorPaletteExpanded) {
-                  <button
-                    class="btn btn-secondary"
-                    (click)="resetBaseColors()"
-                    [disabled]="saving"
-                    title="Reset all base colors to defaults"
-                    >
-                    Reset to Defaults
-                  </button>
+              </div>
+
+              @if (showCharacterStyleForm) {
+                <div class="form-card">
+                  <div class="form-header">
+                    <h3>Add New Style</h3>
+                    <button class="btn-close" (click)="cancelCharacterStyleForm()">×</button>
+                  </div>
+                  <form (ngSubmit)="addCharacterStyle()">
+                    <div class="form-group">
+                      <label for="characterStyleName">Name</label>
+                      <input
+                        id="characterStyleName"
+                        type="text"
+                        class="form-control"
+                        [(ngModel)]="newCharacterStyleName"
+                        [ngModelOptions]="{standalone: true}"
+                        placeholder="e.g. Anime, Realistic"
+                        (keydown.enter)="$event.preventDefault(); addCharacterStyle()"
+                        [disabled]="saving"
+                      />
+                      <small class="form-help">Portrait style name shown in the character list when more than one exists.</small>
+                    </div>
+                    <div class="form-actions">
+                      <button type="button" class="btn btn-secondary" (click)="cancelCharacterStyleForm()" [disabled]="saving">
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        class="btn btn-primary"
+                        [disabled]="!newCharacterStyleName.trim() || saving"
+                      >
+                        @if (saving) {
+                          <span class="spinner-small"></span>
+                        }
+                        Add Style
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              }
+
+              <div class="items-list character-styles-list">
+                @for (style of characterStyles; track style.id) {
+                  <div class="item-row character-style-row">
+                    <button
+                      type="button"
+                      class="style-star"
+                      [class.starred]="isDefaultCharacterStyle(style.id)"
+                      [title]="isDefaultCharacterStyle(style.id) ? 'Default style' : 'Set as default'"
+                      [attr.aria-label]="isDefaultCharacterStyle(style.id) ? 'Default style' : 'Set ' + style.name + ' as default'"
+                      [disabled]="saving || isDefaultCharacterStyle(style.id)"
+                      (click)="setDefaultCharacterStyle(style)"
+                    >★</button>
+                    <div class="item-content">
+                      <div class="item-info">
+                        <div class="item-name-row">
+                          <input
+                            type="text"
+                            class="character-style-name-input"
+                            [ngModel]="getCharacterStyleDisplayName(style)"
+                            [ngModelOptions]="{standalone: true}"
+                            (ngModelChange)="onCharacterStyleNameDraft(style.id, $event)"
+                            (blur)="renameCharacterStyle(style.id)"
+                            (keydown.enter)="$event.preventDefault(); $any($event.target).blur()"
+                            [attr.aria-label]="'Rename ' + style.name"
+                            [disabled]="saving"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div class="item-actions">
+                      <button
+                        type="button"
+                        class="btn-icon btn-danger"
+                        (click)="removeCharacterStyle(style)"
+                        [disabled]="characterStyles.length <= 1 || saving"
+                        [title]="characterStyles.length <= 1 ? 'At least one style is required' : 'Delete style'"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
                 }
               </div>
-              @if (colorPaletteExpanded) {
-                <div class="form-card">
+              <small class="form-help character-styles-hint">The starred style is used for pinboard, casts, and the character detail hero.</small>
+            </section>
+            </div>
+      }
+
+      @if (activeSection === 'appearance') {
+            <section class="section settings-fields">
+              <form [formGroup]="settingsForm">
+                <div class="form-group" [settingsSearchable]="['Theme', 'appearance', 'color scheme', themeSearchLabel]">
+                  <label for="theme">Theme</label>
+                  <select
+                    id="theme"
+                    formControlName="theme"
+                    class="form-control"
+                    >
+                    @for (theme of availableThemes; track theme) {
+                      <option [value]="theme.id">
+                        {{ theme.name }}{{ theme.description ? ' - ' + theme.description : '' }}
+                      </option>
+                    }
+                  </select>
+                  <small class="form-help">Choose the color theme for this project.</small>
+                </div>
+              </form>
+              @if (zoomService.isElectron()) {
+                <div class="form-group" [settingsSearchable]="['Interface zoom', 'zoom', 'scale', zoomPercent + '%']">
+                  <label>Interface zoom</label>
+                  <div class="zoom-controls-inline">
+                    <button type="button" class="btn btn-secondary btn-zoom" (click)="zoomService.zoomOut()" [disabled]="!zoomService.canZoomOut()" title="Zoom out">−</button>
+                    <span class="zoom-value">{{ zoomPercent }}%</span>
+                    <button type="button" class="btn btn-secondary btn-zoom" (click)="zoomService.zoomIn()" [disabled]="!zoomService.canZoomIn()" title="Zoom in">+</button>
+                    <button type="button" class="btn btn-ghost btn-zoom-reset" (click)="zoomService.resetZoom()" [disabled]="zoomService.zoomLevel === 0" title="Reset to 100%">Reset</button>
+                  </div>
+                  <small class="form-help">Zoom the entire application interface. Preference is saved automatically.</small>
+                </div>
+              }
+            </section>
+          <!-- Color Palette Management Section -->
+          @if (colorPalette) {
+            <section class="section" [settingsSearchable]="['Color Palette', 'base colors', 'extra colors', 'theme override']">
+              <div class="section-header">
+                <h2>Color Palette</h2>
+                <button
+                  class="btn btn-secondary"
+                  (click)="resetBaseColors()"
+                  [disabled]="saving"
+                  title="Reset all base colors to defaults"
+                  >
+                  Reset to Defaults
+                </button>
+              </div>
                   <p class="form-help">
                     Manage the color palette used for categories and tags. Base colors can be themed but not removed.
                     You can add extra colors beyond the base 10.
@@ -685,59 +829,14 @@
                       <p class="form-help">No extra colors added yet.</p>
                     }
                   </div>
-                </div>
-              }
             </section>
           }
-          <!-- Settings Section -->
-          <section class="section">
-            <div class="section-header">
-              <h2>Project Settings</h2>
-              <span class="settings-autosave-status">
-                {{ savingSettings ? 'Saving changes…' : 'Changes save automatically' }}
-              </span>
-            </div>
-            <div class="form-card">
-              <form [formGroup]="settingsForm">
-                <div class="form-group">
-                  <label for="defaultCategory">Default Category</label>
-                  <select
-                    id="defaultCategory"
-                    formControlName="defaultCategory"
-                    class="form-control"
-                    [class.error]="getFieldError(settingsForm, 'defaultCategory')"
-                    >
-                    <option value="">Select default category</option>
-                    @for (category of categories; track category) {
-                      <option [value]="category.id" [title]="category.description || category.name">
-                        {{ category.name }}{{ category.description ? ' - ' + category.description : '' }}
-                      </option>
-                    }
-                  </select>
-                  @if (getFieldError(settingsForm, 'defaultCategory')) {
-                    <div class="field-error">
-                      {{ getFieldError(settingsForm, 'defaultCategory') }}
-                    </div>
-                  }
-                  <small class="form-help">This category will be pre-selected when creating new characters.</small>
-                </div>
-                <div class="form-group">
-                  <label class="checkbox-label">
-                    <input type="checkbox" formControlName="autoSave">
-                    <span class="checkmark"></span>
-                    Auto-save changes
-                  </label>
-                  <small class="form-help">Automatically save character changes without confirmation.</small>
-                </div>
-                <div class="form-group">
-                  <label class="checkbox-label">
-                    <input type="checkbox" formControlName="fileWatchEnabled">
-                    <span class="checkmark"></span>
-                    Watch for external file changes
-                  </label>
-                  <small class="form-help">Monitor files for changes made by external editors.</small>
-                </div>
-                <div class="form-group">
+      }
+
+      @if (activeSection === 'general') {
+            <section class="section settings-fields">
+                <form [formGroup]="settingsForm">
+                <div class="form-group" [settingsSearchable]="['Characters Folder', 'path', settings?.charactersFolder || 'characters']">
                   <label for="charactersFolder">Characters Folder</label>
                   <input
                     type="text"
@@ -754,7 +853,7 @@
                   }
                   <small class="form-help">Relative path from project root where character files are stored (default: characters).</small>
                 </div>
-                <div class="form-group">
+                <div class="form-group" [settingsSearchable]="['Casts Folder', 'path', settings?.castsFolder || 'characters/casts']">
                   <label for="castsFolder">Casts Folder</label>
                   <input
                     type="text"
@@ -771,7 +870,7 @@
                   }
                   <small class="form-help">Relative path from project root where cast folders are stored (default: characters/casts). Can be any path, e.g. writing/casts.</small>
                 </div>
-                <div class="form-group">
+                <div class="form-group" [settingsSearchable]="['Names File', 'backstage', 'names.md', settings?.namesFile || 'characters/names.md']">
                   <label for="namesFile">Names File</label>
                   <input
                     type="text"
@@ -788,7 +887,7 @@
                   }
                   <small class="form-help">Relative path from project root for the backstage names list file (default: characters/names.md). Can be any path, e.g. notes/names.md.</small>
                 </div>
-                <div class="form-group">
+                <div class="form-group" [settingsSearchable]="['Images Folder', 'portraits', 'img', settings?.imagesFolder || 'img']">
                   <label for="imagesFolder">Images Folder</label>
                   <input
                     type="text"
@@ -805,94 +904,7 @@
                   }
                   <small class="form-help">Relative path from project root containing project images. Generated portraits are saved under its @new folder.</small>
                 </div>
-
-                <div class="form-group character-styles-section" id="character-styles">
-                  <label>Character Styles</label>
-                  <small class="form-help">Portrait styles for characters (e.g. Default, Anime). The character list can switch between them when more than one exists.</small>
-                  <ul class="character-styles-list">
-                    @for (style of characterStyles; track style.id) {
-                      <li class="character-style-row">
-                        <input
-                          type="text"
-                          class="form-control character-style-name-input"
-                          [ngModel]="getCharacterStyleDisplayName(style)"
-                          [ngModelOptions]="{standalone: true}"
-                          (ngModelChange)="onCharacterStyleNameDraft(style.id, $event)"
-                          (blur)="renameCharacterStyle(style.id)"
-                          (keydown.enter)="$event.preventDefault(); $any($event.target).blur()"
-                          [attr.aria-label]="'Rename ' + style.name"
-                          [disabled]="saving"
-                        />
-                        <span class="character-style-id">{{ style.id }}</span>
-                        <button
-                          type="button"
-                          class="btn btn-ghost btn-sm"
-                          (click)="removeCharacterStyle(style)"
-                          [disabled]="characterStyles.length <= 1 || saving"
-                          title="Remove style"
-                        >Remove</button>
-                      </li>
-                    }
-                  </ul>
-                  <div class="character-style-add">
-                    <input
-                      type="text"
-                      class="form-control"
-                      [(ngModel)]="newCharacterStyleName"
-                      [ngModelOptions]="{standalone: true}"
-                      placeholder="New style name"
-                      (keydown.enter)="$event.preventDefault(); addCharacterStyle()"
-                    />
-                    <button
-                      type="button"
-                      class="btn btn-secondary"
-                      (click)="addCharacterStyle()"
-                      [disabled]="!newCharacterStyleName.trim() || saving"
-                    >Add style</button>
-                  </div>
-                  @if (characterStyles.length > 1) {
-                    <label class="nested-label" for="defaultCharacterStyle">Default style</label>
-                    <select
-                      id="defaultCharacterStyle"
-                      formControlName="defaultCharacterStyle"
-                      class="form-control"
-                    >
-                      @for (style of characterStyles; track style.id) {
-                        <option [value]="style.id">{{ style.name }}</option>
-                      }
-                    </select>
-                    <small class="form-help">Used for pinboard, casts, and the character detail hero.</small>
-                  }
-                </div>
-
-                <div class="form-group">
-                  <label for="theme">Theme</label>
-                  <select
-                    id="theme"
-                    formControlName="theme"
-                    class="form-control"
-                    >
-                    @for (theme of availableThemes; track theme) {
-                      <option [value]="theme.id">
-                        {{ theme.name }}{{ theme.description ? ' - ' + theme.description : '' }}
-                      </option>
-                    }
-                  </select>
-                  <small class="form-help">Choose the color theme for this project.</small>
-                </div>
-                @if (zoomService.isElectron()) {
-                  <div class="form-group">
-                    <label>Interface zoom</label>
-                    <div class="zoom-controls-inline">
-                      <button type="button" class="btn btn-secondary btn-zoom" (click)="zoomService.zoomOut()" [disabled]="!zoomService.canZoomOut()" title="Zoom out">−</button>
-                      <span class="zoom-value">{{ zoomPercent }}%</span>
-                      <button type="button" class="btn btn-secondary btn-zoom" (click)="zoomService.zoomIn()" [disabled]="!zoomService.canZoomIn()" title="Zoom in">+</button>
-                      <button type="button" class="btn btn-ghost btn-zoom-reset" (click)="zoomService.resetZoom()" [disabled]="zoomService.zoomLevel === 0" title="Reset to 100%">Reset</button>
-                    </div>
-                    <small class="form-help">Zoom the entire application interface. Preference is saved automatically.</small>
-                  </div>
-                }
-                <div class="form-group">
+                <div class="form-group" [settingsSearchable]="['Application Updates', 'update', 'version']">
                   <label>Application Updates</label>
                   <div class="update-check-section">
                     <button
@@ -926,11 +938,9 @@
                   </div>
                   <small class="form-help">Check if a new version of the application is available.</small>
                 </div>
-              </form>
-            </div>
-          </section>
-        </div>
+                </form>
+            </section>
       }
     </div>
-  </div>
+  }
 </div>

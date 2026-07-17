@@ -137,7 +137,8 @@
               } @else {
                 <a
                   class="add-style-link"
-                  routerLink="/metadata"
+                  routerLink="/settings"
+                  [queryParams]="{ section: 'character-styles' }"
                   fragment="character-styles"
                   title="Add another character style in Settings"
                 >Add another style</a>

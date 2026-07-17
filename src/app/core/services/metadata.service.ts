@@ -637,7 +637,12 @@ export class MetadataService {
       throw new Error('No metadata loaded');
     }
 
-    const updatedSettings = { ...metadata.settings, ...updates };
+    const updatedSettings = {
+      ...metadata.settings,
+      ...updates,
+    } as ProjectSettings & { autoSave?: unknown; fileWatchEnabled?: unknown };
+    delete updatedSettings.autoSave;
+    delete updatedSettings.fileWatchEnabled;
 
     // Validate the updated settings
     const validation = ProjectValidator.validateProjectSettings(updatedSettings);

@@ -125,7 +125,7 @@ export class JsonUtils {
    */
   static getProperty<T = any>(data: any, propertyPath: string): T | undefined {
     try {
-      // Simple property path resolution (e.g., "settings.autoSave")
+      // Simple property path resolution (e.g., "settings.defaultCategory")
       const properties = propertyPath.split('.');
       let current = data;
       

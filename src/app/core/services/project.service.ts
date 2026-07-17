@@ -213,9 +213,14 @@ export class ProjectService {
       this.ensureDefaultPinboard(metadata);
 
       const stylesSeeded = this.ensureCharacterStyles(metadata);
+      const legacySettingsStripped = this.stripLegacySettingsInPlace(metadata);
 
       // Save metadata if initialization modified it in place
-      if ((metadata.pinboards && metadata.pinboards.length > 0) || stylesSeeded) {
+      if (
+        (metadata.pinboards && metadata.pinboards.length > 0) ||
+        stylesSeeded ||
+        legacySettingsStripped
+      ) {
         await this.saveMetadata(projectPath, metadata);
       }
 
@@ -407,8 +412,6 @@ export class ProjectService {
       books: [],
       settings: {
         defaultCategory: DEFAULT_CATEGORIES[0].id,
-        autoSave: true,
-        fileWatchEnabled: true,
         charactersFolder: DEFAULT_CHARACTERS_FOLDER,
         castsFolder: DEFAULT_CASTS_FOLDER,
         imagesFolder: DEFAULT_IMAGES_FOLDER,
@@ -460,10 +463,26 @@ export class ProjectService {
       Array.isArray(metadata.categories) &&
       Array.isArray(metadata.tags) &&
       metadata.settings &&
-      typeof metadata.settings.defaultCategory === 'string' &&
-      typeof metadata.settings.autoSave === 'boolean' &&
-      typeof metadata.settings.fileWatchEnabled === 'boolean'
+      typeof metadata.settings.defaultCategory === 'string'
     );
+  }
+
+  /** Drops removed settings keys still present in older ensemble.json files. */
+  private stripLegacySettingsInPlace(metadata: ProjectMetadata): boolean {
+    const settings = metadata.settings as ProjectSettings & {
+      autoSave?: unknown;
+      fileWatchEnabled?: unknown;
+    };
+    let changed = false;
+    if ('autoSave' in settings) {
+      delete settings.autoSave;
+      changed = true;
+    }
+    if ('fileWatchEnabled' in settings) {
+      delete settings.fileWatchEnabled;
+      changed = true;
+    }
+    return changed;
   }
 
   getCategories(): Category[] {

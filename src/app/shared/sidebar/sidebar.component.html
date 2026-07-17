@@ -35,15 +35,17 @@
   <nav class="sidebar-nav">
     @for (section of sections; track section.id; let isLast = $last) {
       <div class="nav-section">
-        <!-- Section Header -->
-        <div class="section-header" [class.collapsed]="isCollapsed">
-          @if (!isCollapsed) {
-            <span class="section-label">{{ section.label }}</span>
-          }
-          @if (isCollapsed) {
-            <span class="section-divider"></span>
-          }
-        </div>
+        <!-- Section Header (skip unlabeled / single-item sections) -->
+        @if (section.label && section.items.length > 1) {
+          <div class="section-header" [class.collapsed]="isCollapsed">
+            @if (!isCollapsed) {
+              <span class="section-label">{{ section.label }}</span>
+            }
+            @if (isCollapsed) {
+              <span class="section-divider"></span>
+            }
+          </div>
+        }
         <!-- Section Items -->
         <div class="section-items">
           @for (item of section.items; track item.label) {

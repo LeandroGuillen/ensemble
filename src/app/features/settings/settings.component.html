@@ -1,0 +1,120 @@
+<div class="settings-page">
+  <app-page-header [title]="'Settings'">
+    <span pageHeaderSuffix class="settings-header-context">
+      <span class="settings-header-sep" aria-hidden="true">—</span>
+      <span class="settings-header-section">{{ activeNavItem.label }}</span>
+      <span class="settings-header-dot" aria-hidden="true">.</span>
+      <span class="settings-header-description">{{ activeNavItem.description }}</span>
+    </span>
+  </app-page-header>
+
+  <div class="settings-body">
+    <nav class="settings-nav" aria-label="Settings sections">
+      <div class="settings-search">
+        <input
+          type="search"
+          class="settings-search-input"
+          placeholder="Search settings…"
+          [ngModel]="searchQuery"
+          (ngModelChange)="onSearchChange($event)"
+          aria-label="Search settings"
+        />
+        @if (hasActiveSearch) {
+          <button
+            type="button"
+            class="settings-search-clear"
+            (click)="clearSearch()"
+            title="Clear search"
+            aria-label="Clear search"
+          >×</button>
+        }
+      </div>
+
+      @if (hasActiveSearch && searchMatches.length > 0) {
+        <div class="settings-search-results">
+          <div class="settings-search-results-label">Matches</div>
+          <ul class="settings-search-results-list">
+            @for (match of searchMatches; track match.field.id) {
+              <li>
+                <button
+                  type="button"
+                  class="settings-search-result"
+                  [class.active]="activeSection === match.field.section"
+                  (click)="selectSearchMatch(match)"
+                >
+                  <span class="settings-search-result-label">{{ match.field.label }}</span>
+                  <span class="settings-search-result-meta">
+                    {{ match.sectionLabel }}
+                    @if (match.valuePreview) {
+                      <span class="settings-search-result-value">· {{ match.valuePreview }}</span>
+                    }
+                  </span>
+                </button>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+
+      @if (hasActiveSearch && filteredNavEntries.length === 0 && searchMatches.length === 0) {
+        <p class="settings-search-empty">No settings match “{{ searchQuery }}”</p>
+      }
+
+      <ul class="settings-nav-list">
+        @for (entry of filteredNavEntries; track entry.id) {
+          @if (entry.kind === 'group') {
+            <li class="settings-nav-group" [class.active-group]="isGroupActive(entry)">
+              <button
+                type="button"
+                class="settings-nav-group-toggle"
+                [attr.aria-expanded]="isGroupExpanded(entry.id)"
+                (click)="toggleGroup(entry.id)"
+              >
+                <span class="settings-nav-label">{{ entry.label }}</span>
+                <span class="settings-nav-chevron" [class.expanded]="isGroupExpanded(entry.id)">▾</span>
+              </button>
+              @if (isGroupExpanded(entry.id)) {
+                <ul class="settings-nav-children">
+                  @for (child of entry.children; track child.id) {
+                    <li>
+                      <button
+                        type="button"
+                        class="settings-nav-item settings-nav-child"
+                        [class.active]="activeSection === child.id"
+                        (click)="selectSection(child.id)"
+                      >
+                        <span class="settings-nav-label">{{ child.label }}</span>
+                      </button>
+                    </li>
+                  }
+                </ul>
+              }
+            </li>
+          } @else {
+            <li>
+              <button
+                type="button"
+                class="settings-nav-item"
+                [class.active]="activeSection === entry.id"
+                (click)="selectSection(entry.id)"
+              >
+                <span class="settings-nav-label">{{ entry.label }}</span>
+              </button>
+            </li>
+          }
+        }
+      </ul>
+    </nav>
+
+    <div class="settings-panel">
+      <div class="settings-panel-content">
+        @if (isProjectSection(activeSection)) {
+          <app-metadata-management [activeSection]="activeSection"></app-metadata-management>
+        }
+        @if (isAiSection(activeSection)) {
+          <app-ai-settings [activeSection]="activeSection"></app-ai-settings>
+        }
+      </div>
+    </div>
+  </div>
+</div>

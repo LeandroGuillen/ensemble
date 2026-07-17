@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, Input, OnChanges, OnInit, OnDestroy, SimpleChanges } from '@angular/core';
 
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { debounceTime, Subject, takeUntil } from 'rxjs';
@@ -8,21 +8,20 @@ import { ProjectService } from '../../core/services/project.service';
 import { CharacterService } from '../../core/services/character.service';
 import { CastService } from '../../core/services/cast.service';
 import { BackstageService } from '../../core/services/backstage.service';
-import { ElectronService } from '../../core/services/electron.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { ColorPaletteService } from '../../core/services/color-palette.service';
 import { UpdateService, UpdateStatus } from '../../core/services/update.service';
 import { ZoomService } from '../../core/services/zoom.service';
 import { ModalService } from '../../core/services/modal.service';
 import { Category, Tag, ProjectSettings, CategoryFolderMode, CharacterStyle } from '../../core/interfaces/project.interface';
-import { Character } from '../../core/interfaces/character.interface';
 import { Theme } from '../../core/interfaces/theme.interface';
 import { ColorPaletteConfig } from '../../core/interfaces/color-palette.interface';
 import { BASE_COLOR_NAMES } from '../../core/interfaces/color-palette.interface';
-import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { DEFAULT_BASE_COLORS } from '../../core/utils/color-palette.utils';
 import { slugify } from '../../core/utils/slug.utils';
 import { DEFAULT_CHARACTER_STYLE_ID } from '../../core/constants/project.constants';
+import type { SettingsSectionId } from '../settings/settings-section';
+import { SettingsSearchableDirective } from '../settings/settings-searchable.directive';
 
 interface CategoryFormData {
   name: string;
@@ -39,12 +38,15 @@ interface TagFormData {
 
 @Component({
     selector: 'app-metadata-management',
-    imports: [FormsModule, ReactiveFormsModule, PageHeaderComponent],
+    imports: [FormsModule, ReactiveFormsModule, SettingsSearchableDirective],
     templateUrl: './metadata-management.component.html',
     styleUrls: ['./metadata-management.component.scss']
 })
-export class MetadataManagementComponent implements OnInit, OnDestroy {
+export class MetadataManagementComponent implements OnInit, OnDestroy, OnChanges {
   private destroy$ = new Subject<void>();
+
+  /** Which settings panel section to render (driven by parent Settings page). */
+  @Input() activeSection: SettingsSectionId = 'general';
   
   categories: Category[] = [];
   tags: Tag[] = [];
@@ -61,11 +63,12 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
   baseColorNames = BASE_COLOR_NAMES;
   editingBaseColorIndex: number | null = null;
   newExtraColor = '';
-  colorPaletteExpanded = false;
+  colorPaletteExpanded = true;
 
   // Form states
   showCategoryForm = false;
   showTagForm = false;
+  showCharacterStyleForm = false;
   editingCategory: Category | null = null;
   editingTag: Tag | null = null;
 
@@ -129,8 +132,6 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
 
     this.settingsForm = this.fb.group({
       defaultCategory: ['', Validators.required],
-      autoSave: [true],
-      fileWatchEnabled: [true],
       charactersFolder: ['', [Validators.maxLength(200)]],
       castsFolder: ['', [Validators.maxLength(200)]],
       namesFile: ['', [Validators.maxLength(500)]],
@@ -202,6 +203,12 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
       });
   }
 
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['activeSection'] && this.activeSection === 'appearance') {
+      this.colorPaletteExpanded = true;
+    }
+  }
+
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
@@ -231,8 +238,6 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
       this.settingsForm.patchValue(
         {
           defaultCategory: this.settings.defaultCategory,
-          autoSave: this.settings.autoSave,
-          fileWatchEnabled: this.settings.fileWatchEnabled,
           charactersFolder: this.settings.charactersFolder ?? 'characters',
           castsFolder: this.settings.castsFolder ?? 'characters/casts',
           namesFile: this.settings.namesFile ?? 'characters/names.md',
@@ -462,6 +467,26 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
 
   // Character Styles Management
 
+  showAddCharacterStyleForm(): void {
+    this.showCharacterStyleForm = true;
+    this.newCharacterStyleName = '';
+  }
+
+  cancelCharacterStyleForm(): void {
+    this.showCharacterStyleForm = false;
+    this.newCharacterStyleName = '';
+  }
+
+  isDefaultCharacterStyle(styleId: string): boolean {
+    return this.settingsForm.get('defaultCharacterStyle')?.value === styleId;
+  }
+
+  async setDefaultCharacterStyle(style: CharacterStyle): Promise<void> {
+    if (this.isDefaultCharacterStyle(style.id)) return;
+    this.settingsForm.patchValue({ defaultCharacterStyle: style.id }, { emitEvent: false });
+    await this.persistCharacterStyles();
+  }
+
   async addCharacterStyle(): Promise<void> {
     const name = this.newCharacterStyleName.trim();
     if (!name) return;
@@ -476,6 +501,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
     }
     this.characterStyles = [...this.characterStyles, { id, name }];
     this.newCharacterStyleName = '';
+    this.showCharacterStyleForm = false;
     if (!this.settingsForm.get('defaultCharacterStyle')?.value) {
       this.settingsForm.patchValue({ defaultCharacterStyle: id }, { emitEvent: false });
     }
@@ -968,5 +994,27 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
 
   isUpdateError(): boolean {
     return this.updateStatus.status === 'error';
+  }
+
+  get defaultCategorySearchLabel(): string {
+    const id = this.settingsForm.get('defaultCategory')?.value || this.settings?.defaultCategory;
+    return this.categories.find((c) => c.id === id)?.name || '';
+  }
+
+  get themeSearchLabel(): string {
+    const id = this.settingsForm.get('theme')?.value || this.currentTheme?.id;
+    return this.availableThemes.find((t) => t.id === id)?.name || this.currentTheme?.name || '';
+  }
+
+  get characterStylesLabel(): string {
+    return this.characterStyles.map((s) => s.name).join(' ');
+  }
+
+  get categoryNamesSearch(): string {
+    return this.categories.map((c) => `${c.name} ${c.description || ''}`).join(' ');
+  }
+
+  get tagNamesSearch(): string {
+    return this.tags.map((t) => t.name).join(' ');
   }
 }

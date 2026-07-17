@@ -1,21 +1,24 @@
-
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, Input, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { debounceTime, merge, Subject, takeUntil } from 'rxjs';
 import { AiSettings } from '../../core/interfaces/project.interface';
 import { ImageWorkflow } from '../../core/interfaces/image-generation.interface';
 import { AiService, AiTestConnectionResult } from '../../core/services/ai.service';
 import { ImageGenerationService } from '../../core/services/image-generation/image-generation.service';
-import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
+import type { SettingsSectionId } from '../settings/settings-section';
+import { SettingsSearchableDirective } from '../settings/settings-searchable.directive';
 
 @Component({
     selector: 'app-ai-settings',
-    imports: [FormsModule, ReactiveFormsModule, PageHeaderComponent],
+    imports: [FormsModule, ReactiveFormsModule, SettingsSearchableDirective],
     templateUrl: './ai-settings.component.html',
     styleUrls: ['./ai-settings.component.scss']
 })
 export class AiSettingsComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
+
+  /** Which settings panel section to render (driven by parent Settings page). */
+  @Input() activeSection: SettingsSectionId = 'ai';
 
   aiForm: FormGroup;
   imageForm: FormGroup;

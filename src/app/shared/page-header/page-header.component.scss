@@ -17,7 +17,8 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
-  flex-shrink: 0;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .page-title {
@@ -29,6 +30,7 @@
   white-space: nowrap;
   letter-spacing: -0.015em;
   line-height: 1.1;
+  flex-shrink: 0;
 }
 
 .header-right {
@@ -36,8 +38,12 @@
   align-items: center;
   gap: var(--spacing-sm);
   justify-content: flex-end;
-  flex-shrink: 0;
-  flex: 1;
+  flex: 0 0 auto;
+  margin-left: auto;
+
+  &:empty {
+    display: none;
+  }
 }
 
 @media (max-width: 1024px) {

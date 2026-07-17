@@ -51,17 +51,10 @@ export class SidebarComponent implements OnInit {
       ]
     },
     {
-      id: 'settings',
-      label: 'Settings',
+      id: 'utility',
+      label: '',
       items: [
-        { icon: 'cpu', label: 'AI Settings', route: '/ai-settings', title: 'AI Settings' },
-        { icon: 'settings', label: 'General', route: '/metadata', title: 'General Settings' }
-      ]
-    },
-    {
-      id: 'help',
-      label: 'Help',
-      items: [
+        { icon: 'settings', label: 'Settings', route: '/settings', title: 'Settings' },
         { icon: 'keyboard', label: 'Shortcuts', title: 'Keyboard Shortcuts', action: () => this.openShortcuts() }
       ]
     }

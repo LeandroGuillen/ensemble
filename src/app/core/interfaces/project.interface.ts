@@ -129,8 +129,6 @@ export interface ImageGenerationSettings {
 
 export interface ProjectSettings {
   defaultCategory: string;
-  autoSave: boolean;
-  fileWatchEnabled: boolean;
   /** Relative path from project root for character files (default: 'characters') */
   charactersFolder?: string;
   /** Relative path from project root for the casts folder (default: 'characters/casts') */

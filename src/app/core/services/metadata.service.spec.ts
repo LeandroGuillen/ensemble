@@ -29,9 +29,7 @@ describe('MetadataService', () => {
     casts: [],
     books: [],
     settings: {
-      defaultCategory: 'main-character',
-      autoSave: true,
-      fileWatchEnabled: true
+      defaultCategory: 'main-character'
     }
   });
 
@@ -144,7 +142,7 @@ describe('MetadataService', () => {
       projectService.getCurrentProject.and.returnValue(project);
       (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
 
-      const invalidMetadata: any = { projectName: '', version: '1.0.0', categories: [], tags: [], casts: [], books: [], settings: { defaultCategory: 'main', autoSave: true, fileWatchEnabled: true } };
+      const invalidMetadata: any = { projectName: '', version: '1.0.0', categories: [], tags: [], casts: [], books: [], settings: { defaultCategory: 'main' } };
       await expectAsync(service.saveMetadata(invalidMetadata)).toBeRejected();
     });
   });
@@ -350,10 +348,10 @@ describe('MetadataService', () => {
 
     it('should update settings', async () => {
       const updated = await service.updateSettings({
-        autoSave: false
+        charactersFolder: 'personajes'
       });
 
-      expect(updated.autoSave).toBe(false);
+      expect(updated.charactersFolder).toBe('personajes');
       expect(projectService.updateMetadata).toHaveBeenCalled();
     });
 

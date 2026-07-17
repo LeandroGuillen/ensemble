@@ -14,9 +14,7 @@ describe('ProjectValidator', () => {
     casts: [],
     books: [],
     settings: {
-      defaultCategory: 'main-character',
-      autoSave: true,
-      fileWatchEnabled: true
+      defaultCategory: 'main-character'
     }
   });
 
@@ -371,8 +369,6 @@ describe('ProjectValidator', () => {
     it('should validate valid settings', () => {
       const settings: ProjectSettings = {
         defaultCategory: 'main-character',
-        autoSave: true,
-        fileWatchEnabled: true,
         charactersFolder: 'personas'
       };
       const result = ProjectValidator.validateProjectSettings(settings);
@@ -383,38 +379,12 @@ describe('ProjectValidator', () => {
 
     it('should fail validation when defaultCategory is missing', () => {
       const settings: ProjectSettings = {
-        defaultCategory: '',
-        autoSave: true,
-        fileWatchEnabled: true
+        defaultCategory: ''
       };
       const result = ProjectValidator.validateProjectSettings(settings);
       
       expect(result.isValid).toBe(false);
       expect(result.errors.some(e => e.field === 'defaultCategory' && e.code === 'REQUIRED_FIELD')).toBe(true);
-    });
-
-    it('should fail validation when autoSave is not boolean', () => {
-      const settings: any = {
-        defaultCategory: 'main-character',
-        autoSave: 'true',
-        fileWatchEnabled: true
-      };
-      const result = ProjectValidator.validateProjectSettings(settings);
-      
-      expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.field === 'autoSave' && e.code === 'INVALID_TYPE')).toBe(true);
-    });
-
-    it('should fail validation when fileWatchEnabled is not boolean', () => {
-      const settings: any = {
-        defaultCategory: 'main-character',
-        autoSave: true,
-        fileWatchEnabled: 'true'
-      };
-      const result = ProjectValidator.validateProjectSettings(settings);
-      
-      expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.field === 'fileWatchEnabled' && e.code === 'INVALID_TYPE')).toBe(true);
     });
   });
 });

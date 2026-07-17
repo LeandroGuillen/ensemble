@@ -440,23 +440,6 @@ export class ProjectValidator {
       });
     }
 
-    // Type validations
-    if (typeof settings.autoSave !== 'boolean') {
-      errors.push({
-        field: 'autoSave',
-        message: 'Auto save must be a boolean value',
-        code: 'INVALID_TYPE'
-      });
-    }
-
-    if (typeof settings.fileWatchEnabled !== 'boolean') {
-      errors.push({
-        field: 'fileWatchEnabled',
-        message: 'File watch enabled must be a boolean value',
-        code: 'INVALID_TYPE'
-      });
-    }
-
     // charactersFolder: optional string, no parent path traversal
     if (settings.charactersFolder !== undefined && settings.charactersFolder !== null) {
       if (typeof settings.charactersFolder !== 'string') {

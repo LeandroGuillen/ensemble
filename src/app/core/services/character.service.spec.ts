@@ -33,9 +33,7 @@ describe('CharacterService', () => {
       casts: [],
       books: [],
       settings: {
-        defaultCategory: 'main-character',
-        autoSave: true,
-        fileWatchEnabled: true
+        defaultCategory: 'main-character'
       }
     }
   });
