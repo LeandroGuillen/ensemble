@@ -21,10 +21,14 @@
 .filters-sidebar-anim {
   flex-shrink: 0;
   overflow: hidden;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
 }
 
 .filters-sidebar {
   width: 260px;
+  height: 100%;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -55,6 +59,15 @@
   min-height: 0;
   padding: var(--spacing-md);
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+
+  app-character-filter {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
 }
 
 .sidebar-collapse-btn,
@@ -141,6 +154,25 @@
 
 .toolbar-spacer {
   flex: 1;
+}
+
+.character-style-select {
+  height: 36px;
+  min-width: 140px;
+  padding: 0 10px;
+  border: 1px solid var(--border-color, #2d3748);
+  border-radius: 6px;
+  background: var(--bg-secondary, #1a202c);
+  color: var(--text-primary, #e2e8f0);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent-color, #63b3ed);
+  }
 }
 
 .results-toolbar {

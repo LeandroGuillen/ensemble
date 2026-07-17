@@ -16,7 +16,7 @@ import {
   ReactiveFormsModule,
   Validators,
 } from "@angular/forms";
-import { ActivatedRoute, Router } from "@angular/router";
+import { ActivatedRoute, Router, RouterLink } from "@angular/router";
 import { Location } from "@angular/common";
 import { Subject } from "rxjs";
 import { debounceTime, takeUntil } from "rxjs/operators";
@@ -26,6 +26,7 @@ import {
   Category,
   Character,
   CharacterFormData,
+  CharacterStyle,
   Project,
   ImageWorkflow,
   ProjectImage,
@@ -45,7 +46,12 @@ import {
   ProjectService,
 } from "../../core/services";
 import { ModalService } from "../../core/services/modal.service";
-import { parseThumbnailReference, resolveThumbnailPath } from "../../core/utils/thumbnail.utils";
+import {
+  parseThumbnailReference,
+  resolveThumbnailPath,
+  resolveThumbnailForStyle,
+  formatThumbnailWikiLink,
+} from "../../core/utils/thumbnail.utils";
 import {
   CategoryToggleComponent,
   ToggleOption,
@@ -60,6 +66,7 @@ import { PageHeaderComponent } from "../../shared/page-header/page-header.compon
     imports: [
     FormsModule,
     ReactiveFormsModule,
+    RouterLink,
     CategoryToggleComponent,
     MultiSelectButtonsComponent,
     PageHeaderComponent,
@@ -111,8 +118,13 @@ export class CharacterDetailComponent
   isGeneratingName = false;
   aiEnabled = false;
 
-  // Thumbnail preview (resolved from img/ path)
-  thumbnailPreviewUrl: string | null = null;
+  // Thumbnail previews by character style
+  thumbnailPreviewUrls: Map<string, string> = new Map();
+  characterStyles: CharacterStyle[] = [];
+  defaultCharacterStyle = '';
+  /** Style id the image picker / generate portrait will assign to */
+  pickerTargetStyleId = '';
+  thumbnailsMap: Record<string, string> = {};
   imageGenerationEnabled = false;
   showGeneratePortraitDialog = false;
   showImagePickerDialog = false;
@@ -193,6 +205,11 @@ export class CharacterDetailComponent
         this.categories = this.projectService.getCategories();
         this.tags = this.projectService.getTags();
         this.books = this.metadataService.getBooks();
+        this.characterStyles = this.projectService.getCharacterStyles();
+        this.defaultCharacterStyle = this.projectService.getDefaultCharacterStyle();
+        if (!this.pickerTargetStyleId) {
+          this.pickerTargetStyleId = this.defaultCharacterStyle;
+        }
         this.imageGenerationEnabled =
           project?.metadata.settings.imageGeneration?.enabled || false;
 
@@ -252,6 +269,8 @@ export class CharacterDetailComponent
           this.isEditing = false;
           this.character = null;
           this.characterForm.reset();
+          this.thumbnailsMap = {};
+          this.thumbnailPreviewUrls = new Map();
           this.prompts = [];
           this.selectedPromptIndex = -1;
           this.contentTabs = [{ id: 'main', label: 'Main' }];
@@ -269,35 +288,7 @@ export class CharacterDetailComponent
         }
       });
 
-    // Thumbnail preview: resolve path and load image when thumbnail field changes
-    this.characterForm
-      .get("thumbnail")
-      ?.valueChanges.pipe(
-        debounceTime(300),
-        takeUntil(this.destroy$)
-      )
-      .subscribe(async (value) => {
-        this.thumbnailPreviewUrl = null;
-        if (!value?.trim() || !this.currentProject?.path) {
-          return;
-        }
-        const parsed = parseThumbnailReference(value);
-        if (!parsed) {
-          return;
-        }
-        const absolutePath = resolveThumbnailPath(
-          this.currentProject.path,
-          parsed
-        );
-        try {
-          const dataUrl =
-            await this.electronService.getImageAsDataUrl(absolutePath);
-          this.thumbnailPreviewUrl = dataUrl;
-          this.cdr.markForCheck();
-        } catch {
-          // Ignore - file may not exist yet
-        }
-      });
+    // Thumbnail previews are refreshed when thumbnailsMap changes via refreshThumbnailPreviews()
 
     // Update cached field errors when form value/status changes (debounced to avoid work on every keystroke)
     merge(
@@ -431,7 +422,6 @@ export class CharacterDetailComponent
       ],
       tags: [[]],
       books: [[]],
-      thumbnail: [""],
       content: [
         "",
         {
@@ -477,9 +467,12 @@ export class CharacterDetailComponent
           category: this.character.category,
           tags: this.character.tags,
           books: this.character.books,
-          thumbnail: this.character.thumbnail || '',
           content: this.character.content || '',
         });
+
+        this.thumbnailsMap = { ...(this.character.thumbnails || {}) };
+        this.pickerTargetStyleId = this.defaultCharacterStyle;
+        await this.refreshThumbnailPreviews();
 
         this.prompts = (this.character.prompts || []).map((p) => ({ ...p }));
         this.selectedPromptIndex = this.prompts.length > 0 ? 0 : -1;
@@ -642,7 +635,7 @@ export class CharacterDetailComponent
         category: this.characterForm.value.category,
         tags: this.characterForm.value.tags || [],
         books: this.characterForm.value.books || [],
-        thumbnail: (this.characterForm.value.thumbnail || '').trim(),
+        thumbnails: { ...this.thumbnailsMap },
         prompts: this.prompts.map((p) => ({
           name: p.name,
           positive: p.positive,
@@ -811,7 +804,7 @@ export class CharacterDetailComponent
 
   /** Recomputes all field errors and updates cache (used by template via fieldErrors). */
   private updateFieldErrors(): void {
-    const fields = ['name', 'category', 'thumbnail', 'content'];
+    const fields = ['name', 'category', 'content'];
     for (const name of fields) {
       this.fieldErrors[name] = this.computeFieldError(name);
     }
@@ -849,10 +842,60 @@ export class CharacterDetailComponent
     const labels: Record<string, string> = {
       name: 'Character name',
       category: 'Category',
-      thumbnail: 'Thumbnail',
       content: 'Content'
     };
     return labels[fieldName] || fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+  }
+
+  get thumbnailPreviewUrl(): string | null {
+    return this.getStylePreviewUrl(this.defaultCharacterStyle);
+  }
+
+  getStylePreviewUrl(styleId: string): string | null {
+    return this.thumbnailPreviewUrls.get(styleId) || null;
+  }
+
+  private setThumbnailForStyle(styleId: string, wikiLink: string): void {
+    if (!styleId) return;
+    const trimmed = wikiLink.trim();
+    if (trimmed) {
+      this.thumbnailsMap = { ...this.thumbnailsMap, [styleId]: trimmed };
+    } else {
+      const next = { ...this.thumbnailsMap };
+      delete next[styleId];
+      this.thumbnailsMap = next;
+    }
+    this.characterForm.markAsDirty();
+    void this.refreshThumbnailPreviews();
+  }
+
+  async refreshThumbnailPreviews(): Promise<void> {
+    const next = new Map<string, string>();
+    if (!this.currentProject?.path) {
+      this.thumbnailPreviewUrls = next;
+      this.cdr.markForCheck();
+      return;
+    }
+    await Promise.all(
+      this.characterStyles.map(async (style) => {
+        const raw = resolveThumbnailForStyle(this.thumbnailsMap, style.id);
+        if (!raw) return;
+        const parsed = parseThumbnailReference(raw);
+        if (!parsed) return;
+        try {
+          const dataUrl = await this.electronService.getImageAsDataUrl(
+            resolveThumbnailPath(this.currentProject!.path, parsed)
+          );
+          if (dataUrl) {
+            next.set(style.id, dataUrl);
+          }
+        } catch {
+          // Ignore missing files
+        }
+      })
+    );
+    this.thumbnailPreviewUrls = next;
+    this.cdr.markForCheck();
   }
 
   /**
@@ -1043,6 +1086,7 @@ export class CharacterDetailComponent
       this.error = 'Image generation is not enabled. Configure it in AI Settings first.';
       return;
     }
+    this.pickerTargetStyleId = this.defaultCharacterStyle || this.characterStyles[0]?.id || '';
     this.error = null;
     this.showGeneratePortraitDialog = true;
     try {
@@ -1078,8 +1122,10 @@ export class CharacterDetailComponent
         negativePrompt: this.negativeImagePrompt.trim(),
         characterName,
       });
-      this.characterForm.patchValue({ thumbnail: `[[${relativePath}]]` });
-      this.characterForm.markAsDirty();
+      this.setThumbnailForStyle(
+        this.pickerTargetStyleId || this.defaultCharacterStyle,
+        formatThumbnailWikiLink(relativePath)
+      );
       this.showGeneratePortraitDialog = false;
       this.notificationService.showSuccess(`Portrait saved to ${relativePath}`);
     } catch (error) {
@@ -1090,7 +1136,8 @@ export class CharacterDetailComponent
     }
   }
 
-  async openImagePicker(): Promise<void> {
+  async openImagePicker(styleId?: string): Promise<void> {
+    this.pickerTargetStyleId = styleId || this.defaultCharacterStyle || this.characterStyles[0]?.id || '';
     this.showImagePickerDialog = true;
     this.electronService.setBrowserNavigationInterception(true);
     this.imageSearch = '';
@@ -1146,8 +1193,9 @@ export class CharacterDetailComponent
   }
 
   private getInitialImagePickerDirectory(): string {
+    const styleId = this.pickerTargetStyleId || this.defaultCharacterStyle;
     const thumbnail = parseThumbnailReference(
-      this.characterForm.get('thumbnail')?.value || ''
+      resolveThumbnailForStyle(this.thumbnailsMap, styleId) || ''
     );
     if (!thumbnail) return '';
 
@@ -1310,17 +1358,19 @@ export class CharacterDetailComponent
   }
 
   selectProjectImage(image: ProjectImage): void {
-    this.characterForm.patchValue({ thumbnail: `[[${image.relativePath}]]` });
-    this.characterForm.markAsDirty();
+    const styleId = this.pickerTargetStyleId || this.defaultCharacterStyle;
+    this.setThumbnailForStyle(styleId, formatThumbnailWikiLink(image.relativePath));
     this.closeImagePicker();
   }
 
-  removeThumbnail(): void {
-    if (!this.characterForm.get('thumbnail')?.value?.trim()) return;
-    this.characterForm.patchValue({ thumbnail: '' });
-    this.characterForm.markAsDirty();
-    this.thumbnailPreviewUrl = null;
-    this.cdr.markForCheck();
+  removeThumbnail(styleId?: string): void {
+    const target = styleId || this.defaultCharacterStyle;
+    if (!resolveThumbnailForStyle(this.thumbnailsMap, target)) return;
+    this.setThumbnailForStyle(target, '');
+  }
+
+  hasThumbnailForStyle(styleId: string): boolean {
+    return !!resolveThumbnailForStyle(this.thumbnailsMap, styleId);
   }
 
   // --- Prompts ---------------------------------------------------------------
@@ -1432,8 +1482,10 @@ export class CharacterDetailComponent
         characterName,
         ...(outputDirectory ? { outputDirectory } : {}),
       });
-      this.characterForm.patchValue({ thumbnail: `[[${relativePath}]]` });
-      this.characterForm.markAsDirty();
+      this.setThumbnailForStyle(
+        this.defaultCharacterStyle,
+        formatThumbnailWikiLink(relativePath)
+      );
       this.notificationService.showSuccess(`Image saved to ${relativePath}`);
     } catch (error) {
       this.error = error instanceof Error ? error.message : 'Failed to generate image';
@@ -1464,11 +1516,12 @@ export class CharacterDetailComponent
   }
 
   /**
-   * Returns the project-relative directory containing the current thumbnail, or
-   * null when no thumbnail is set.
+   * Returns the project-relative directory containing the current style's thumbnail, or
+   * null when no thumbnail is set for that style.
    */
   private getThumbnailOutputDirectory(): string | null {
-    const raw = this.characterForm.get('thumbnail')?.value || '';
+    const styleId = this.pickerTargetStyleId || this.defaultCharacterStyle;
+    const raw = resolveThumbnailForStyle(this.thumbnailsMap, styleId) || '';
     const parsed = parseThumbnailReference(raw);
     if (!parsed) return null;
     const normalized = parsed.replace(/\\/g, '/');

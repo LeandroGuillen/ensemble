@@ -508,6 +508,63 @@ export class ProjectValidator {
       }
     }
 
+    if (settings.characterStyles !== undefined && settings.characterStyles !== null) {
+      if (!Array.isArray(settings.characterStyles)) {
+        errors.push({
+          field: 'characterStyles',
+          message: 'Character styles must be an array',
+          code: 'INVALID_TYPE'
+        });
+      } else {
+        const styleIds: string[] = [];
+        settings.characterStyles.forEach((style, index) => {
+          if (!style || typeof style !== 'object') {
+            errors.push({
+              field: `characterStyles[${index}]`,
+              message: 'Character style must be an object',
+              code: 'INVALID_TYPE'
+            });
+            return;
+          }
+          if (!style.id || typeof style.id !== 'string' || !style.id.trim()) {
+            errors.push({
+              field: `characterStyles[${index}].id`,
+              message: 'Character style id is required',
+              code: 'REQUIRED_FIELD'
+            });
+          } else {
+            styleIds.push(style.id);
+          }
+          if (!style.name || typeof style.name !== 'string' || !style.name.trim()) {
+            errors.push({
+              field: `characterStyles[${index}].name`,
+              message: 'Character style name is required',
+              code: 'REQUIRED_FIELD'
+            });
+          }
+        });
+        const duplicateIds = styleIds.filter((id, i) => styleIds.indexOf(id) !== i);
+        if (duplicateIds.length > 0) {
+          errors.push({
+            field: 'characterStyles',
+            message: `Duplicate character style ids: ${[...new Set(duplicateIds)].join(', ')}`,
+            code: 'DUPLICATE_VALUE'
+          });
+        }
+        if (
+          settings.defaultCharacterStyle &&
+          styleIds.length > 0 &&
+          !styleIds.includes(settings.defaultCharacterStyle)
+        ) {
+          errors.push({
+            field: 'defaultCharacterStyle',
+            message: 'Default character style must match a configured style id',
+            code: 'INVALID_VALUE'
+          });
+        }
+      }
+    }
+
     return {
       isValid: errors.length === 0,
       errors

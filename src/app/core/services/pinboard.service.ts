@@ -3,6 +3,7 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { PinboardConnection, PinboardPin, PinboardData } from '../interfaces/pinboard.interface';
 import { generateId } from '../utils/id.utils';
 import { DEFAULT_CONNECTION_COLOR, DEFAULT_CONNECTION_LABEL_COLOR } from '../constants/project.constants';
+import { resolveThumbnailForStyle } from '../utils/thumbnail.utils';
 import { ProjectService } from './project.service';
 import { CharacterService } from './character.service';
 import { LoggingService } from './logging.service';
@@ -322,14 +323,15 @@ export class PinboardService {
         physics: false // Disable physics for this node
       };
 
-      // Load character thumbnail from img/ folder (Obsidian wiki-link format)
+      // Load character thumbnail for the project's default character style
       let imageDataUrl: string | null = null;
-      if (character?.thumbnail) {
-        const cached = this.characterService.getCachedThumbnail(node.id);
+      const styleId = this.projectService.getDefaultCharacterStyle();
+      if (resolveThumbnailForStyle(character?.thumbnails, styleId)) {
+        const cached = this.characterService.getCachedThumbnail(node.id, styleId);
         if (cached) {
           imageDataUrl = cached;
-        } else {
-          imageDataUrl = await this.characterService.loadThumbnailForCharacter(character);
+        } else if (character) {
+          imageDataUrl = await this.characterService.loadThumbnailForCharacter(character, styleId);
         }
       }
 

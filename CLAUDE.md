@@ -133,7 +133,9 @@ tags:
 books:
   - n23
   - n26
-thumbnail: "[[img/_pjs/zzz_all_cast/dessir.jpg]]"  # Opaque wiki-link string
+thumbnails:
+  default: "[[img/default/dessir.jpg]]"
+  realistic: "[[img/realistic/dessir.jpg]]"
 created: "2024-01-15T10:30:00Z"
 modified: "2024-01-20T14:45:00Z"
 ---
@@ -142,6 +144,8 @@ modified: "2024-01-20T14:45:00Z"
 ```
 
 Character ID is the relative file path from `characters/` (e.g., `_dessir.md` or `main-character/_dessir.md`).
+
+**Character styles**: Project settings define `characterStyles` (seeded with a single `Default` style) and `defaultCharacterStyle`. When more than one style exists, the character list shows a Character Style dropdown. With only one style, the list selector is hidden and character detail offers a subtle link to Settings to add another. Missing style portraits show a placeholder. Pinboard/casts use `defaultCharacterStyle`.
 
 ### Removed Features
 

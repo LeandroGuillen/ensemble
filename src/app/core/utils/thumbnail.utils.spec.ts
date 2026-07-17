@@ -1,4 +1,9 @@
-import { parseThumbnailReference, resolveThumbnailPath } from './thumbnail.utils';
+import {
+  parseThumbnailReference,
+  resolveThumbnailPath,
+  resolveThumbnailForStyle,
+  normalizeThumbnailsMap,
+} from './thumbnail.utils';
 
 describe('thumbnail.utils', () => {
   describe('parseThumbnailReference', () => {
@@ -50,6 +55,45 @@ describe('thumbnail.utils', () => {
       expect(resolveThumbnailPath('/project', 'img/subfolder/dessir.png')).toBe(
         '/project/img/subfolder/dessir.png'
       );
+    });
+  });
+
+  describe('resolveThumbnailForStyle', () => {
+    it('should return the style-specific thumbnail', () => {
+      expect(
+        resolveThumbnailForStyle(
+          { anime: '[[img/anime/a.jpg]]', realistic: '[[img/real/a.jpg]]' },
+          'anime'
+        )
+      ).toBe('[[img/anime/a.jpg]]');
+    });
+
+    it('should return null when style is missing (no fallback)', () => {
+      expect(resolveThumbnailForStyle({ anime: '[[img/a.jpg]]' }, 'realistic')).toBeNull();
+      expect(resolveThumbnailForStyle(undefined, 'anime')).toBeNull();
+      expect(resolveThumbnailForStyle({}, 'anime')).toBeNull();
+    });
+
+    it('should return null for blank values', () => {
+      expect(resolveThumbnailForStyle({ anime: '   ' }, 'anime')).toBeNull();
+    });
+  });
+
+  describe('normalizeThumbnailsMap', () => {
+    it('should keep only non-empty string entries', () => {
+      expect(
+        normalizeThumbnailsMap({
+          anime: '[[img/a.jpg]]',
+          empty: '',
+          blank: '  ',
+          bad: 1 as any,
+        })
+      ).toEqual({ anime: '[[img/a.jpg]]' });
+    });
+
+    it('should return undefined for empty maps', () => {
+      expect(normalizeThumbnailsMap({})).toBeUndefined();
+      expect(normalizeThumbnailsMap(null)).toBeUndefined();
     });
   });
 });

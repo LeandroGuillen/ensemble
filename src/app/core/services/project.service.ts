@@ -3,6 +3,7 @@ import { BehaviorSubject } from 'rxjs';
 import {
   Book,
   Category,
+  CharacterStyle,
   Pinboard,
   PinboardPin,
   PinboardConnection,
@@ -24,6 +25,8 @@ import {
   DEFAULT_NAMES_FILE,
   DEFAULT_CATEGORIES,
   DEFAULT_TAGS,
+  DEFAULT_CHARACTER_STYLES,
+  DEFAULT_CHARACTER_STYLE_ID,
   normalizeRelativeFolder,
 } from '../constants/project.constants';
 import { ElectronService } from './electron.service';
@@ -209,8 +212,10 @@ export class ProjectService {
       // Ensure a default pinboard exists and lastSession tracks it
       this.ensureDefaultPinboard(metadata);
 
+      const stylesSeeded = this.ensureCharacterStyles(metadata);
+
       // Save metadata if initialization modified it in place
-      if (metadata.pinboards && metadata.pinboards.length > 0) {
+      if ((metadata.pinboards && metadata.pinboards.length > 0) || stylesSeeded) {
         await this.saveMetadata(projectPath, metadata);
       }
 
@@ -407,6 +412,8 @@ export class ProjectService {
         charactersFolder: DEFAULT_CHARACTERS_FOLDER,
         castsFolder: DEFAULT_CASTS_FOLDER,
         imagesFolder: DEFAULT_IMAGES_FOLDER,
+        characterStyles: DEFAULT_CHARACTER_STYLES.map((s) => ({ ...s })),
+        defaultCharacterStyle: DEFAULT_CHARACTER_STYLE_ID,
       },
       pinboards: [
         {
@@ -625,6 +632,66 @@ export class ProjectService {
   getFilterExpandedState(): boolean {
     const project = this.currentProjectSubject.value;
     return project?.metadata.lastSession?.lastCharacterListFilterExpanded ?? false;
+  }
+
+  getCharacterStyles(): CharacterStyle[] {
+    const project = this.currentProjectSubject.value;
+    const styles = project?.metadata.settings?.characterStyles;
+    if (styles && styles.length > 0) {
+      return styles;
+    }
+    return DEFAULT_CHARACTER_STYLES.map((s) => ({ ...s }));
+  }
+
+  getDefaultCharacterStyle(): string {
+    const project = this.currentProjectSubject.value;
+    const styles = this.getCharacterStyles();
+    const configured = project?.metadata.settings?.defaultCharacterStyle?.trim();
+    if (configured && styles.some((s) => s.id === configured)) {
+      return configured;
+    }
+    return styles[0]?.id || DEFAULT_CHARACTER_STYLE_ID;
+  }
+
+  async saveLastCharacterListStyle(styleId: string): Promise<void> {
+    const project = this.currentProjectSubject.value;
+    if (!project) {
+      return;
+    }
+    const ls = this.ensureLastSession(project.metadata);
+    if (ls.lastCharacterListStyle === styleId) {
+      return;
+    }
+    ls.lastCharacterListStyle = styleId;
+    await this.saveMetadata(project.path, project.metadata);
+  }
+
+  getLastCharacterListStyle(): string | null {
+    const project = this.currentProjectSubject.value;
+    return project?.metadata.lastSession?.lastCharacterListStyle ?? null;
+  }
+
+  /**
+   * Seeds characterStyles / defaultCharacterStyle when missing.
+   * @returns true if metadata was modified
+   */
+  private ensureCharacterStyles(metadata: ProjectMetadata): boolean {
+    if (!metadata.settings) {
+      return false;
+    }
+    let changed = false;
+    const styles = metadata.settings.characterStyles;
+    if (!Array.isArray(styles) || styles.length === 0) {
+      metadata.settings.characterStyles = DEFAULT_CHARACTER_STYLES.map((s) => ({ ...s }));
+      changed = true;
+    }
+    const defaultId = metadata.settings.defaultCharacterStyle?.trim();
+    const list = metadata.settings.characterStyles!;
+    if (!defaultId || !list.some((s) => s.id === defaultId)) {
+      metadata.settings.defaultCharacterStyle = list[0]?.id || DEFAULT_CHARACTER_STYLE_ID;
+      changed = true;
+    }
+    return changed;
   }
 
   async savePlotBoardZoom(zoom: number): Promise<void> {

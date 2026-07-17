@@ -13,6 +13,8 @@ export interface FilterState {
   selectedTags: string[];
   selectedCast: string;
   selectedBook: string;
+  /** '' = all, 'with' = has portrait for active style, 'without' = missing portrait */
+  selectedPictureFilter: '' | 'with' | 'without';
 }
 
 @Component({
@@ -25,7 +27,10 @@ export interface FilterState {
     BookSelectorComponent
 ],
     templateUrl: './character-filter.component.html',
-    styleUrls: ['./character-filter.component.scss']
+    styleUrls: ['./character-filter.component.scss'],
+    host: {
+      '[class.sidebar-host]': 'sidebar',
+    },
 })
 export class CharacterFilterComponent {
   @Input() categories: Category[] = [];
@@ -38,6 +43,7 @@ export class CharacterFilterComponent {
   @Input() selectedTags: string[] = [];
   @Input() selectedCast = '';
   @Input() selectedBook = '';
+  @Input() selectedPictureFilter: '' | 'with' | 'without' = '';
   @Input() isExpanded = false;
   @Input() sidebar = false;
 
@@ -46,8 +52,14 @@ export class CharacterFilterComponent {
   @Output() tagsChange = new EventEmitter<string[]>();
   @Output() castChange = new EventEmitter<string>();
   @Output() bookChange = new EventEmitter<string>();
+  @Output() pictureFilterChange = new EventEmitter<'' | 'with' | 'without'>();
   @Output() clearFilters = new EventEmitter<void>();
   @Output() expandedChange = new EventEmitter<boolean>();
+
+  readonly pictureFilterOptions: ToggleOption[] = [
+    { id: 'with', name: 'With', tooltip: 'Characters that have a portrait for the current style' },
+    { id: 'without', name: 'Without', tooltip: 'Characters missing a portrait for the current style' },
+  ];
 
   constructor(private host: ElementRef<HTMLElement>) {}
 
@@ -95,6 +107,11 @@ export class CharacterFilterComponent {
 
   onBookChange(): void {
     this.bookChange.emit(this.selectedBook);
+  }
+
+  onPictureFilterChange(value: string): void {
+    const next = value === 'with' || value === 'without' ? value : '';
+    this.pictureFilterChange.emit(next);
   }
 
   onClearFilters(): void {
@@ -173,10 +190,22 @@ export class CharacterFilterComponent {
       filters.push(this.getBookName(this.selectedBook));
     }
 
+    if (this.selectedPictureFilter === 'with') {
+      filters.push('With pictures');
+    } else if (this.selectedPictureFilter === 'without') {
+      filters.push('Without pictures');
+    }
+
     return filters.length > 0 ? filters.join(' • ') : 'No filters applied';
   }
 
   hasActiveFilters(): boolean {
-    return !!(this.selectedCategory || this.selectedTags.length > 0 || this.selectedCast || this.selectedBook);
+    return !!(
+      this.selectedCategory ||
+      this.selectedTags.length > 0 ||
+      this.selectedCast ||
+      this.selectedBook ||
+      this.selectedPictureFilter
+    );
   }
 }

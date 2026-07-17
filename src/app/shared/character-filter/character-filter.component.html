@@ -113,6 +113,16 @@
           ></app-book-selector>
         </div>
       }
+      <!-- Picture Filter -->
+      <div class="filter-section section-pictures">
+        <label class="filter-label">Pictures</label>
+        <app-category-toggle
+          [options]="pictureFilterOptions"
+          [selectedValue]="selectedPictureFilter"
+          [emptyLabel]="'All'"
+          (valueChange)="onPictureFilterChange($event)"
+        ></app-category-toggle>
+      </div>
     </div>
   }
 </div>

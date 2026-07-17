@@ -5,7 +5,7 @@ import { Category } from '../interfaces/project.interface';
 import { MarkdownUtils } from '../utils/markdown.utils';
 import { slugify } from '../utils/slug.utils';
 import { pathJoin, pathBasename, pathDirname } from '../utils/path.utils';
-import { parseThumbnailReference, resolveThumbnailPath } from '../utils/thumbnail.utils';
+import { parseThumbnailReference, resolveThumbnailPath, resolveThumbnailForStyle, normalizeThumbnailsMap, thumbnailCacheKey } from '../utils/thumbnail.utils';
 import { assertIpcSuccess, withIpcError } from '../utils/ipc.utils';
 import { requireProject } from '../utils/project.utils';
 import { ElectronService } from './electron.service';
@@ -304,7 +304,7 @@ export class CharacterService {
         category: frontmatter.category || 'uncategorized',
         tags: frontmatter.tags || [],
         books: frontmatter.books || [],
-        thumbnail: frontmatter.thumbnail,
+        thumbnails: normalizeThumbnailsMap(frontmatter.thumbnails),
         prompts: normalizePrompts(frontmatter.prompts),
         content: content || '',
         created: frontmatter.created ? new Date(frontmatter.created) : new Date(),
@@ -346,7 +346,7 @@ export class CharacterService {
         category: data.category,
         tags: data.tags || [],
         books: data.books || [],
-        thumbnail: data.thumbnail?.trim() || undefined,
+        thumbnails: normalizeThumbnailsMap(data.thumbnails),
         prompts: normalizePrompts(data.prompts),
         content: data.content || '',
         created: now,
@@ -431,7 +431,9 @@ export class CharacterService {
         category: data.category ?? existingCharacter.category,
         tags: data.tags ?? existingCharacter.tags,
         books: data.books ?? existingCharacter.books,
-        thumbnail: 'thumbnail' in data ? (data.thumbnail?.trim() || undefined) : existingCharacter.thumbnail,
+        thumbnails: 'thumbnails' in data
+          ? normalizeThumbnailsMap(data.thumbnails)
+          : existingCharacter.thumbnails,
         prompts: data.prompts !== undefined ? normalizePrompts(data.prompts) : existingCharacter.prompts,
         content: data.content !== undefined ? data.content : existingCharacter.content,
         modified: new Date(),
@@ -441,15 +443,11 @@ export class CharacterService {
       // Save updated character to file
       await this.saveCharacterToFile(updatedCharacter);
 
-      // A thumbnail path change must invalidate the persistent data URL cache.
-      // Otherwise the character list reuses the previous image after navigation.
-      if (
-        newId !== id ||
-        (data.thumbnail !== undefined && data.thumbnail !== existingCharacter.thumbnail)
-      ) {
-        this.removeCachedThumbnail(id);
+      // Thumbnail path changes must invalidate the persistent data URL cache.
+      if (newId !== id || ('thumbnails' in data && !thumbnailsMapsEqual(data.thumbnails, existingCharacter.thumbnails))) {
+        this.removeCachedThumbnailsForCharacter(id);
         if (newId !== id) {
-          this.removeCachedThumbnail(newId);
+          this.removeCachedThumbnailsForCharacter(newId);
         }
       }
 
@@ -482,6 +480,8 @@ export class CharacterService {
       if (!deleteResult.success) {
         throw new Error(`Failed to delete character: ${deleteResult.error}`);
       }
+
+      this.removeCachedThumbnailsForCharacter(id);
 
       // Update in-memory list
       const filteredCharacters = characters.filter((char) => char.id !== id);
@@ -550,7 +550,9 @@ export class CharacterService {
         category: character.category,
         tags: character.tags,
         books: character.books,
-        ...(character.thumbnail ? { thumbnail: character.thumbnail } : {}),
+        ...(character.thumbnails && Object.keys(character.thumbnails).length > 0
+          ? { thumbnails: character.thumbnails }
+          : {}),
         ...(character.prompts && character.prompts.length > 0 ? { prompts: character.prompts } : {}),
         created: character.created.toISOString(),
         modified: character.modified.toISOString(),
@@ -634,23 +636,27 @@ export class CharacterService {
     }
   }
 
-  getCachedThumbnail(characterId: string): string | null {
-    return this.thumbnailDataUrls.get(characterId) || null;
+  getCachedThumbnail(characterId: string, styleId?: string): string | null {
+    const style = styleId || this.projectService.getDefaultCharacterStyle();
+    return this.thumbnailDataUrls.get(thumbnailCacheKey(characterId, style)) || null;
   }
 
   /**
-   * Loads a character's thumbnail from img/ folder and caches it.
+   * Loads a character's thumbnail for a style from disk and caches it.
    * Resolves Obsidian wiki-link format [[img/path.png]] or plain paths.
+   * Returns null when the style has no thumbnail set (caller should show placeholder).
    */
-  async loadThumbnailForCharacter(character: Character): Promise<string | null> {
-    if (!character.thumbnail) {
+  async loadThumbnailForCharacter(character: Character, styleId?: string): Promise<string | null> {
+    const style = styleId || this.projectService.getDefaultCharacterStyle();
+    const raw = resolveThumbnailForStyle(character.thumbnails, style);
+    if (!raw) {
       return null;
     }
     const project = this.projectService.getCurrentProject();
     if (!project?.path) {
       return null;
     }
-    const parsed = parseThumbnailReference(character.thumbnail);
+    const parsed = parseThumbnailReference(raw);
     if (!parsed) {
       return null;
     }
@@ -659,7 +665,7 @@ export class CharacterService {
       const dataUrl = await this.electronService.getImageAsDataUrl(absolutePath);
       if (dataUrl) {
         const modTime = character.modified?.toISOString() ?? '';
-        this.setCachedThumbnail(character.id, dataUrl, modTime);
+        this.setCachedThumbnail(character.id, style, dataUrl, modTime);
         return dataUrl;
       }
     } catch (error) {
@@ -669,33 +675,56 @@ export class CharacterService {
   }
 
   /**
-   * Batch loads thumbnails for characters that have thumbnail references.
+   * Batch loads thumbnails for characters for the given style (default style if omitted).
    */
-  async loadThumbnailsForCharacters(characters: Character[]): Promise<void> {
+  async loadThumbnailsForCharacters(characters: Character[], styleId?: string): Promise<void> {
     const project = this.projectService.getCurrentProject();
     if (!project?.path) {
       return;
     }
-    const toLoad = characters.filter(
-      (c) => c.thumbnail && !this.thumbnailDataUrls.has(c.id)
-    );
-    await Promise.all(
-      toLoad.map((char) => this.loadThumbnailForCharacter(char))
-    );
+    const style = styleId || this.projectService.getDefaultCharacterStyle();
+    const toLoad = characters.filter((c) => {
+      const raw = resolveThumbnailForStyle(c.thumbnails, style);
+      return !!raw && !this.thumbnailDataUrls.has(thumbnailCacheKey(c.id, style));
+    });
+    await Promise.all(toLoad.map((char) => this.loadThumbnailForCharacter(char, style)));
   }
 
-  setCachedThumbnail(characterId: string, dataUrl: string, modificationTime: string): void {
-    this.thumbnailDataUrls.set(characterId, dataUrl);
-    this.thumbnailModificationTimes.set(characterId, modificationTime);
+  setCachedThumbnail(
+    characterId: string,
+    styleId: string,
+    dataUrl: string,
+    modificationTime: string
+  ): void {
+    const key = thumbnailCacheKey(characterId, styleId);
+    this.thumbnailDataUrls.set(key, dataUrl);
+    this.thumbnailModificationTimes.set(key, modificationTime);
   }
 
-  getCachedThumbnailModTime(characterId: string): string | null {
-    return this.thumbnailModificationTimes.get(characterId) || null;
+  getCachedThumbnailModTime(characterId: string, styleId?: string): string | null {
+    const style = styleId || this.projectService.getDefaultCharacterStyle();
+    return this.thumbnailModificationTimes.get(thumbnailCacheKey(characterId, style)) || null;
   }
 
-  removeCachedThumbnail(characterId: string): void {
-    this.thumbnailDataUrls.delete(characterId);
-    this.thumbnailModificationTimes.delete(characterId);
+  removeCachedThumbnail(characterId: string, styleId?: string): void {
+    if (styleId) {
+      const key = thumbnailCacheKey(characterId, styleId);
+      this.thumbnailDataUrls.delete(key);
+      this.thumbnailModificationTimes.delete(key);
+      return;
+    }
+    this.removeCachedThumbnailsForCharacter(characterId);
+  }
+
+  /** Removes all cached style variants for a character. */
+  removeCachedThumbnailsForCharacter(characterId: string): void {
+    const prefix = `${characterId}:`;
+    for (const key of [...this.thumbnailDataUrls.keys()]) {
+      if (key.startsWith(prefix) || key === characterId) {
+        this.thumbnailDataUrls.delete(key);
+        this.thumbnailModificationTimes.delete(key);
+      }
+    }
   }
 
   /**
@@ -741,10 +770,32 @@ export class CharacterService {
   }
 
   /**
-   * Gets all cached thumbnail data URLs (for passing to child components)
+   * Gets cached thumbnail data URLs for a style as Map<characterId, dataUrl>
+   * (for passing to child components that key by character id only).
    */
-  getAllCachedThumbnails(): Map<string, string> {
-    return new Map(this.thumbnailDataUrls);
+  getAllCachedThumbnails(styleId?: string): Map<string, string> {
+    const style = styleId || this.projectService.getDefaultCharacterStyle();
+    const result = new Map<string, string>();
+    const suffix = `:${style}`;
+    for (const [key, value] of this.thumbnailDataUrls) {
+      if (key.endsWith(suffix)) {
+        const characterId = key.slice(0, -suffix.length);
+        result.set(characterId, value);
+      }
+    }
+    return result;
   }
 
+}
+
+function thumbnailsMapsEqual(
+  a: Record<string, string> | undefined | null,
+  b: Record<string, string> | undefined | null
+): boolean {
+  const normA = normalizeThumbnailsMap(a) || {};
+  const normB = normalizeThumbnailsMap(b) || {};
+  const keysA = Object.keys(normA);
+  const keysB = Object.keys(normB);
+  if (keysA.length !== keysB.length) return false;
+  return keysA.every((k) => normA[k] === normB[k]);
 }

@@ -6,11 +6,12 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Observable, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { Book, Cast, Category, Character, Project, Tag } from '../../core/interfaces';
+import { Book, Cast, Category, Character, CharacterStyle, Project, Tag } from '../../core/interfaces';
 import { CharacterService, ElectronService, MetadataService, NotificationService, ProjectService, LoggingService, CharacterEditDialogService } from '../../core/services';
 import { MetadataHelperService } from '../../core/services/metadata-helper.service';
 import { ModalService } from '../../core/services/modal.service';
 import { PreferencesService } from '../../core/services/preferences.service';
+import { resolveThumbnailForStyle } from '../../core/utils/thumbnail.utils';
 import { ToggleOption } from '../../shared/category-toggle/category-toggle.component';
 import { CharacterFilterComponent } from '../../shared/character-filter/character-filter.component';
 import { CommandPaletteService } from '../../shared/command-palette/command-palette.service';
@@ -67,6 +68,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   selectedTags: string[] = [];
   selectedCast = '';
   selectedBook = '';
+  selectedPictureFilter: '' | 'with' | 'without' = '';
   selectedCharacterIds: string[] = [];
   showCastNameForm = false;
   newCastName = '';
@@ -87,6 +89,8 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   filterExpanded = false; // Track filter expanded state
   filtersSidebarOpen = true;
   galleryThumbnailSize: 'big' | 'medium' | 'small' = 'big'; // Gallery thumbnail size
+  characterStyles: CharacterStyle[] = [];
+  selectedCharacterStyle = '';
   activeDropCategoryId: string | null = null;
   isUpdatingCategory = false;
   categoryDropListIds: string[] = [];
@@ -173,6 +177,10 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     if (savedSelectedBook) {
       this.selectedBook = savedSelectedBook;
     }
+    const savedPictureFilter = localStorage.getItem('characterPictureFilter');
+    if (savedPictureFilter === 'with' || savedPictureFilter === 'without') {
+      this.selectedPictureFilter = savedPictureFilter;
+    }
 
     // Register command palette commands
     this.registerCommands();
@@ -190,6 +198,13 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       if (project) {
         // Load filter expanded state from project settings
         this.filterExpanded = project.metadata.lastSession?.lastCharacterListFilterExpanded ?? false;
+        this.characterStyles = this.projectService.getCharacterStyles();
+        const savedStyle = this.projectService.getLastCharacterListStyle();
+        const defaultStyle = this.projectService.getDefaultCharacterStyle();
+        this.selectedCharacterStyle =
+          (savedStyle && this.characterStyles.some((s) => s.id === savedStyle)
+            ? savedStyle
+            : defaultStyle) || this.characterStyles[0]?.id || '';
         this.loadCharacters();
       }
     });
@@ -503,6 +518,15 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     this.applyFilters();
   }
 
+  onPictureFilterChange(): void {
+    if (this.selectedPictureFilter) {
+      localStorage.setItem('characterPictureFilter', this.selectedPictureFilter);
+    } else {
+      localStorage.removeItem('characterPictureFilter');
+    }
+    this.applyFilters();
+  }
+
   async onFilterExpandedChange(expanded: boolean): Promise<void> {
     this.filterExpanded = expanded;
     // Save to project settings in ensemble.json
@@ -520,12 +544,14 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     this.selectedTags = [];
     this.selectedCast = '';
     this.selectedBook = '';
+    this.selectedPictureFilter = '';
     // Clear saved filter state
     localStorage.removeItem('characterSearchTerm');
     localStorage.removeItem('characterSelectedCategory');
     localStorage.removeItem('characterSelectedTags');
     localStorage.removeItem('characterSelectedCast');
     localStorage.removeItem('characterSelectedBook');
+    localStorage.removeItem('characterPictureFilter');
     this.applyFilters();
   }
 
@@ -590,6 +616,20 @@ export class CharacterListComponent implements OnInit, OnDestroy {
       // Book filter - character must be assigned to the selected book
       if (this.selectedBook) {
         if (!character.books || !character.books.includes(this.selectedBook)) {
+          return false;
+        }
+      }
+
+      // Picture filter — based on portrait for the active character style
+      if (this.selectedPictureFilter) {
+        const hasPicture = !!resolveThumbnailForStyle(
+          character.thumbnails,
+          this.selectedCharacterStyle
+        );
+        if (this.selectedPictureFilter === 'with' && !hasPicture) {
+          return false;
+        }
+        if (this.selectedPictureFilter === 'without' && hasPicture) {
           return false;
         }
       }
@@ -679,10 +719,10 @@ export class CharacterListComponent implements OnInit, OnDestroy {
    * Syncs local cache Maps from service cache (for child component Inputs)
    */
   private syncCacheFromService(): void {
-    this.thumbnailDataUrls = this.characterService.getAllCachedThumbnails();
+    this.thumbnailDataUrls = this.characterService.getAllCachedThumbnails(this.selectedCharacterStyle);
     this.thumbnailModificationTimes.clear();
     this.allCharacters.forEach(char => {
-      const modTime = this.characterService.getCachedThumbnailModTime(char.id);
+      const modTime = this.characterService.getCachedThumbnailModTime(char.id, this.selectedCharacterStyle);
       if (modTime) {
         this.thumbnailModificationTimes.set(char.id, modTime);
       }
@@ -690,8 +730,21 @@ export class CharacterListComponent implements OnInit, OnDestroy {
   }
 
   private async loadThumbnailDataUrls(characters: Character[]): Promise<void> {
-    await this.characterService.loadThumbnailsForCharacters(characters);
+    await this.characterService.loadThumbnailsForCharacters(characters, this.selectedCharacterStyle);
     this.syncCacheFromService();
+    this.cdr.detectChanges();
+  }
+
+  async setCharacterStyle(styleId: string): Promise<void> {
+    if (!styleId || styleId === this.selectedCharacterStyle) {
+      return;
+    }
+    this.selectedCharacterStyle = styleId;
+    await this.projectService.saveLastCharacterListStyle(styleId);
+    this.syncCacheFromService();
+    await this.loadThumbnailDataUrls(this.allCharacters);
+    this.applyFilters();
+    this.updateCharacterCommands(this.allCharacters);
     this.cdr.detectChanges();
   }
 
@@ -722,6 +775,12 @@ getFilterSummary(): string {
     if (this.selectedBook) {
       const bookName = this.metadataHelper.getBookName(this.selectedBook);
       filters.push(`book: ${bookName}`);
+    }
+
+    if (this.selectedPictureFilter === 'with') {
+      filters.push('with pictures');
+    } else if (this.selectedPictureFilter === 'without') {
+      filters.push('without pictures');
     }
 
     return filters.length > 0 ? `Filtered by ${filters.join(', ')}` : '';

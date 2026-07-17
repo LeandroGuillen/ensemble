@@ -30,10 +30,11 @@ export class CharacterPickerService {
 
     await this.characterService.loadThumbnailsForCharacters(characters);
 
+    const styleId = this.projectService.getDefaultCharacterStyle();
     const commands: Command[] = characters.map((char) => ({
       id: `pick-${char.id}`,
       label: char.name,
-      thumbnail: this.characterService.getCachedThumbnail(char.id) || undefined,
+      thumbnail: this.characterService.getCachedThumbnail(char.id, styleId) || undefined,
       metadata: this.metadataHelper.getCategoryName(char.category),
       keywords: [
         char.name,

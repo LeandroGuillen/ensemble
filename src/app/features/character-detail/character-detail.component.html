@@ -93,23 +93,56 @@
 
           <!-- HERO: thumbnail + name + category -->
           <section class="hero-card">
-            <button
-              type="button"
-              class="hero-thumb"
-              (click)="openImagePicker()"
-              title="Choose an image from the project"
-              aria-label="Choose project image"
-            >
-              @if (thumbnailPreviewUrl) {
-                <img [src]="thumbnailPreviewUrl" alt="Thumbnail preview" />
-              }
-              @if (!thumbnailPreviewUrl) {
-                <div class="hero-thumb-placeholder">
-                  <span class="hero-thumb-icon">👤</span>
-                  <span class="hero-thumb-hint">No portrait</span>
+            <div class="hero-thumb-column">
+              <button
+                type="button"
+                class="hero-thumb"
+                (click)="openImagePicker(defaultCharacterStyle)"
+                title="Choose an image for the default style"
+                aria-label="Choose default style image"
+              >
+                @if (thumbnailPreviewUrl) {
+                  <img [src]="thumbnailPreviewUrl" alt="Thumbnail preview" />
+                }
+                @if (!thumbnailPreviewUrl) {
+                  <div class="hero-thumb-placeholder">
+                    <span class="hero-thumb-icon">👤</span>
+                    <span class="hero-thumb-hint">No portrait</span>
+                  </div>
+                }
+              </button>
+
+              @if (characterStyles.length > 1) {
+                <div class="style-strip" role="list" aria-label="Character styles">
+                  @for (style of characterStyles; track style.id) {
+                    <button
+                      type="button"
+                      class="style-strip-item"
+                      role="listitem"
+                      [class.is-default]="style.id === defaultCharacterStyle"
+                      [class.has-image]="hasThumbnailForStyle(style.id)"
+                      (click)="openImagePicker(style.id)"
+                      [title]="'Set ' + style.name + ' image'"
+                      [attr.aria-label]="'Set ' + style.name + ' image'"
+                    >
+                      @if (getStylePreviewUrl(style.id); as preview) {
+                        <img [src]="preview" [alt]="style.name" />
+                      } @else {
+                        <span class="style-strip-placeholder">?</span>
+                      }
+                      <span class="style-strip-label">{{ style.name }}</span>
+                    </button>
+                  }
                 </div>
+              } @else {
+                <a
+                  class="add-style-link"
+                  routerLink="/metadata"
+                  fragment="character-styles"
+                  title="Add another character style in Settings"
+                >Add another style</a>
               }
-            </button>
+            </div>
 
             <div class="hero-main">
               <div class="hero-field">
@@ -252,21 +285,15 @@
 
                 <section class="meta-group">
                   <header class="meta-group-header">
-                    <h4 class="meta-group-title">Thumbnail</h4>
-                    <span class="meta-group-hint">Wiki-link path</span>
+                    <h4 class="meta-group-title">Portraits</h4>
+                    <span class="meta-group-hint">
+                      {{ characterStyles.length > 1 ? 'Per character style' : 'Character portrait' }}
+                    </span>
                   </header>
-                  <input
-                    type="text"
-                    id="thumbnail"
-                    class="form-control"
-                    formControlName="thumbnail"
-                    placeholder="[[img/path/to/image.jpg]]"
-                    [class.error]="fieldErrors['thumbnail']"
-                    (focus)="onTextInputFocus($event)"
-                    (blur)="onTextInputBlur('thumbnail')"
-                  />
                   <div class="thumbnail-actions">
-                    <button type="button" class="btn btn-secondary" (click)="openImagePicker()">Choose image</button>
+                    <button type="button" class="btn btn-secondary" (click)="openImagePicker(defaultCharacterStyle)">
+                      Choose default image
+                    </button>
                     <button
                       type="button"
                       class="btn btn-secondary"
@@ -276,9 +303,9 @@
                     <button
                       type="button"
                       class="btn btn-ghost thumbnail-remove-btn"
-                      (click)="removeThumbnail()"
-                      [disabled]="!characterForm.get('thumbnail')?.value?.trim()"
-                    >Remove thumbnail</button>
+                      (click)="removeThumbnail(defaultCharacterStyle)"
+                      [disabled]="!hasThumbnailForStyle(defaultCharacterStyle)"
+                    >Remove default</button>
                   </div>
                 </section>
               </aside>

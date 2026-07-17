@@ -680,11 +680,12 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
       if (this.thumbnailCache.has(cid)) continue;
       const char = this.characters.find((c) => c.id === cid);
       if (!char) continue;
-      const cached = this.characterService.getCachedThumbnail(cid);
+      const styleId = this.projectService.getDefaultCharacterStyle();
+      const cached = this.characterService.getCachedThumbnail(cid, styleId);
       if (cached) {
         this.thumbnailCache.set(cid, cached);
       } else {
-        const loaded = await this.characterService.loadThumbnailForCharacter(char);
+        const loaded = await this.characterService.loadThumbnailForCharacter(char, styleId);
         if (loaded) {
           this.thumbnailCache.set(cid, loaded);
         }

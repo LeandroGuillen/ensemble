@@ -17,6 +17,14 @@ export interface ProjectLastSession {
   lastPlotBoardZoom?: number;
   /** Pinboard (relationship graph) the user had selected. */
   lastPinboardId?: string;
+  /** Character style id selected on the character list page. */
+  lastCharacterListStyle?: string;
+}
+
+/** Named portrait style (e.g. anime, realistic) for character thumbnails. */
+export interface CharacterStyle {
+  id: string;
+  name: string;
 }
 
 export interface ProjectMetadata {
@@ -129,6 +137,10 @@ export interface ProjectSettings {
   namesFile?: string;
   /** Relative path from project root containing project images (default: 'img') */
   imagesFolder?: string;
+  /** Available character portrait styles for this project */
+  characterStyles?: CharacterStyle[];
+  /** Default character style id (used by pinboard, casts, character detail hero) */
+  defaultCharacterStyle?: string;
   pinboardView?: PinboardViewState;
   ai?: AiSettings;
   imageGeneration?: ImageGenerationSettings;

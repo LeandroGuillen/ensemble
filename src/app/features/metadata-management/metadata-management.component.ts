@@ -14,13 +14,15 @@ import { ColorPaletteService } from '../../core/services/color-palette.service';
 import { UpdateService, UpdateStatus } from '../../core/services/update.service';
 import { ZoomService } from '../../core/services/zoom.service';
 import { ModalService } from '../../core/services/modal.service';
-import { Category, Tag, ProjectSettings, CategoryFolderMode } from '../../core/interfaces/project.interface';
+import { Category, Tag, ProjectSettings, CategoryFolderMode, CharacterStyle } from '../../core/interfaces/project.interface';
 import { Character } from '../../core/interfaces/character.interface';
 import { Theme } from '../../core/interfaces/theme.interface';
 import { ColorPaletteConfig } from '../../core/interfaces/color-palette.interface';
 import { BASE_COLOR_NAMES } from '../../core/interfaces/color-palette.interface';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { DEFAULT_BASE_COLORS } from '../../core/utils/color-palette.utils';
+import { slugify } from '../../core/utils/slug.utils';
+import { DEFAULT_CHARACTER_STYLE_ID } from '../../core/constants/project.constants';
 
 interface CategoryFormData {
   name: string;
@@ -47,6 +49,10 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
   categories: Category[] = [];
   tags: Tag[] = [];
   settings: ProjectSettings | null = null;
+  characterStyles: CharacterStyle[] = [];
+  newCharacterStyleName = '';
+  /** Draft rename values keyed by style id (committed on blur). */
+  characterStyleNameDrafts: Record<string, string> = {};
   availableThemes: Theme[] = [];
   currentTheme: Theme | null = null;
   
@@ -129,6 +135,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
       castsFolder: ['', [Validators.maxLength(200)]],
       namesFile: ['', [Validators.maxLength(500)]],
       imagesFolder: ['', [Validators.maxLength(200)]],
+      defaultCharacterStyle: [''],
       theme: ['']
     });
   }
@@ -183,6 +190,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
           this.categories = metadata.categories;
           this.tags = metadata.tags;
           this.settings = metadata.settings;
+          this.characterStyles = this.projectService.getCharacterStyles();
           this.updateSettingsForm();
         }
       });
@@ -229,6 +237,10 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
           castsFolder: this.settings.castsFolder ?? 'characters/casts',
           namesFile: this.settings.namesFile ?? 'characters/names.md',
           imagesFolder: this.settings.imagesFolder ?? 'img',
+          defaultCharacterStyle:
+            this.settings.defaultCharacterStyle ||
+            this.characterStyles[0]?.id ||
+            DEFAULT_CHARACTER_STYLE_ID,
           theme: this.settings.theme || 'blue-gold'
         },
         { emitEvent: false }
@@ -405,12 +417,18 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
         const castsFolder = formData.castsFolder?.trim() || 'characters/casts';
         const namesFile = formData.namesFile?.trim() || 'characters/names.md';
         const imagesFolder = formData.imagesFolder?.trim() || 'img';
+        const defaultCharacterStyle =
+          formData.defaultCharacterStyle?.trim() ||
+          this.characterStyles[0]?.id ||
+          DEFAULT_CHARACTER_STYLE_ID;
         const settingsUpdate = {
           ...formData,
           charactersFolder,
           castsFolder,
           namesFile,
-          imagesFolder
+          imagesFolder,
+          characterStyles: this.characterStyles,
+          defaultCharacterStyle
         };
 
         if (formData.theme && formData.theme !== previousSettings?.theme) {
@@ -440,6 +458,99 @@ export class MetadataManagementComponent implements OnInit, OnDestroy {
     };
     this.settingsSaveChain = this.settingsSaveChain.then(save, save);
     await this.settingsSaveChain;
+  }
+
+  // Character Styles Management
+
+  async addCharacterStyle(): Promise<void> {
+    const name = this.newCharacterStyleName.trim();
+    if (!name) return;
+    const id = slugify(name);
+    if (!id) {
+      this.error = 'Character style name must produce a valid id';
+      return;
+    }
+    if (this.characterStyles.some((s) => s.id === id)) {
+      this.error = `Character style "${id}" already exists`;
+      return;
+    }
+    this.characterStyles = [...this.characterStyles, { id, name }];
+    this.newCharacterStyleName = '';
+    if (!this.settingsForm.get('defaultCharacterStyle')?.value) {
+      this.settingsForm.patchValue({ defaultCharacterStyle: id }, { emitEvent: false });
+    }
+    await this.persistCharacterStyles();
+  }
+
+  onCharacterStyleNameDraft(styleId: string, name: string): void {
+    this.characterStyleNameDrafts[styleId] = name;
+  }
+
+  getCharacterStyleDisplayName(style: CharacterStyle): string {
+    const draft = this.characterStyleNameDrafts[style.id];
+    return draft !== undefined ? draft : style.name;
+  }
+
+  async renameCharacterStyle(styleId: string): Promise<void> {
+    const draft = this.characterStyleNameDrafts[styleId];
+    if (draft === undefined) return;
+    const name = draft.trim();
+    const style = this.characterStyles.find((s) => s.id === styleId);
+    if (!style) {
+      delete this.characterStyleNameDrafts[styleId];
+      return;
+    }
+    if (!name) {
+      delete this.characterStyleNameDrafts[styleId];
+      return;
+    }
+    delete this.characterStyleNameDrafts[styleId];
+    if (name === style.name) return;
+    this.characterStyles = this.characterStyles.map((s) =>
+      s.id === styleId ? { ...s, name } : s
+    );
+    await this.persistCharacterStyles();
+  }
+
+  async removeCharacterStyle(style: CharacterStyle): Promise<void> {
+    if (this.characterStyles.length <= 1) {
+      this.error = 'At least one character style is required';
+      return;
+    }
+    const confirmed = await this.modalService.confirm(
+      `Remove character style "${style.name}"? Existing character portraits for this style will remain in files but won't be shown until the style is re-added.`
+    );
+    if (!confirmed) return;
+
+    this.characterStyles = this.characterStyles.filter((s) => s.id !== style.id);
+    const currentDefault = this.settingsForm.get('defaultCharacterStyle')?.value;
+    if (currentDefault === style.id) {
+      this.settingsForm.patchValue(
+        { defaultCharacterStyle: this.characterStyles[0]?.id || DEFAULT_CHARACTER_STYLE_ID },
+        { emitEvent: false }
+      );
+    }
+    await this.persistCharacterStyles();
+  }
+
+  private async persistCharacterStyles(): Promise<void> {
+    try {
+      this.saving = true;
+      this.error = null;
+      const defaultCharacterStyle =
+        this.settingsForm.get('defaultCharacterStyle')?.value ||
+        this.characterStyles[0]?.id ||
+        DEFAULT_CHARACTER_STYLE_ID;
+      await this.metadataService.updateSettings({
+        characterStyles: this.characterStyles,
+        defaultCharacterStyle,
+      });
+    } catch (error) {
+      this.logger.error('Failed to save character styles:', error);
+      this.error = `Failed to save character styles: ${error}`;
+    } finally {
+      this.saving = false;
+    }
   }
 
   // Color Management

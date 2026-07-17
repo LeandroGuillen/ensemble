@@ -16,6 +16,12 @@ export const LEGACY_METADATA_JSON_FILE = 'metadata.json';
 // ---- Default relative folders / files --------------------------------------
 export const DEFAULT_CHARACTERS_FOLDER = 'characters';
 export const DEFAULT_IMAGES_FOLDER = 'img';
+
+export const DEFAULT_CHARACTER_STYLE_ID = 'default';
+
+export const DEFAULT_CHARACTER_STYLES: ReadonlyArray<{ id: string; name: string }> = [
+  { id: DEFAULT_CHARACTER_STYLE_ID, name: 'Default' },
+];
 export const DEFAULT_CASTS_FOLDER = 'characters/casts';
 export const DEFAULT_NAMES_FILE = 'characters/names.md';
 

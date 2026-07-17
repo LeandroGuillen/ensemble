@@ -61,9 +61,16 @@ describe('CharacterService', () => {
       'deleteFile',
       'deleteDirectoryRecursive'
     ]);
-    const projectSpy = jasmine.createSpyObj('ProjectService', ['getCurrentProject', 'getCharactersFolderPath'], {
+    const projectSpy = jasmine.createSpyObj('ProjectService', [
+      'getCurrentProject',
+      'getCharactersFolderPath',
+      'getDefaultCharacterStyle',
+      'getCharacterStyles',
+    ], {
       currentProject$: new BehaviorSubject<Project | null>(null)
     });
+    projectSpy.getDefaultCharacterStyle.and.returnValue('default');
+    projectSpy.getCharacterStyles.and.returnValue([{ id: 'default', name: 'Default' }]);
     const fileWatcherSpy = jasmine.createSpyObj('FileWatcherService', [], {
       fileChanges$: new BehaviorSubject<any>(null)
     });
@@ -241,7 +248,7 @@ describe('CharacterService', () => {
       expect(updated).toBeNull();
     });
 
-    it('should clear thumbnail when an empty thumbnail is saved', async () => {
+    it('should clear thumbnails when an empty map is saved', async () => {
       const project = createValidProject();
       projectService.getCurrentProject.and.returnValue(project);
       (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
@@ -253,7 +260,7 @@ describe('CharacterService', () => {
         tags: [],
         books: [],
         prompts: [],
-        thumbnail: '[[img/portrait.png]]',
+        thumbnails: { default: '[[img/portrait.png]]' },
         content: '',
         created: new Date(),
         modified: new Date(),
@@ -266,13 +273,13 @@ describe('CharacterService', () => {
       electronService.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));
 
       const updated = await service.updateCharacter('main-character/_test-character.md', {
-        thumbnail: '',
+        thumbnails: {},
       });
 
-      expect(updated?.thumbnail).toBeUndefined();
+      expect(updated?.thumbnails).toBeUndefined();
       expect(electronService.writeFileAtomic).toHaveBeenCalled();
       const savedContent = electronService.writeFileAtomic.calls.mostRecent().args[1] as string;
-      expect(savedContent).not.toContain('thumbnail:');
+      expect(savedContent).not.toContain('thumbnails:');
     });
 
     it('should not move character file when category changes', async () => {

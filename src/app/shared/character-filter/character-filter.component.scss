@@ -1,3 +1,15 @@
+:host {
+  display: contents;
+}
+
+:host.sidebar-host {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+}
+
 .character-filter {
   background: var(--color-bg-tertiary);
   border: 1px solid var(--color-border);
@@ -166,8 +178,10 @@
 
 .character-filter.sidebar-mode {
   display: flex;
+  flex: 1;
   width: 100%;
-  height: auto;
+  height: 100%;
+  min-height: 0;
   background: transparent;
   border: 0;
   border-radius: 0;
@@ -178,6 +192,7 @@
   }
 
   .filter-header {
+    flex-shrink: 0;
     height: 36px;
     gap: var(--spacing-xs);
 
@@ -260,14 +275,17 @@
     }
   }
 
-  .section-category { z-index: 40; }
-  .section-tags { z-index: 30; }
-  .section-cast { z-index: 20; }
-  .section-book { z-index: 10; }
+  .section-category { z-index: 50; }
+  .section-tags { z-index: 40; }
+  .section-cast { z-index: 30; }
+  .section-book { z-index: 20; }
+  .section-pictures { z-index: 10; }
 }
 
 .sidebar-mode .filter-body {
   position: static;
+  flex: 0 1 auto;
+  min-height: 0;
   width: 100%;
   min-width: 0;
   max-width: none;
@@ -278,9 +296,29 @@
   box-shadow: none;
   animation: none;
   gap: var(--spacing-lg);
+  overflow: visible;
 
   .filter-section {
+    display: flex;
+    flex-direction: column;
     gap: var(--spacing-sm);
+    flex: 0 0 auto;
+
+    .filter-label {
+      flex-shrink: 0;
+    }
+  }
+
+  ::ng-deep {
+    .cast-dropdown-container,
+    .book-selector-container {
+      width: 100%;
+    }
+
+    .selected-book-display,
+    .cast-dropdown-trigger {
+      width: 100%;
+    }
   }
 }
 

@@ -79,11 +79,13 @@
             [selectedTags]="selectedTags"
             [selectedCast]="selectedCast"
             [selectedBook]="selectedBook"
+            [selectedPictureFilter]="selectedPictureFilter"
             (searchTermChange)="searchTerm = $event; onSearchChange()"
             (categoryChange)="selectedCategory = $event; onCategoryChange()"
             (tagsChange)="selectedTags = $event; onTagsSelectionChange($event)"
             (castChange)="selectedCast = $event; onCastChange()"
             (bookChange)="selectedBook = $event; onBookChange()"
+            (pictureFilterChange)="selectedPictureFilter = $event; onPictureFilterChange()"
             (clearFilters)="clearFilters()"
           ></app-character-filter>
         </div>
@@ -137,6 +139,23 @@
           </div>
 
           <span class="toolbar-spacer"></span>
+
+          @if (characterStyles.length > 1) {
+            <div class="toolbar-control">
+              <label class="toolbar-label" for="character-style-select">Character Style</label>
+              <select
+                id="character-style-select"
+                class="character-style-select"
+                [ngModel]="selectedCharacterStyle"
+                (ngModelChange)="setCharacterStyle($event)"
+                aria-label="Character style"
+              >
+                @for (style of characterStyles; track style.id) {
+                  <option [value]="style.id">{{ style.name }}</option>
+                }
+              </select>
+            </div>
+          }
 
           @if (viewMode === 'list' || viewMode === 'compact') {
             <div class="column-toggle" aria-label="Column count">

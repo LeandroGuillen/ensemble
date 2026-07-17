@@ -10,7 +10,8 @@ export interface Character {
   category: string;
   tags: string[];
   books: string[];
-  thumbnail?: string; // Opaque string (e.g., wiki-link [[path/to/image.jpg]])
+  /** Map of character-style id → opaque wiki-link / path string */
+  thumbnails?: Record<string, string>;
   prompts: CharacterPrompt[]; // Image-generation prompts; first is the default
   content: string; // Full markdown body below frontmatter
   created: Date;
@@ -23,7 +24,7 @@ export interface CharacterFormData {
   category: string;
   tags: string[];
   books: string[];
-  thumbnail?: string;
+  thumbnails?: Record<string, string>;
   prompts: CharacterPrompt[];
   content: string;
 }
@@ -33,7 +34,7 @@ export interface CharacterFrontmatter {
   category: string;
   tags: string[];
   books: string[];
-  thumbnail?: string;
+  thumbnails?: Record<string, string>;
   prompts?: CharacterPrompt[];
   created?: string;
   modified?: string;
