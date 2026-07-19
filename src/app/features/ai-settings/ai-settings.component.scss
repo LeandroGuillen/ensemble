@@ -36,14 +36,12 @@
 }
 
 .notification-container {
-  position: relative;
-  min-height: 0;
-  margin-bottom: 0;
-
-  &.has-message {
-    min-height: 40px;
-    margin-bottom: var(--spacing-md);
-  }
+  position: fixed;
+  top: var(--spacing-xl);
+  right: var(--spacing-xl);
+  width: min(28rem, calc(100vw - (2 * var(--spacing-xl))));
+  z-index: 1000;
+  pointer-events: none;
 }
 
 .success-message,
