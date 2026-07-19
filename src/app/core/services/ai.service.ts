@@ -11,6 +11,38 @@ export interface AiGenerationOptions {
   temperature?: number;
 }
 
+export interface StructuredGenerationOptions {
+  /**
+   * Required: callers must size this for their schema. The settings-level
+   * maxTokens is tuned for short name generation and truncates larger JSON.
+   */
+  maxTokens: number;
+  temperature?: number;
+  /** Defaults to 120s; local models can take well over the 30s IPC default. */
+  timeoutMs?: number;
+}
+
+/**
+ * Extracts a JSON payload from raw model output. Local models often wrap JSON
+ * in markdown fences or prose, so we parse the outermost object/array found.
+ */
+export function parseStructuredJson<T>(text: string): T {
+  const cleaned = text
+    .trim()
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/```\s*$/, '')
+    .trim();
+  const starts = [cleaned.indexOf('{'), cleaned.indexOf('[')].filter((i) => i >= 0);
+  const start = starts.length ? Math.min(...starts) : -1;
+  const end = Math.max(cleaned.lastIndexOf('}'), cleaned.lastIndexOf(']'));
+  const candidate = start >= 0 && end > start ? cleaned.slice(start, end + 1) : cleaned;
+  try {
+    return JSON.parse(candidate) as T;
+  } catch {
+    throw new Error('AI choked answering. Please try again.');
+  }
+}
+
 export interface AiTestConnectionResult {
   success: boolean;
   error?: string;
@@ -129,15 +161,14 @@ export class AiService {
 
   private async testLmStudioConnection(settings: AiSettings): Promise<AiTestConnectionResult> {
     try {
-      // LM Studio uses OpenAI-compatible API
-      const url = `${settings.localServerUrl}/v1/models`;
+      const url = `${settings.localServerUrl}/api/v1/models`;
       const response = await this.makeHttpRequest(url, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });
 
       if (response.status === 200 && response.data) {
-        const models = response.data.data?.map((m: any) => m.id) || [];
+        const models = response.data.models?.map((model: any) => model.key) || [];
         return {
           success: true,
           models: models,
@@ -156,55 +187,76 @@ export class AiService {
     }
   }
 
-  async generateCharacterName(options: AiGenerationOptions = {}): Promise<string> {
+  /**
+   * Prompts the configured provider for a JSON response and returns it parsed.
+   * This is the single structured-generation entry point every AI feature
+   * (name generation, drafts, ideas, …) should build on.
+   */
+  async generateStructured<T>(prompt: string, options: StructuredGenerationOptions): Promise<T> {
     const settings = this.getCurrentAiSettings();
 
     if (!settings || !settings.enabled) {
       throw new Error('AI is not enabled. Please configure AI settings first.');
     }
 
-    const context = options.context || '';
-    const prompt = this.buildNameGenerationPrompt(context);
-
-    // Use moderate-high temperature for creative but coherent name generation
-    const generationOptions = {
-      ...options,
-      temperature: options.temperature ?? 0.8, // Sweet spot for creativity + coherence
-    };
-
+    let raw: string;
     if (settings.provider === 'ollama') {
-      return await this.generateWithOllama(prompt, settings, generationOptions);
+      raw = await this.generateWithOllama(prompt, settings, options);
     } else if (settings.provider === 'lm-studio') {
-      return await this.generateWithLmStudio(prompt, settings, generationOptions);
+      raw = await this.generateWithLmStudio(prompt, settings, options);
     } else {
       throw new Error(`Provider ${settings.provider} not yet implemented`);
+    }
+
+    if (!raw) {
+      throw new Error('No response generated');
+    }
+    return parseStructuredJson<T>(raw);
+  }
+
+  async generateCharacterName(options: AiGenerationOptions = {}): Promise<string> {
+    const settings = this.getCurrentAiSettings();
+    const prompt = this.buildNameGenerationPrompt(options.context || '');
+
+    try {
+      const result = await this.generateStructured<{ name: string }>(prompt, {
+        // Reasoning models may use several hundred tokens before producing the
+        // short JSON answer. Keep the user setting when it is already larger.
+        maxTokens: Math.max(options.maxTokens ?? settings?.maxTokens ?? 1000, 1000),
+        // Use moderate-high temperature for creative but coherent name generation
+        temperature: options.temperature ?? 0.8,
+      });
+      if (!result?.name) {
+        throw new Error('AI choked answering. Please try again.');
+      }
+      return result.name;
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith('AI is not enabled')) {
+        throw error;
+      }
+      throw new Error(`Failed to generate name: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
   private buildNameGenerationPrompt(context: string): string {
-    // Add some randomness to vary the prompt
-    const randomNum = Math.floor(Math.random() * 100);
-
-    let prompt = 'Generate a unique, pronounceable character name. ';
-    prompt += 'The name should be memorable, easy to say, and feel natural. ';
-    prompt += 'Vary your choices - try different cultural origins, lengths, and sounds. ';
-    prompt += 'Avoid overused fantasy names like Aria, Elara, Kael, or Theron. ';
+    const soundProfiles = [
+      'Use soft consonants and open vowels.',
+      'Use crisp consonants and short syllables.',
+      'Use liquid consonants and a three-syllable rhythm.',
+      'Use two compact syllables with an unusual vowel rhythm.',
+      'Combine familiar phonemes in an unexpected way.',
+      'Use a vowel-rich sound with few consonant clusters.',
+    ];
+    const soundProfile = soundProfiles[Math.floor(Math.random() * soundProfiles.length)];
+    let prompt = 'Generate one unique, pronounceable character name. ';
+    prompt += `${soundProfile} `;
 
     if (context) {
       prompt += `Context: ${context}. `;
     }
 
-    // Add variation to the prompt itself
-    if (randomNum < 33) {
-      prompt += 'Consider names from various cultures around the world. ';
-    } else if (randomNum < 66) {
-      prompt += 'Think of names with interesting but natural sound combinations. ';
-    } else {
-      prompt += 'Mix familiar sounds in new ways to create fresh names. ';
-    }
-
-    prompt += 'The name must be easy to pronounce and remember. ';
-    prompt += 'Respond with JSON: {"name": "YourName"}';
+    prompt += 'Avoid overused names such as Aria, Elara, Kael, and Theron. ';
+    prompt += 'Return exactly: {"name": "YourName"}';
 
     return prompt;
   }
@@ -212,7 +264,7 @@ export class AiService {
   private async generateWithOllama(
     prompt: string,
     settings: AiSettings,
-    options: AiGenerationOptions
+    options: StructuredGenerationOptions
   ): Promise<string> {
     const url = `${settings.localServerUrl}/api/generate`;
 
@@ -222,8 +274,8 @@ export class AiService {
       stream: false,
       format: 'json',
       options: {
-        temperature: options.temperature || settings.temperature,
-        num_predict: options.maxTokens || settings.maxTokens,
+        temperature: options.temperature ?? settings.temperature,
+        num_predict: options.maxTokens,
         seed: Math.floor(Math.random() * 1000000), // Random seed for variety
         top_k: 40, // Consider top 40 tokens
         top_p: 0.9, // Nucleus sampling for diversity
@@ -231,76 +283,54 @@ export class AiService {
       },
     };
 
-    try {
-      const response = await this.makeHttpRequest(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: requestBody,
-      });
+    const response = await this.makeHttpRequest(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: requestBody,
+      timeout: options.timeoutMs ?? 120000,
+    });
 
-      if (response.status === 200 && response.data) {
-        const generatedText = response.data.response?.trim() || '';
-
-        if (!generatedText) {
-          throw new Error('No response generated');
-        }
-        try {
-          const jsonResponse = JSON.parse(generatedText);
-          return jsonResponse.name;
-        } catch {
-          throw new Error(`AI choked answering. Please try again.`);
-        }
-      } else {
-        throw new Error(`Server returned status ${response.status}`);
-      }
-    } catch (error) {
-      throw new Error(`Failed to generate name: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    if (response.status !== 200 || !response.data) {
+      throw new Error(`Server returned status ${response.status}`);
     }
+    return response.data.response?.trim() || '';
   }
 
   private async generateWithLmStudio(
     prompt: string,
     settings: AiSettings,
-    options: AiGenerationOptions
+    options: StructuredGenerationOptions
   ): Promise<string> {
-    const url = `${settings.localServerUrl}/v1/chat/completions`;
+    const url = `${settings.localServerUrl}/api/v1/chat`;
 
     const requestBody = {
       model: settings.modelName,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: options.temperature || settings.temperature,
-      max_tokens: options.maxTokens || settings.maxTokens,
+      system_prompt: 'Reason carefully, then return the final answer as valid JSON only.',
+      input: prompt,
+      temperature: options.temperature ?? settings.temperature,
+      max_output_tokens: options.maxTokens,
+      reasoning: 'on',
     };
 
-    if (settings.apiKey) {
-      // Add API key to headers if provided
+    const response = await this.makeHttpRequest(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(settings.apiKey ? { Authorization: `Bearer ${settings.apiKey}` } : {}),
+      },
+      body: requestBody,
+      timeout: options.timeoutMs ?? 120000,
+    });
+
+    if (response.status !== 200 || response.data?.error) {
+      const serverError =
+        typeof response.data?.error === 'string'
+          ? response.data.error
+          : response.data?.error?.message;
+      throw new Error(serverError || `Server returned status ${response.status}`);
     }
-
-    try {
-      const response = await this.makeHttpRequest(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(settings.apiKey ? { Authorization: `Bearer ${settings.apiKey}` } : {}),
-        },
-        body: requestBody,
-      });
-
-      if (response.status === 200 && response.data) {
-        const generatedText = response.data.choices?.[0]?.message?.content?.trim() || '';
-
-        if (!generatedText) {
-          throw new Error('No response generated');
-        }
-
-        const jsonResponse = JSON.parse(generatedText);
-        return jsonResponse.name;
-      } else {
-        throw new Error(`Server returned status ${response.status}`);
-      }
-    } catch (error) {
-      throw new Error(`Failed to generate name: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    const message = response.data.output?.find((item: any) => item.type === 'message');
+    return typeof message?.content === 'string' ? message.content.trim() : '';
   }
 
   private async makeHttpRequest(url: string, options: any): Promise<any> {

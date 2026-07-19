@@ -210,6 +210,16 @@ export class ElectronService {
     return await this.ipcRenderer.invoke(IpcChannels.downloadImage, url, destinationPath, options);
   }
 
+  async saveBase64Image(
+    base64Data: string,
+    destinationPath: string
+  ): Promise<{ success: boolean; path?: string; error?: string }> {
+    if (!this.isElectron()) {
+      return { success: false, error: 'Not running in Electron' };
+    }
+    return await this.ipcRenderer.invoke(IpcChannels.saveBase64Image, base64Data, destinationPath);
+  }
+
   async moveDirectory(sourcePath: string, destPath: string): Promise<{ success: boolean; error?: string }> {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };

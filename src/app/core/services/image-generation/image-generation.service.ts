@@ -6,15 +6,14 @@ import {
   ProjectImage,
   ProjectImageDirectory,
 } from '../../interfaces/image-generation.interface';
-import {
-  ImageGenerationSettings,
-  InvokeAiImageSettings,
-} from '../../interfaces/project.interface';
+import { ImageGenerationSettings } from '../../interfaces/project.interface';
 import { asciiSlugify } from '../../utils/slug.utils';
 import { requireProject } from '../../utils/project.utils';
 import { ElectronService } from '../electron.service';
 import { ProjectService } from '../project.service';
+import { GeminiImageProvider } from './gemini-image.provider';
 import { InvokeAiProvider } from './invokeai.provider';
+import { OpenAiImageProvider } from './openai-image.provider';
 
 const IMAGE_PATTERNS = ['*.png', '*.jpg', '*.jpeg', '*.webp', '*.gif'];
 
@@ -26,10 +25,17 @@ export class ImageGenerationService {
   ) {}
 
   getSettings(): ImageGenerationSettings {
-    return (
-      this.projectService.getCurrentProject()?.metadata.settings.imageGeneration ||
-      defaultImageGenerationSettings()
-    );
+    const stored = this.projectService.getCurrentProject()?.metadata.settings.imageGeneration;
+    const defaults = defaultImageGenerationSettings();
+    if (!stored) return defaults;
+    // Older projects lack the cloud provider blocks; merge so they always exist.
+    return {
+      ...defaults,
+      ...stored,
+      invokeai: { ...defaults.invokeai, ...stored.invokeai },
+      openai: { ...defaults.openai!, ...stored.openai },
+      gemini: { ...defaults.gemini!, ...stored.gemini },
+    };
   }
 
   async updateSettings(settings: ImageGenerationSettings): Promise<void> {
@@ -44,17 +50,23 @@ export class ImageGenerationService {
             ...settings.invokeai,
             baseUrl: settings.invokeai.baseUrl.trim().replace(/\/+$/, ''),
           },
+          ...(settings.openai
+            ? { openai: { ...settings.openai, apiKey: settings.openai.apiKey.trim() } }
+            : {}),
+          ...(settings.gemini
+            ? { gemini: { ...settings.gemini, apiKey: settings.gemini.apiKey.trim() } }
+            : {}),
         },
       },
     };
     await this.projectService.updateMetadata(updatedMetadata);
   }
 
-  async testConnection(settings?: InvokeAiImageSettings) {
+  async testConnection(settings?: ImageGenerationSettings) {
     return await this.provider(settings).testConnection();
   }
 
-  async listWorkflows(settings?: InvokeAiImageSettings): Promise<ImageWorkflow[]> {
+  async listWorkflows(settings?: ImageGenerationSettings): Promise<ImageWorkflow[]> {
     return await this.provider(settings).listWorkflows();
   }
 
@@ -63,7 +75,7 @@ export class ImageGenerationService {
     const settings = this.getSettings();
     if (!settings.enabled) throw new Error('Image generation is not enabled');
 
-    const provider = this.provider(settings.invokeai);
+    const provider = this.provider(settings);
     const image = await provider.generate(request);
     const imagesFolder = project.metadata.settings.imagesFolder?.trim() || 'img';
     const baseRelativePath = buildGeneratedImagePath(
@@ -173,9 +185,16 @@ export class ImageGenerationService {
     };
   }
 
-  private provider(overrides?: InvokeAiImageSettings): InvokeAiProvider {
-    const invokeSettings = overrides || this.getSettings().invokeai;
-    return new InvokeAiProvider(this.electronService, invokeSettings.baseUrl);
+  private provider(overrides?: ImageGenerationSettings) {
+    const settings = overrides || this.getSettings();
+    switch (settings.provider) {
+      case 'openai':
+        return new OpenAiImageProvider(this.electronService, settings.openai || { apiKey: '' });
+      case 'gemini':
+        return new GeminiImageProvider(this.electronService, settings.gemini || { apiKey: '' });
+      default:
+        return new InvokeAiProvider(this.electronService, settings.invokeai.baseUrl);
+    }
   }
 
   private async findAvailableRelativePath(projectPath: string, requestedPath: string): Promise<string> {
@@ -215,6 +234,8 @@ export function defaultImageGenerationSettings(): ImageGenerationSettings {
     invokeai: {
       baseUrl: 'http://invoke.yak-toad.ts.net',
     },
+    openai: { apiKey: '' },
+    gemini: { apiKey: '' },
   };
 }
 

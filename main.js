@@ -804,6 +804,24 @@ ipcMain.handle(IPC.downloadImage, async (event, url, destinationPath, options = 
   }
 });
 
+// Save a base64-encoded image (from cloud generation APIs) to disk atomically.
+ipcMain.handle(IPC.saveBase64Image, async (event, base64Data, destinationPath) => {
+  const tempPath = `${destinationPath}.tmp.${Date.now()}`;
+  try {
+    const buffer = Buffer.from(base64Data || '', 'base64');
+    if (!buffer.length) {
+      return err('Empty image data');
+    }
+    await fs.mkdir(pathModule.dirname(destinationPath), { recursive: true });
+    await fs.writeFile(tempPath, buffer);
+    await fs.rename(tempPath, destinationPath);
+    return ok({ path: destinationPath });
+  } catch (error) {
+    await fs.unlink(tempPath).catch(() => {});
+    return err(error.message);
+  }
+});
+
 // Handle opening file in system default editor
 ipcMain.handle(IPC.openFileInEditor, async (event, filePath) => {
   try {
