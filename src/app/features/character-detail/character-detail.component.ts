@@ -173,12 +173,6 @@ export class CharacterDetailComponent
 
   /** True while a text input/textarea in this form has focus — CD is detached to avoid wasted work. */
   private textInputFocused = false;
-  private focusedElement: HTMLElement | null = null;
-  /**
-   * Stops input/beforeinput events from bubbling into zone.js while a text field is focused.
-   * Registered in the capture phase on the focused element so it fires before zone's listener.
-   */
-  private inputEventStopper = (e: Event) => e.stopPropagation();
 
   constructor(
     private route: ActivatedRoute,
@@ -272,7 +266,18 @@ export class CharacterDetailComponent
         } else {
           this.isEditing = false;
           this.character = null;
-          this.characterForm.reset();
+          const defaultCategory =
+            this.categories.find(
+              (category) =>
+                category.id === this.currentProject?.metadata.settings.defaultCategory
+            ) || this.categories[0];
+          this.characterForm.reset({
+            name: '',
+            category: defaultCategory?.id || '',
+            tags: [],
+            books: [],
+            content: '',
+          });
           this.thumbnailsMap = {};
           this.thumbnailPreviewUrls = new Map();
           this.prompts = [];
@@ -325,11 +330,6 @@ export class CharacterDetailComponent
     this.electronService.removeBrowserNavigationCommandListener(
       this.browserNavigationCommandListener
     );
-    if (this.focusedElement) {
-      this.focusedElement.removeEventListener('input', this.inputEventStopper, true);
-      this.focusedElement.removeEventListener('beforeinput', this.inputEventStopper, true);
-      this.focusedElement = null;
-    }
     if (this.textInputFocused) {
       this.cdr.reattach();
     }
@@ -411,7 +411,7 @@ export class CharacterDetailComponent
         "",
         {
           validators: [
-            // Validators.required,
+            Validators.required,
             Validators.minLength(1),
             Validators.maxLength(100),
           ],
@@ -965,27 +965,12 @@ export class CharacterDetailComponent
    * form values don't change during typing — running CD on every keystroke is wasted work
    * (~114ms per key in production, ~190ms in dev mode).
    */
-  onTextInputFocus(event: FocusEvent): void {
+  onTextInputFocus(_event: FocusEvent): void {
     this.textInputFocused = true;
     this.cdr.detach();
-
-    // Prevent input events from reaching zone.js while this field is focused.
-    // With updateOn:'blur', the form value doesn't change during typing,
-    // so input events inside zone are pure waste.
-    const el = event.target as HTMLElement;
-    this.focusedElement = el;
-    this.ngZone.runOutsideAngular(() => {
-      el.addEventListener('input', this.inputEventStopper, true);
-      el.addEventListener('beforeinput', this.inputEventStopper, true);
-    });
   }
 
   onTextInputBlur(fieldName: string): void {
-    if (this.focusedElement) {
-      this.focusedElement.removeEventListener('input', this.inputEventStopper, true);
-      this.focusedElement.removeEventListener('beforeinput', this.inputEventStopper, true);
-      this.focusedElement = null;
-    }
     this.textInputFocused = false;
     this.cdr.reattach();
     this.onFieldBlur(fieldName);
