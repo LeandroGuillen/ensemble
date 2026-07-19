@@ -411,7 +411,7 @@ export class CharacterDetailComponent
         "",
         {
           validators: [
-            Validators.required,
+            // Validators.required,
             Validators.minLength(1),
             Validators.maxLength(100),
           ],
@@ -444,7 +444,7 @@ export class CharacterDetailComponent
     try {
       // First check if character exists in memory
       let character = this.characterService.getCharacterById(id);
-      
+
       // If not found, ensure characters are loaded first
       if (!character && this.currentProject) {
         await this.characterService.loadCharacters(this.currentProject.path);
@@ -622,6 +622,17 @@ export class CharacterDetailComponent
   }
 
   async onSubmit(): Promise<void> {
+    // Name/content use updateOn:'blur', so a value typed into the still-focused
+    // field (e.g. submitting with Ctrl+Enter) is pending until blur. Blur it so
+    // the pending value is applied before validating.
+    const active = document.activeElement;
+    if (
+      active instanceof HTMLElement &&
+      (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')
+    ) {
+      active.blur();
+    }
+
     if (this.characterForm.invalid) {
       this.markFormGroupTouched(this.characterForm);
       this.highlightRequiredFields();
@@ -1042,41 +1053,41 @@ export class CharacterDetailComponent
    */
   private scrollToFirstInvalidField(): void {
     const requiredFields = ['name', 'category'];
-    
+
     for (const fieldName of requiredFields) {
       const field = this.characterForm.get(fieldName);
       if (field && field.invalid && field.touched) {
         let element: HTMLElement | null = null;
-        
+
         if (fieldName === 'category') {
           // For category, find the form-group container
           element = document.querySelector('.form-group-category') as HTMLElement;
         } else {
           // For other fields, find the input element
-          element = document.getElementById(fieldName) || 
+          element = document.getElementById(fieldName) ||
                    document.querySelector(`[formControlName="${fieldName}"]`) as HTMLElement;
         }
-        
+
         if (element) {
           // Scroll to the element with some offset from the top
-          element.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center' 
+          element.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
           });
-          
+
           // Add a brief highlight animation
           element.classList.add('field-highlight');
           const elementToHighlight = element;
           setTimeout(() => {
             elementToHighlight.classList.remove('field-highlight');
           }, 2000);
-          
+
           // Focus the field if it's an input (not category)
           if (fieldName !== 'category' && (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement)) {
             const elementToFocus = element;
             setTimeout(() => elementToFocus.focus(), 300);
           }
-          
+
           break; // Only scroll to the first invalid field
         }
       }
@@ -1614,4 +1625,3 @@ export class CharacterDetailComponent
     }
   }
 }
-

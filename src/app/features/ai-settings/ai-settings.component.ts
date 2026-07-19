@@ -1,7 +1,11 @@
 import { Component, Input, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { debounceTime, merge, Subject, takeUntil } from 'rxjs';
-import { AiSettings } from '../../core/interfaces/project.interface';
+import {
+  AiSettings,
+  ImageGenerationProviderId,
+  ImageGenerationSettings,
+} from '../../core/interfaces/project.interface';
 import { ImageWorkflow } from '../../core/interfaces/image-generation.interface';
 import { AiService, AiTestConnectionResult } from '../../core/services/ai.service';
 import { ImageGenerationService } from '../../core/services/image-generation/image-generation.service';
@@ -39,6 +43,12 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
     { id: 'anthropic', name: 'Anthropic (Cloud)', description: 'Requires API key', disabled: true },
   ];
 
+  imageProviders = [
+    { id: 'invokeai', name: 'InvokeAI', description: 'Self-hosted server with workflows' },
+    { id: 'openai', name: 'OpenAI / ChatGPT (Cloud)', description: 'Requires API key' },
+    { id: 'gemini', name: 'Google Gemini (Cloud)', description: 'Requires API key' },
+  ];
+
   constructor(
     private fb: FormBuilder,
     private aiService: AiService,
@@ -48,8 +58,13 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
     const imageSettings = this.imageGenerationService.getSettings();
     this.imageForm = this.fb.group({
       enabled: [imageSettings.enabled],
-      baseUrl: [imageSettings.invokeai.baseUrl, Validators.required],
+      provider: [imageSettings.provider],
+      baseUrl: [imageSettings.invokeai.baseUrl],
       defaultWorkflowId: [imageSettings.invokeai.defaultWorkflowId || ''],
+      openaiApiKey: [imageSettings.openai?.apiKey || ''],
+      openaiModel: [imageSettings.openai?.model || ''],
+      geminiApiKey: [imageSettings.gemini?.apiKey || ''],
+      geminiModel: [imageSettings.gemini?.model || ''],
     });
   }
 
@@ -68,14 +83,38 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
     this.imageForm.patchValue(
       {
         enabled: settings.enabled,
+        provider: settings.provider,
         baseUrl: settings.invokeai.baseUrl,
         defaultWorkflowId: settings.invokeai.defaultWorkflowId || '',
+        openaiApiKey: settings.openai?.apiKey || '',
+        openaiModel: settings.openai?.model || '',
+        geminiApiKey: settings.gemini?.apiKey || '',
+        geminiModel: settings.gemini?.model || '',
       },
       { emitEvent: false }
     );
-    if (settings.enabled) {
+    if (settings.enabled && settings.provider === 'invokeai') {
       void this.refreshImageWorkflows(false);
     }
+  }
+
+  get imageProvider(): ImageGenerationProviderId {
+    return this.imageForm.get('provider')?.value || 'invokeai';
+  }
+
+  /** Builds the full settings candidate from the current form state. */
+  private buildImageSettings(): ImageGenerationSettings {
+    const value = this.imageForm.getRawValue();
+    return {
+      enabled: !!value.enabled,
+      provider: value.provider || 'invokeai',
+      invokeai: {
+        baseUrl: value.baseUrl,
+        defaultWorkflowId: value.defaultWorkflowId || undefined,
+      },
+      openai: { apiKey: value.openaiApiKey || '', model: value.openaiModel?.trim() || undefined },
+      gemini: { apiKey: value.geminiApiKey || '', model: value.geminiModel?.trim() || undefined },
+    };
   }
 
   ngOnDestroy(): void {
@@ -171,21 +210,14 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
     }
 
     const formData: AiSettings = this.aiForm.getRawValue();
-    const imageData = this.imageForm.getRawValue();
+    const imageSettings = this.buildImageSettings();
     const save = async () => {
       this.saving = true;
       this.error = null;
       this.successMessage = null;
       try {
         await this.aiService.updateAiSettings(formData);
-        await this.imageGenerationService.updateSettings({
-          enabled: !!imageData.enabled,
-          provider: 'invokeai',
-          invokeai: {
-            baseUrl: imageData.baseUrl,
-            defaultWorkflowId: imageData.defaultWorkflowId || undefined,
-          },
-        });
+        await this.imageGenerationService.updateSettings(imageSettings);
         if (showMessage) {
           this.successMessage = 'Settings saved';
           setTimeout(() => {
@@ -203,20 +235,17 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
   }
 
   async refreshImageWorkflows(showResult = true): Promise<void> {
-    if (this.imageForm.get('baseUrl')?.invalid) return;
+    if (!this.imageForm.value.baseUrl?.trim()) return;
     this.imageTesting = true;
     this.imageTestMessage = null;
     this.error = null;
     try {
-      const invokeai = {
-        baseUrl: this.imageForm.value.baseUrl,
-        defaultWorkflowId: this.imageForm.value.defaultWorkflowId || undefined,
-      };
-      const connection = await this.imageGenerationService.testConnection(invokeai);
+      const candidate = { ...this.buildImageSettings(), provider: 'invokeai' as const };
+      const connection = await this.imageGenerationService.testConnection(candidate);
       if (!connection.success) {
         throw new Error(connection.error || 'Could not connect to InvokeAI');
       }
-      this.imageWorkflows = await this.imageGenerationService.listWorkflows(invokeai);
+      this.imageWorkflows = await this.imageGenerationService.listWorkflows(candidate);
       this.imageTestMessage = showResult
         ? `Connected to InvokeAI ${connection.version || ''}. Found ${this.imageWorkflows.length} compatible workflow(s).`
         : null;
@@ -227,6 +256,27 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
     } catch (error) {
       this.error = error instanceof Error ? error.message : 'Failed to load InvokeAI workflows';
       this.imageWorkflows = [];
+    } finally {
+      this.imageTesting = false;
+    }
+  }
+
+  /** Tests connectivity/credentials for the selected cloud image provider. */
+  async testCloudImageConnection(): Promise<void> {
+    this.imageTesting = true;
+    this.imageTestMessage = null;
+    this.error = null;
+    try {
+      const candidate = this.buildImageSettings();
+      const connection = await this.imageGenerationService.testConnection(candidate);
+      if (!connection.success) {
+        throw new Error(connection.error || 'Connection test failed');
+      }
+      const providerName =
+        this.imageProviders.find((p) => p.id === candidate.provider)?.name || candidate.provider;
+      this.imageTestMessage = `Connected to ${providerName}.`;
+    } catch (error) {
+      this.error = error instanceof Error ? error.message : 'Connection test failed';
     } finally {
       this.imageTesting = false;
     }

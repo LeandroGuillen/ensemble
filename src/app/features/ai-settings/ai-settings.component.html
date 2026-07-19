@@ -1,7 +1,7 @@
 <div class="ai-settings ai-settings-panel">
     <div class="settings-content">
         <div class="settings-inner">
-            <div class="notification-container" [class.has-message]="successMessage || error">
+            <div class="notification-container">
                 <div
                     class="success-message"
                     [class.visible]="successMessage"
@@ -283,20 +283,36 @@
 
             @if (activeSection === 'image-generation') {
                 <form [formGroup]="imageForm" class="ai-form">
-                    <div class="form-section" [settingsSearchable]="['Enable character image generation', 'InvokeAI', 'portrait', 'workflow', imageForm.get('baseUrl')?.value, imageForm.get('defaultWorkflowId')?.value]">
+                    <div class="form-section" [settingsSearchable]="['Enable character image generation', 'InvokeAI', 'OpenAI', 'ChatGPT', 'Gemini', 'portrait', 'workflow', 'API Key', imageForm.get('baseUrl')?.value, imageForm.get('defaultWorkflowId')?.value]">
                         <div class="form-group">
                             <label class="checkbox-label">
                                 <input type="checkbox" formControlName="enabled" />
                                 <span>Enable character image generation</span>
                             </label>
                             <p class="field-hint">
-                                Saved InvokeAI workflows act as presets. Ensemble changes only
-                                their exposed Positive Prompt and Negative Prompt fields. Use String Join
-                                nodes in the workflow to prepend fixed templates (score tags, style tokens, etc.).
+                                Generate character portraits with a self-hosted InvokeAI server
+                                or a cloud provider (OpenAI, Google Gemini).
                             </p>
                         </div>
 
                         @if (imageForm.get("enabled")?.value) {
+                            <div class="form-group">
+                                <label class="form-label" for="imageProvider">Image Provider</label>
+                                <select
+                                    id="imageProvider"
+                                    class="form-control"
+                                    formControlName="provider"
+                                >
+                                    @for (provider of imageProviders; track provider.id) {
+                                        <option [value]="provider.id">
+                                            {{ provider.name }} - {{ provider.description }}
+                                        </option>
+                                    }
+                                </select>
+                            </div>
+                        }
+
+                        @if (imageForm.get("enabled")?.value && imageProvider === 'invokeai') {
                             <div class="form-group">
                                 <label class="form-label" for="invokeAiBaseUrl">InvokeAI Server URL</label>
                                 <input
@@ -306,7 +322,12 @@
                                     formControlName="baseUrl"
                                     placeholder="http://invoke.yak-toad.ts.net"
                                 />
-                                <p class="field-hint">Use the server root, not the <code>/app</code> UI path.</p>
+                                <p class="field-hint">
+                                    Use the server root, not the <code>/app</code> UI path.
+                                    Saved InvokeAI workflows act as presets. Ensemble changes only
+                                    their exposed Positive Prompt and Negative Prompt fields. Use String Join
+                                    nodes in the workflow to prepend fixed templates (score tags, style tokens, etc.).
+                                </p>
                             </div>
 
                             <div class="form-group">
@@ -314,7 +335,7 @@
                                     type="button"
                                     class="btn btn-secondary"
                                     (click)="refreshImageWorkflows()"
-                                    [disabled]="imageTesting || imageForm.get('baseUrl')?.invalid"
+                                    [disabled]="imageTesting || !imageForm.get('baseUrl')?.value?.trim()"
                                 >
                                     {{ imageTesting ? "Connecting…" : "Test & Load Workflows" }}
                                 </button>
@@ -339,6 +360,78 @@
                                     Only workflows exposing labeled Positive Prompt and Negative Prompt
                                     string fields are shown.
                                 </p>
+                            </div>
+                        }
+
+                        @if (imageForm.get("enabled")?.value && imageProvider === 'openai') {
+                            <div class="form-group">
+                                <label class="form-label" for="openaiApiKey">OpenAI API Key</label>
+                                <input
+                                    id="openaiApiKey"
+                                    type="password"
+                                    class="form-control"
+                                    formControlName="openaiApiKey"
+                                    placeholder="sk-..."
+                                />
+                                <p class="field-hint">
+                                    Get an API key from platform.openai.com. The key is stored in
+                                    the project's ensemble.json file.
+                                </p>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="openaiModel">Model</label>
+                                <input
+                                    id="openaiModel"
+                                    type="text"
+                                    class="form-control"
+                                    formControlName="openaiModel"
+                                    placeholder="gpt-image-1"
+                                />
+                                <p class="field-hint">Leave empty to use gpt-image-1.</p>
+                            </div>
+                        }
+
+                        @if (imageForm.get("enabled")?.value && imageProvider === 'gemini') {
+                            <div class="form-group">
+                                <label class="form-label" for="geminiApiKey">Gemini API Key</label>
+                                <input
+                                    id="geminiApiKey"
+                                    type="password"
+                                    class="form-control"
+                                    formControlName="geminiApiKey"
+                                    placeholder="AIza..."
+                                />
+                                <p class="field-hint">
+                                    Get an API key from aistudio.google.com. The key is stored in
+                                    the project's ensemble.json file.
+                                </p>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="geminiModel">Model</label>
+                                <input
+                                    id="geminiModel"
+                                    type="text"
+                                    class="form-control"
+                                    formControlName="geminiModel"
+                                    placeholder="gemini-2.5-flash-image"
+                                />
+                                <p class="field-hint">Leave empty to use gemini-2.5-flash-image.</p>
+                            </div>
+                        }
+
+                        @if (imageForm.get("enabled")?.value && imageProvider !== 'invokeai') {
+                            <div class="form-group">
+                                <button
+                                    type="button"
+                                    class="btn btn-secondary"
+                                    (click)="testCloudImageConnection()"
+                                    [disabled]="imageTesting"
+                                >
+                                    {{ imageTesting ? "Testing…" : "Test Connection" }}
+                                </button>
+                                @if (imageTestMessage) {
+                                    <div class="test-result success">{{ imageTestMessage }}</div>
+                                }
                             </div>
                         }
                     </div>

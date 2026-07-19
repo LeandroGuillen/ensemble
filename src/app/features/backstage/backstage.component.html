@@ -417,6 +417,17 @@
                           placeholder="Add name (ENTER to add)"
                           #addNameInput
                           />
+                        @if (aiEnabled) {
+                          <button
+                            class="btn-icon-xs generate-name-btn"
+                            (click)="generateNameIntoSelectedList()"
+                            [disabled]="generatingName"
+                            title="Generate a name with AI"
+                            aria-label="Generate a name with AI"
+                            >
+                            {{ generatingName ? "⏳" : "✨" }}
+                          </button>
+                        }
                       </div>
                     </div>
                   </div>

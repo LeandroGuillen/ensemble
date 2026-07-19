@@ -144,7 +144,13 @@ export interface AiSettings {
   maxTokens: number;
 }
 
-export type ImageGenerationProviderId = 'invokeai';
+export type ImageGenerationProviderId = 'invokeai' | 'openai' | 'gemini';
+
+export interface CloudImageSettings {
+  apiKey: string;
+  /** Provider model id; falls back to the provider's default when omitted. */
+  model?: string;
+}
 
 export interface InvokeAiImageSettings {
   baseUrl: string;
@@ -155,6 +161,8 @@ export interface ImageGenerationSettings {
   enabled: boolean;
   provider: ImageGenerationProviderId;
   invokeai: InvokeAiImageSettings;
+  openai?: CloudImageSettings;
+  gemini?: CloudImageSettings;
 }
 
 export interface ProjectSettings {

@@ -5,6 +5,7 @@ import { Router } from "@angular/router";
 import { DomSanitizer, SafeHtml } from "@angular/platform-browser";
 import { Subject } from "rxjs";
 import { takeUntil } from "rxjs/operators";
+import { AiService } from "../../core/services/ai.service";
 import { BackstageService } from "../../core/services/backstage.service";
 import { CharacterEditDialogService } from "../../core/services/character-edit-dialog.service";
 import { ElectronService } from "../../core/services/electron.service";
@@ -63,7 +64,12 @@ export class BackstageComponent implements OnInit, OnDestroy {
   selectedNameIndex: number | null = null;
   showSorted = false; // Toggle for sorted view of names
 
+  // AI name generation state
+  aiEnabled = false;
+  generatingName = false;
+
   constructor(
+    private aiService: AiService,
     private backstageService: BackstageService,
     private router: Router,
     private electronService: ElectronService,
@@ -92,6 +98,13 @@ export class BackstageComponent implements OnInit, OnDestroy {
         this.concepts = data.concepts;
         this.nameLists = data.nameLists;
         this.applyFilter();
+      });
+
+    this.aiService
+      .getAiSettings()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((settings) => {
+        this.aiEnabled = !!settings?.enabled;
       });
   }
 
@@ -300,6 +313,33 @@ export class BackstageComponent implements OnInit, OnDestroy {
         input.focus();
       }
     }, 0);
+  }
+
+  /** One click, one AI-generated name appended to the selected list. */
+  async generateNameIntoSelectedList(): Promise<void> {
+    if (this.selectedNameListIndex === null || this.generatingName) return;
+
+    const nameList = this.getSelectedNameList();
+    if (!nameList) return;
+
+    this.generatingName = true;
+    this.error = null;
+    try {
+      const title = nameList.title?.trim();
+      const generatedName = await this.aiService.generateCharacterName({
+        context: title ? `Name list: "${title}"` : undefined,
+      });
+      // The list may have changed while generating; append to the current state.
+      const currentList = this.getSelectedNameList();
+      if (!currentList || this.selectedNameListIndex === null) return;
+      const names = [...currentList.names, { name: generatedName }];
+      this.updateNameList(this.selectedNameListIndex, { names });
+      this.selectedNameIndex = names.length - 1;
+    } catch (error) {
+      this.error = error instanceof Error ? error.message : "Failed to generate name";
+    } finally {
+      this.generatingName = false;
+    }
   }
 
   onEscapeAddName(): void {

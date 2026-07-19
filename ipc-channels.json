@@ -42,6 +42,7 @@
 
   "aiRequest": "ai-request",
   "downloadImage": "download-image",
+  "saveBase64Image": "save-base64-image",
 
   "openFileInEditor": "open-file-in-editor",
   "showItemInFolder": "show-item-in-folder",

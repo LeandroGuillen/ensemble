@@ -1,0 +1,23 @@
+[
+  {
+    "adapter": "JavaScript",
+    "label": "Electron main process",
+    "type": "node",
+    "request": "launch",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "runtimeExecutable": "$ZED_WORKTREE_ROOT/node_modules/.bin/electron",
+    "args": [".", "--remote-debugging-port=9222"],
+    "outputCapture": "std",
+    "skipFiles": ["<node_internals>/**"]
+  },
+  {
+    "adapter": "JavaScript",
+    "label": "Angular renderer",
+    "type": "chrome",
+    "request": "attach",
+    "port": 9222,
+    "webRoot": "$ZED_WORKTREE_ROOT",
+    "urlFilter": "http://localhost:4200/*",
+    "skipFiles": ["<node_internals>/**"]
+  }
+]

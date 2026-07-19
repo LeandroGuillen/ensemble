@@ -31,6 +31,10 @@ export interface GeneratedImage {
   providerImageName: string;
   contentType: string;
   extension: string;
+  /** Inline image payload for providers that return base64 instead of a URL. */
+  base64Data?: string;
+  /** Direct download URL for providers that return hosted images. */
+  remoteUrl?: string;
 }
 
 export interface ProjectImage {

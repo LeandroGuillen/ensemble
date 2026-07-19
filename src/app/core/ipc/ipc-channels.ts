@@ -56,6 +56,7 @@ export interface IpcChannels {
 
   readonly aiRequest: string;
   readonly downloadImage: string;
+  readonly saveBase64Image: string;
 
   readonly openFileInEditor: string;
   readonly showItemInFolder: string;
