@@ -28,9 +28,13 @@ export class CommandPaletteService {
   private enterLabelSubject = new BehaviorSubject<string>('Execute');
   public enterLabel$ = this.enterLabelSubject.asObservable();
 
+  private promptModeSubject = new BehaviorSubject<boolean>(false);
+  public promptMode$ = this.promptModeSubject.asObservable();
+
   private pickResolver: ((command: Command | null) => void) | null = null;
+  private promptResolver: ((value: string | null) => void) | null = null;
   private savedCommands: Command[] | null = null;
-  private pickCloseSub: Subscription | null = null;
+  private modeCloseSub: Subscription | null = null;
 
   constructor() { }
 
@@ -66,13 +70,14 @@ export class CommandPaletteService {
    */
   pick(commands: Command[], placeholder?: string): Promise<Command | null> {
     return new Promise((resolve) => {
-      this.savedCommands = this.commandsSubject.value;
+      this.beginTransientMode();
       this.pickResolver = resolve;
 
       if (placeholder) {
         this.placeholderSubject.next(placeholder);
       }
       this.enterLabelSubject.next('Select');
+      this.promptModeSubject.next(false);
 
       const pickerCommands = commands.map((cmd) => ({
         ...cmd,
@@ -83,21 +88,72 @@ export class CommandPaletteService {
 
       this.commandsSubject.next(pickerCommands);
       this.open();
+      this.watchCloseForCancel(() => this.resolvePick(null));
+    });
+  }
 
-      this.pickCloseSub = this.isOpen$.subscribe((isOpen) => {
-        if (!isOpen && this.pickResolver) {
-          this.resolvePick(null);
-        }
-      });
+  /**
+   * Opens the palette in free-text prompt mode.
+   * Enter submits the current query; Escape / backdrop cancels.
+   */
+  prompt(placeholder = 'Enter text...'): Promise<string | null> {
+    return new Promise((resolve) => {
+      this.beginTransientMode();
+      this.promptResolver = resolve;
+
+      this.placeholderSubject.next(placeholder);
+      this.enterLabelSubject.next('Confirm');
+      this.promptModeSubject.next(true);
+      this.commandsSubject.next([]);
+      this.open();
+      this.watchCloseForCancel(() => this.resolvePrompt(null));
+    });
+  }
+
+  /** Submit the typed value while in prompt mode (called by the palette UI). */
+  submitPrompt(value: string): void {
+    if (!this.promptResolver) return;
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    this.resolvePrompt(trimmed);
+  }
+
+  isPromptMode(): boolean {
+    return this.promptModeSubject.value;
+  }
+
+  private beginTransientMode(): void {
+    if (this.savedCommands === null) {
+      this.savedCommands = this.commandsSubject.value;
+    }
+  }
+
+  private watchCloseForCancel(onCancel: () => void): void {
+    this.modeCloseSub?.unsubscribe();
+    this.modeCloseSub = this.isOpen$.subscribe((isOpen) => {
+      if (!isOpen && (this.pickResolver || this.promptResolver)) {
+        onCancel();
+      }
     });
   }
 
   private resolvePick(result: Command | null): void {
     const resolver = this.pickResolver;
     this.pickResolver = null;
+    this.endTransientMode();
+    resolver?.(result);
+  }
 
-    this.pickCloseSub?.unsubscribe();
-    this.pickCloseSub = null;
+  private resolvePrompt(result: string | null): void {
+    const resolver = this.promptResolver;
+    this.promptResolver = null;
+    this.endTransientMode();
+    resolver?.(result);
+  }
+
+  private endTransientMode(): void {
+    this.modeCloseSub?.unsubscribe();
+    this.modeCloseSub = null;
 
     if (this.savedCommands !== null) {
       this.commandsSubject.next(this.savedCommands);
@@ -106,7 +162,10 @@ export class CommandPaletteService {
 
     this.placeholderSubject.next('Type a command or search...');
     this.enterLabelSubject.next('Execute');
+    this.promptModeSubject.next(false);
 
-    resolver?.(result);
+    if (this.isOpenSubject.value) {
+      this.close();
+    }
   }
 }

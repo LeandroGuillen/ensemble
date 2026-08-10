@@ -43,7 +43,12 @@
           }
         </div>
       }
-      @if (filteredCommands.length === 0 && searchQuery) {
+      @if (promptMode) {
+        <div class="command-empty">
+          <p>{{ searchQuery.trim() ? 'Press Enter to confirm' : 'Type a value, then press Enter' }}</p>
+        </div>
+      }
+      @if (!promptMode && filteredCommands.length === 0 && searchQuery) {
         <div class="command-empty">
           <p>No commands found</p>
         </div>

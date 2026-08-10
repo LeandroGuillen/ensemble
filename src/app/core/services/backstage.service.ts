@@ -342,4 +342,26 @@ export class BackstageService {
     await this.saveNameLists(nameLists);
     this.backstageData$.next({ ...data, nameLists });
   }
+
+  /** Appends a name to an existing list. */
+  async addNameToList(listIndex: number, name: string, notes?: string): Promise<void> {
+    const data = this.backstageData$.value;
+    if (listIndex < 0 || listIndex >= data.nameLists.length) {
+      throw new Error('Name list not found');
+    }
+
+    const trimmed = name.trim();
+    if (!trimmed) {
+      throw new Error('Name cannot be empty');
+    }
+
+    const list = data.nameLists[listIndex];
+    const names = [...list.names, { name: trimmed, ...(notes ? { notes } : {}) }];
+    await this.updateNameList(listIndex, { names });
+  }
+
+  /** Snapshot of current name lists (for pickers / command actions). */
+  getNameLists(): NameList[] {
+    return this.backstageData$.value.nameLists;
+  }
 }

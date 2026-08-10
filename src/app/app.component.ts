@@ -3,7 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterOutlet, NavigationEnd } from "@angular/router";
 
 import { Title } from "@angular/platform-browser";
-import { ProjectService, ElectronService, ThemeService, LoggingService, ZoomService } from "./core/services";
+import { ProjectService, ElectronService, ThemeService, LoggingService, ZoomService, AddNameCommandService } from "./core/services";
 import { filter } from "rxjs/operators";
 import { CommandPaletteComponent } from "./shared/command-palette/command-palette.component";
 import { CommandPaletteService } from "./shared/command-palette/command-palette.service";
@@ -42,7 +42,8 @@ export class AppComponent implements OnInit {
     private themeService: ThemeService,
     private logger: LoggingService,
     private modalService: ModalService,
-    private zoomService: ZoomService
+    private zoomService: ZoomService,
+    private addNameCommandService: AddNameCommandService
   ) {}
 
   async ngOnInit() {
@@ -96,6 +97,7 @@ export class AppComponent implements OnInit {
           this.themeService.initialize();
           // Register theme commands
           this.registerThemeCommands();
+          this.addNameCommandService.register();
         }
       });
 

@@ -19,6 +19,7 @@ export class CommandPaletteComponent implements OnInit {
   selectedIndex = 0;
   placeholder = 'Type a command or search...';
   enterLabel = 'Execute';
+  promptMode = false;
 
   private readonly destroyRef = inject(DestroyRef);
 
@@ -51,6 +52,13 @@ export class CommandPaletteComponent implements OnInit {
     this.commandPaletteService.enterLabel$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(l => this.enterLabel = l);
+
+    this.commandPaletteService.promptMode$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(promptMode => {
+        this.promptMode = promptMode;
+        this.filterCommands();
+      });
   }
 
   @HostListener('document:keydown', ['$event'])
@@ -85,6 +93,11 @@ export class CommandPaletteComponent implements OnInit {
   }
 
   filterCommands(): void {
+    if (this.promptMode) {
+      this.filteredCommands = [];
+      return;
+    }
+
     const query = this.searchQuery.toLowerCase().trim();
 
     if (!query) {
@@ -117,6 +130,11 @@ export class CommandPaletteComponent implements OnInit {
   }
 
   executeSelectedCommand(): void {
+    if (this.promptMode) {
+      this.commandPaletteService.submitPrompt(this.searchQuery);
+      return;
+    }
+
     if (this.filteredCommands.length > 0 && this.selectedIndex < this.filteredCommands.length) {
       this.executeCommand(this.filteredCommands[this.selectedIndex]);
     }

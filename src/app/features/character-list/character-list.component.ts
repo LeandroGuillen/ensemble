@@ -342,6 +342,11 @@ export class CharacterListComponent implements OnInit {
   }
 
   private registerCommands(): void {
+    const currentCommands = this.commandPaletteService['commandsSubject'].value;
+    const otherCommands = currentCommands.filter(
+      (cmd) => cmd.group !== 'actions' && cmd.group !== 'characters'
+    );
+
     const baseCommands = [
       {
         id: 'new-character',
@@ -363,7 +368,7 @@ export class CharacterListComponent implements OnInit {
       },
     ];
 
-    this.commandPaletteService.registerCommands(baseCommands);
+    this.commandPaletteService.registerCommands([...otherCommands, ...baseCommands]);
   }
 
   private updateCharacterCommands(characters: Character[]): void {
