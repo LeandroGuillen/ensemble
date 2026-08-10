@@ -167,7 +167,7 @@ export const SETTINGS_FIELD_INDEX: SettingsFieldIndex[] = [
     id: 'default-workflow',
     section: 'image-generation',
     label: 'Default Workflow',
-    keywords: ['workflow', 'preset', 'mangamaster'],
+    keywords: ['workflow', 'preset', 'mangamaster', 'comfyui-workflows', 'upload', 'add workflow'],
     valueKeys: ['defaultWorkflowId', 'comfyDefaultWorkflowId'],
   },
 ];

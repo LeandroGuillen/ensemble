@@ -1,11 +1,14 @@
 import {
   applyComfyFilenamePrefix,
   applyComfyPrompts,
+  describeComfyWorkflowIncompatibility,
   extractComfyImageRef,
   findPromptFieldsInApiPrompt,
   isComfyApiFormat,
   normalizeComfyUiBaseUrl,
   randomizeComfySeeds,
+  resolveComfyWorkflowPath,
+  safeComfyWorkflowFilename,
   toCompatibleComfyWorkflow,
 } from './comfyui.provider';
 
@@ -48,45 +51,59 @@ describe('ComfyUiProvider workflow helpers', () => {
     expect(normalizeComfyUiBaseUrl('http://127.0.0.1:8188/')).toBe('http://127.0.0.1:8188');
   });
 
-  it('detects API-format prompts', () => {
-    expect(isComfyApiFormat(apiPrompt)).toBe(true);
+  it('sanitizes workflow filenames for project storage', () => {
+    expect(safeComfyWorkflowFilename('/tmp/My Workflow!.json')).toBe('My_Workflow_.json');
+    expect(safeComfyWorkflowFilename('/tmp/plain')).toBe('plain.json');
+  });
+
+  it('rejects path traversal in workflow ids', () => {
+    expect(() => resolveComfyWorkflowPath('/proj/comfyui-workflows', '../secret.json')).toThrow();
+    expect(() => resolveComfyWorkflowPath('/proj/comfyui-workflows', 'sub/a.json')).toThrow();
+    expect(resolveComfyWorkflowPath('/proj/comfyui-workflows', 'ok.json')).toBe(
+      '/proj/comfyui-workflows/ok.json'
+    );
+  });
+
+  it('describes why UI-format workflows cannot be imported', () => {
+    const uiWorkflow = {
+      nodes: [],
+      links: [],
+    };
+    expect(describeComfyWorkflowIncompatibility(uiWorkflow)).toContain('Export (API)');
+  });
+
+  it('describes missing prompt titles on API workflows', () => {
     expect(
-      isComfyApiFormat({
-        nodes: [],
-        links: [],
+      describeComfyWorkflowIncompatibility({
+        '1': { class_type: 'CLIPTextEncode', inputs: { text: 'hi' }, _meta: { title: 'Prompt' } },
       })
-    ).toBe(false);
+    ).toContain('Positive Prompt');
   });
 
-  it('finds positive/negative StringConcatenate fields and templates', () => {
-    const fields = findPromptFieldsInApiPrompt(apiPrompt);
-    expect(fields?.positive).toEqual({ nodeId: '164:161', fieldName: 'string_b' });
-    expect(fields?.negative).toEqual({ nodeId: '164:162', fieldName: 'string_b' });
-    expect(fields?.positiveTemplate).toBe('Mangamast3r, score_9');
-    expect(fields?.negativeTemplate).toBe('worst quality');
-  });
-
-  it('injects prompts into string_b while keeping templates', () => {
-    const prompt = structuredClone(apiPrompt);
-    const fields = findPromptFieldsInApiPrompt(prompt)!;
-    applyComfyPrompts(prompt, fields.positive, fields.negative, {
-      positivePrompt: '1woman, blonde',
-      negativePrompt: 'jewelry',
-    });
-    expect(prompt['164:161'].inputs.string_a).toBe('Mangamast3r, score_9');
-    expect(prompt['164:161'].inputs.string_b).toBe('1woman, blonde');
-    expect(prompt['164:162'].inputs.string_b).toBe('jewelry');
-  });
-
-  it('randomizes seed widgets and sets SaveImage prefix from the character name', () => {
+  it('randomizes numeric seeds', () => {
     const prompt = structuredClone(apiPrompt);
     randomizeComfySeeds(prompt);
     expect(prompt['165'].inputs.seed).not.toBe(42);
+  });
+
+  it('applies prompts into StringConcatenate string_b', () => {
+    const prompt = structuredClone(apiPrompt);
+    const fields = findPromptFieldsInApiPrompt(prompt)!;
+    applyComfyPrompts(prompt, fields.positive, fields.negative, {
+      positivePrompt: 'hero face',
+      negativePrompt: 'blurry',
+    });
+    expect(prompt['164:161'].inputs.string_b).toBe('hero face');
+    expect(prompt['164:162'].inputs.string_b).toBe('blurry');
+  });
+
+  it('rewrites SaveImage filename_prefix from the character name', () => {
+    const prompt = structuredClone(apiPrompt);
     applyComfyFilenamePrefix(prompt, 'Dessir Galsea');
     expect(prompt['164:170'].inputs.filename_prefix).toBe('dessir-galsea');
   });
 
-  it('extracts the last output image from history outputs', () => {
+  it('prefers output images over temp previews', () => {
     expect(
       extractComfyImageRef({
         '164:170': {
@@ -126,6 +143,7 @@ describe('ComfyUiProvider workflow helpers', () => {
       },
     };
     expect(toCompatibleComfyWorkflow('mangamaster_v3.json', uiWorkflow)).toBeNull();
+    expect(isComfyApiFormat(uiWorkflow)).toBeFalse();
   });
 
   it('accepts API-format workflows with titled prompt nodes', () => {

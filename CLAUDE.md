@@ -109,6 +109,7 @@ Each project has this structure:
 ```
 project-folder/
 ├── ensemble.json           # Project metadata: categories, tags, settings, lastSession, pinboards
+├── comfyui-workflows/      # ComfyUI API-format workflow JSON (optional; image generation)
 ├── characters/             # Character files (recursively scanned)
 │   ├── _<slug>.md          # Character file (e.g., "_dessir.md")
 │   ├── <category-slug>/    # Optional subfolders

@@ -12,7 +12,14 @@ import { pathJoin } from '../../utils/path.utils';
 import { requireProject } from '../../utils/project.utils';
 import { ElectronService } from '../electron.service';
 import { ProjectService } from '../project.service';
-import { ComfyUiProvider } from './comfyui.provider';
+import {
+  COMFY_WORKFLOWS_DIR,
+  ComfyUiProvider,
+  describeComfyWorkflowIncompatibility,
+  resolveComfyWorkflowPath,
+  safeComfyWorkflowFilename,
+  toCompatibleComfyWorkflow,
+} from './comfyui.provider';
 import { GeminiImageProvider } from './gemini-image.provider';
 import { InvokeAiProvider } from './invokeai.provider';
 import { OpenAiImageProvider } from './openai-image.provider';
@@ -91,6 +98,86 @@ export class ImageGenerationService {
 
   async listWorkflows(settings?: ImageGenerationSettings): Promise<ImageWorkflow[]> {
     return await this.provider(settings).listWorkflows();
+  }
+
+  /** Absolute path to the project's `comfyui-workflows/` folder. */
+  getComfyWorkflowsDirectory(): string {
+    const project = requireProject(this.projectService.getCurrentProject());
+    return pathJoin(project.path, COMFY_WORKFLOWS_DIR);
+  }
+
+  /**
+   * Open a file picker, validate the selected ComfyUI API workflow, and copy it
+   * into the project's `comfyui-workflows/` folder. Returns null if cancelled.
+   */
+  async pickAndImportComfyWorkflow(): Promise<ImageWorkflow | null> {
+    const sourcePath = await this.electronService.selectJson();
+    if (!sourcePath) return null;
+    return await this.importComfyWorkflow(sourcePath);
+  }
+
+  /**
+   * Copy a ComfyUI API-format workflow JSON into the project and return its
+   * Ensemble workflow descriptor. Rejects UI-format graphs and workflows
+   * missing titled Positive/Negative Prompt nodes.
+   */
+  async importComfyWorkflow(sourcePath: string): Promise<ImageWorkflow> {
+    const workflowsDir = this.getComfyWorkflowsDirectory();
+    const read = await this.electronService.readFile(sourcePath);
+    if (!read.success || read.content === undefined) {
+      throw new Error(read.error || 'Failed to read workflow file');
+    }
+
+    let raw: unknown;
+    try {
+      raw = JSON.parse(read.content);
+    } catch {
+      throw new Error('Selected file is not valid JSON');
+    }
+
+    const filename = safeComfyWorkflowFilename(sourcePath);
+    const compatible = toCompatibleComfyWorkflow(filename, raw);
+    if (!compatible) {
+      throw new Error(describeComfyWorkflowIncompatibility(raw));
+    }
+
+    const mkdir = await this.electronService.createDirectory(workflowsDir);
+    if (!mkdir.success) {
+      throw new Error(mkdir.error || 'Could not create comfyui-workflows folder');
+    }
+
+    const destName = await this.findAvailableWorkflowFilename(workflowsDir, filename);
+    const destPath = resolveComfyWorkflowPath(workflowsDir, destName);
+    const write = await this.electronService.writeFileAtomic(
+      destPath,
+      JSON.stringify(raw, null, 2)
+    );
+    if (!write.success) {
+      throw new Error(write.error || 'Failed to save workflow into the project');
+    }
+
+    return { ...compatible, id: destName, name: destName.replace(/\.json$/i, '') };
+  }
+
+  /** Delete a project-local ComfyUI workflow and clear it as default if selected. */
+  async deleteComfyWorkflow(workflowId: string): Promise<void> {
+    const workflowsDir = this.getComfyWorkflowsDirectory();
+    const filePath = resolveComfyWorkflowPath(workflowsDir, workflowId);
+    const result = await this.electronService.deleteFile(filePath);
+    if (!result.success) {
+      throw new Error(result.error || `Failed to delete workflow "${workflowId}"`);
+    }
+
+    const settings = this.getSettings();
+    if (settings.comfyui?.defaultWorkflowId === workflowId) {
+      await this.updateSettings({
+        ...settings,
+        comfyui: {
+          ...settings.comfyui,
+          defaultWorkflowId: undefined,
+        },
+      });
+    }
   }
 
   async generateAndSave(request: ImageGenerationRequest): Promise<string> {
@@ -215,14 +302,32 @@ export class ImageGenerationService {
         return new OpenAiImageProvider(this.electronService, settings.openai || { apiKey: '' });
       case 'gemini':
         return new GeminiImageProvider(this.electronService, settings.gemini || { apiKey: '' });
-      case 'comfyui':
+      case 'comfyui': {
+        const project = this.projectService.getCurrentProject();
+        const workflowsDir = project ? pathJoin(project.path, COMFY_WORKFLOWS_DIR) : '';
         return new ComfyUiProvider(
           this.electronService,
-          settings.comfyui?.baseUrl || defaultImageGenerationSettings().comfyui!.baseUrl
+          settings.comfyui?.baseUrl || defaultImageGenerationSettings().comfyui!.baseUrl,
+          workflowsDir
         );
+      }
       default:
         return new InvokeAiProvider(this.electronService, settings.invokeai.baseUrl);
     }
+  }
+
+  private async findAvailableWorkflowFilename(
+    workflowsDir: string,
+    requestedName: string
+  ): Promise<string> {
+    let candidate = requestedName;
+    let suffix = 2;
+    while (await this.electronService.fileExists(pathJoin(workflowsDir, candidate))) {
+      const stem = requestedName.replace(/\.json$/i, '');
+      candidate = `${stem}-${suffix}.json`;
+      suffix += 1;
+    }
+    return candidate;
   }
 
   private async findAvailableRelativePath(projectPath: string, requestedPath: string): Promise<string> {

@@ -107,6 +107,13 @@ export class ElectronService {
     return await this.ipcRenderer.invoke(IpcChannels.selectImages);
   }
 
+  async selectJson(): Promise<string | null> {
+    if (!this.isElectron()) {
+      return null;
+    }
+    return await this.ipcRenderer.invoke(IpcChannels.selectJson);
+  }
+
   async getVersion(): Promise<string> {
     if (!this.isElectron()) {
       return '1.0.0';

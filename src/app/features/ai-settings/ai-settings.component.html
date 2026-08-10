@@ -302,6 +302,7 @@
                                     id="imageProvider"
                                     class="form-control"
                                     formControlName="provider"
+                                    (change)="onImageProviderChange()"
                                 >
                                     @for (provider of imageProviders; track provider.id) {
                                         <option [value]="provider.id">
@@ -374,10 +375,11 @@
                                     placeholder="http://127.0.0.1:8188"
                                 />
                                 <p class="field-hint">
-                                    Point at your local ComfyUI server. Save workflows with
-                                    <code>File → Export (API)</code> into ComfyUI's user workflows folder.
-                                    Title nodes <code>Positive Prompt</code> and <code>Negative Prompt</code>
-                                    (StringConcatenate, CLIPTextEncode, or text primitives). For
+                                    Point at your local ComfyUI server (used to run jobs).
+                                    In ComfyUI, title nodes <code>Positive Prompt</code> and
+                                    <code>Negative Prompt</code> (StringConcatenate, CLIPTextEncode,
+                                    or text primitives), then use <code>File → Export (API)</code>
+                                    and add the JSON into this Ensemble project below. For
                                     StringConcatenate, Ensemble writes the character prompt into
                                     <code>string_b</code> and keeps <code>string_a</code> as the fixed template.
                                 </p>
@@ -387,10 +389,10 @@
                                 <button
                                     type="button"
                                     class="btn btn-secondary"
-                                    (click)="refreshImageWorkflows()"
+                                    (click)="testComfyConnection()"
                                     [disabled]="imageTesting || !imageForm.get('comfyBaseUrl')?.value?.trim()"
                                 >
-                                    {{ imageTesting ? "Connecting…" : "Test & Load Workflows" }}
+                                    {{ imageTesting ? "Connecting…" : "Test Connection" }}
                                 </button>
                                 @if (imageTestMessage) {
                                     <div class="test-result success">{{ imageTestMessage }}</div>
@@ -398,7 +400,7 @@
                             </div>
 
                             <div class="form-group">
-                                <label class="form-label" for="defaultComfyWorkflow">Default Workflow</label>
+                                <label class="form-label" for="defaultComfyWorkflow">Project Workflows</label>
                                 <select
                                     id="defaultComfyWorkflow"
                                     class="form-control"
@@ -409,10 +411,36 @@
                                         <option [value]="workflow.id">{{ workflow.name }}</option>
                                     }
                                 </select>
+                                <div class="workflow-actions">
+                                    <button
+                                        type="button"
+                                        class="btn btn-secondary"
+                                        (click)="addComfyWorkflow()"
+                                        [disabled]="imageWorkflowBusy"
+                                    >
+                                        {{ imageWorkflowBusy ? "Working…" : "Add workflow…" }}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="btn btn-secondary"
+                                        (click)="refreshComfyWorkflows()"
+                                        [disabled]="imageWorkflowBusy"
+                                    >
+                                        Refresh
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="btn btn-secondary"
+                                        (click)="removeComfyWorkflow()"
+                                        [disabled]="imageWorkflowBusy || !imageForm.get('comfyDefaultWorkflowId')?.value"
+                                    >
+                                        Remove selected
+                                    </button>
+                                </div>
                                 <p class="field-hint">
-                                    Only API-format workflows with Positive Prompt and Negative Prompt
-                                    titled nodes are shown. UI graph saves from ComfyUI are ignored —
-                                    use Export (API).
+                                    Workflows are stored in this project's
+                                    <code>comfyui-workflows/</code> folder. Only API-format JSON with
+                                    Positive Prompt and Negative Prompt titled nodes can be added.
                                 </p>
                             </div>
                         }

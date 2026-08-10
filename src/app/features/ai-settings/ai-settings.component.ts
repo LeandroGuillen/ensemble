@@ -35,6 +35,7 @@ export class AiSettingsComponent implements OnInit {
   imageTesting = false;
   imageTestMessage: string | null = null;
   imageWorkflows: ImageWorkflow[] = [];
+  imageWorkflowBusy = false;
   private saveChain: Promise<void> = Promise.resolve();
 
   providers = [
@@ -99,8 +100,10 @@ export class AiSettingsComponent implements OnInit {
       },
       { emitEvent: false }
     );
-    if (settings.enabled && (settings.provider === 'invokeai' || settings.provider === 'comfyui')) {
+    if (settings.enabled && settings.provider === 'invokeai') {
       void this.refreshImageWorkflows(false);
+    } else if (settings.enabled && settings.provider === 'comfyui') {
+      void this.refreshComfyWorkflows(false);
     }
   }
 
@@ -110,6 +113,17 @@ export class AiSettingsComponent implements OnInit {
 
   get usesLocalWorkflowProvider(): boolean {
     return this.imageProvider === 'invokeai' || this.imageProvider === 'comfyui';
+  }
+
+  onImageProviderChange(): void {
+    this.imageWorkflows = [];
+    this.imageTestMessage = null;
+    this.error = null;
+    if (this.imageProvider === 'invokeai') {
+      void this.refreshImageWorkflows(false);
+    } else if (this.imageProvider === 'comfyui') {
+      void this.refreshComfyWorkflows(false);
+    }
   }
 
   /** Builds the full settings candidate from the current form state. */
@@ -245,12 +259,13 @@ export class AiSettingsComponent implements OnInit {
 
   async refreshImageWorkflows(showResult = true): Promise<void> {
     const provider = this.imageProvider;
-    if (provider !== 'invokeai' && provider !== 'comfyui') return;
+    if (provider === 'comfyui') {
+      await this.testComfyConnection(showResult);
+      return;
+    }
+    if (provider !== 'invokeai') return;
 
-    const baseUrl =
-      provider === 'comfyui'
-        ? this.imageForm.value.comfyBaseUrl?.trim()
-        : this.imageForm.value.baseUrl?.trim();
+    const baseUrl = this.imageForm.value.baseUrl?.trim();
     if (!baseUrl) return;
 
     this.imageTesting = true;
@@ -260,27 +275,104 @@ export class AiSettingsComponent implements OnInit {
       const candidate = { ...this.buildImageSettings(), provider };
       const connection = await this.imageGenerationService.testConnection(candidate);
       if (!connection.success) {
-        throw new Error(connection.error || `Could not connect to ${provider === 'comfyui' ? 'ComfyUI' : 'InvokeAI'}`);
+        throw new Error(connection.error || 'Could not connect to InvokeAI');
       }
       this.imageWorkflows = await this.imageGenerationService.listWorkflows(candidate);
-      const label = provider === 'comfyui' ? 'ComfyUI' : 'InvokeAI';
       this.imageTestMessage = showResult
-        ? `Connected to ${label}${connection.version ? ` ${connection.version}` : ''}. Found ${this.imageWorkflows.length} compatible workflow(s).`
+        ? `Connected to InvokeAI${connection.version ? ` ${connection.version}` : ''}. Found ${this.imageWorkflows.length} compatible workflow(s).`
         : null;
-      const workflowControl =
-        provider === 'comfyui' ? 'comfyDefaultWorkflowId' : 'defaultWorkflowId';
-      const current = this.imageForm.value[workflowControl];
+      const current = this.imageForm.value.defaultWorkflowId;
       if (current && !this.imageWorkflows.some((workflow) => workflow.id === current)) {
-        this.imageForm.patchValue({ [workflowControl]: '' });
+        this.imageForm.patchValue({ defaultWorkflowId: '' });
       }
     } catch (error) {
-      this.error =
-        error instanceof Error
-          ? error.message
-          : `Failed to load ${provider === 'comfyui' ? 'ComfyUI' : 'InvokeAI'} workflows`;
+      this.error = error instanceof Error ? error.message : 'Failed to load InvokeAI workflows';
       this.imageWorkflows = [];
     } finally {
       this.imageTesting = false;
+    }
+  }
+
+  /** Test ComfyUI reachability only (workflows live in the project folder). */
+  async testComfyConnection(showResult = true): Promise<void> {
+    const baseUrl = this.imageForm.value.comfyBaseUrl?.trim();
+    if (!baseUrl) return;
+
+    this.imageTesting = true;
+    this.imageTestMessage = null;
+    this.error = null;
+    try {
+      const candidate = { ...this.buildImageSettings(), provider: 'comfyui' as const };
+      const connection = await this.imageGenerationService.testConnection(candidate);
+      if (!connection.success) {
+        throw new Error(connection.error || 'Could not connect to ComfyUI');
+      }
+      await this.refreshComfyWorkflows(false);
+      this.imageTestMessage = showResult
+        ? `Connected to ComfyUI${connection.version ? ` ${connection.version}` : ''}. ${this.imageWorkflows.length} project workflow(s).`
+        : null;
+    } catch (error) {
+      this.error = error instanceof Error ? error.message : 'Failed to connect to ComfyUI';
+    } finally {
+      this.imageTesting = false;
+    }
+  }
+
+  /** Reload ComfyUI workflows from the project's comfyui-workflows/ folder. */
+  async refreshComfyWorkflows(showResult = true): Promise<void> {
+    this.imageWorkflowBusy = true;
+    this.error = null;
+    try {
+      const candidate = { ...this.buildImageSettings(), provider: 'comfyui' as const };
+      this.imageWorkflows = await this.imageGenerationService.listWorkflows(candidate);
+      const current = this.imageForm.value.comfyDefaultWorkflowId;
+      if (current && !this.imageWorkflows.some((workflow) => workflow.id === current)) {
+        this.imageForm.patchValue({ comfyDefaultWorkflowId: '' });
+      }
+      if (showResult) {
+        this.imageTestMessage = `Found ${this.imageWorkflows.length} project workflow(s).`;
+      }
+    } catch (error) {
+      this.error = error instanceof Error ? error.message : 'Failed to load project ComfyUI workflows';
+      this.imageWorkflows = [];
+    } finally {
+      this.imageWorkflowBusy = false;
+    }
+  }
+
+  async addComfyWorkflow(): Promise<void> {
+    this.error = null;
+    this.imageTestMessage = null;
+    this.imageWorkflowBusy = true;
+    try {
+      const imported = await this.imageGenerationService.pickAndImportComfyWorkflow();
+      if (!imported) return;
+      await this.refreshComfyWorkflows(false);
+      this.imageForm.patchValue({ comfyDefaultWorkflowId: imported.id });
+      this.imageTestMessage = `Added workflow "${imported.name}".`;
+    } catch (error) {
+      this.error = error instanceof Error ? error.message : 'Failed to add ComfyUI workflow';
+    } finally {
+      this.imageWorkflowBusy = false;
+    }
+  }
+
+  async removeComfyWorkflow(): Promise<void> {
+    const workflowId = this.imageForm.value.comfyDefaultWorkflowId?.trim();
+    if (!workflowId) return;
+
+    this.error = null;
+    this.imageTestMessage = null;
+    this.imageWorkflowBusy = true;
+    try {
+      await this.imageGenerationService.deleteComfyWorkflow(workflowId);
+      this.imageForm.patchValue({ comfyDefaultWorkflowId: '' });
+      await this.refreshComfyWorkflows(false);
+      this.imageTestMessage = `Removed workflow "${workflowId.replace(/\.json$/i, '')}".`;
+    } catch (error) {
+      this.error = error instanceof Error ? error.message : 'Failed to remove ComfyUI workflow';
+    } finally {
+      this.imageWorkflowBusy = false;
     }
   }
 

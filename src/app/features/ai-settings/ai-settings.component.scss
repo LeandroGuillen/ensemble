@@ -127,6 +127,13 @@
   align-self: flex-start;
 }
 
+.workflow-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-xs);
+}
+
 .form-label {
   font-weight: 500;
   color: var(--color-text-secondary);

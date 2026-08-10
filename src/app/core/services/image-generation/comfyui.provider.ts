@@ -5,6 +5,7 @@ import {
   ImageWorkflow,
   WorkflowFieldIdentifier,
 } from '../../interfaces/image-generation.interface';
+import { pathBasename, pathJoin } from '../../utils/path.utils';
 import { asciiSlugify } from '../../utils/slug.utils';
 import { ElectronService } from '../electron.service';
 
@@ -16,9 +17,13 @@ interface ComfyApiNode {
 
 type ComfyApiPrompt = Record<string, ComfyApiNode>;
 
+/** Project-relative folder that stores uploaded ComfyUI API workflows. */
+export const COMFY_WORKFLOWS_DIR = 'comfyui-workflows';
+
 /**
  * Image generation via a local/self-hosted ComfyUI server.
  *
+ * Workflows are stored in the Ensemble project under `comfyui-workflows/`.
  * Compatible workflows expose nodes titled "Positive Prompt" and "Negative Prompt"
  * (StringConcatenate, CLIPTextEncode, or PrimitiveString*). For StringConcatenate,
  * Ensemble writes the character prompt into `string_b` and keeps `string_a` as the
@@ -27,7 +32,8 @@ type ComfyApiPrompt = Record<string, ComfyApiNode>;
 export class ComfyUiProvider implements ImageGenerationProvider {
   constructor(
     private electronService: ElectronService,
-    private baseUrl: string
+    private baseUrl: string,
+    private workflowsDir: string
   ) {
     this.baseUrl = normalizeComfyUiBaseUrl(baseUrl);
   }
@@ -46,7 +52,18 @@ export class ComfyUiProvider implements ImageGenerationProvider {
   }
 
   async listWorkflows(): Promise<ImageWorkflow[]> {
-    const names = await this.listWorkflowFilenames();
+    if (!this.workflowsDir) return [];
+    if (!(await this.electronService.fileExists(this.workflowsDir))) return [];
+
+    const listing = await this.electronService.readDirectoryFiles(this.workflowsDir);
+    if (!listing.success) {
+      throw new Error(listing.error || 'Unable to list project ComfyUI workflows');
+    }
+
+    const names = (listing.files || [])
+      .filter((name) => name.toLowerCase().endsWith('.json'))
+      .sort((a, b) => a.localeCompare(b));
+
     const workflows: ImageWorkflow[] = [];
     for (const name of names) {
       try {
@@ -127,46 +144,19 @@ export class ComfyUiProvider implements ImageGenerationProvider {
     return `${this.baseUrl}/view?${params.toString()}`;
   }
 
-  private async listWorkflowFilenames(): Promise<string[]> {
-    const response = await this.request(
-      '/api/userdata?dir=workflows&recurse=true&split=false',
-      { timeout: 30000 }
-    );
-    if (response.status !== 200) {
-      throw new Error(`Unable to list ComfyUI workflows (status ${response.status})`);
+  async loadWorkflowJson(workflowId: string): Promise<any> {
+    const filePath = resolveComfyWorkflowPath(this.workflowsDir, workflowId);
+    const response = await this.electronService.readFile(filePath);
+    if (!response.success || response.content === undefined) {
+      throw new Error(
+        response.error || `Unable to load ComfyUI workflow "${workflowId}"`
+      );
     }
-    const items = response.data;
-    if (!Array.isArray(items)) {
-      throw new Error('ComfyUI returned an unexpected workflow list');
+    try {
+      return JSON.parse(response.content);
+    } catch {
+      throw new Error(`ComfyUI workflow "${workflowId}" is not valid JSON`);
     }
-    return items
-      .map((item: unknown) => {
-        if (typeof item === 'string') return item;
-        if (Array.isArray(item) && typeof item[0] === 'string') return item[0];
-        return '';
-      })
-      .filter((name: string) => name.toLowerCase().endsWith('.json'));
-  }
-
-  private async loadWorkflowJson(workflowId: string): Promise<any> {
-    const encoded = workflowId
-      .split('/')
-      .map((segment) => encodeURIComponent(segment))
-      .join('%2F');
-    const response = await this.request(`/api/userdata/workflows%2F${encoded}`, {
-      timeout: 60000,
-    });
-    if (response.status !== 200) {
-      throw new Error(`Unable to load ComfyUI workflow "${workflowId}" (status ${response.status})`);
-    }
-    if (typeof response.data === 'string') {
-      try {
-        return JSON.parse(response.data);
-      } catch {
-        throw new Error(`ComfyUI workflow "${workflowId}" is not valid JSON`);
-      }
-    }
-    return response.data;
   }
 
   private async toApiPrompt(workflow: any): Promise<ComfyApiPrompt> {
@@ -174,7 +164,7 @@ export class ComfyUiProvider implements ImageGenerationProvider {
       return workflow as ComfyApiPrompt;
     }
     throw new Error(
-      'This ComfyUI workflow is UI format. In ComfyUI use File → Export (API), save the JSON into the workflows folder, then reload workflows in Ensemble.'
+      'This ComfyUI workflow is UI format. In ComfyUI use File → Export (API), then add it to Ensemble.'
     );
   }
 
@@ -222,6 +212,30 @@ export function normalizeComfyUiBaseUrl(url: string): string {
   return (url || '').trim().replace(/\/+$/, '');
 }
 
+/** Reject path traversal; workflows are flat files under the project folder. */
+export function resolveComfyWorkflowPath(workflowsDir: string, workflowId: string): string {
+  const id = (workflowId || '').trim();
+  if (!id || id.includes('/') || id.includes('\\') || id.includes('..')) {
+    throw new Error('Invalid workflow id');
+  }
+  if (!id.toLowerCase().endsWith('.json')) {
+    throw new Error('Invalid workflow id');
+  }
+  if (!workflowsDir) {
+    throw new Error('ComfyUI workflows folder is not configured');
+  }
+  return pathJoin(workflowsDir, id);
+}
+
+export function safeComfyWorkflowFilename(sourcePath: string): string {
+  const base = pathBasename(sourcePath) || 'workflow.json';
+  const cleaned = base.replace(/[^a-zA-Z0-9._-]/g, '_');
+  if (!cleaned.toLowerCase().endsWith('.json')) {
+    return `${cleaned || 'workflow'}.json`;
+  }
+  return cleaned || 'workflow.json';
+}
+
 export function isComfyApiFormat(workflow: unknown): boolean {
   if (!workflow || typeof workflow !== 'object' || Array.isArray(workflow)) return false;
   const record = workflow as Record<string, unknown>;
@@ -233,6 +247,17 @@ export function isComfyApiFormat(workflow: unknown): boolean {
     }
   }
   return false;
+}
+
+/** Human-readable reason a workflow cannot be imported / listed. */
+export function describeComfyWorkflowIncompatibility(workflow: unknown): string {
+  if (!isComfyApiFormat(workflow)) {
+    return 'This ComfyUI workflow is UI format. In ComfyUI use File → Export (API), then add it to Ensemble.';
+  }
+  if (!findPromptFieldsInApiPrompt(workflow as ComfyApiPrompt)) {
+    return 'Workflow must expose nodes titled Positive Prompt and Negative Prompt (StringConcatenate, CLIPTextEncode, or text primitives).';
+  }
+  return 'Incompatible ComfyUI workflow';
 }
 
 /** Detect compatible prompt fields from an API-format ComfyUI workflow. */
