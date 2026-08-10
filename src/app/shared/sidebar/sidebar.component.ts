@@ -37,6 +37,8 @@ export class SidebarComponent implements OnInit {
       label: 'Characters',
       items: [
         { icon: 'users', label: 'Characters', route: '/characters', title: 'Characters' },
+        { icon: 'lightbulb', label: 'Concepts', route: '/concepts', title: 'Concepts' },
+        { icon: 'type', label: 'Names', route: '/names', title: 'Names' },
         { icon: 'git-branch', label: 'Pinboard', route: '/pinboard', title: 'Pinboard' },
         { icon: 'theater', label: 'Casts', route: '/casts', title: 'Casts' }
       ]
@@ -46,7 +48,6 @@ export class SidebarComponent implements OnInit {
       label: 'References',
       items: [
         { icon: 'book', label: 'Books', route: '/library', title: 'Books' },
-        { icon: 'layout', label: 'Backstage', route: '/backstage', title: 'Backstage' },
         { icon: 'plot-board', label: 'Plot Board', route: '/plot-board', title: 'Plot Board' }
       ]
     },

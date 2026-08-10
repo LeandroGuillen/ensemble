@@ -2,7 +2,7 @@ import { DestroyRef, inject, Component, OnInit, HostListener, SecurityContext } 
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { FormsModule } from "@angular/forms";
-import { Router } from "@angular/router";
+import { ActivatedRoute } from "@angular/router";
 import { DomSanitizer, SafeHtml } from "@angular/platform-browser";
 import { AiService } from "../../core/services/ai.service";
 import { BackstageService } from "../../core/services/backstage.service";
@@ -17,6 +17,8 @@ import {
 } from "../../core/interfaces/backstage.interface";
 import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
 
+type BackstageMode = "concepts" | "nameLists";
+
 @Component({
     selector: "app-backstage",
     imports: [
@@ -29,6 +31,9 @@ import { PageHeaderComponent } from "../../shared/page-header/page-header.compon
 export class BackstageComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
+  /** Locked by route: /concepts or /names */
+  mode: BackstageMode = "concepts";
+
   concepts: CharacterConcept[] = [];
   nameLists: NameList[] = [];
   isLoading = false;
@@ -39,9 +44,7 @@ export class BackstageComponent implements OnInit {
   focusedItemIndex: number | null = null;
   focusedNameIndex: number | null = null;
   selectedItemIndex: number | null = null; // For keyboard navigation in overview mode
-  selectedSection: "concepts" | "nameLists" = "concepts"; // Which section is selected
-  activeTab: "concepts" | "nameLists" = "concepts"; // Which tab is currently active
-  
+
   // Selection state for master-detail view
   selectedConceptIndex: number | null = null;
   selectedNameListIndex: number | null = null;
@@ -71,7 +74,7 @@ export class BackstageComponent implements OnInit {
   constructor(
     private aiService: AiService,
     private backstageService: BackstageService,
-    private router: Router,
+    private route: ActivatedRoute,
     private electronService: ElectronService,
     private sanitizer: DomSanitizer,
     private logger: LoggingService,
@@ -79,18 +82,40 @@ export class BackstageComponent implements OnInit {
     , private modalService: ModalService
   ) {}
 
+  get pageTitle(): string {
+    return this.mode === "concepts" ? "Concepts" : "Names";
+  }
+
   ngOnInit(): void {
-    // Load saved active tab from localStorage
-    const savedTab = localStorage.getItem('backstageActiveTab') as "concepts" | "nameLists" | null;
-    if (savedTab === "concepts" || savedTab === "nameLists") {
-      this.activeTab = savedTab;
-      this.selectedSection = savedTab;
-    }
-    
+    this.route.data
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((data) => {
+        const routeMode = data["mode"] as BackstageMode | undefined;
+        const nextMode: BackstageMode = routeMode === "nameLists" ? "nameLists" : "concepts";
+        if (this.mode !== nextMode) {
+          this.mode = nextMode;
+          this.searchQuery = "";
+          this.selectedItemIndex = null;
+          this.selectedConceptIndex = null;
+          this.selectedNameListIndex = null;
+          this.editingConceptTitleIndex = null;
+          this.editingConceptNotes = false;
+          this.editingNameIndex = null;
+          this.editingCommentIndex = null;
+          this.selectedNameIndex = null;
+          this.editingNameListIndex = null;
+          this.focusedItemType = null;
+          this.focusedItemIndex = null;
+          this.applyFilter();
+        } else {
+          this.mode = nextMode;
+        }
+      });
+
     // Initialize filtered arrays
     this.filteredConcepts = [];
     this.filteredNameLists = [];
-    
+
     this.backstageService
       .getBackstageData()
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -110,7 +135,7 @@ export class BackstageComponent implements OnInit {
 
   applyFilter(): void {
     const query = this.searchQuery.toLowerCase().trim();
-    
+
     if (!query) {
       this.filteredConcepts = this.concepts;
       this.filteredNameLists = this.nameLists;
@@ -146,28 +171,6 @@ export class BackstageComponent implements OnInit {
     this.applyFilter();
   }
 
-  setActiveTab(tab: "concepts" | "nameLists"): void {
-    this.activeTab = tab;
-    this.selectedSection = tab;
-    this.selectedItemIndex = null;
-    // Save active tab to localStorage
-    localStorage.setItem('backstageActiveTab', tab);
-    // Exit focus mode when switching tabs
-    if (this.focusedItemType !== null) {
-      this.exitFocusMode();
-    }
-    // Clear selection when switching tabs
-    this.selectedConceptIndex = null;
-    this.selectedNameListIndex = null;
-    // Clear editing state
-    this.editingConceptTitleIndex = null;
-    this.editingConceptNotes = false;
-    this.editingNameIndex = null;
-    this.editingCommentIndex = null;
-    this.selectedNameIndex = null;
-    this.editingNameListIndex = null;
-  }
-
   selectConcept(index: number): void {
     this.selectedConceptIndex = index;
     this.selectedItemIndex = this.filteredConcepts.findIndex(
@@ -184,7 +187,7 @@ export class BackstageComponent implements OnInit {
     this.editingNameIndex = null;
     this.editingCommentIndex = null;
     this.selectedNameIndex = null;
-    
+
     // Focus the names panel so keyboard navigation works
     setTimeout(() => {
       const panel = document.querySelector('.names-panel') as HTMLElement;
@@ -211,7 +214,7 @@ export class BackstageComponent implements OnInit {
   }
 
   getSelectedConcept(): CharacterConcept | null {
-    if (this.selectedConceptIndex === null || this.selectedConceptIndex < 0 || 
+    if (this.selectedConceptIndex === null || this.selectedConceptIndex < 0 ||
         this.selectedConceptIndex >= this.concepts.length) {
       return null;
     }
@@ -219,7 +222,7 @@ export class BackstageComponent implements OnInit {
   }
 
   getSelectedNameList(): NameList | null {
-    if (this.selectedNameListIndex === null || this.selectedNameListIndex < 0 || 
+    if (this.selectedNameListIndex === null || this.selectedNameListIndex < 0 ||
         this.selectedNameListIndex >= this.nameLists.length) {
       return null;
     }
@@ -230,7 +233,7 @@ export class BackstageComponent implements OnInit {
   getDisplayNames(): Array<{ name: string; notes?: string }> | undefined {
     const nameList = this.getSelectedNameList();
     if (!nameList) return undefined;
-    
+
     if (this.showSorted) {
       // Return sorted copy (don't modify original)
       return [...nameList.names].sort((a, b) => {
@@ -247,10 +250,10 @@ export class BackstageComponent implements OnInit {
   getOriginalIndex(displayIndex: number): number {
     const nameList = this.getSelectedNameList();
     if (!nameList || !this.showSorted) return displayIndex;
-    
+
     const sortedNames = this.getDisplayNames();
     if (!sortedNames || displayIndex >= sortedNames.length) return displayIndex;
-    
+
     const displayName = sortedNames[displayIndex];
     // Find the original index by comparing the actual object reference
     return nameList.names.findIndex(n => n === displayName);
@@ -266,7 +269,7 @@ export class BackstageComponent implements OnInit {
 
   onNameItemChange(index: number, field: "name" | "notes", value: string): void {
     if (this.selectedNameListIndex === null) return;
-    
+
     const nameList = this.getSelectedNameList();
     if (!nameList) return;
 
@@ -284,7 +287,7 @@ export class BackstageComponent implements OnInit {
 
   onRemoveNameItem(index: number): void {
     if (this.selectedNameListIndex === null) return;
-    
+
     const nameList = this.getSelectedNameList();
     if (!nameList) return;
 
@@ -294,14 +297,14 @@ export class BackstageComponent implements OnInit {
 
   onAddNameToSelectedList(): void {
     if (this.selectedNameListIndex === null || !this.newNameInput.trim()) return;
-    
+
     const nameList = this.getSelectedNameList();
     if (!nameList) return;
 
     const names = [...nameList.names, { name: this.newNameInput.trim() }];
     this.updateNameList(this.selectedNameListIndex, { names });
     this.newNameInput = "";
-    
+
     // Select the newly added name and focus the add input again
     setTimeout(() => {
       const nameList = this.getSelectedNameList();
@@ -372,7 +375,7 @@ export class BackstageComponent implements OnInit {
   scrollToSelectedName(): void {
     // Scroll the selected name item into view
     if (this.selectedNameIndex === null) return;
-    
+
     setTimeout(() => {
       const nameItems = document.querySelectorAll('.name-item');
       if (nameItems && nameItems.length > this.selectedNameIndex!) {
@@ -496,13 +499,13 @@ export class BackstageComponent implements OnInit {
   // Toggle strikethrough on selected name
   toggleStrikethrough(index: number): void {
     if (this.selectedNameListIndex === null) return;
-    
+
     const nameList = this.getSelectedNameList();
     if (!nameList) return;
 
     const names = [...nameList.names];
     const currentName = names[index].name;
-    
+
     // Check if already has strikethrough
     if (currentName.startsWith('~~') && currentName.endsWith('~~') && currentName.length > 4) {
       // Remove strikethrough
@@ -677,25 +680,25 @@ export class BackstageComponent implements OnInit {
     const isInput = target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
     const isEditingName = this.editingNameIndex !== null;
     const isEditingComment = this.editingCommentIndex !== null;
-    
+
     // Check if we're in an input that should allow arrow key navigation
     const isNameInput = target.classList?.contains("name-input-inline");
     const isCommentInput = target.classList?.contains("comment-input-inline");
     const isAddNameInput = target.classList?.contains("add-name-input");
     const isInEditableInput = isNameInput || isCommentInput || isAddNameInput;
-    
+
     // Handle name navigation and editing when in names panel
     // Only allow navigation when not actively editing a name/comment and not in add inputs
-    if (this.activeTab === "nameLists" && this.getSelectedNameList()) {
+    if (this.mode === "nameLists" && this.getSelectedNameList()) {
       const nameList = this.getSelectedNameList();
-      
+
       // Arrow key navigation
       if ((event.key === "ArrowUp" || event.key === "ArrowDown") && !isEditingName && !isEditingComment && !isInEditableInput) {
         if (nameList && nameList.names.length > 0) {
           event.preventDefault();
           const displayNames = this.getDisplayNames();
           if (!displayNames) return;
-          
+
           // Find current display index
           let currentDisplayIndex = -1;
           if (this.selectedNameIndex !== null) {
@@ -708,7 +711,7 @@ export class BackstageComponent implements OnInit {
               currentDisplayIndex = this.selectedNameIndex;
             }
           }
-          
+
           if (event.key === "ArrowUp") {
             if (currentDisplayIndex > 0) {
               currentDisplayIndex = currentDisplayIndex - 1;
@@ -726,16 +729,16 @@ export class BackstageComponent implements OnInit {
               currentDisplayIndex = 0;
             }
           }
-          
+
           // Convert display index back to original index
           this.selectedNameIndex = this.getOriginalIndex(currentDisplayIndex);
-          
+
           // Scroll the selected item into view
           this.scrollToSelectedName();
           return;
         }
       }
-      
+
       // ENTER key to edit name
       if (event.key === "Enter" && !isEditingName && !isEditingComment && !isInEditableInput && this.selectedNameIndex !== null) {
         if (nameList && nameList.names.length > 0 && this.selectedNameIndex >= 0 && this.selectedNameIndex < nameList.names.length) {
@@ -744,7 +747,7 @@ export class BackstageComponent implements OnInit {
           return;
         }
       }
-      
+
       // C key to add/edit comment
       if ((event.key === "c" || event.key === "C") && !isEditingName && !isEditingComment && !isInEditableInput && this.selectedNameIndex !== null) {
         if (nameList && nameList.names.length > 0 && this.selectedNameIndex >= 0 && this.selectedNameIndex < nameList.names.length) {
@@ -753,7 +756,7 @@ export class BackstageComponent implements OnInit {
           return;
         }
       }
-      
+
       // S key to toggle strikethrough
       if ((event.key === "s" || event.key === "S") && !isEditingName && !isEditingComment && !isInEditableInput && this.selectedNameIndex !== null && !event.ctrlKey && !event.metaKey) {
         if (nameList && nameList.names.length > 0 && this.selectedNameIndex >= 0 && this.selectedNameIndex < nameList.names.length) {
@@ -762,7 +765,7 @@ export class BackstageComponent implements OnInit {
           return;
         }
       }
-      
+
       // DEL or Delete key to delete selected name
       if ((event.key === "Delete" || event.key === "Del") && !isEditingName && !isEditingComment && !isInEditableInput && this.selectedNameIndex !== null) {
         if (nameList && nameList.names.length > 0 && this.selectedNameIndex >= 0 && this.selectedNameIndex < nameList.names.length) {
@@ -789,7 +792,7 @@ export class BackstageComponent implements OnInit {
           return;
         }
       }
-      
+
       // N key to focus add name input
       if ((event.key === "n" || event.key === "N") && !isEditingName && !isEditingComment && !isInEditableInput && !event.ctrlKey && !event.metaKey) {
         event.preventDefault();
@@ -804,7 +807,7 @@ export class BackstageComponent implements OnInit {
     }
 
     // Don't handle if user is typing in an input/textarea (except for name navigation above)
-    if (isInput && !(this.activeTab === "nameLists" && (event.key === "ArrowUp" || event.key === "ArrowDown") && !isInEditableInput)) {
+    if (isInput && !(this.mode === "nameLists" && (event.key === "ArrowUp" || event.key === "ArrowDown") && !isInEditableInput)) {
       // Allow Escape to exit focus mode even when typing
       if (event.key === "Escape" && this.focusedItemType !== null) {
         event.preventDefault();
@@ -815,12 +818,12 @@ export class BackstageComponent implements OnInit {
 
     // Handle keyboard shortcuts
     if (event.ctrlKey || event.metaKey) {
-      if (event.key === "n" && !event.shiftKey) {
+      if (event.key === "n" && !event.shiftKey && this.mode === "concepts") {
         event.preventDefault();
         this.addConcept();
         return;
       }
-      if (event.key === "N" && event.shiftKey) {
+      if (((event.key === "N" && event.shiftKey) || (event.key === "n" && !event.shiftKey)) && this.mode === "nameLists") {
         event.preventDefault();
         this.addNameList();
         return;
@@ -845,9 +848,8 @@ export class BackstageComponent implements OnInit {
   }
 
   private handleOverviewNavigation(event: KeyboardEvent): void {
-    // Use activeTab instead of selectedSection for navigation
     const currentSection =
-      this.activeTab === "concepts"
+      this.mode === "concepts"
         ? this.filteredConcepts
         : this.filteredNameLists;
     const currentIndex = this.selectedItemIndex ?? -1;
@@ -858,7 +860,7 @@ export class BackstageComponent implements OnInit {
         if (currentIndex > 0) {
           this.selectedItemIndex = currentIndex - 1;
           // Auto-select when navigating
-          if (this.activeTab === "concepts") {
+          if (this.mode === "concepts") {
             const concept = this.filteredConcepts[this.selectedItemIndex];
             this.selectConcept(this.concepts.indexOf(concept));
           } else {
@@ -872,7 +874,7 @@ export class BackstageComponent implements OnInit {
         if (currentIndex < currentSection.length - 1) {
           this.selectedItemIndex = currentIndex + 1;
           // Auto-select when navigating
-          if (this.activeTab === "concepts") {
+          if (this.mode === "concepts") {
             const concept = this.filteredConcepts[this.selectedItemIndex];
             this.selectConcept(this.concepts.indexOf(concept));
           } else {
@@ -885,7 +887,7 @@ export class BackstageComponent implements OnInit {
         event.preventDefault();
         const pageUpIndex = Math.max(0, currentIndex - 10);
         this.selectedItemIndex = pageUpIndex;
-        if (this.activeTab === "concepts") {
+        if (this.mode === "concepts") {
           const concept = this.filteredConcepts[this.selectedItemIndex];
           this.selectConcept(this.concepts.indexOf(concept));
         } else {
@@ -897,7 +899,7 @@ export class BackstageComponent implements OnInit {
         event.preventDefault();
         const pageDownIndex = Math.min(currentSection.length - 1, currentIndex + 10);
         this.selectedItemIndex = pageDownIndex;
-        if (this.activeTab === "concepts") {
+        if (this.mode === "concepts") {
           const concept = this.filteredConcepts[this.selectedItemIndex];
           this.selectConcept(this.concepts.indexOf(concept));
         } else {
@@ -908,7 +910,7 @@ export class BackstageComponent implements OnInit {
       case "Enter":
         event.preventDefault();
         if (currentIndex >= 0 && currentIndex < currentSection.length) {
-          if (this.activeTab === "concepts") {
+          if (this.mode === "concepts") {
             const concept = this.filteredConcepts[currentIndex];
             this.selectConcept(this.concepts.indexOf(concept));
           } else {
@@ -920,17 +922,10 @@ export class BackstageComponent implements OnInit {
       case "Escape":
         event.preventDefault();
         this.selectedItemIndex = null;
-        if (this.activeTab === "concepts") {
+        if (this.mode === "concepts") {
           this.selectedConceptIndex = null;
         } else {
           this.selectedNameListIndex = null;
-        }
-        break;
-      case "Tab":
-        // Switch tabs with Tab key (when not in input)
-        if (!event.shiftKey) {
-          event.preventDefault();
-          this.setActiveTab(this.activeTab === "concepts" ? "nameLists" : "concepts");
         }
         break;
     }

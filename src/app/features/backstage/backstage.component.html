@@ -1,5 +1,5 @@
 <div class="backstage-container">
-  <app-page-header [title]="'Backstage'">
+  <app-page-header [title]="pageTitle">
     <div class="page-actions">
       <div class="search-box">
         <input
@@ -8,13 +8,13 @@
           data-search-input
           [(ngModel)]="searchQuery"
           (ngModelChange)="onSearchChange()"
-          [placeholder]="activeTab === 'concepts' ? 'Search concepts...' : 'Search name lists...'"
+          [placeholder]="mode === 'concepts' ? 'Search concepts...' : 'Search name lists...'"
           aria-label="Search"
           aria-describedby="search-results-count"
           />
         @if (searchQuery) {
           <span id="search-results-count" class="sr-only" aria-live="polite">
-            {{ activeTab === 'concepts' ? filteredConcepts.length : filteredNameLists.length }} results
+            {{ mode === 'concepts' ? filteredConcepts.length : filteredNameLists.length }} results
           </span>
         }
         @if (searchQuery) {
@@ -41,7 +41,7 @@
           <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
         </svg>
       </button>
-      @if (activeTab === 'nameLists') {
+      @if (mode === 'nameLists') {
         <button
           class="btn btn-secondary btn-icon"
           [class.active]="showSorted"
@@ -51,18 +51,18 @@
           ⇅
         </button>
       }
-      @if (activeTab === 'nameLists') {
+      @if (mode === 'nameLists') {
         <button
           class="btn btn-primary"
           (click)="addNameList()"
-          title="New Name List (Ctrl+Shift+N)"
+          title="New Name List (Ctrl+N)"
           >
           <span class="plus-glyph" aria-hidden="true">+</span>
           New Name List
-          <kbd class="shortcut-hint">Ctrl+Shift+N</kbd>
+          <kbd class="shortcut-hint">Ctrl+N</kbd>
         </button>
       }
-      @if (activeTab === 'concepts') {
+      @if (mode === 'concepts') {
         <button
           class="btn btn-primary"
           (click)="addConcept()"
@@ -83,363 +83,337 @@
   }
 
   <div class="tabs-container">
-    <div class="tabs">
-      <button
-        class="tab"
-        [class.active]="activeTab === 'concepts'"
-        (click)="setActiveTab('concepts')"
-        >
-        Character Concepts
-        <span class="tab-count"
-          >({{ searchQuery ? filteredConcepts.length + " / " : "" }}{{
-          concepts.length
-          }})</span
-          >
-        </button>
-        <button
-          class="tab"
-          [class.active]="activeTab === 'nameLists'"
-          (click)="setActiveTab('nameLists')"
-          >
-          Name Lists
-          <span class="tab-count"
-            >({{ searchQuery ? filteredNameLists.length + " / " : "" }}{{
-            nameLists.length
-            }})</span
-            >
-          </button>
-        </div>
-        @if (activeTab === 'nameLists') {
-          <div class="shortcuts-help">
-            <span class="shortcut-item">↑↓ Navigate</span>
-            <span class="shortcut-item">ENTER Edit</span>
-            <span class="shortcut-item">C Comment</span>
-            <span class="shortcut-item">S Strikethrough</span>
-            <span class="shortcut-item">N New</span>
-            <span class="shortcut-item">DEL Delete</span>
-          </div>
-        }
-        @if (activeTab === 'concepts') {
-          <div class="shortcuts-help">
-            <span class="shortcut-item">↑↓ Navigate</span>
-            <span class="shortcut-item">ENTER Select</span>
-          </div>
-        }
+    @if (mode === 'nameLists') {
+      <div class="shortcuts-help">
+        <span class="shortcut-item">↑↓ Navigate</span>
+        <span class="shortcut-item">ENTER Edit</span>
+        <span class="shortcut-item">C Comment</span>
+        <span class="shortcut-item">S Strikethrough</span>
+        <span class="shortcut-item">N New</span>
+        <span class="shortcut-item">DEL Delete</span>
       </div>
+    }
+    @if (mode === 'concepts') {
+      <div class="shortcuts-help">
+        <span class="shortcut-item">↑↓ Navigate</span>
+        <span class="shortcut-item">ENTER Select</span>
+      </div>
+    }
+  </div>
 
-      <div class="backstage-content">
-        <!-- Concepts Master-Detail View -->
-        @if (activeTab === 'concepts') {
-          <div class="master-detail-view">
-            <!-- Left: List View -->
-            <div class="master-panel">
-              <div class="panel-header">
-                <h3>Concepts</h3>
-                <button
-                  class="btn-icon"
-                  (click)="openConceptsInEditor()"
-                  title="Open concepts.md in system editor"
+  <div class="backstage-content">
+    <!-- Concepts Master-Detail View -->
+    @if (mode === 'concepts') {
+      <div class="master-detail-view">
+        <!-- Left: List View -->
+        <div class="master-panel">
+          <div class="panel-header">
+            <h3>Concepts</h3>
+            <button
+              class="btn-icon"
+              (click)="openConceptsInEditor()"
+              title="Open concepts.md in system editor"
+              >
+              📝
+            </button>
+          </div>
+          @if (filteredConcepts.length > 0) {
+            <div class="master-list">
+              @for (concept of filteredConcepts; track concept; let i = $index) {
+                <div
+                  class="master-item concept-item"
+                  [class.selected]="concepts.indexOf(concept) === selectedConceptIndex"
+                  [class.editing]="editingConceptTitleIndex === concepts.indexOf(concept)"
+                  [attr.data-index]="i"
                   >
-                  📝
-                </button>
-              </div>
-              @if (filteredConcepts.length > 0) {
-                <div class="master-list">
-                  @for (concept of filteredConcepts; track concept; let i = $index) {
-                    <div
-                      class="master-item concept-item"
-                      [class.selected]="concepts.indexOf(concept) === selectedConceptIndex"
-                      [class.editing]="editingConceptTitleIndex === concepts.indexOf(concept)"
-                      [attr.data-index]="i"
-                      >
-                      <div class="concept-item-content" (click)="selectConcept(concepts.indexOf(concept))">
-                        @if (editingConceptTitleIndex !== concepts.indexOf(concept)) {
-                          <div class="item-title">
-                            {{ concept.title || "Untitled Concept" }}
-                          </div>
-                        }
-                        @if (editingConceptTitleIndex === concepts.indexOf(concept)) {
-                          <input
-                            type="text"
-                            class="form-control concept-title-input"
-                            [value]="concept.title || ''"
-                            (blur)="onConceptTitleBlur(concepts.indexOf(concept), $any($event.target).value)"
-                            (keyup.enter)="$any($event.target).blur()"
-                            (keyup.escape)="cancelEditConceptTitle()"
-                            #conceptTitleInput
-                            />
-                        }
-                        @if (concept.notes) {
-                          <div class="item-preview">
-                            {{ concept.notes.substring(0, 100)
-                            }}{{ concept.notes.length > 100 ? "..." : "" }}
-                          </div>
-                        }
+                  <div class="concept-item-content" (click)="selectConcept(concepts.indexOf(concept))">
+                    @if (editingConceptTitleIndex !== concepts.indexOf(concept)) {
+                      <div class="item-title">
+                        {{ concept.title || "Untitled Concept" }}
                       </div>
-                      <div class="master-item-actions" (click)="$event.stopPropagation()">
-                        @if (editingConceptTitleIndex !== concepts.indexOf(concept)) {
-                          <button
-                            class="btn-icon-sm"
-                            (click)="startEditConceptTitle(concepts.indexOf(concept))"
-                            title="Edit concept title"
-                            >
-                            ✏️
-                          </button>
-                        }
-                      </div>
-                    </div>
-                  }
-                </div>
-              }
-              @if (filteredConcepts.length === 0) {
-                <div class="empty-state">
-                  <p class="text-muted">
-                    @if (searchQuery) {
-                      <span>No concepts match your search.</span>
                     }
-                    @if (!searchQuery) {
-                      <span
-                        >No character concepts yet. Click "New Concept" to start
-                        brainstorming!</span
-                        >
-                      }
-                    </p>
+                    @if (editingConceptTitleIndex === concepts.indexOf(concept)) {
+                      <input
+                        type="text"
+                        class="form-control concept-title-input"
+                        [value]="concept.title || ''"
+                        (blur)="onConceptTitleBlur(concepts.indexOf(concept), $any($event.target).value)"
+                        (keyup.enter)="$any($event.target).blur()"
+                        (keyup.escape)="cancelEditConceptTitle()"
+                        #conceptTitleInput
+                        />
+                    }
+                    @if (concept.notes) {
+                      <div class="item-preview">
+                        {{ concept.notes.substring(0, 100)
+                        }}{{ concept.notes.length > 100 ? "..." : "" }}
+                      </div>
+                    }
                   </div>
-                }
-              </div>
-              <!-- Right: Detail View -->
-              @if (getSelectedConcept()) {
-                <div class="detail-panel">
-                  <div class="detail-header">
-                    <div class="detail-actions">
+                  <div class="master-item-actions" (click)="$event.stopPropagation()">
+                    @if (editingConceptTitleIndex !== concepts.indexOf(concept)) {
                       <button
-                        class="btn btn-secondary btn-sm"
-                        (click)="takeTheStage(getSelectedConcept()!)"
-                        title="Take the Stage - Create character from this concept"
+                        class="btn-icon-sm"
+                        (click)="startEditConceptTitle(concepts.indexOf(concept))"
+                        title="Edit concept title"
                         >
-                        ⭐ Take the Stage
+                        ✏️
                       </button>
-                      <button
-                        class="btn btn-ghost btn-sm"
-                        (click)="deleteConcept(selectedConceptIndex!)"
-                        title="Delete concept"
-                        >
-                        🗑️ Delete
-                      </button>
-                    </div>
-                  </div>
-                  <div class="detail-content">
-                    @if (!editingConceptNotes) {
-                      <div class="notes-view-mode" (click)="toggleEditNotes()">
-                        <div class="markdown-content" [innerHTML]="renderMarkdown(getSelectedConcept()?.notes)"></div>
-                        <div class="edit-hint">Click to edit</div>
-                      </div>
                     }
-                    @if (editingConceptNotes) {
-                      <textarea
-                        class="form-control notes-textarea"
-                        [value]="getSelectedConcept()?.notes || ''"
-                        (blur)="updateConcept(selectedConceptIndex!, { notes: $any($event.target).value }); editingConceptNotes = false"
-                        (keydown.escape)="editingConceptNotes = false"
-                        placeholder="Jot down your ideas here... (Markdown supported)"
-                        #notesTextarea
-                      ></textarea>
-                    }
-                  </div>
-                </div>
-              }
-              @if (!getSelectedConcept()) {
-                <div class="detail-panel empty-detail">
-                  <div class="empty-detail-message">
-                    <p>Select a concept from the list to view and edit it.</p>
                   </div>
                 </div>
               }
             </div>
           }
-
-          <!-- Name Lists Master-Detail View -->
-          @if (activeTab === 'nameLists') {
-            <div class="master-detail-view">
-              <!-- Left: List View -->
-              <div class="master-panel">
-                <div class="panel-header">
-                  <h3>Name Lists</h3>
-                  <button
-                    class="btn-icon"
-                    (click)="openNamesInEditor()"
-                    title="Open names.md in system editor"
+          @if (filteredConcepts.length === 0) {
+            <div class="empty-state">
+              <p class="text-muted">
+                @if (searchQuery) {
+                  <span>No concepts match your search.</span>
+                }
+                @if (!searchQuery) {
+                  <span
+                    >No character concepts yet. Click "New Concept" to start
+                    brainstorming!</span
                     >
-                    📝
+                  }
+                </p>
+              </div>
+            }
+          </div>
+          <!-- Right: Detail View -->
+          @if (getSelectedConcept()) {
+            <div class="detail-panel">
+              <div class="detail-header">
+                <div class="detail-actions">
+                  <button
+                    class="btn btn-secondary btn-sm"
+                    (click)="takeTheStage(getSelectedConcept()!)"
+                    title="Take the Stage - Create character from this concept"
+                    >
+                    ⭐ Take the Stage
+                  </button>
+                  <button
+                    class="btn btn-ghost btn-sm"
+                    (click)="deleteConcept(selectedConceptIndex!)"
+                    title="Delete concept"
+                    >
+                    🗑️ Delete
                   </button>
                 </div>
-                @if (filteredNameLists.length > 0) {
-                  <div class="master-list">
-                    @for (nameList of filteredNameLists; track nameList; let i = $index) {
-                      <div
-                        class="master-item"
-                        [class.selected]="nameLists.indexOf(nameList) === selectedNameListIndex"
-                        [class.editing]="editingNameListIndex === nameLists.indexOf(nameList)"
-                        [attr.data-index]="i"
-                        >
-                        <div class="master-item-content" (click)="selectNameList(nameLists.indexOf(nameList))">
-                          @if (editingNameListIndex !== nameLists.indexOf(nameList)) {
-                            <div class="item-title">
-                              {{ nameList.title }}
-                            </div>
-                          }
-                          @if (editingNameListIndex === nameLists.indexOf(nameList)) {
-                            <input
-                              type="text"
-                              class="form-control item-title-input"
-                              [value]="nameList.title"
-                              (blur)="onNameListTitleBlur(nameLists.indexOf(nameList), $any($event.target).value)"
-                              (keyup.enter)="$any($event.target).blur()"
-                              (keyup.escape)="cancelEditNameList()"
-                              #nameListTitleInput
-                              />
-                          }
-                          <div class="item-preview">
-                            {{ nameList.names.length }} name{{ nameList.names.length !== 1 ? "s" : "" }}
-                          </div>
-                        </div>
-                        <div class="master-item-actions" (click)="$event.stopPropagation()">
-                          @if (editingNameListIndex !== nameLists.indexOf(nameList)) {
-                            <button
-                              class="btn-icon-sm"
-                              (click)="startEditNameList(nameLists.indexOf(nameList))"
-                              title="Edit name list"
-                              >
-                              ✏️
-                            </button>
-                          }
-                          <button
-                            class="btn-icon-sm"
-                            (click)="deleteNameList(nameLists.indexOf(nameList))"
-                            title="Delete name list"
-                            >
-                            🗑️
-                          </button>
-                        </div>
-                      </div>
-                    }
+              </div>
+              <div class="detail-content">
+                @if (!editingConceptNotes) {
+                  <div class="notes-view-mode" (click)="toggleEditNotes()">
+                    <div class="markdown-content" [innerHTML]="renderMarkdown(getSelectedConcept()?.notes)"></div>
+                    <div class="edit-hint">Click to edit</div>
                   </div>
                 }
-                @if (filteredNameLists.length === 0) {
-                  <div class="empty-state">
-                    <p class="text-muted">
-                      @if (searchQuery) {
-                        <span>No name lists match your search.</span>
-                      }
-                      @if (!searchQuery) {
-                        <span
-                          >No name lists yet. Click "New Name List" to organize your character
-                          names!</span
-                          >
-                        }
-                      </p>
-                    </div>
-                  }
-                </div>
-                <!-- Right: Detail View -->
-                @if (getSelectedNameList()) {
-                  <div class="detail-panel names-panel" tabindex="0" (focus)="onNamesPanelFocus()" (click)="onNamesPanelClick($event)">
-                    <div class="names-list-container">
-                      @for (nameItem of getDisplayNames(); track nameItem; let i = $index) {
-                        <div
-                          class="name-item"
-                          [class.selected]="getOriginalIndex(i) === selectedNameIndex"
-                          [class.editing]="getOriginalIndex(i) === editingNameIndex"
-                          (click)="selectNameItem(getOriginalIndex(i))"
-                          >
-                          <div class="name-item-content">
-                            <span class="name-bullet">•</span>
-                            @if (getOriginalIndex(i) !== editingNameIndex) {
-                              <span class="name-text" [innerHTML]="formatNameForDisplay(nameItem.name)"></span>
-                            }
-                            @if (getOriginalIndex(i) === editingNameIndex) {
-                              <input
-                                type="text"
-                                class="name-input-inline"
-                                [value]="nameItem.name"
-                                (blur)="onNameItemChange(getOriginalIndex(i), 'name', $any($event.target).value); finishEditName()"
-                                (keydown.enter)="$event.preventDefault(); onNameItemChange(getOriginalIndex(i), 'name', $any($event.target).value); finishEditName()"
-                                (keydown.escape)="$event.preventDefault(); finishEditName()"
-                                #nameInput
-                                />
-                            }
-                            @if (nameItem.notes && getOriginalIndex(i) !== editingCommentIndex) {
-                              <span
-                                class="name-comment"
-                                >
-                                {{ getCommentForDisplay(nameItem.notes) }}
-                              </span>
-                            }
-                            @if (getOriginalIndex(i) === editingCommentIndex) {
-                              <input
-                                type="text"
-                                class="comment-input-inline"
-                                [value]="getCommentForDisplay(nameItem.notes)"
-                                (blur)="onNameItemChange(getOriginalIndex(i), 'notes', $any($event.target).value); finishEditComment()"
-                                (keydown.enter)="$event.preventDefault(); onNameItemChange(getOriginalIndex(i), 'notes', $any($event.target).value); finishEditComment()"
-                                (keydown.escape)="$event.preventDefault(); finishEditComment()"
-                                placeholder="Comment..."
-                                #commentInput
-                                />
-                            }
-                          </div>
-                          <div class="name-item-actions" (click)="$event.stopPropagation()">
-                            <button
-                              class="btn-icon-xs"
-                              (click)="takeTheStageWithName(nameItem.name)"
-                              title="Take the Stage"
-                              >
-                              ⭐
-                            </button>
-                            <button
-                              class="btn-icon-xs"
-                              (click)="onRemoveNameItem(getOriginalIndex(i))"
-                              title="Remove"
-                              >
-                              ×
-                            </button>
-                          </div>
+                @if (editingConceptNotes) {
+                  <textarea
+                    class="form-control notes-textarea"
+                    [value]="getSelectedConcept()?.notes || ''"
+                    (blur)="updateConcept(selectedConceptIndex!, { notes: $any($event.target).value }); editingConceptNotes = false"
+                    (keydown.escape)="editingConceptNotes = false"
+                    placeholder="Jot down your ideas here... (Markdown supported)"
+                    #notesTextarea
+                  ></textarea>
+                }
+              </div>
+            </div>
+          }
+          @if (!getSelectedConcept()) {
+            <div class="detail-panel empty-detail">
+              <div class="empty-detail-message">
+                <p>Select a concept from the list to view and edit it.</p>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Name Lists Master-Detail View -->
+      @if (mode === 'nameLists') {
+        <div class="master-detail-view">
+          <!-- Left: List View -->
+          <div class="master-panel">
+            <div class="panel-header">
+              <h3>Name Lists</h3>
+              <button
+                class="btn-icon"
+                (click)="openNamesInEditor()"
+                title="Open names.md in system editor"
+                >
+                📝
+              </button>
+            </div>
+            @if (filteredNameLists.length > 0) {
+              <div class="master-list">
+                @for (nameList of filteredNameLists; track nameList; let i = $index) {
+                  <div
+                    class="master-item"
+                    [class.selected]="nameLists.indexOf(nameList) === selectedNameListIndex"
+                    [class.editing]="editingNameListIndex === nameLists.indexOf(nameList)"
+                    [attr.data-index]="i"
+                    >
+                    <div class="master-item-content" (click)="selectNameList(nameLists.indexOf(nameList))">
+                      @if (editingNameListIndex !== nameLists.indexOf(nameList)) {
+                        <div class="item-title">
+                          {{ nameList.title }}
                         </div>
                       }
-                      <div class="add-name-item">
-                        <span class="name-bullet">+</span>
+                      @if (editingNameListIndex === nameLists.indexOf(nameList)) {
                         <input
                           type="text"
-                          class="add-name-input"
-                          [(ngModel)]="newNameInput"
-                          (keydown.enter)="$event.preventDefault(); onAddNameToSelectedList()"
-                          (keydown.escape)="$event.preventDefault(); onEscapeAddName()"
-                          placeholder="Add name (ENTER to add)"
-                          #addNameInput
+                          class="form-control item-title-input"
+                          [value]="nameList.title"
+                          (blur)="onNameListTitleBlur(nameLists.indexOf(nameList), $any($event.target).value)"
+                          (keyup.enter)="$any($event.target).blur()"
+                          (keyup.escape)="cancelEditNameList()"
+                          #nameListTitleInput
                           />
-                        @if (aiEnabled) {
-                          <button
-                            class="btn-icon-xs generate-name-btn"
-                            (click)="generateNameIntoSelectedList()"
-                            [disabled]="generatingName"
-                            title="Generate a name with AI"
-                            aria-label="Generate a name with AI"
-                            >
-                            {{ generatingName ? "⏳" : "✨" }}
-                          </button>
-                        }
+                      }
+                      <div class="item-preview">
+                        {{ nameList.names.length }} name{{ nameList.names.length !== 1 ? "s" : "" }}
                       </div>
                     </div>
-                  </div>
-                }
-                @if (!getSelectedNameList()) {
-                  <div class="detail-panel empty-detail">
-                    <div class="empty-detail-message">
-                      <p>Select a name list from the list to view and edit it.</p>
+                    <div class="master-item-actions" (click)="$event.stopPropagation()">
+                      @if (editingNameListIndex !== nameLists.indexOf(nameList)) {
+                        <button
+                          class="btn-icon-sm"
+                          (click)="startEditNameList(nameLists.indexOf(nameList))"
+                          title="Edit name list"
+                          >
+                          ✏️
+                        </button>
+                      }
+                      <button
+                        class="btn-icon-sm"
+                        (click)="deleteNameList(nameLists.indexOf(nameList))"
+                        title="Delete name list"
+                        >
+                        🗑️
+                      </button>
                     </div>
                   </div>
                 }
               </div>
             }
+            @if (filteredNameLists.length === 0) {
+              <div class="empty-state">
+                <p class="text-muted">
+                  @if (searchQuery) {
+                    <span>No name lists match your search.</span>
+                  }
+                  @if (!searchQuery) {
+                    <span
+                      >No name lists yet. Click "New Name List" to organize your character
+                      names!</span
+                      >
+                    }
+                  </p>
+                </div>
+              }
+            </div>
+            <!-- Right: Detail View -->
+            @if (getSelectedNameList()) {
+              <div class="detail-panel names-panel" tabindex="0" (focus)="onNamesPanelFocus()" (click)="onNamesPanelClick($event)">
+                <div class="names-list-container">
+                  @for (nameItem of getDisplayNames(); track nameItem; let i = $index) {
+                    <div
+                      class="name-item"
+                      [class.selected]="getOriginalIndex(i) === selectedNameIndex"
+                      [class.editing]="getOriginalIndex(i) === editingNameIndex"
+                      (click)="selectNameItem(getOriginalIndex(i))"
+                      >
+                      <div class="name-item-content">
+                        <span class="name-bullet">•</span>
+                        @if (getOriginalIndex(i) !== editingNameIndex) {
+                          <span class="name-text" [innerHTML]="formatNameForDisplay(nameItem.name)"></span>
+                        }
+                        @if (getOriginalIndex(i) === editingNameIndex) {
+                          <input
+                            type="text"
+                            class="name-input-inline"
+                            [value]="nameItem.name"
+                            (blur)="onNameItemChange(getOriginalIndex(i), 'name', $any($event.target).value); finishEditName()"
+                            (keydown.enter)="$event.preventDefault(); onNameItemChange(getOriginalIndex(i), 'name', $any($event.target).value); finishEditName()"
+                            (keydown.escape)="$event.preventDefault(); finishEditName()"
+                            #nameInput
+                            />
+                        }
+                        @if (nameItem.notes && getOriginalIndex(i) !== editingCommentIndex) {
+                          <span
+                            class="name-comment"
+                            >
+                            {{ getCommentForDisplay(nameItem.notes) }}
+                          </span>
+                        }
+                        @if (getOriginalIndex(i) === editingCommentIndex) {
+                          <input
+                            type="text"
+                            class="comment-input-inline"
+                            [value]="getCommentForDisplay(nameItem.notes)"
+                            (blur)="onNameItemChange(getOriginalIndex(i), 'notes', $any($event.target).value); finishEditComment()"
+                            (keydown.enter)="$event.preventDefault(); onNameItemChange(getOriginalIndex(i), 'notes', $any($event.target).value); finishEditComment()"
+                            (keydown.escape)="$event.preventDefault(); finishEditComment()"
+                            placeholder="Comment..."
+                            #commentInput
+                            />
+                        }
+                      </div>
+                      <div class="name-item-actions" (click)="$event.stopPropagation()">
+                        <button
+                          class="btn-icon-xs"
+                          (click)="takeTheStageWithName(nameItem.name)"
+                          title="Take the Stage"
+                          >
+                          ⭐
+                        </button>
+                        <button
+                          class="btn-icon-xs"
+                          (click)="onRemoveNameItem(getOriginalIndex(i))"
+                          title="Remove"
+                          >
+                          ×
+                        </button>
+                      </div>
+                    </div>
+                  }
+                  <div class="add-name-item">
+                    <span class="name-bullet">+</span>
+                    <input
+                      type="text"
+                      class="add-name-input"
+                      [(ngModel)]="newNameInput"
+                      (keydown.enter)="$event.preventDefault(); onAddNameToSelectedList()"
+                      (keydown.escape)="$event.preventDefault(); onEscapeAddName()"
+                      placeholder="Add name (ENTER to add)"
+                      #addNameInput
+                      />
+                    @if (aiEnabled) {
+                      <button
+                        class="btn-icon-xs generate-name-btn"
+                        (click)="generateNameIntoSelectedList()"
+                        [disabled]="generatingName"
+                        title="Generate a name with AI"
+                        aria-label="Generate a name with AI"
+                        >
+                        {{ generatingName ? "⏳" : "✨" }}
+                      </button>
+                    }
+                  </div>
+                </div>
+              </div>
+            }
+            @if (!getSelectedNameList()) {
+              <div class="detail-panel empty-detail">
+                <div class="empty-detail-message">
+                  <p>Select a name list from the list to view and edit it.</p>
+                </div>
+              </div>
+            }
           </div>
-        </div>
+        }
+      </div>
+    </div>

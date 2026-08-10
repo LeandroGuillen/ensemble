@@ -20,6 +20,7 @@ export { ModalService } from "./modal.service";
 export { CharacterEditDialogService } from "./character-edit-dialog.service";
 export { CharacterPickerService } from "./character-picker.service";
 export { AddNameCommandService } from "./add-name-command.service";
+export { AddConceptCommandService } from "./add-concept-command.service";
 export { ImagePickerService } from "./image-picker.service";
 export { UpdateService } from "./update.service";
 export { ZoomService } from "./zoom.service";

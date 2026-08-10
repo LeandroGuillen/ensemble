@@ -73,12 +73,27 @@ export const routes: Routes = [
     canActivate: [projectGuard],
   },
   {
-    path: "backstage",
+    path: "concepts",
     loadComponent: () =>
       import("./features/backstage/backstage.component").then(
         (m) => m.BackstageComponent
       ),
     canActivate: [projectGuard],
+    data: { mode: "concepts" },
+  },
+  {
+    path: "names",
+    loadComponent: () =>
+      import("./features/backstage/backstage.component").then(
+        (m) => m.BackstageComponent
+      ),
+    canActivate: [projectGuard],
+    data: { mode: "nameLists" },
+  },
+  {
+    path: "backstage",
+    redirectTo: "/concepts",
+    pathMatch: "full",
   },
   {
     path: "plot-board",

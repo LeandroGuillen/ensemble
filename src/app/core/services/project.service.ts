@@ -629,7 +629,12 @@ export class ProjectService {
    */
   getLastRoute(): string | null {
     const project = this.currentProjectSubject.value;
-    return project?.metadata.lastSession?.lastRoute || null;
+    const route = project?.metadata.lastSession?.lastRoute || null;
+    // Backstage was split into Concepts + Names
+    if (route === '/backstage') {
+      return '/concepts';
+    }
+    return route;
   }
 
   /**

@@ -86,36 +86,68 @@ export class KeyboardShortcutsService {
         category: 'Character Detail'
       },
 
-      // Backstage
+      // Concepts
       {
         keys: ['Ctrl', 'N'],
         description: 'Add new concept',
-        category: 'Backstage'
-      },
-      {
-        keys: ['Ctrl', 'Shift', 'N'],
-        description: 'Add new name list',
-        category: 'Backstage'
+        category: 'Concepts'
       },
       {
         keys: ['Ctrl', 'F'],
         description: 'Focus search',
-        category: 'Backstage'
+        category: 'Concepts'
       },
       {
         keys: ['↑', '↓'],
-        description: 'Navigate concepts/name lists',
-        category: 'Backstage'
+        description: 'Navigate concepts',
+        category: 'Concepts'
       },
       {
         keys: ['Enter'],
-        description: 'Focus selected item',
-        category: 'Backstage'
+        description: 'Select concept',
+        category: 'Concepts'
+      },
+
+      // Names
+      {
+        keys: ['Ctrl', 'N'],
+        description: 'Add new name list',
+        category: 'Names'
       },
       {
-        keys: ['Esc'],
-        description: 'Exit focus mode',
-        category: 'Backstage'
+        keys: ['Ctrl', 'F'],
+        description: 'Focus search',
+        category: 'Names'
+      },
+      {
+        keys: ['↑', '↓'],
+        description: 'Navigate name lists / names',
+        category: 'Names'
+      },
+      {
+        keys: ['Enter'],
+        description: 'Edit selected name',
+        category: 'Names'
+      },
+      {
+        keys: ['C'],
+        description: 'Edit name comment',
+        category: 'Names'
+      },
+      {
+        keys: ['S'],
+        description: 'Toggle strikethrough',
+        category: 'Names'
+      },
+      {
+        keys: ['N'],
+        description: 'Focus add-name input',
+        category: 'Names'
+      },
+      {
+        keys: ['Del'],
+        description: 'Delete selected name',
+        category: 'Names'
       },
 
       // Pinboard
