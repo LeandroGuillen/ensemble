@@ -12,6 +12,7 @@ import { pathJoin } from '../../utils/path.utils';
 import { requireProject } from '../../utils/project.utils';
 import { ElectronService } from '../electron.service';
 import { ProjectService } from '../project.service';
+import { ComfyUiProvider } from './comfyui.provider';
 import { GeminiImageProvider } from './gemini-image.provider';
 import { InvokeAiProvider } from './invokeai.provider';
 import { OpenAiImageProvider } from './openai-image.provider';
@@ -34,6 +35,7 @@ export class ImageGenerationService {
       ...defaults,
       ...stored,
       invokeai: { ...defaults.invokeai, ...stored.invokeai },
+      comfyui: { ...defaults.comfyui!, ...stored.comfyui },
       openai: { ...defaults.openai!, ...stored.openai },
       gemini: { ...defaults.gemini!, ...stored.gemini },
     };
@@ -51,6 +53,14 @@ export class ImageGenerationService {
             ...settings.invokeai,
             baseUrl: settings.invokeai.baseUrl.trim().replace(/\/+$/, ''),
           },
+          ...(settings.comfyui
+            ? {
+                comfyui: {
+                  ...settings.comfyui,
+                  baseUrl: settings.comfyui.baseUrl.trim().replace(/\/+$/, ''),
+                },
+              }
+            : {}),
           ...(settings.openai
             ? { openai: { ...settings.openai, apiKey: settings.openai.apiKey.trim() } }
             : {}),
@@ -61,6 +71,18 @@ export class ImageGenerationService {
       },
     };
     await this.projectService.updateMetadata(updatedMetadata);
+  }
+
+  /** Default workflow id for the active local workflow provider (InvokeAI / ComfyUI). */
+  getDefaultWorkflowId(settings?: ImageGenerationSettings): string | undefined {
+    const current = settings || this.getSettings();
+    if (current.provider === 'comfyui') {
+      return current.comfyui?.defaultWorkflowId;
+    }
+    if (current.provider === 'invokeai') {
+      return current.invokeai.defaultWorkflowId;
+    }
+    return undefined;
   }
 
   async testConnection(settings?: ImageGenerationSettings) {
@@ -193,6 +215,11 @@ export class ImageGenerationService {
         return new OpenAiImageProvider(this.electronService, settings.openai || { apiKey: '' });
       case 'gemini':
         return new GeminiImageProvider(this.electronService, settings.gemini || { apiKey: '' });
+      case 'comfyui':
+        return new ComfyUiProvider(
+          this.electronService,
+          settings.comfyui?.baseUrl || defaultImageGenerationSettings().comfyui!.baseUrl
+        );
       default:
         return new InvokeAiProvider(this.electronService, settings.invokeai.baseUrl);
     }
@@ -234,6 +261,9 @@ export function defaultImageGenerationSettings(): ImageGenerationSettings {
     provider: 'invokeai',
     invokeai: {
       baseUrl: 'http://invoke.yak-toad.ts.net',
+    },
+    comfyui: {
+      baseUrl: 'http://127.0.0.1:8188',
     },
     openai: { apiKey: '' },
     gemini: { apiKey: '' },

@@ -141,7 +141,7 @@ export interface AiSettings {
   maxTokens: number;
 }
 
-export type ImageGenerationProviderId = 'invokeai' | 'openai' | 'gemini';
+export type ImageGenerationProviderId = 'invokeai' | 'comfyui' | 'openai' | 'gemini';
 
 export interface CloudImageSettings {
   apiKey: string;
@@ -154,10 +154,16 @@ export interface InvokeAiImageSettings {
   defaultWorkflowId?: string;
 }
 
+export interface ComfyUiImageSettings {
+  baseUrl: string;
+  defaultWorkflowId?: string;
+}
+
 export interface ImageGenerationSettings {
   enabled: boolean;
   provider: ImageGenerationProviderId;
   invokeai: InvokeAiImageSettings;
+  comfyui?: ComfyUiImageSettings;
   openai?: CloudImageSettings;
   gemini?: CloudImageSettings;
 }

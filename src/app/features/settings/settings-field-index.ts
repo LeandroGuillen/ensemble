@@ -146,7 +146,7 @@ export const SETTINGS_FIELD_INDEX: SettingsFieldIndex[] = [
     id: 'image-gen-enabled',
     section: 'image-generation',
     label: 'Enable character image generation',
-    keywords: ['image generation', 'invokeai', 'portrait', 'workflow'],
+    keywords: ['image generation', 'invokeai', 'comfyui', 'portrait', 'workflow'],
     valueKeys: ['imageGenEnabled'],
   },
   {
@@ -157,10 +157,17 @@ export const SETTINGS_FIELD_INDEX: SettingsFieldIndex[] = [
     valueKeys: ['invokeAiBaseUrl'],
   },
   {
+    id: 'comfyui-url',
+    section: 'image-generation',
+    label: 'ComfyUI Server URL',
+    keywords: ['comfyui', 'comfy', 'server', 'url', 'workflow'],
+    valueKeys: ['comfyUiBaseUrl'],
+  },
+  {
     id: 'default-workflow',
     section: 'image-generation',
     label: 'Default Workflow',
-    keywords: ['workflow', 'preset'],
-    valueKeys: ['defaultWorkflowId'],
+    keywords: ['workflow', 'preset', 'mangamaster'],
+    valueKeys: ['defaultWorkflowId', 'comfyDefaultWorkflowId'],
   },
 ];

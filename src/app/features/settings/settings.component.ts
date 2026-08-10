@@ -385,6 +385,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
       imageGenEnabled: image.enabled ? 'enabled' : 'disabled',
       invokeAiBaseUrl: image.invokeai.baseUrl || '',
       defaultWorkflowId: image.invokeai.defaultWorkflowId || '',
+      comfyUiBaseUrl: image.comfyui?.baseUrl || '',
+      comfyDefaultWorkflowId: image.comfyui?.defaultWorkflowId || '',
     };
   }
 
