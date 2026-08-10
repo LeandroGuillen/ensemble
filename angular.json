@@ -26,6 +26,9 @@
             "tsConfig": "tsconfig.app.json",
             "assets": ["src/favicon.ico", "src/assets"],
             "styles": ["src/styles.scss"],
+            "stylePreprocessorOptions": {
+              "includePaths": ["src"]
+            },
             "scripts": [],
             "browser": "src/main.ts"
           },
@@ -83,6 +86,9 @@
             "karmaConfig": "karma.conf.js",
             "assets": ["src/favicon.ico", "src/assets"],
             "styles": ["src/styles.scss"],
+            "stylePreprocessorOptions": {
+              "includePaths": ["src"]
+            },
             "scripts": []
           }
         }

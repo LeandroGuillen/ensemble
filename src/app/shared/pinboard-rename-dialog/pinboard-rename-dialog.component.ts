@@ -1,12 +1,12 @@
 import { Component, EventEmitter, Input, Output, OnChanges, SimpleChanges } from '@angular/core';
-
 import { FormsModule } from '@angular/forms';
+import { ModalFrameComponent } from '../modal-frame/modal-frame.component';
 
 @Component({
-    selector: 'app-pinboard-rename-dialog',
-    imports: [FormsModule],
-    templateUrl: './pinboard-rename-dialog.component.html',
-    styleUrls: ['./pinboard-rename-dialog.component.scss']
+  selector: 'app-pinboard-rename-dialog',
+  imports: [FormsModule, ModalFrameComponent],
+  templateUrl: './pinboard-rename-dialog.component.html',
+  styleUrls: ['./pinboard-rename-dialog.component.scss'],
 })
 export class PinboardRenameDialogComponent implements OnChanges {
   @Input() visible = false;
@@ -44,14 +44,12 @@ export class PinboardRenameDialogComponent implements OnChanges {
     }
 
     if (this.pinboardName.trim() === this.currentName) {
-      // No change, just close
       this.onClose();
       return;
     }
 
-    // Check for duplicate name (excluding current)
-    const otherNames = this.allPinboardNames.filter(n => n !== this.currentName);
-    if (otherNames.some(n => n.toLowerCase() === this.pinboardName.trim().toLowerCase())) {
+    const otherNames = this.allPinboardNames.filter((n) => n !== this.currentName);
+    if (otherNames.some((n) => n.toLowerCase() === this.pinboardName.trim().toLowerCase())) {
       this.errorMessage = `A pinboard named "${this.pinboardName.trim()}" already exists`;
       return;
     }
@@ -64,14 +62,4 @@ export class PinboardRenameDialogComponent implements OnChanges {
     this.pinboardName = '';
     this.errorMessage = '';
   }
-
-  onOverlayClick(): void {
-    this.onClose();
-  }
-
-  onDialogClick(event: Event): void {
-    event.stopPropagation();
-  }
 }
-
-

@@ -1,67 +1,64 @@
 @if (visible) {
-  <div class="modal-overlay" (click)="onOverlayClick()">
-    <div class="modal-dialog add-pin-dialog" (click)="onDialogClick($event)">
-      <div class="modal-header">
-        <h3>Pin Character</h3>
-        <button class="close-btn" (click)="onClose()">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label for="characterFilter">Search:</label>
-          <input
-            #characterFilterInput
-            type="text"
-            id="characterFilter"
-            [(ngModel)]="characterFilter"
-            (input)="onFilterInput()"
-            placeholder="Filter by name or category..."
-            />
-        </div>
-        <div class="character-list">
-          @if (filteredCharacters.length === 0) {
-            <div class="no-characters">
-              @if (characters.length === 0) {
-                <p>No characters available.</p>
-              }
-              @if (characters.length > 0 && characterFilter === '') {
-                <p>All characters are already on the pinboard.</p>
-              }
-              @if (characters.length > 0 && characterFilter !== '') {
-                <p>No characters match your filter.</p>
-              }
-            </div>
-          }
-          @for (character of filteredCharacters; track character.id; let i = $index) {
-            <div
-              class="character-item"
-              [class.selected]="i === selectedCharacterIndex"
-              (click)="onCharacterClick(character)"
-              (mouseenter)="selectedCharacterIndex = i"
-              >
-              <div class="character-thumbnail">
-                @if (getThumbnailDataUrl(character)) {
-                  <img [src]="getThumbnailDataUrl(character)" [alt]="character.name" />
-                }
-                @if (!getThumbnailDataUrl(character)) {
-                  <div
-                    class="thumbnail-placeholder"
-                    [style.background-color]="metadataHelper.getCategoryColor(character.category)"
-                    >
-                    {{ character.name.charAt(0).toUpperCase() }}
-                  </div>
-                }
-              </div>
-              <div class="character-info">
-                <span class="character-name">{{ character.name }}</span>
-                <span
-                  class="character-category"
-                  [title]="metadataHelper.getCategoryTooltip(character.category)"
-                  >{{ metadataHelper.getCategoryName(character.category) }}</span>
-              </div>
-            </div>
-          }
-        </div>
-      </div>
+  <app-modal-frame
+    title="Pin Character"
+    dialogClass="add-pin-dialog"
+    (closed)="onClose()"
+  >
+    <div class="form-group">
+      <label for="characterFilter">Search:</label>
+      <input
+        #characterFilterInput
+        type="text"
+        id="characterFilter"
+        class="form-control"
+        [(ngModel)]="characterFilter"
+        (input)="onFilterInput()"
+        placeholder="Filter by name or category..."
+      />
     </div>
-  </div>
+    <div class="character-list">
+      @if (filteredCharacters.length === 0) {
+        <div class="no-characters">
+          @if (characters.length === 0) {
+            <p>No characters available.</p>
+          }
+          @if (characters.length > 0 && characterFilter === '') {
+            <p>All characters are already on the pinboard.</p>
+          }
+          @if (characters.length > 0 && characterFilter !== '') {
+            <p>No characters match your filter.</p>
+          }
+        </div>
+      }
+      @for (character of filteredCharacters; track character.id; let i = $index) {
+        <div
+          class="character-item"
+          [class.selected]="i === selectedCharacterIndex"
+          (click)="onCharacterClick(character)"
+          (mouseenter)="selectedCharacterIndex = i"
+        >
+          <div class="character-thumbnail">
+            @if (getThumbnailDataUrl(character)) {
+              <img [src]="getThumbnailDataUrl(character)" [alt]="character.name" />
+            }
+            @if (!getThumbnailDataUrl(character)) {
+              <div
+                class="thumbnail-placeholder"
+                [style.background-color]="metadataHelper.getCategoryColor(character.category)"
+              >
+                {{ character.name.charAt(0).toUpperCase() }}
+              </div>
+            }
+          </div>
+          <div class="character-info">
+            <span class="character-name">{{ character.name }}</span>
+            <span
+              class="character-category"
+              [title]="metadataHelper.getCategoryTooltip(character.category)"
+              >{{ metadataHelper.getCategoryName(character.category) }}</span>
+          </div>
+        </div>
+      }
+    </div>
+  </app-modal-frame>
 }

@@ -1,13 +1,13 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
-
 import { FormsModule } from '@angular/forms';
 import { Pinboard } from '../../core/interfaces/pinboard.interface';
+import { ModalFrameComponent } from '../modal-frame/modal-frame.component';
 
 @Component({
-    selector: 'app-pinboard-create-dialog',
-    imports: [FormsModule],
-    templateUrl: './pinboard-create-dialog.component.html',
-    styleUrls: ['./pinboard-create-dialog.component.scss']
+  selector: 'app-pinboard-create-dialog',
+  imports: [FormsModule, ModalFrameComponent],
+  templateUrl: './pinboard-create-dialog.component.html',
+  styleUrls: ['./pinboard-create-dialog.component.scss'],
 })
 export class PinboardCreateDialogComponent {
   @Input() visible = false;
@@ -20,7 +20,7 @@ export class PinboardCreateDialogComponent {
   errorMessage = '';
 
   get availablePinboards(): Pinboard[] {
-    return this.pinboards.filter(p => p.id !== this.duplicateFromId);
+    return this.pinboards.filter((p) => p.id !== this.duplicateFromId);
   }
 
   onClose(): void {
@@ -37,15 +37,14 @@ export class PinboardCreateDialogComponent {
       return;
     }
 
-    // Check for duplicate name
-    if (this.pinboards.some(p => p.name.toLowerCase() === this.pinboardName.trim().toLowerCase())) {
+    if (this.pinboards.some((p) => p.name.toLowerCase() === this.pinboardName.trim().toLowerCase())) {
       this.errorMessage = `A pinboard named "${this.pinboardName.trim()}" already exists`;
       return;
     }
 
     this.create.emit({
       name: this.pinboardName.trim(),
-      duplicateFromId: this.duplicateFromId || undefined
+      duplicateFromId: this.duplicateFromId || undefined,
     });
     this.reset();
   }
@@ -55,14 +54,4 @@ export class PinboardCreateDialogComponent {
     this.duplicateFromId = null;
     this.errorMessage = '';
   }
-
-  onOverlayClick(): void {
-    this.onClose();
-  }
-
-  onDialogClick(event: Event): void {
-    event.stopPropagation();
-  }
 }
-
-

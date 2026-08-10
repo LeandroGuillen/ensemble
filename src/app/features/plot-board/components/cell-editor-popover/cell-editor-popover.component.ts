@@ -12,11 +12,12 @@ import {
 
 import { FormsModule } from '@angular/forms';
 import { ColorSwatchPickerComponent } from '../../../../shared/color-swatch-picker/color-swatch-picker.component';
+import { ConfirmButtonDirective } from '../../../../shared/confirm-button/confirm-button.directive';
 import { EmojiPickerComponent } from '../../../../shared/emoji-picker/emoji-picker.component';
 
 @Component({
   selector: 'app-cell-editor-popover',
-  imports: [FormsModule, EmojiPickerComponent, ColorSwatchPickerComponent],
+  imports: [FormsModule, EmojiPickerComponent, ColorSwatchPickerComponent, ConfirmButtonDirective],
   templateUrl: './cell-editor-popover.component.html',
   styleUrls: ['./cell-editor-popover.component.scss'],
 })
@@ -108,11 +109,6 @@ export class CellEditorPopoverComponent implements AfterViewInit {
     event.stopPropagation();
     this.icon = '';
     this.iconChange.emit('');
-  }
-
-  onRequestDelete(event: Event): void {
-    event.stopPropagation();
-    this.requestDelete.emit();
   }
 
   onConfirmDelete(event: Event): void {

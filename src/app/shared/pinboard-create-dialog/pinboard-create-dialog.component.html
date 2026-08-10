@@ -1,55 +1,47 @@
 @if (visible) {
-  <div class="modal-overlay" (click)="onOverlayClick()">
-    <div class="modal-dialog" (click)="onDialogClick($event)">
-      <div class="modal-header">
-        <h3>Create Pinboard</h3>
-        <button class="close-btn" (click)="onClose()">&times;</button>
+  <app-modal-frame title="Create Pinboard" (closed)="onClose()">
+    <form (ngSubmit)="onCreate()">
+      <div class="form-group">
+        <label for="pinboardName">Pinboard Name:</label>
+        <input
+          type="text"
+          id="pinboardName"
+          class="form-control"
+          [(ngModel)]="pinboardName"
+          name="pinboardName"
+          placeholder="Enter pinboard name..."
+          autofocus
+          required
+          maxlength="50"
+        />
       </div>
-      <div class="modal-body">
-        <form (ngSubmit)="onCreate()">
-          <div class="form-group">
-            <label for="pinboardName">Pinboard Name:</label>
-            <input
-              type="text"
-              id="pinboardName"
-              [(ngModel)]="pinboardName"
-              name="pinboardName"
-              placeholder="Enter pinboard name..."
-              autofocus
-              required
-              maxlength="50"
-              />
-          </div>
-          @if (pinboards.length > 0) {
-            <div class="form-group">
-              <label for="duplicateFrom">Duplicate from (optional):</label>
-              <select
-                id="duplicateFrom"
-                [(ngModel)]="duplicateFromId"
-                name="duplicateFrom"
-                >
-                <option [value]="null">Create empty pinboard</option>
-                @for (pinboard of pinboards; track pinboard) {
-                  <option [value]="pinboard.id">
-                    {{ pinboard.name }}
-                  </option>
-                }
-              </select>
-            </div>
-          }
-          @if (errorMessage) {
-            <div class="error-message">
-              {{ errorMessage }}
-            </div>
-          }
-          <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" (click)="onClose()">Cancel</button>
-            <button type="submit" class="btn btn-primary">Create</button>
-          </div>
-        </form>
+      @if (pinboards.length > 0) {
+        <div class="form-group">
+          <label for="duplicateFrom">Duplicate from (optional):</label>
+          <select
+            id="duplicateFrom"
+            class="form-control"
+            [(ngModel)]="duplicateFromId"
+            name="duplicateFrom"
+          >
+            <option [value]="null">Create empty pinboard</option>
+            @for (pinboard of pinboards; track pinboard) {
+              <option [value]="pinboard.id">
+                {{ pinboard.name }}
+              </option>
+            }
+          </select>
+        </div>
+      }
+      @if (errorMessage) {
+        <div class="error-message">
+          {{ errorMessage }}
+        </div>
+      }
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" (click)="onClose()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create</button>
       </div>
-    </div>
-  </div>
+    </form>
+  </app-modal-frame>
 }
-
-

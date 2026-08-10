@@ -1,0 +1,90 @@
+/* Shared modal chrome used by app-modal-frame and dialogs */
+
+@layer components {
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+  }
+
+  .modal-dialog {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xl);
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+
+    &.add-pin-dialog {
+      max-width: 600px;
+      max-height: 80vh;
+    }
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-lg);
+    border-bottom: 1px solid var(--color-border);
+
+    h3 {
+      margin: 0;
+      color: var(--color-text-primary);
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+  }
+
+  .modal-body {
+    padding: var(--spacing-lg);
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    justify-content: flex-end;
+    margin-top: var(--spacing-lg);
+  }
+
+  .close-btn {
+    background: transparent;
+    border: none;
+    font-size: 24px;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-md);
+    transition: background var(--transition-fast), color var(--transition-fast);
+
+    &:hover {
+      background: var(--color-bg-tertiary);
+      color: var(--color-text-primary);
+    }
+  }
+
+  .app-confirm-button--armed,
+  .confirm-delete-btn {
+    background: rgba(248, 113, 113, 0.2);
+    color: var(--color-error);
+    border: 1px solid rgba(248, 113, 113, 0.45);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+}

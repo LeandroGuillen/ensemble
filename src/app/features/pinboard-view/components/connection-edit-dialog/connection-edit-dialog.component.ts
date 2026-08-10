@@ -2,11 +2,12 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Character } from '../../../../core/interfaces';
 import { ColorSelectorComponent } from '../../../../shared/color-selector/color-selector.component';
+import { ModalFrameComponent } from '../../../../shared/modal-frame/modal-frame.component';
 import { ConnectionFormData } from '../../pinboard-connection-form';
 
 @Component({
   selector: 'app-connection-edit-dialog',
-  imports: [FormsModule, ColorSelectorComponent],
+  imports: [FormsModule, ColorSelectorComponent, ModalFrameComponent],
   templateUrl: './connection-edit-dialog.component.html',
   styleUrls: ['./connection-edit-dialog.component.scss'],
 })
@@ -40,14 +41,6 @@ export class ConnectionEditDialogComponent {
   onClose(): void {
     this.visible = false;
     this.visibleChange.emit(false);
-  }
-
-  onOverlayClick(): void {
-    this.onClose();
-  }
-
-  onDialogClick(event: Event): void {
-    event.stopPropagation();
   }
 
   onSubmit(): void {

@@ -44,14 +44,16 @@
   ></textarea>
   <div class="popover-footer">
     <div class="popover-footer-left">
-      @if (!confirmDelete && canDelete) {
-        <button type="button" class="btn-delete-cell" (click)="onRequestDelete($event)">
+      @if (canDelete) {
+        <button
+          type="button"
+          class="btn-delete-cell"
+          appConfirmButton
+          confirmLabel="Confirm delete"
+          armedClass="btn-delete-confirm"
+          (confirmed)="onConfirmDelete($event)"
+        >
           Delete
-        </button>
-      }
-      @if (confirmDelete) {
-        <button type="button" class="btn-delete-cell btn-delete-confirm" (click)="onConfirmDelete($event)">
-          Confirm delete
         </button>
       }
     </div>

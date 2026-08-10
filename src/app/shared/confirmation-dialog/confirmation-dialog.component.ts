@@ -1,11 +1,11 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
-
+import { ModalFrameComponent } from '../modal-frame/modal-frame.component';
 
 @Component({
-    selector: 'app-confirmation-dialog',
-    imports: [],
-    templateUrl: './confirmation-dialog.component.html',
-    styleUrls: ['./confirmation-dialog.component.scss']
+  selector: 'app-confirmation-dialog',
+  imports: [ModalFrameComponent],
+  templateUrl: './confirmation-dialog.component.html',
+  styleUrls: ['./confirmation-dialog.component.scss'],
 })
 export class ConfirmationDialogComponent {
   @Input() visible = false;
@@ -14,7 +14,7 @@ export class ConfirmationDialogComponent {
   @Input() confirmText = 'Confirm';
   @Input() cancelText = 'Cancel';
   @Input() confirmButtonClass = 'btn-primary';
-  @Input() danger = false; // If true, uses danger styling for confirm button
+  @Input() danger = false;
 
   @Output() visibleChange = new EventEmitter<boolean>();
   @Output() confirm = new EventEmitter<void>();
@@ -39,13 +39,4 @@ export class ConfirmationDialogComponent {
     this.visible = false;
     this.visibleChange.emit(false);
   }
-
-  onOverlayClick(): void {
-    this.onClose();
-  }
-
-  onDialogClick(event: Event): void {
-    event.stopPropagation();
-  }
 }
-

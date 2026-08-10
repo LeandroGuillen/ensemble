@@ -11,6 +11,7 @@ import { CharacterEditDialogService } from "../../core/services/character-edit-d
 import { ElectronService } from "../../core/services/electron.service";
 import { LoggingService } from "../../core/services/logging.service";
 import { ModalService } from "../../core/services/modal.service";
+import { MarkdownUtils } from "../../core/utils/markdown.utils";
 import {
   CharacterConcept,
   NameList,
@@ -467,66 +468,15 @@ export class BackstageComponent implements OnInit, OnDestroy {
   // Helper to format name for display (render markdown strikethrough)
   formatNameForDisplay(name: string | undefined): string {
     if (!name) return 'Unnamed';
-    // Escape HTML to prevent XSS
-    const escaped = name
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
-    // Convert markdown strikethrough (~~text~~) to HTML
+    const escaped = MarkdownUtils.escapeHtml(name);
     return escaped.replace(/~~(.+?)~~/g, '<del>$1</del>');
   }
 
   // Convert markdown to HTML for rendering
   renderMarkdown(markdown: string | undefined): SafeHtml {
     if (!markdown) return '';
-    
-    // Escape HTML first to prevent XSS
-    let html = markdown
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
-    
-    // Convert markdown to HTML (basic support)
-    // Code blocks (must come before inline code and other formatting)
-    html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
-    
-    // Inline code (must come before bold/italic)
-    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-    
-    // Headers
-    html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
-    html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
-    html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
-    
-    // Bold
-    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    html = html.replace(/__(.+?)__/g, '<strong>$1</strong>');
-    
-    // Italic (simple approach - single asterisk/underscore)
-    html = html.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, '<em>$1</em>');
-    html = html.replace(/(?<!_)_([^_]+?)_(?!_)/g, '<em>$1</em>');
-    
-    // Strikethrough
-    html = html.replace(/~~(.+?)~~/g, '<del>$1</del>');
-    
-    // Links
-    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
-    
-    // Line breaks - convert double newlines to paragraphs
-    const paragraphs = html.split(/\n\n+/);
-    html = paragraphs.map(para => {
-      para = para.trim();
-      if (!para) return '';
-      // Convert single newlines to <br> within paragraphs
-      para = para.replace(/\n/g, '<br>');
-      // Don't wrap if already has block-level tags
-      if (/^<(h[1-6]|pre|ul|ol)/.test(para)) {
-        return para;
-      }
-      return `<p>${para}</p>`;
-    }).join('');
-    
-    // Sanitize and return as SafeHtml
+
+    const html = MarkdownUtils.markdownToHtml(markdown);
     const sanitized = this.sanitizer.sanitize(SecurityContext.HTML, html);
     return this.sanitizer.bypassSecurityTrustHtml(sanitized || '');
   }

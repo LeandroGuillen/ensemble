@@ -1,0 +1,5 @@
+/* Modal chrome lives in global `styles/_modals.scss`.
+   Keep this file for encapsulation hooks / local tweaks. */
+:host {
+  display: contents;
+}

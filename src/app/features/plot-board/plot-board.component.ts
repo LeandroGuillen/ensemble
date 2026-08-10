@@ -26,6 +26,7 @@ import { PlotBoard, PlotCellMeta, PlotRow, PlotThread } from '../../core/interfa
 import { Character } from '../../core/interfaces/character.interface';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { EmojiPickerComponent } from '../../shared/emoji-picker/emoji-picker.component';
+import { ConfirmButtonDirective } from '../../shared/confirm-button/confirm-button.directive';
 import { PlotBoardReorderService } from './plot-board-reorder.service';
 import { PlotBoardSidebarComponent } from './components/plot-board-sidebar/plot-board-sidebar.component';
 import { ThreadToolbarComponent } from './components/thread-toolbar/thread-toolbar.component';
@@ -40,6 +41,7 @@ export type ZoomLevel = 1 | 2 | 3;
     FormsModule,
     PageHeaderComponent,
     EmojiPickerComponent,
+    ConfirmButtonDirective,
     PlotBoardSidebarComponent,
     ThreadToolbarComponent,
     CellEditorPopoverComponent,
@@ -393,10 +395,10 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   onDocumentClick(event: MouseEvent): void {
     const target = event.target as HTMLElement;
 
-    if (this.confirmDeleteThreadId !== null && !target.closest('.confirm-delete-btn, .btn-danger')) {
+    if (this.confirmDeleteThreadId !== null && !target.closest('.confirm-delete-btn, .btn-danger, [appConfirmButton]')) {
       this.confirmDeleteThreadId = null;
     }
-    if (this.confirmDeleteRowIndex !== null && !target.closest('.confirm-delete-btn, .btn-danger')) {
+    if (this.confirmDeleteRowIndex !== null && !target.closest('.confirm-delete-btn, .btn-danger, [appConfirmButton]')) {
       this.confirmDeleteRowIndex = null;
     }
 
@@ -436,7 +438,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   requestDeleteThread(threadId: string): void {
-    this.confirmDeleteThreadId = threadId;
+    this.confirmDeleteThreadId = threadId || null;
   }
 
   confirmDeleteThread(threadId: string): void {
@@ -561,6 +563,10 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   requestDeleteRow(rowIndex: number): void {
     this.confirmDeleteRowIndex = rowIndex;
+  }
+
+  onRowDeleteArmed(rowIndex: number, armed: boolean): void {
+    this.confirmDeleteRowIndex = armed ? rowIndex : null;
   }
 
   confirmDeleteRow(rowIndex: number): void {

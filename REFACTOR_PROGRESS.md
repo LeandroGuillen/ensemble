@@ -81,12 +81,23 @@ Git: one commit per batch. Verify with `npm run build` (and `npm test` if applic
       Chose CDK (`cdkDropList`/`moveItemInArray`) for same-list reorder in metadata categories
       and tags (matches character-list CDK usage). Removed duplicated HTML5 DnD handlers.
 
-## Batch F — Shared UI infra  ·  Status: [ ]
-- [ ] F1. `ModalFrameComponent` (role/aria-modal/Esc/focus-trap/backdrop).
-- [ ] F2. `ConfirmButtonDirective` (two-click confirm + outside-click).
-- [ ] F3. `_buttons.scss` / `_forms.scss` / `_modals.scss` / `_variables.scss` partials; `@use` everywhere.
-- [ ] F4. Single `color-contrast.utils.ts` (WCAG) replacing two inconsistent formulas.
-- [ ] F5. Route backstage markdown rendering through `markdown.utils.ts`.
+## Batch F — Shared UI infra  ·  Status: [x]
+- [x] F1. `ModalFrameComponent` (role/aria-modal/Esc/focus-trap/backdrop).
+      Shared frame under `shared/modal-frame/` with CDK `cdkTrapFocus`, Esc/backdrop
+      close, and focus restore. Migrated confirmation, pinboard create/rename,
+      pin-add, and connection-edit dialogs onto it.
+- [x] F2. `ConfirmButtonDirective` (two-click confirm + outside-click).
+      `button[appConfirmButton]` arms on first click, confirms on second, disarms on
+      outside click / Esc. Adopted for plot-board thread, row, and cell delete.
+- [x] F3. `_buttons.scss` / `_forms.scss` / `_modals.scss` / `_variables.scss` partials; `@use` everywhere.
+      Partials live in `src/styles/`; `styles.scss` `@use`s them. `angular.json`
+      `stylePreprocessorOptions.includePaths` includes `src` for `@use 'styles/...'`.
+- [x] F4. Single `color-contrast.utils.ts` (WCAG) replacing two inconsistent formulas.
+      Character list and cast detail now call `contrastTextColor()` (relative luminance
+      + equal-contrast threshold ~0.179).
+- [x] F5. Route backstage markdown rendering through `markdown.utils.ts`.
+      Added `MarkdownUtils.escapeHtml` / `markdownToHtml`; backstage `renderMarkdown`
+      and `formatNameForDisplay` consume them (still DomSanitizer-gated).
 
 ## Batch G — main.js split & safety  ·  Status: [ ]
 - [ ] G1. Split `main.js` into `main.js` + `lib/{window,fs-handlers,path-handlers,dialog-handlers,file-watcher,ai-http,updater}.js` with `register(ipcMain, deps)` exports. Collapse duplicated updater cache-search.

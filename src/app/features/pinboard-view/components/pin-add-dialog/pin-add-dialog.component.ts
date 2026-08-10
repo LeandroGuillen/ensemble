@@ -11,10 +11,11 @@ import {
 import { FormsModule } from '@angular/forms';
 import { Character } from '../../../../core/interfaces';
 import { MetadataHelperService } from '../../../../core/services';
+import { ModalFrameComponent } from '../../../../shared/modal-frame/modal-frame.component';
 
 @Component({
   selector: 'app-pin-add-dialog',
-  imports: [FormsModule],
+  imports: [FormsModule, ModalFrameComponent],
   templateUrl: './pin-add-dialog.component.html',
   styleUrls: ['./pin-add-dialog.component.scss'],
 })
@@ -38,6 +39,7 @@ export class PinAddDialogComponent implements OnChanges {
   @HostListener('document:keydown', ['$event'])
   handleDialogKeydown(event: KeyboardEvent): void {
     if (!this.visible) return;
+    if (event.key === 'Escape') return; // ModalFrame handles Esc close
 
     const target = event.target as HTMLElement;
     const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
@@ -73,14 +75,6 @@ export class PinAddDialogComponent implements OnChanges {
     this.selectedCharacterIndex = -1;
   }
 
-  onOverlayClick(): void {
-    this.onClose();
-  }
-
-  onDialogClick(event: Event): void {
-    event.stopPropagation();
-  }
-
   onFilterInput(): void {
     this.updateFilteredCharacters();
   }
@@ -95,23 +89,23 @@ export class PinAddDialogComponent implements OnChanges {
 
   updateFilteredCharacters(): void {
     let availableCharacters = this.characters.filter(
-      char => !this.pinnedCharacterIds.includes(char.id)
+      (char) => !this.pinnedCharacterIds.includes(char.id)
     );
 
     if (this.characterFilter.trim()) {
       const filter = this.characterFilter.toLowerCase();
-      availableCharacters = availableCharacters.filter(char =>
-        char.name.toLowerCase().includes(filter) ||
-        char.category.toLowerCase().includes(filter)
+      availableCharacters = availableCharacters.filter(
+        (char) =>
+          char.name.toLowerCase().includes(filter) ||
+          char.category.toLowerCase().includes(filter)
       );
     }
 
     this.filteredCharacters = availableCharacters;
 
     if (this.selectedCharacterIndex >= this.filteredCharacters.length) {
-      this.selectedCharacterIndex = this.filteredCharacters.length > 0
-        ? this.filteredCharacters.length - 1
-        : -1;
+      this.selectedCharacterIndex =
+        this.filteredCharacters.length > 0 ? this.filteredCharacters.length - 1 : -1;
     }
   }
 

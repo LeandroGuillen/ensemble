@@ -13,6 +13,7 @@ import { ModalService } from '../../core/services/modal.service';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { resolveThumbnailForStyle } from '../../core/utils/thumbnail.utils';
 import { resolveEffectiveCategory } from '../../core/utils/character-category.utils';
+import { contrastTextColor } from '../../core/utils/color-contrast.utils';
 import { ToggleOption } from '../../shared/category-toggle/category-toggle.component';
 import { CharacterFilterComponent } from '../../shared/character-filter/character-filter.component';
 import { CommandPaletteService } from '../../shared/command-palette/command-palette.service';
@@ -1311,41 +1312,8 @@ getFilterSummary(): string {
   /**
    * Calculate the relative luminance of a color to determine if we should use
    * white or black text for contrast.
-   * Based on WCAG guidelines: https://www.w3.org/TR/WCAG20/#relativeluminancedef
    */
   getContrastTextColor(backgroundColor: string): string {
-    // Convert hex to RGB
-    let r = 0,
-      g = 0,
-      b = 0;
-
-    // Handle hex colors (#RGB or #RRGGBB)
-    if (backgroundColor.startsWith('#')) {
-      const hex = backgroundColor.substring(1);
-      if (hex.length === 3) {
-        r = parseInt(hex[0] + hex[0], 16);
-        g = parseInt(hex[1] + hex[1], 16);
-        b = parseInt(hex[2] + hex[2], 16);
-      } else if (hex.length === 6) {
-        r = parseInt(hex.substring(0, 2), 16);
-        g = parseInt(hex.substring(2, 4), 16);
-        b = parseInt(hex.substring(4, 6), 16);
-      }
-    }
-
-    // Calculate relative luminance
-    const rsRGB = r / 255;
-    const gsRGB = g / 255;
-    const bsRGB = b / 255;
-
-    const rLinear = rsRGB <= 0.03928 ? rsRGB / 12.92 : Math.pow((rsRGB + 0.055) / 1.055, 2.4);
-    const gLinear = gsRGB <= 0.03928 ? gsRGB / 12.92 : Math.pow((gsRGB + 0.055) / 1.055, 2.4);
-    const bLinear = bsRGB <= 0.03928 ? bsRGB / 12.92 : Math.pow((bsRGB + 0.055) / 1.055, 2.4);
-
-    const luminance = 0.2126 * rLinear + 0.7152 * gLinear + 0.0722 * bLinear;
-
-    // Use white text on dark backgrounds, black text on light backgrounds
-    // Threshold of 0.5 works well for most cases
-    return luminance > 0.5 ? '#000000' : '#ffffff';
+    return contrastTextColor(backgroundColor);
   }
 }

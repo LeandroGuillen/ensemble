@@ -51,21 +51,18 @@
           <line x1="17" y1="11" x2="23" y2="11"/>
         </svg>
       </button>
-      @if (confirmDeleteThreadId !== thread.id) {
-        <button
-          type="button"
-          class="btn-icon-sm btn-danger"
-          (click)="onRequestDelete(thread.id, $event)"
-          title="Remove thread"
-        >
-          &times;
-        </button>
-      }
-      @if (confirmDeleteThreadId === thread.id) {
-        <button type="button" class="confirm-delete-btn" (click)="onConfirmDelete(thread.id, $event)">
-          Confirm
-        </button>
-      }
+      <button
+        type="button"
+        class="btn-icon-sm btn-danger"
+        appConfirmButton
+        confirmLabel="Confirm"
+        armedClass="confirm-delete-btn"
+        (armedChange)="onDeleteArmed(thread.id, $event)"
+        (confirmed)="onConfirmDelete(thread.id, $event)"
+        title="Remove thread"
+      >
+        &times;
+      </button>
     </div>
   }
 </div>

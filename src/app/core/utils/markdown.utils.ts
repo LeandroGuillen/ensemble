@@ -187,4 +187,75 @@ export class MarkdownUtils {
       throw new Error(`Failed to parse YAML: ${error}`);
     }
   }
+
+  /**
+   * Escape HTML special characters to prevent XSS when rendering user markdown.
+   */
+  static escapeHtml(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  /**
+   * Convert a limited markdown subset to HTML (headers, emphasis, code, links,
+   * strikethrough, paragraphs). Input is HTML-escaped first.
+   * Callers that bind to `[innerHTML]` should still sanitize (e.g. DomSanitizer).
+   */
+  static markdownToHtml(markdown: string): string {
+    if (!markdown) {
+      return '';
+    }
+
+    let html = this.escapeHtml(markdown);
+
+    // Code blocks (must come before inline code and other formatting)
+    html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+
+    // Inline code (must come before bold/italic)
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+    // Headers
+    html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+    html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+    html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+
+    // Bold
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/__(.+?)__/g, '<strong>$1</strong>');
+
+    // Italic (simple approach - single asterisk/underscore)
+    html = html.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, '<em>$1</em>');
+    html = html.replace(/(?<!_)_([^_]+?)_(?!_)/g, '<em>$1</em>');
+
+    // Strikethrough
+    html = html.replace(/~~(.+?)~~/g, '<del>$1</del>');
+
+    // Links
+    html = html.replace(
+      /\[([^\]]+)\]\(([^)]+)\)/g,
+      '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'
+    );
+
+    // Line breaks - convert double newlines to paragraphs
+    const paragraphs = html.split(/\n\n+/);
+    html = paragraphs
+      .map((para) => {
+        para = para.trim();
+        if (!para) {
+          return '';
+        }
+        // Convert single newlines to <br> within paragraphs
+        para = para.replace(/\n/g, '<br>');
+        // Don't wrap if already has block-level tags
+        if (/^<(h[1-6]|pre|ul|ol)/.test(para)) {
+          return para;
+        }
+        return `<p>${para}</p>`;
+      })
+      .join('');
+
+    return html;
+  }
 }
