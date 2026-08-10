@@ -88,7 +88,7 @@ export class GeneratePortraitDialogComponent implements OnChanges {
     this.errorChange.emit(null);
     try {
       this.imageWorkflows = await this.imageGenerationService.listWorkflows();
-      const configured = this.imageGenerationService.getSettings().invokeai.defaultWorkflowId;
+      const configured = this.imageGenerationService.getDefaultWorkflowId();
       this.selectedImageWorkflowId =
         (configured && this.imageWorkflows.some((workflow) => workflow.id === configured)
           ? configured

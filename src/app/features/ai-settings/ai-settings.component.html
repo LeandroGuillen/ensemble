@@ -283,14 +283,14 @@
 
             @if (activeSection === 'image-generation') {
                 <form [formGroup]="imageForm" class="ai-form">
-                    <div class="form-section" [settingsSearchable]="['Enable character image generation', 'InvokeAI', 'OpenAI', 'ChatGPT', 'Gemini', 'portrait', 'workflow', 'API Key', imageForm.get('baseUrl')?.value, imageForm.get('defaultWorkflowId')?.value]">
+                    <div class="form-section" [settingsSearchable]="['Enable character image generation', 'InvokeAI', 'ComfyUI', 'OpenAI', 'ChatGPT', 'Gemini', 'portrait', 'workflow', 'API Key', imageForm.get('baseUrl')?.value, imageForm.get('comfyBaseUrl')?.value, imageForm.get('defaultWorkflowId')?.value, imageForm.get('comfyDefaultWorkflowId')?.value]">
                         <div class="form-group">
                             <label class="checkbox-label">
                                 <input type="checkbox" formControlName="enabled" />
                                 <span>Enable character image generation</span>
                             </label>
                             <p class="field-hint">
-                                Generate character portraits with a self-hosted InvokeAI server
+                                Generate character portraits with a self-hosted InvokeAI or ComfyUI server,
                                 or a cloud provider (OpenAI, Google Gemini).
                             </p>
                         </div>
@@ -363,6 +363,60 @@
                             </div>
                         }
 
+                        @if (imageForm.get("enabled")?.value && imageProvider === 'comfyui') {
+                            <div class="form-group">
+                                <label class="form-label" for="comfyUiBaseUrl">ComfyUI Server URL</label>
+                                <input
+                                    id="comfyUiBaseUrl"
+                                    type="text"
+                                    class="form-control"
+                                    formControlName="comfyBaseUrl"
+                                    placeholder="http://127.0.0.1:8188"
+                                />
+                                <p class="field-hint">
+                                    Point at your local ComfyUI server. Save workflows with
+                                    <code>File → Export (API)</code> into ComfyUI's user workflows folder.
+                                    Title nodes <code>Positive Prompt</code> and <code>Negative Prompt</code>
+                                    (StringConcatenate, CLIPTextEncode, or text primitives). For
+                                    StringConcatenate, Ensemble writes the character prompt into
+                                    <code>string_b</code> and keeps <code>string_a</code> as the fixed template.
+                                </p>
+                            </div>
+
+                            <div class="form-group">
+                                <button
+                                    type="button"
+                                    class="btn btn-secondary"
+                                    (click)="refreshImageWorkflows()"
+                                    [disabled]="imageTesting || !imageForm.get('comfyBaseUrl')?.value?.trim()"
+                                >
+                                    {{ imageTesting ? "Connecting…" : "Test & Load Workflows" }}
+                                </button>
+                                @if (imageTestMessage) {
+                                    <div class="test-result success">{{ imageTestMessage }}</div>
+                                }
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="defaultComfyWorkflow">Default Workflow</label>
+                                <select
+                                    id="defaultComfyWorkflow"
+                                    class="form-control"
+                                    formControlName="comfyDefaultWorkflowId"
+                                >
+                                    <option value="">Choose when generating</option>
+                                    @for (workflow of imageWorkflows; track workflow.id) {
+                                        <option [value]="workflow.id">{{ workflow.name }}</option>
+                                    }
+                                </select>
+                                <p class="field-hint">
+                                    Only API-format workflows with Positive Prompt and Negative Prompt
+                                    titled nodes are shown. UI graph saves from ComfyUI are ignored —
+                                    use Export (API).
+                                </p>
+                            </div>
+                        }
+
                         @if (imageForm.get("enabled")?.value && imageProvider === 'openai') {
                             <div class="form-group">
                                 <label class="form-label" for="openaiApiKey">OpenAI API Key</label>
@@ -419,7 +473,7 @@
                             </div>
                         }
 
-                        @if (imageForm.get("enabled")?.value && imageProvider !== 'invokeai') {
+                        @if (imageForm.get("enabled")?.value && !usesLocalWorkflowProvider) {
                             <div class="form-group">
                                 <button
                                     type="button"

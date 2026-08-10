@@ -46,6 +46,7 @@ export class AiSettingsComponent implements OnInit {
 
   imageProviders = [
     { id: 'invokeai', name: 'InvokeAI', description: 'Self-hosted server with workflows' },
+    { id: 'comfyui', name: 'ComfyUI', description: 'Self-hosted ComfyUI with workflows' },
     { id: 'openai', name: 'OpenAI / ChatGPT (Cloud)', description: 'Requires API key' },
     { id: 'gemini', name: 'Google Gemini (Cloud)', description: 'Requires API key' },
   ];
@@ -62,6 +63,8 @@ export class AiSettingsComponent implements OnInit {
       provider: [imageSettings.provider],
       baseUrl: [imageSettings.invokeai.baseUrl],
       defaultWorkflowId: [imageSettings.invokeai.defaultWorkflowId || ''],
+      comfyBaseUrl: [imageSettings.comfyui?.baseUrl || 'http://127.0.0.1:8188'],
+      comfyDefaultWorkflowId: [imageSettings.comfyui?.defaultWorkflowId || ''],
       openaiApiKey: [imageSettings.openai?.apiKey || ''],
       openaiModel: [imageSettings.openai?.model || ''],
       geminiApiKey: [imageSettings.gemini?.apiKey || ''],
@@ -87,6 +90,8 @@ export class AiSettingsComponent implements OnInit {
         provider: settings.provider,
         baseUrl: settings.invokeai.baseUrl,
         defaultWorkflowId: settings.invokeai.defaultWorkflowId || '',
+        comfyBaseUrl: settings.comfyui?.baseUrl || 'http://127.0.0.1:8188',
+        comfyDefaultWorkflowId: settings.comfyui?.defaultWorkflowId || '',
         openaiApiKey: settings.openai?.apiKey || '',
         openaiModel: settings.openai?.model || '',
         geminiApiKey: settings.gemini?.apiKey || '',
@@ -94,13 +99,17 @@ export class AiSettingsComponent implements OnInit {
       },
       { emitEvent: false }
     );
-    if (settings.enabled && settings.provider === 'invokeai') {
+    if (settings.enabled && (settings.provider === 'invokeai' || settings.provider === 'comfyui')) {
       void this.refreshImageWorkflows(false);
     }
   }
 
   get imageProvider(): ImageGenerationProviderId {
     return this.imageForm.get('provider')?.value || 'invokeai';
+  }
+
+  get usesLocalWorkflowProvider(): boolean {
+    return this.imageProvider === 'invokeai' || this.imageProvider === 'comfyui';
   }
 
   /** Builds the full settings candidate from the current form state. */
@@ -112,6 +121,10 @@ export class AiSettingsComponent implements OnInit {
       invokeai: {
         baseUrl: value.baseUrl,
         defaultWorkflowId: value.defaultWorkflowId || undefined,
+      },
+      comfyui: {
+        baseUrl: value.comfyBaseUrl,
+        defaultWorkflowId: value.comfyDefaultWorkflowId || undefined,
       },
       openai: { apiKey: value.openaiApiKey || '', model: value.openaiModel?.trim() || undefined },
       gemini: { apiKey: value.geminiApiKey || '', model: value.geminiModel?.trim() || undefined },
@@ -231,26 +244,40 @@ export class AiSettingsComponent implements OnInit {
   }
 
   async refreshImageWorkflows(showResult = true): Promise<void> {
-    if (!this.imageForm.value.baseUrl?.trim()) return;
+    const provider = this.imageProvider;
+    if (provider !== 'invokeai' && provider !== 'comfyui') return;
+
+    const baseUrl =
+      provider === 'comfyui'
+        ? this.imageForm.value.comfyBaseUrl?.trim()
+        : this.imageForm.value.baseUrl?.trim();
+    if (!baseUrl) return;
+
     this.imageTesting = true;
     this.imageTestMessage = null;
     this.error = null;
     try {
-      const candidate = { ...this.buildImageSettings(), provider: 'invokeai' as const };
+      const candidate = { ...this.buildImageSettings(), provider };
       const connection = await this.imageGenerationService.testConnection(candidate);
       if (!connection.success) {
-        throw new Error(connection.error || 'Could not connect to InvokeAI');
+        throw new Error(connection.error || `Could not connect to ${provider === 'comfyui' ? 'ComfyUI' : 'InvokeAI'}`);
       }
       this.imageWorkflows = await this.imageGenerationService.listWorkflows(candidate);
+      const label = provider === 'comfyui' ? 'ComfyUI' : 'InvokeAI';
       this.imageTestMessage = showResult
-        ? `Connected to InvokeAI ${connection.version || ''}. Found ${this.imageWorkflows.length} compatible workflow(s).`
+        ? `Connected to ${label}${connection.version ? ` ${connection.version}` : ''}. Found ${this.imageWorkflows.length} compatible workflow(s).`
         : null;
-      const current = this.imageForm.value.defaultWorkflowId;
+      const workflowControl =
+        provider === 'comfyui' ? 'comfyDefaultWorkflowId' : 'defaultWorkflowId';
+      const current = this.imageForm.value[workflowControl];
       if (current && !this.imageWorkflows.some((workflow) => workflow.id === current)) {
-        this.imageForm.patchValue({ defaultWorkflowId: '' });
+        this.imageForm.patchValue({ [workflowControl]: '' });
       }
     } catch (error) {
-      this.error = error instanceof Error ? error.message : 'Failed to load InvokeAI workflows';
+      this.error =
+        error instanceof Error
+          ? error.message
+          : `Failed to load ${provider === 'comfyui' ? 'ComfyUI' : 'InvokeAI'} workflows`;
       this.imageWorkflows = [];
     } finally {
       this.imageTesting = false;

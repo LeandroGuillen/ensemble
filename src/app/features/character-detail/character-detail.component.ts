@@ -1166,7 +1166,7 @@ export class CharacterDetailComponent
     if (this.selectedImageWorkflowId) {
       return this.selectedImageWorkflowId;
     }
-    const configured = this.imageGenerationService.getSettings().invokeai.defaultWorkflowId;
+    const configured = this.imageGenerationService.getDefaultWorkflowId();
     const workflows = this.imageWorkflows.length
       ? this.imageWorkflows
       : (this.imageWorkflows = await this.imageGenerationService.listWorkflows());
