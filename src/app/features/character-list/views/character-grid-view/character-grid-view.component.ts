@@ -2,6 +2,7 @@ import { Component, Input, Output, EventEmitter } from "@angular/core";
 
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { Character, Tag, Category } from "../../../../core/interfaces";
+import { MetadataHelperService } from "../../../../core/services/metadata-helper.service";
 import { resolveEffectiveCategory } from "../../../../core/utils/character-category.utils";
 
 @Component({
@@ -34,18 +35,18 @@ export class CharacterGridViewComponent {
 
   private dragInProgress = false;
 
+  constructor(public metadataHelper: MetadataHelperService) {}
+
   getDisplayCategoryId(character: Character): string {
     return resolveEffectiveCategory(character, this.categoryContextBookId);
   }
 
   getCategoryName(categoryId: string): string {
-    const category = this.categories.find((cat) => cat.id === categoryId);
-    return category?.name || categoryId;
+    return this.metadataHelper.getCategoryName(categoryId);
   }
 
   getCategoryColor(categoryId: string): string {
-    const category = this.categories.find((cat) => cat.id === categoryId);
-    return category?.color || "#95a5a6";
+    return this.metadataHelper.getCategoryColor(categoryId);
   }
 
   getCharacterTagsInOrder(character: Character): Tag[] {

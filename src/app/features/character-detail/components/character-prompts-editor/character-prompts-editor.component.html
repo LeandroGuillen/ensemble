@@ -1,0 +1,102 @@
+<section class="panel prompts-panel">
+  <header class="panel-header">
+    <h3 class="panel-title">Prompts</h3>
+    <span class="panel-subtitle">
+      Image-generation prompts — the starred one is the default and is written first in the file
+    </span>
+  </header>
+  <div class="prompts-body">
+    <div class="prompts-list-col">
+      <ul class="prompts-list">
+        @for (prompt of prompts; track $index) {
+          <li
+            class="prompts-list-item"
+            [class.active]="selectedPromptIndex === $index"
+            (click)="selectPrompt($index)"
+          >
+            <button
+              type="button"
+              class="prompt-star"
+              [class.starred]="$index === 0"
+              [title]="$index === 0 ? 'Default prompt' : 'Set as default'"
+              (click)="setPromptAsDefault($index); $event.stopPropagation()"
+            >★</button>
+            <span class="prompts-list-name">{{ getPromptLabel(prompt, $index) }}</span>
+          </li>
+        } @empty {
+          <li class="prompts-list-empty">No prompts yet</li>
+        }
+      </ul>
+      <button type="button" class="btn btn-secondary prompts-add-btn" (click)="addPrompt()">
+        + Add prompt
+      </button>
+    </div>
+
+    <div class="prompt-editor-col">
+      @if (selectedPrompt) {
+        <div class="prompt-field">
+          <label class="form-label" for="prompt-name">Name</label>
+          <input
+            type="text"
+            id="prompt-name"
+            class="form-control"
+            [ngModel]="selectedPrompt.name"
+            (ngModelChange)="selectedPrompt.name = $event; onPromptFieldChange()"
+            placeholder="Prompt name (optional)"
+          />
+        </div>
+        <div class="prompt-field">
+          <label class="form-label" for="prompt-positive">Positive</label>
+          <textarea
+            id="prompt-positive"
+            class="form-control prompt-editor"
+            rows="6"
+            [ngModel]="selectedPrompt.positive"
+            (ngModelChange)="selectedPrompt.positive = $event; onPromptFieldChange()"
+            placeholder="What you want to see…"
+          ></textarea>
+        </div>
+        <div class="prompt-field">
+          <label class="form-label" for="prompt-negative">Negative</label>
+          <textarea
+            id="prompt-negative"
+            class="form-control prompt-editor"
+            rows="4"
+            [ngModel]="selectedPrompt.negative"
+            (ngModelChange)="selectedPrompt.negative = $event; onPromptFieldChange()"
+            placeholder="What you don't want to see…"
+          ></textarea>
+        </div>
+        <div class="prompt-editor-actions">
+          <button
+            type="button"
+            class="btn btn-primary prompt-generate-btn"
+            (click)="onGenerate()"
+            [disabled]="promptGenerateDisabled"
+            [title]="promptGenerateTitle"
+          >
+            @if (generatingPromptIndex !== null) {
+              <span class="spinner spinner-sm"></span>
+            }
+            {{ generatingPromptIndex !== null ? 'Generating…' : 'Generate' }}
+          </button>
+          @if (prompts.length > 0 && selectedPromptIndex !== 0) {
+            <button
+              type="button"
+              class="btn btn-secondary"
+              (click)="setPromptAsDefault(selectedPromptIndex)"
+            >Set as default</button>
+          }
+          <button
+            type="button"
+            class="btn btn-ghost prompt-delete-btn"
+            (click)="removePrompt(selectedPromptIndex)"
+            [disabled]="prompts.length === 0"
+          >Delete</button>
+        </div>
+      } @else {
+        <div class="prompt-empty">No prompt selected. Add one to get started.</div>
+      }
+    </div>
+  </div>
+</section>

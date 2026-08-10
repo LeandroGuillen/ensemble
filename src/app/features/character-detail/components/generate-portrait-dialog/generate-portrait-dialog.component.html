@@ -1,0 +1,78 @@
+@if (visible) {
+  <div class="dialog-backdrop" (click)="onBackdropClick()">
+    <section
+      class="portrait-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="portrait-dialog-title"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="dialog-header">
+        <div>
+          <h2 id="portrait-dialog-title">Generate portrait</h2>
+          <p>{{ characterName || 'New character' }}</p>
+        </div>
+        <button
+          type="button"
+          class="dialog-close"
+          (click)="onCloseClick()"
+          [disabled]="isGeneratingPortrait"
+        >×</button>
+      </header>
+      @if (error) {
+        <div class="error-banner">
+          <span class="error-banner-text">{{ error }}</span>
+        </div>
+      }
+      <label class="form-label" for="portrait-workflow">InvokeAI workflow</label>
+      <select
+        id="portrait-workflow"
+        class="form-control"
+        [(ngModel)]="selectedImageWorkflowId"
+      >
+        @for (workflow of imageWorkflows; track workflow.id) {
+          <option [value]="workflow.id">{{ workflow.name }}</option>
+        }
+      </select>
+      <label class="form-label" for="positive-image-prompt">Character description</label>
+      <textarea
+        id="positive-image-prompt"
+        class="form-control prompt-editor"
+        rows="7"
+        [(ngModel)]="positiveImagePrompt"
+        placeholder="Physical appearance, clothing, expression…"
+      ></textarea>
+      <label class="form-label" for="negative-image-prompt">Character exclusions</label>
+      <textarea
+        id="negative-image-prompt"
+        class="form-control prompt-editor"
+        rows="3"
+        [(ngModel)]="negativeImagePrompt"
+        placeholder="Optional exclusions specific to this character"
+      ></textarea>
+      <p class="dialog-hint">
+        The workflow supplies fixed prompt templates, model, LoRAs, dimensions, and generation settings.
+        Ensemble only fills in the character-specific text above.
+      </p>
+      <footer class="dialog-footer">
+        <button
+          type="button"
+          class="btn btn-ghost"
+          (click)="onCloseClick()"
+          [disabled]="isGeneratingPortrait"
+        >Cancel</button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          (click)="generatePortrait()"
+          [disabled]="isGeneratingPortrait || !selectedImageWorkflowId || !positiveImagePrompt.trim()"
+        >
+          @if (isGeneratingPortrait) {
+            <span class="spinner spinner-sm"></span>
+          }
+          {{ isGeneratingPortrait ? 'Generating…' : 'Generate' }}
+        </button>
+      </footer>
+    </section>
+  </div>
+}

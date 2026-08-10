@@ -19,6 +19,7 @@ import {
   ProjectService,
   LoggingService,
   ModalService,
+  MetadataHelperService,
 } from "../../core/services";
 import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
 
@@ -53,8 +54,9 @@ export class CastListComponent implements OnInit, OnDestroy {
     private router: Router,
     private ngZone: NgZone,
     private cdr: ChangeDetectorRef,
-    private logger: LoggingService
-    , private modalService: ModalService
+    private logger: LoggingService,
+    private modalService: ModalService,
+    private metadataHelper: MetadataHelperService
   ) {}
 
   ngOnInit(): void {
@@ -315,7 +317,6 @@ export class CastListComponent implements OnInit, OnDestroy {
   }
 
   getCategoryName(categoryId: string): string {
-    const category = this.categories.find((cat) => cat.id === categoryId);
-    return category?.name || categoryId;
+    return this.metadataHelper.getCategoryName(categoryId);
   }
 }

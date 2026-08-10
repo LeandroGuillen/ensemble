@@ -18,6 +18,7 @@ import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
 import { CastService } from './cast.service';
 import { LoggingService } from './logging.service';
+import { requireProject } from '../utils/project.utils';
 
 @Injectable({
   providedIn: 'root',
@@ -86,9 +87,7 @@ export class MetadataService {
    * Saves metadata via ProjectService (updates ensemble.json)
    */
   async saveMetadata(metadata: ProjectMetadata): Promise<void> {
-    if (!this.currentProjectPath) {
-      throw new Error('No project path set');
-    }
+    requireProject(this.projectService.getCurrentProject());
 
     try {
       // Validate metadata before saving

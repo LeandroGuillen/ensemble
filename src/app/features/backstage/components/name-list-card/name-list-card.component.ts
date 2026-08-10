@@ -2,6 +2,7 @@ import { Component, Input, Output, EventEmitter, HostListener } from "@angular/c
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { NameList, NameWithNotes } from "../../../../core/interfaces/backstage.interface";
+import { ModalService } from "../../../../core/services/modal.service";
 
 @Component({
   selector: "app-name-list-card",
@@ -29,6 +30,8 @@ export class NameListCardComponent {
   selectedNameIndex: number | null = null;
   bulkAddMode = false;
   bulkInputText = "";
+
+  constructor(private modalService: ModalService) {}
 
   onTitleChange(title: string): void {
     this.update.emit({ title });
@@ -223,17 +226,27 @@ export class NameListCardComponent {
       case "Backspace":
         if (currentIndex >= 0 && currentIndex < this.nameList.names.length) {
           event.preventDefault();
-          if (confirm("Delete this name?")) {
-            this.onRemoveName(currentIndex);
-            if (this.selectedNameIndex !== null) {
-              this.selectedNameIndex = Math.min(
-                this.selectedNameIndex,
-                this.nameList.names.length - 2
-              );
-            }
-          }
+          void this.confirmAndRemoveName(currentIndex);
         }
         break;
+    }
+  }
+
+  private async confirmAndRemoveName(index: number): Promise<void> {
+    if (
+      !(await this.modalService.confirm("Delete this name?", "Delete Name", {
+        confirmText: "Delete",
+        danger: true,
+      }))
+    ) {
+      return;
+    }
+    this.onRemoveName(index);
+    if (this.selectedNameIndex !== null) {
+      this.selectedNameIndex = Math.min(
+        this.selectedNameIndex,
+        this.nameList.names.length - 1
+      );
     }
   }
 

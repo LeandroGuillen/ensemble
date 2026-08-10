@@ -1,0 +1,44 @@
+.page-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+
+  .pin-character-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+
+    .plus-glyph {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.05rem;
+      line-height: 1;
+      font-weight: 500;
+      margin-right: 2px;
+    }
+  }
+}
+
+.zoom-level {
+  font-size: 0.8125rem;
+  color: var(--color-text-primary);
+  min-width: 48px;
+  padding: 0 6px;
+  text-align: center;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+@media (max-width: 768px) {
+  .page-actions {
+    gap: var(--spacing-xs);
+  }
+
+  .zoom-level {
+    display: none;
+  }
+}

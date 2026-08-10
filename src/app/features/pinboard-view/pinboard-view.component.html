@@ -1,97 +1,21 @@
 <app-page-header [title]="getCurrentPinboardName()">
-  <div class="page-actions">
-    <!-- Zoom controls -->
-    <div class="zoom-controls">
-      <button class="toggle-option" (click)="zoomOut()" [disabled]="currentZoomIndex === 0" title="Zoom out" aria-label="Zoom out">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-        </svg>
-      </button>
-      <span class="zoom-level">{{ getCurrentZoomLevel() }}</span>
-      <button
-        class="toggle-option"
-        (click)="zoomIn()"
-        [disabled]="currentZoomIndex === zoomLevels.length - 1"
-        title="Zoom in"
-        aria-label="Zoom in"
-        >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-        </svg>
-      </button>
-    </div>
-
-    <button class="icon-btn" (click)="onResetView()" title="Fit to view" aria-label="Fit to view">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path
-          d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          />
-        <circle cx="10" cy="10" r="3" stroke="currentColor" stroke-width="2" />
-      </svg>
-    </button>
-
-    <button
-      class="icon-toggle"
-      [class.active]="showGrid"
-      (click)="onToggleGrid()"
-      [title]="showGrid ? 'Hide Grid' : 'Show Grid'"
-      [attr.aria-label]="showGrid ? 'Hide Grid' : 'Show Grid'"
-      >
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path
-          d="M3 9H21M3 15H21M9 3V21M15 3V21M3 3H21V21H3V3Z"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          />
-      </svg>
-    </button>
-
-    <button
-      class="icon-toggle"
-      [class.active]="snapToGrid"
-      (click)="onToggleSnapToGrid()"
-      [title]="snapToGrid ? 'Disable Snap to Grid' : 'Enable Snap to Grid'"
-      [attr.aria-label]="snapToGrid ? 'Disable Snap to Grid' : 'Enable Snap to Grid'"
-      >
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <!-- Grid dots -->
-        <circle cx="6" cy="6" r="1.5" fill="currentColor" opacity="0.4" />
-        <circle cx="12" cy="6" r="1.5" fill="currentColor" opacity="0.4" />
-        <circle cx="18" cy="6" r="1.5" fill="currentColor" opacity="0.4" />
-        <circle cx="6" cy="12" r="1.5" fill="currentColor" opacity="0.4" />
-        <circle cx="12" cy="12" r="1.5" fill="currentColor" />
-        <circle cx="18" cy="12" r="1.5" fill="currentColor" opacity="0.4" />
-        <circle cx="6" cy="18" r="1.5" fill="currentColor" opacity="0.4" />
-        <circle cx="12" cy="18" r="1.5" fill="currentColor" opacity="0.4" />
-        <circle cx="18" cy="18" r="1.5" fill="currentColor" opacity="0.4" />
-        <!-- Snap indicator - crosshair pointing to center -->
-        <path
-          d="M12 8V10M12 14V16M8 12H10M14 12H16"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          />
-        <!-- Center highlight ring -->
-        <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5" fill="none" />
-      </svg>
-    </button>
-
-    <button class="btn btn-primary pin-character-btn" (click)="openAddPinDialog()" title="Pin Character (P)">
-      <span class="plus-glyph" aria-hidden="true">+</span>
-      Pin Character
-      <kbd class="shortcut-hint">P</kbd>
-    </button>
-  </div>
+  <app-pinboard-toolbar
+    [currentZoomLevel]="networkService.getCurrentZoomLevel()"
+    [canZoomIn]="networkService.currentZoomIndex < networkService.zoomLevels.length - 1"
+    [canZoomOut]="networkService.currentZoomIndex > 0"
+    [showGrid]="networkService.showGrid"
+    [snapToGrid]="networkService.snapToGrid"
+    (zoomIn)="onZoomIn()"
+    (zoomOut)="onZoomOut()"
+    (resetView)="onResetView()"
+    (toggleGrid)="onToggleGrid()"
+    (toggleSnapToGrid)="onToggleSnapToGrid()"
+    (pinCharacter)="openAddPinDialog()"
+  ></app-pinboard-toolbar>
 </app-page-header>
 
 <div class="pinboard-page">
   <div class="pinboard-view">
-    <!-- Pinboard Sidebar -->
     <div
       class="pinboard-sidebar-anim"
       [@pinboardSidebar]="sidebarOpen ? 'open' : 'closed'"
@@ -120,7 +44,7 @@
           </svg>
         </button>
       }
-      <!-- Empty State -->
+
       @if (isEmpty && networkInitialized) {
         <div class="pinboard-empty-state">
           <div class="empty-icon">📌</div>
@@ -137,15 +61,20 @@
       }
 
       <div #pinboardContainer class="pinboard-canvas" [class.hidden]="isEmpty && networkInitialized">
-        <!-- vis.js network will be rendered here -->
       </div>
 
-      <!-- Plus icon for connection creation (outside canvas to ensure visibility) -->
-      @if (selectedNodeForConnection && plusIconPosition && !connectionMode && !showConnectionDialog && !showEditDialog && !showAddPinDialog) {
+      @if (
+        interactionService.selectedNodeForConnection &&
+        interactionService.plusIconPosition &&
+        !interactionService.connectionMode &&
+        !showConnectionDialog &&
+        !showEditDialog &&
+        !showAddPinDialog
+      ) {
         <div
           class="connection-plus-icon"
-          [style.left.px]="plusIconPosition.x"
-          [style.top.px]="plusIconPosition.y"
+          [style.left.px]="interactionService.plusIconPosition!.x"
+          [style.top.px]="interactionService.plusIconPosition!.y"
           (click)="onPlusIconClick($event)"
           (mousedown)="$event.stopPropagation()"
           title="Click to create a connection from this character"
@@ -157,21 +86,19 @@
         </div>
       }
 
-      <!-- Connection mode indicator -->
-      @if (connectionMode) {
+      @if (interactionService.connectionMode) {
         <div class="connection-mode-indicator">
           <p>Click on another character to create a connection</p>
           <button class="btn-cancel-connection" (click)="exitConnectionMode()">Cancel</button>
         </div>
       }
 
-      <!-- Node Delete Icon (shows on hover) -->
-      @if (hoveredNodeId && getHoveredNodePosition()) {
+      @if (interactionService.hoveredNodeId && interactionService.getHoveredNodePosition()) {
         <div
           class="node-delete-icon"
-          [style.left.px]="getHoveredNodePosition()?.x"
-          [style.top.px]="getHoveredNodePosition()?.y"
-          (click)="removePinFromPinboard(hoveredNodeId!)"
+          [style.left.px]="interactionService.getHoveredNodePosition()?.x"
+          [style.top.px]="interactionService.getHoveredNodePosition()?.y"
+          (click)="removePinFromPinboard(interactionService.hoveredNodeId!)"
           (mouseenter)="$event.stopPropagation()"
           (mouseleave)="$event.stopPropagation()"
           title="Remove this character from the pinboard"
@@ -182,312 +109,47 @@
         </div>
       }
     </div>
-
   </div>
 </div>
 
-<!-- Connection Creation Dialog -->
-@if (showConnectionDialog) {
-  <div class="modal-overlay" (click)="closeDialogs()">
-    <div class="modal-dialog" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <h3>Create Connection</h3>
-        <button class="close-btn" (click)="closeDialogs()">&times;</button>
-      </div>
-      <div class="modal-body">
-        <form (ngSubmit)="saveConnection()">
-          <!-- Connection Preview -->
-          <div class="connection-preview">
-            <div class="preview-nodes">
-              <div class="preview-node-container">
-                <div class="preview-node">
-                  @if (getCharacterById(connectionForm.source); as sourceChar) {
-                    @if (getThumbnailDataUrl(sourceChar)) {
-                      <img
-                        [src]="getThumbnailDataUrl(sourceChar)"
-                        [alt]="sourceChar.name" />
-                    }
-                    @if (!getThumbnailDataUrl(sourceChar)) {
-                      <div
-                        class="preview-node-placeholder">
-                        {{ sourceChar.name.charAt(0).toUpperCase() }}
-                      </div>
-                    }
-                  }
-                </div>
-                @if (connectionForm.arrowTo) {
-                  <div class="preview-arrow-indicator" [style.border-color]="connectionForm.color" [style.color]="connectionForm.color">
-                    <svg width="16" height="16" viewBox="0 0 16 16">
-                      <path d="M14 8 L4 8 M4 8 L8 4 M4 8 L8 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                    </svg>
-                  </div>
-                }
-              </div>
-              <div class="preview-line" [style.border-color]="connectionForm.color">
-                @if (connectionForm.label) {
-                  <span class="preview-label" [style.color]="connectionForm.labelColor">
-                    {{ connectionForm.label }}
-                  </span>
-                }
-              </div>
-              <div class="preview-node-container">
-                @if (connectionForm.arrowFrom) {
-                  <div class="preview-arrow-indicator" [style.border-color]="connectionForm.color" [style.color]="connectionForm.color">
-                    <svg width="16" height="16" viewBox="0 0 16 16">
-                      <path d="M2 8 L12 8 M12 8 L8 4 M12 8 L8 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                    </svg>
-                  </div>
-                }
-                <div class="preview-node">
-                  @if (getCharacterById(connectionForm.target); as targetChar) {
-                    @if (getThumbnailDataUrl(targetChar)) {
-                      <img
-                        [src]="getThumbnailDataUrl(targetChar)"
-                        [alt]="targetChar.name" />
-                    }
-                    @if (!getThumbnailDataUrl(targetChar)) {
-                      <div
-                        class="preview-node-placeholder">
-                        {{ targetChar.name.charAt(0).toUpperCase() }}
-                      </div>
-                    }
-                  }
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="form-group">
-            <label for="connectionLabel">Label:</label>
-            <input
-              type="text"
-              id="connectionLabel"
-              [(ngModel)]="connectionForm.label"
-              name="label"
-              placeholder="Optional label"
-              />
-          </div>
-          <div class="form-group color-group">
-            <app-color-selector
-              label="Connection Color"
-              [color]="connectionForm.color"
-              [usedColors]="getUsedConnectionColors()"
-              (colorChange)="connectionForm.color = $event"
-            ></app-color-selector>
-            <app-color-selector
-              label="Label Color"
-              [color]="connectionForm.labelColor"
-              [usedColors]="getUsedLabelColors()"
-              (colorChange)="connectionForm.labelColor = $event"
-            ></app-color-selector>
-          </div>
-          <div class="form-group checkbox-group">
-            <label>
-              <input type="checkbox" [(ngModel)]="connectionForm.arrowFrom" name="arrowFrom" />
-              Arrow from source
-            </label>
-          </div>
-          <div class="form-group checkbox-group">
-            <label>
-              <input type="checkbox" [(ngModel)]="connectionForm.arrowTo" name="arrowTo" />
-              Arrow to target
-            </label>
-          </div>
-          <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" (click)="closeDialogs()">Cancel</button>
-            <button type="submit" class="btn btn-primary">Create Connection</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-}
+<app-connection-edit-dialog
+  [(visible)]="showConnectionDialog"
+  mode="create"
+  [form]="connectionForm"
+  [sourceCharacter]="getCharacterById(connectionForm.source)"
+  [targetCharacter]="getCharacterById(connectionForm.target)"
+  [sourceThumbnail]="connectionForm.source ? getThumbnailDataUrl(getCharacterById(connectionForm.source)!) : null"
+  [targetThumbnail]="connectionForm.target ? getThumbnailDataUrl(getCharacterById(connectionForm.target)!) : null"
+  [usedConnectionColors]="getUsedConnectionColors()"
+  [usedLabelColors]="getUsedLabelColors()"
+  (save)="onConnectionSave($event)"
+  (visibleChange)="!$event && closeDialogs()"
+></app-connection-edit-dialog>
 
-<!-- Connection Edit Dialog -->
-@if (showEditDialog) {
-  <div class="modal-overlay" (click)="closeDialogs()">
-    <div class="modal-dialog" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <h3>Edit Connection</h3>
-        <button class="close-btn" (click)="closeDialogs()">&times;</button>
-      </div>
-      <div class="modal-body">
-        <form (ngSubmit)="saveConnection()">
-          <!-- Connection Preview -->
-          <div class="connection-preview">
-            <div class="preview-nodes">
-              <div class="preview-node-container">
-                <div class="preview-node">
-                  @if (getCharacterById(connectionForm.source); as sourceChar) {
-                    @if (getThumbnailDataUrl(sourceChar)) {
-                      <img
-                        [src]="getThumbnailDataUrl(sourceChar)"
-                        [alt]="sourceChar.name" />
-                    }
-                    @if (!getThumbnailDataUrl(sourceChar)) {
-                      <div
-                        class="preview-node-placeholder">
-                        {{ sourceChar.name.charAt(0).toUpperCase() }}
-                      </div>
-                    }
-                  }
-                </div>
-                @if (connectionForm.arrowTo) {
-                  <div class="preview-arrow-indicator" [style.border-color]="connectionForm.color" [style.color]="connectionForm.color">
-                    <svg width="16" height="16" viewBox="0 0 16 16">
-                      <path d="M14 8 L4 8 M4 8 L8 4 M4 8 L8 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                    </svg>
-                  </div>
-                }
-              </div>
-              <div class="preview-line" [style.border-color]="connectionForm.color">
-                @if (connectionForm.label) {
-                  <span class="preview-label" [style.color]="connectionForm.labelColor">
-                    {{ connectionForm.label }}
-                  </span>
-                }
-              </div>
-              <div class="preview-node-container">
-                @if (connectionForm.arrowFrom) {
-                  <div class="preview-arrow-indicator" [style.border-color]="connectionForm.color" [style.color]="connectionForm.color">
-                    <svg width="16" height="16" viewBox="0 0 16 16">
-                      <path d="M2 8 L12 8 M12 8 L8 4 M12 8 L8 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                    </svg>
-                  </div>
-                }
-                <div class="preview-node">
-                  @if (getCharacterById(connectionForm.target); as targetChar) {
-                    @if (getThumbnailDataUrl(targetChar)) {
-                      <img
-                        [src]="getThumbnailDataUrl(targetChar)"
-                        [alt]="targetChar.name" />
-                    }
-                    @if (!getThumbnailDataUrl(targetChar)) {
-                      <div
-                        class="preview-node-placeholder">
-                        {{ targetChar.name.charAt(0).toUpperCase() }}
-                      </div>
-                    }
-                  }
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="form-group">
-            <label for="editConnectionLabel">Label:</label>
-            <input
-              type="text"
-              id="editConnectionLabel"
-              [(ngModel)]="connectionForm.label"
-              name="label"
-              placeholder="Optional label"
-              />
-          </div>
-          <div class="form-group color-group">
-            <app-color-selector
-              label="Connection Color"
-              [color]="connectionForm.color"
-              [usedColors]="getUsedConnectionColors()"
-              (colorChange)="connectionForm.color = $event"
-            ></app-color-selector>
-            <app-color-selector
-              label="Label Color"
-              [color]="connectionForm.labelColor"
-              [usedColors]="getUsedLabelColors()"
-              (colorChange)="connectionForm.labelColor = $event"
-            ></app-color-selector>
-          </div>
-          <div class="form-group checkbox-group">
-            <label>
-              <input type="checkbox" [(ngModel)]="connectionForm.arrowFrom" name="arrowFrom" />
-              Arrow from source
-            </label>
-          </div>
-          <div class="form-group checkbox-group">
-            <label>
-              <input type="checkbox" [(ngModel)]="connectionForm.arrowTo" name="arrowTo" />
-              Arrow to target
-            </label>
-          </div>
-          <div class="modal-actions">
-            <button type="button" class="btn btn-danger" (click)="deleteConnection()">Delete</button>
-            <button type="button" class="btn btn-secondary" (click)="closeDialogs()">Cancel</button>
-            <button type="submit" class="btn btn-primary">Save Changes</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-}
+<app-connection-edit-dialog
+  [(visible)]="showEditDialog"
+  mode="edit"
+  [form]="connectionForm"
+  [sourceCharacter]="getCharacterById(connectionForm.source)"
+  [targetCharacter]="getCharacterById(connectionForm.target)"
+  [sourceThumbnail]="connectionForm.source ? getThumbnailDataUrl(getCharacterById(connectionForm.source)!) : null"
+  [targetThumbnail]="connectionForm.target ? getThumbnailDataUrl(getCharacterById(connectionForm.target)!) : null"
+  [usedConnectionColors]="getUsedConnectionColors()"
+  [usedLabelColors]="getUsedLabelColors()"
+  (save)="onConnectionSave($event)"
+  (delete)="deleteConnection()"
+  (visibleChange)="!$event && closeDialogs()"
+></app-connection-edit-dialog>
 
-<!-- Add Pin Dialog -->
-@if (showAddPinDialog) {
-  <div class="modal-overlay" (click)="closeDialogs()">
-    <div class="modal-dialog add-pin-dialog" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <h3>Pin Character</h3>
-        <button class="close-btn" (click)="closeDialogs()">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label for="characterFilter">Search:</label>
-          <input
-            #characterFilterInput
-            type="text"
-            id="characterFilter"
-            [(ngModel)]="characterFilter"
-            (input)="updateFilteredCharacters()"
-            placeholder="Filter by name or category..."
-            />
-        </div>
-        <div class="character-list">
-          @if (filteredCharacters.length === 0) {
-            <div class="no-characters">
-              @if (characters.length === 0) {
-                <p>No characters available.</p>
-              }
-              @if (characters.length > 0 && characterFilter === '') {
-                <p>All characters are already on the pinboard.</p>
-              }
-              @if (characters.length > 0 && characterFilter !== '') {
-                <p>No characters match your filter.</p>
-              }
-            </div>
-          }
-          @for (character of filteredCharacters; track character; let i = $index) {
-            <div
-              class="character-item"
-              [class.selected]="i === selectedCharacterIndex"
-              (click)="addCharacterToPinboard(character)"
-              (mouseenter)="selectedCharacterIndex = i"
-              >
-              <div class="character-thumbnail">
-                @if (getThumbnailDataUrl(character)) {
-                  <img [src]="getThumbnailDataUrl(character)" [alt]="character.name" />
-                }
-                @if (!getThumbnailDataUrl(character)) {
-                  <div
-                    class="thumbnail-placeholder"
-                    [style.background-color]="getCategoryColor(character.category)"
-                    >
-                    {{ character.name.charAt(0).toUpperCase() }}
-                  </div>
-                }
-              </div>
-              <div class="character-info">
-                <span class="character-name">{{ character.name }}</span>
-                <span class="character-category" [title]="getCategoryTooltip(character.category)">{{
-                  getCategoryName(character.category)
-                }}</span>
-              </div>
-            </div>
-          }
-        </div>
-      </div>
-    </div>
-  </div>
-}
+<app-pin-add-dialog
+  [(visible)]="showAddPinDialog"
+  [characters]="characters"
+  [pinnedCharacterIds]="pinnedCharacterIds"
+  [thumbnailDataUrls]="thumbnailDataUrls"
+  (characterSelected)="onCharacterSelected($event)"
+  (visibleChange)="!$event && closeDialogs()"
+></app-pin-add-dialog>
 
-<!-- Pinboard Management Dialogs -->
 <app-pinboard-create-dialog
   [(visible)]="showCreatePinboardDialog"
   [pinboards]="pinboards"

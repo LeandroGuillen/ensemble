@@ -30,8 +30,6 @@ import {
   Project,
   ImageWorkflow,
   ProjectImage,
-  ProjectImageDirectory,
-  ProjectImageFolder,
   Tag,
   CharacterPrompt,
 } from "../../core/interfaces";
@@ -43,6 +41,8 @@ import {
   MetadataService,
   NotificationService,
   ImageGenerationService,
+  ImagePickerService,
+  MetadataHelperService,
   ProjectService,
 } from "../../core/services";
 import { ModalService } from "../../core/services/modal.service";
@@ -63,6 +63,10 @@ import {
   SelectableItem,
 } from "../../shared/multi-select-buttons/multi-select-buttons.component";
 import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
+import { ImagePickerDialogComponent } from "../../shared/image-picker-dialog/image-picker-dialog.component";
+import { CharacterPromptsEditorComponent } from "./components/character-prompts-editor/character-prompts-editor.component";
+import { GeneratePortraitDialogComponent } from "./components/generate-portrait-dialog/generate-portrait-dialog.component";
+
 @Component({
     selector: "app-character-detail",
     imports: [
@@ -72,6 +76,9 @@ import { PageHeaderComponent } from "../../shared/page-header/page-header.compon
     CategoryToggleComponent,
     MultiSelectButtonsComponent,
     PageHeaderComponent,
+    ImagePickerDialogComponent,
+    CharacterPromptsEditorComponent,
+    GeneratePortraitDialogComponent,
 ],
     templateUrl: "./character-detail.component.html",
     styleUrls: ["./character-detail.component.scss"]
@@ -132,44 +139,13 @@ export class CharacterDetailComponent
   imageGenerationEnabled = false;
   showGeneratePortraitDialog = false;
   showImagePickerDialog = false;
-  imageWorkflows: ImageWorkflow[] = [];
-  selectedImageWorkflowId = '';
-  positiveImagePrompt = '';
-  negativeImagePrompt = '';
-  isGeneratingPortrait = false;
+  private imageWorkflows: ImageWorkflow[] = [];
+  private selectedImageWorkflowId = '';
 
   /** Image-generation prompts for this character. The first one is the default. */
   prompts: CharacterPrompt[] = [];
-  /** Index of the prompt currently being edited. */
-  selectedPromptIndex = 0;
   /** Set while a quick-generate from a character prompt is in progress. */
   generatingPromptIndex: number | null = null;
-
-  get selectedImageWorkflow(): ImageWorkflow | undefined {
-    return this.imageWorkflows.find((workflow) => workflow.id === this.selectedImageWorkflowId);
-  }
-
-  isLoadingImages = false;
-  projectImages: ProjectImage[] = [];
-  imageDirectories: ProjectImageFolder[] = [];
-  currentImageDirectory = '';
-  imageSearch = '';
-  private imagePickerHistory: string[] = [];
-  private imagePickerHistoryIndex = -1;
-  private imageDirectoryCache = new Map<string, ProjectImageDirectory>();
-  private lastExternalPickerNavigation: {
-    direction: 'back' | 'forward';
-    timestamp: number;
-  } | null = null;
-  private browserNavigationCommandListener = (
-    _event: unknown,
-    direction: 'back' | 'forward'
-  ) => {
-    if (!this.showImagePickerDialog) return;
-    this.ngZone.run(() => {
-      this.handleExternalPickerNavigation(direction);
-    });
-  };
 
   /** True while a text input/textarea in this form has focus — CD is detached to avoid wasted work. */
   private textInputFocused = false;
@@ -189,6 +165,8 @@ export class CharacterDetailComponent
     private logger: LoggingService,
     private notificationService: NotificationService,
     private imageGenerationService: ImageGenerationService,
+    private imagePickerService: ImagePickerService,
+    private metadataHelper: MetadataHelperService,
     private ngZone: NgZone
   ) {
     this.characterForm = this.createForm();
@@ -281,7 +259,6 @@ export class CharacterDetailComponent
           this.thumbnailsMap = {};
           this.thumbnailPreviewUrls = new Map();
           this.prompts = [];
-          this.selectedPromptIndex = -1;
           this.contentTabs = [{ id: 'main', label: 'Main' }];
           this.cdr.markForCheck();
         }
@@ -327,9 +304,7 @@ export class CharacterDetailComponent
   ngOnDestroy(): void {
     document.removeEventListener('keydown', this.keydownListener);
     this.electronService.setBrowserNavigationInterception(false);
-    this.electronService.removeBrowserNavigationCommandListener(
-      this.browserNavigationCommandListener
-    );
+    this.imagePickerService.close();
     if (this.textInputFocused) {
       this.cdr.reattach();
     }
@@ -338,29 +313,16 @@ export class CharacterDetailComponent
   }
 
   private keydownListener = (event: KeyboardEvent) => {
-    if (
-      this.showImagePickerDialog &&
-      event.altKey &&
-      (event.key === 'ArrowLeft' || event.key === 'ArrowRight')
-    ) {
-      event.preventDefault();
-      this.ngZone.run(() => {
-        event.key === 'ArrowLeft'
-          ? this.goBackInImagePicker()
-          : this.goForwardInImagePicker();
-      });
-      return;
-    }
     if (event.key === "Escape") {
       event.preventDefault();
       this.ngZone.run(() => {
         this.reattachIfDetached();
-        if (this.showImagePickerDialog) {
+        if (this.showImagePickerDialog || this.imagePickerService.isOpen) {
           this.closeImagePicker();
           return;
         }
         if (this.showGeneratePortraitDialog) {
-          this.closeGeneratePortrait();
+          this.showGeneratePortraitDialog = false;
           return;
         }
         this.onCancel();
@@ -392,9 +354,6 @@ export class CharacterDetailComponent
     this.ngZone.runOutsideAngular(() => {
       document.addEventListener('keydown', this.keydownListener);
     });
-    this.electronService.onBrowserNavigationCommand(
-      this.browserNavigationCommandListener
-    );
   }
 
   private reattachIfDetached(): void {
@@ -481,7 +440,6 @@ export class CharacterDetailComponent
         await this.refreshThumbnailPreviews();
 
         this.prompts = (this.character.prompts || []).map((p) => ({ ...p }));
-        this.selectedPromptIndex = this.prompts.length > 0 ? 0 : -1;
 
         this.activeContentTab = 'main';
         this.updateContentTabs();
@@ -544,8 +502,7 @@ export class CharacterDetailComponent
   }
 
   getBookName(bookId: string): string {
-    const book = this.books.find((b) => b.id === bookId);
-    return book ? this.formatBookLabel(book) : bookId;
+    return this.metadataHelper.getBookName(bookId);
   }
 
   private formatBookLabel(book: Book): string {
@@ -771,47 +728,6 @@ export class CharacterDetailComponent
     return selectedBooks.includes(bookId);
   }
 
-  getCategoryName(categoryId: string): string {
-    const category = this.categories.find((cat) => cat.id === categoryId);
-    return category?.name || categoryId;
-  }
-
-  getCategoryColor(categoryId: string): string {
-    const category = this.categories.find((cat) => cat.id === categoryId);
-    return category?.color || "#95a5a6";
-  }
-
-  getCategoryTooltip(categoryId: string): string {
-    const category = this.categories.find((cat) => cat.id === categoryId);
-    if (!category) return categoryId;
-
-    if (category.description) {
-      return category.description;
-    }
-    return category.name;
-  }
-
-  getCategoryToggleOptions(): ToggleOption[] {
-    return this.categories.map((cat) => ({
-      id: cat.id,
-      name: cat.name,
-      tooltip: cat.description || cat.name,
-    }));
-  }
-
-  getTagsAsSelectableItems(): SelectableItem[] {
-    return this.tagsSelectableItems;
-  }
-
-  getBooksAsSelectableItems(): SelectableItem[] {
-    return this.booksSelectableItems;
-  }
-
-  onTagsSelectionChange(selectedIds: string[]): void {
-    this.characterForm.patchValue({ tags: selectedIds });
-    this.characterForm.markAsDirty();
-  }
-
   onBooksSelectionChange(selectedIds: string[]): void {
     this.characterForm.patchValue({ books: selectedIds });
     this.pruneBookCategories(selectedIds);
@@ -854,14 +770,17 @@ export class CharacterDetailComponent
     }
   }
 
-  getTagName(tagId: string): string {
-    const tag = this.tags.find((t) => t.id === tagId);
-    return tag?.name || tagId;
+  getTagsAsSelectableItems(): SelectableItem[] {
+    return this.tagsSelectableItems;
   }
 
-  getTagColor(tagId: string): string {
-    const tag = this.tags.find((t) => t.id === tagId);
-    return tag?.color || "#95a5a6";
+  getBooksAsSelectableItems(): SelectableItem[] {
+    return this.booksSelectableItems;
+  }
+
+  onTagsSelectionChange(selectedIds: string[]): void {
+    this.characterForm.patchValue({ tags: selectedIds });
+    this.characterForm.markAsDirty();
   }
 
   /** Recomputes all field errors and updates cache (used by template via fieldErrors). */
@@ -1128,286 +1047,63 @@ export class CharacterDetailComponent
     }
   }
 
-  async openGeneratePortrait(): Promise<void> {
+  openGeneratePortrait(): void {
     if (!this.imageGenerationEnabled) {
       this.error = 'Image generation is not enabled. Configure it in AI Settings first.';
+      this.cdr.markForCheck();
       return;
     }
     this.pickerTargetStyleId = this.defaultCharacterStyle || this.characterStyles[0]?.id || '';
     this.error = null;
     this.showGeneratePortraitDialog = true;
-    try {
-      this.imageWorkflows = await this.imageGenerationService.listWorkflows();
-      const configured = this.imageGenerationService.getSettings().invokeai.defaultWorkflowId;
-      this.selectedImageWorkflowId =
-        (configured && this.imageWorkflows.some((workflow) => workflow.id === configured)
-          ? configured
-          : this.imageWorkflows[0]?.id) || '';
-    } catch (error) {
-      this.showGeneratePortraitDialog = false;
-      this.error = error instanceof Error ? error.message : 'Failed to load image workflows';
-    }
     this.cdr.markForCheck();
   }
 
-  closeGeneratePortrait(): void {
-    if (!this.isGeneratingPortrait) {
-      this.showGeneratePortraitDialog = false;
-    }
-  }
-
-  async generatePortrait(): Promise<void> {
-    if (!this.selectedImageWorkflowId || !this.positiveImagePrompt.trim()) return;
-    const characterName = this.characterForm.get('name')?.value?.trim() || 'character';
-    this.isGeneratingPortrait = true;
-    this.error = null;
+  onPortraitGenerated(relativePath: string): void {
+    this.setThumbnailForStyle(
+      this.pickerTargetStyleId || this.defaultCharacterStyle,
+      formatThumbnailWikiLink(relativePath)
+    );
+    this.showGeneratePortraitDialog = false;
+    this.notificationService.showSuccess(`Portrait saved to ${relativePath}`);
     this.cdr.markForCheck();
-    try {
-      const relativePath = await this.imageGenerationService.generateAndSave({
-        workflowId: this.selectedImageWorkflowId,
-        positivePrompt: this.positiveImagePrompt.trim(),
-        negativePrompt: this.negativeImagePrompt.trim(),
-        characterName,
-      });
-      this.setThumbnailForStyle(
-        this.pickerTargetStyleId || this.defaultCharacterStyle,
-        formatThumbnailWikiLink(relativePath)
-      );
-      this.showGeneratePortraitDialog = false;
-      this.notificationService.showSuccess(`Portrait saved to ${relativePath}`);
-    } catch (error) {
-      this.error = error instanceof Error ? error.message : 'Failed to generate portrait';
-    } finally {
-      this.isGeneratingPortrait = false;
-      this.cdr.markForCheck();
-    }
   }
 
   async openImagePicker(styleId?: string): Promise<void> {
     this.pickerTargetStyleId = styleId || this.defaultCharacterStyle || this.characterStyles[0]?.id || '';
     this.showImagePickerDialog = true;
-    this.electronService.setBrowserNavigationInterception(true);
-    this.imageSearch = '';
-    this.projectImages = [];
-    this.imageDirectories = [];
-    this.currentImageDirectory = '';
-    this.imageDirectoryCache.clear();
-    this.imagePickerHistory = [];
-    this.imagePickerHistoryIndex = -1;
-    this.lastExternalPickerNavigation = null;
     this.cdr.markForCheck();
-    const initialDirectory = this.getInitialImagePickerDirectory();
-    let loaded = await this.loadImageDirectory(initialDirectory, false);
-    if (!loaded && initialDirectory) {
-      this.error = null;
-      loaded = await this.loadImageDirectory('', false);
-    }
-    if (loaded && this.showImagePickerDialog) {
-      this.initializeImagePickerHistory(this.currentImageDirectory);
-    }
-  }
-
-  async loadImageDirectory(relativeDirectory: string, addToHistory = false): Promise<boolean> {
-    const cachedListing = this.imageDirectoryCache.get(relativeDirectory);
-    if (cachedListing) {
-      this.applyImageDirectory(cachedListing);
-      if (addToHistory) {
-        this.recordImagePickerHistory(cachedListing.relativeDirectory);
-      }
-      this.cdr.markForCheck();
-      return true;
-    }
-
-    this.isLoadingImages = true;
-    this.imageSearch = '';
-    this.cdr.markForCheck();
-    try {
-      const listing =
-        await this.imageGenerationService.browseProjectImageDirectory(relativeDirectory);
-      this.imageDirectoryCache.set(listing.relativeDirectory, listing);
-      this.applyImageDirectory(listing);
-      if (addToHistory) {
-        this.recordImagePickerHistory(listing.relativeDirectory);
-      }
-      return true;
-    } catch (error) {
-      this.error = error instanceof Error ? error.message : 'Failed to load project images';
-      return false;
-    } finally {
-      this.isLoadingImages = false;
+    await this.imagePickerService.open({
+      thumbnailHint: resolveThumbnailForStyle(this.thumbnailsMap, this.pickerTargetStyleId) || '',
+      imagesFolder: this.currentProject?.metadata?.settings?.imagesFolder,
+    });
+    const loadError = this.imagePickerService.snapshot.error;
+    if (loadError) {
+      this.error = loadError;
       this.cdr.markForCheck();
     }
-  }
-
-  private getInitialImagePickerDirectory(): string {
-    const styleId = this.pickerTargetStyleId || this.defaultCharacterStyle;
-    const thumbnail = parseThumbnailReference(
-      resolveThumbnailForStyle(this.thumbnailsMap, styleId) || ''
-    );
-    if (!thumbnail) return '';
-
-    const imagesFolder = (
-      this.currentProject?.metadata?.settings?.imagesFolder?.trim() || 'img'
-    )
-      .replace(/\\/g, '/')
-      .replace(/^\.?\/+|\/+$/g, '');
-    const thumbnailPath = thumbnail
-      .replace(/\\/g, '/')
-      .replace(/^\.?\/+/, '');
-    const prefix = `${imagesFolder}/`;
-    if (!thumbnailPath.startsWith(prefix)) return '';
-
-    const parts = thumbnailPath.slice(prefix.length).split('/').filter(Boolean);
-    parts.pop();
-    return parts.join('/');
-  }
-
-  private applyImageDirectory(listing: ProjectImageDirectory): void {
-    this.imageSearch = '';
-    this.currentImageDirectory = listing.relativeDirectory;
-    this.imageDirectories = listing.directories;
-    this.projectImages = listing.images;
-  }
-
-  openImageDirectory(name: string): void {
-    const path = this.currentImageDirectory
-      ? `${this.currentImageDirectory}/${name}`
-      : name;
-    void this.loadImageDirectory(path, true);
-  }
-
-  goToParentImageDirectory(): void {
-    const parts = this.currentImageDirectory.split('/').filter(Boolean);
-    parts.pop();
-    void this.loadImageDirectory(parts.join('/'), true);
-  }
-
-  navigateImageDirectory(path: string): void {
-    if (path !== this.currentImageDirectory) {
-      void this.loadImageDirectory(path, true);
-    }
-  }
-
-  get canGoBackInImagePicker(): boolean {
-    return this.showImagePickerDialog && this.imagePickerHistoryIndex >= 0;
-  }
-
-  get canGoForwardInImagePicker(): boolean {
-    return this.imagePickerHistoryIndex < this.imagePickerHistory.length - 1;
-  }
-
-  goBackInImagePicker(): void {
-    if (this.imagePickerHistoryIndex <= 0) {
-      this.closeImagePicker();
-      return;
-    }
-    void this.restoreImagePickerHistory(this.imagePickerHistoryIndex - 1);
-  }
-
-  goForwardInImagePicker(): void {
-    void this.restoreImagePickerHistory(this.imagePickerHistoryIndex + 1);
   }
 
   closeImagePicker(): void {
+    this.imagePickerService.close();
     this.showImagePickerDialog = false;
-    this.electronService.setBrowserNavigationInterception(false);
     this.cdr.markForCheck();
   }
 
-  /** Opens the directory currently shown in the image picker in the OS file explorer. */
-  async openCurrentImageDirectoryInExplorer(): Promise<void> {
-    if (!this.currentProject?.path || !this.electronService.isElectron()) return;
-    const imagesRoot = this.projectService.getImagesFolderPath();
-    const absolutePath = this.currentImageDirectory
-      ? await this.electronService.pathJoin(imagesRoot, ...this.currentImageDirectory.split('/'))
-      : imagesRoot;
-    const result = await this.electronService.openPath(absolutePath);
-    if (!result.success) {
-      this.error = result.error ?? 'Failed to open folder';
-      this.cdr.markForCheck();
-    }
+  onImageSelected(image: ProjectImage): void {
+    const styleId = this.pickerTargetStyleId || this.defaultCharacterStyle;
+    this.setThumbnailForStyle(styleId, formatThumbnailWikiLink(image.relativePath));
+    this.showImagePickerDialog = false;
+    this.cdr.markForCheck();
+  }
+
+  onImagePickerExplorerError(message: string): void {
+    this.error = message;
+    this.cdr.markForCheck();
   }
 
   handlePickerNavigationAway(): boolean {
-    if (this.showImagePickerDialog) {
-      this.handleExternalPickerNavigation('back');
-      return false;
-    }
-    return !(
-      this.lastExternalPickerNavigation?.direction === 'back' &&
-      Date.now() - this.lastExternalPickerNavigation.timestamp < 300
-    );
-  }
-
-  private handleExternalPickerNavigation(direction: 'back' | 'forward'): void {
-    const timestamp = Date.now();
-    if (
-      this.lastExternalPickerNavigation?.direction === direction &&
-      timestamp - this.lastExternalPickerNavigation.timestamp < 300
-    ) {
-      return;
-    }
-    this.lastExternalPickerNavigation = { direction, timestamp };
-    direction === 'back'
-      ? this.goBackInImagePicker()
-      : this.goForwardInImagePicker();
-  }
-
-  private recordImagePickerHistory(path: string): void {
-    this.imagePickerHistory = this.imagePickerHistory.slice(
-      0,
-      this.imagePickerHistoryIndex + 1
-    );
-    this.imagePickerHistory.push(path);
-    this.imagePickerHistoryIndex = this.imagePickerHistory.length - 1;
-  }
-
-  private initializeImagePickerHistory(path: string): void {
-    this.imagePickerHistory = [path];
-    this.imagePickerHistoryIndex = 0;
-  }
-
-  private async restoreImagePickerHistory(index: number): Promise<void> {
-    if (index < 0 || index >= this.imagePickerHistory.length || this.isLoadingImages) return;
-    const path = this.imagePickerHistory[index];
-    const listing = this.imageDirectoryCache.get(path);
-    if (listing) {
-      this.imagePickerHistoryIndex = index;
-      this.applyImageDirectory(listing);
-      this.cdr.markForCheck();
-      return;
-    }
-    if (await this.loadImageDirectory(path, false)) {
-      this.imagePickerHistoryIndex = index;
-    }
-  }
-
-  get imageBreadcrumbs(): Array<{ label: string; path: string }> {
-    const parts = this.currentImageDirectory.split('/').filter(Boolean);
-    return parts.map((label, index) => ({
-      label,
-      path: parts.slice(0, index + 1).join('/'),
-    }));
-  }
-
-  get filteredProjectImages(): ProjectImage[] {
-    const query = this.imageSearch.trim().toLowerCase();
-    return query
-      ? this.projectImages.filter((image) => image.relativePath.toLowerCase().includes(query))
-      : this.projectImages;
-  }
-
-  get filteredImageDirectories(): ProjectImageFolder[] {
-    const query = this.imageSearch.trim().toLowerCase();
-    return query
-      ? this.imageDirectories.filter((directory) => directory.name.toLowerCase().includes(query))
-      : this.imageDirectories;
-  }
-
-  selectProjectImage(image: ProjectImage): void {
-    const styleId = this.pickerTargetStyleId || this.defaultCharacterStyle;
-    this.setThumbnailForStyle(styleId, formatThumbnailWikiLink(image.relativePath));
-    this.closeImagePicker();
+    return this.imagePickerService.handleNavigationAway();
   }
 
   removeThumbnail(styleId?: string): void {
@@ -1420,98 +1116,23 @@ export class CharacterDetailComponent
     return !!resolveThumbnailForStyle(this.thumbnailsMap, styleId);
   }
 
-  // --- Prompts ---------------------------------------------------------------
-
-  /** Display label for a prompt entry (falls back to "Prompt N"). */
-  getPromptLabel(prompt: CharacterPrompt, index: number): string {
-    return prompt.name?.trim() || `Prompt ${index + 1}`;
+  get thumbnailOutputDirectory(): string | null {
+    return this.getThumbnailOutputDirectory();
   }
 
-  /** The prompt currently selected for editing, or null. */
-  get selectedPrompt(): CharacterPrompt | null {
-    if (this.selectedPromptIndex < 0 || this.selectedPromptIndex >= this.prompts.length) {
-      return null;
-    }
-    return this.prompts[this.selectedPromptIndex];
+  onPromptsChange(prompts: CharacterPrompt[]): void {
+    this.prompts = prompts;
   }
 
-  selectPrompt(index: number): void {
-    if (index >= 0 && index < this.prompts.length) {
-      this.selectedPromptIndex = index;
-      this.cdr.markForCheck();
-    }
-  }
-
-  addPrompt(): void {
-    const newPrompt: CharacterPrompt = { name: '', positive: '', negative: '' };
-    this.prompts = [...this.prompts, newPrompt];
-    this.selectedPromptIndex = this.prompts.length - 1;
+  onPromptsDirty(): void {
     this.characterForm.markAsDirty();
     this.cdr.markForCheck();
   }
 
-  removePrompt(index: number): void {
-    if (index < 0 || index >= this.prompts.length) return;
-    this.prompts = this.prompts.filter((_, i) => i !== index);
-    if (this.prompts.length === 0) {
-      this.selectedPromptIndex = -1;
-    } else if (this.selectedPromptIndex >= this.prompts.length) {
-      this.selectedPromptIndex = this.prompts.length - 1;
-    }
-    this.characterForm.markAsDirty();
-    this.cdr.markForCheck();
-  }
-
-  /** Promotes a prompt to position 0, making it the default. No-op if already first. */
-  setPromptAsDefault(index: number): void {
-    if (index <= 0 || index >= this.prompts.length) return;
-    const next = [...this.prompts];
-    const [item] = next.splice(index, 1);
-    next.unshift(item);
-    this.prompts = next;
-    this.selectedPromptIndex = this.selectedPromptIndex === index ? 0 : this.selectedPromptIndex;
-    this.characterForm.markAsDirty();
-    this.cdr.markForCheck();
-  }
-
-  onPromptFieldChange(): void {
-    this.characterForm.markAsDirty();
-    this.cdr.markForCheck();
-  }
-
-  /** True when the prompt-clear generate action is unavailable. */
-  get promptGenerateDisabled(): boolean {
-    return (
-      !this.imageGenerationEnabled ||
-      this.generatingPromptIndex !== null ||
-      !this.selectedPrompt ||
-      !this.selectedPrompt.positive.trim()
-    );
-  }
-
-  /** Title text for the prompt-generate button, explaining why it may be disabled. */
-  get promptGenerateTitle(): string {
-    if (!this.imageGenerationEnabled) {
-      return 'Enable image generation in AI Settings to generate from this prompt';
-    }
-    if (!this.selectedPrompt || !this.selectedPrompt.positive.trim()) {
-      return 'Enter positive text to enable generation';
-    }
-    const dir = this.getThumbnailOutputDirectory();
-    return dir
-      ? `Generate with this prompt and save beside the current thumbnail (${dir})`
-      : 'Generate with this prompt';
-  }
-
-  /**
-   * Quick-generates an image using the selected character prompt and the default
-   * workflow. The image is saved into the same folder as the current thumbnail
-   * (when one is set) and becomes the new thumbnail.
-   */
   async generateFromPrompt(prompt: CharacterPrompt): Promise<void> {
     if (!this.imageGenerationEnabled || !prompt.positive.trim()) return;
     if (this.generatingPromptIndex !== null) return;
-    this.generatingPromptIndex = this.selectedPromptIndex;
+    this.generatingPromptIndex = this.prompts.indexOf(prompt);
     this.error = null;
     this.cdr.markForCheck();
     try {
@@ -1542,10 +1163,6 @@ export class CharacterDetailComponent
     }
   }
 
-  /**
-   * Resolves the workflow id to use for quick generation: the configured default
-   * if available, otherwise the first workflow (loaded on demand).
-   */
   private async resolveDefaultWorkflowId(): Promise<string> {
     if (this.selectedImageWorkflowId) {
       return this.selectedImageWorkflowId;
@@ -1562,10 +1179,6 @@ export class CharacterDetailComponent
     return id;
   }
 
-  /**
-   * Returns the project-relative directory containing the current style's thumbnail, or
-   * null when no thumbnail is set for that style.
-   */
   private getThumbnailOutputDirectory(): string | null {
     const styleId = this.pickerTargetStyleId || this.defaultCharacterStyle;
     const raw = resolveThumbnailForStyle(this.thumbnailsMap, styleId) || '';
@@ -1574,10 +1187,6 @@ export class CharacterDetailComponent
     const normalized = parsed.replace(/\\/g, '/');
     const lastSlash = normalized.lastIndexOf('/');
     return lastSlash > 0 ? normalized.slice(0, lastSlash) : null;
-  }
-
-  getProjectImageName(image: ProjectImage): string {
-    return image.relativePath.split('/').pop() || image.relativePath;
   }
 
   /** Open the folder containing the character file in the system file manager. */

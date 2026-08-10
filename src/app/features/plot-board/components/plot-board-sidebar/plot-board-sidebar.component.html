@@ -1,0 +1,138 @@
+<aside
+  class="plot-board-sidebar"
+  id="plot-board-sidebar"
+  [attr.aria-hidden]="!open"
+>
+  <div class="plot-board-sidebar-header">
+    <h3 class="plot-board-sidebar-title">Plot boards</h3>
+    <div class="plot-board-sidebar-actions">
+      <button type="button" class="icon-btn" (click)="refreshList()" title="Refresh list from disk" aria-label="Refresh list from disk">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <polyline points="1 20 1 14 7 14"></polyline>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+        </svg>
+      </button>
+      <button type="button" class="icon-btn" (click)="openNewPlotBoardDialog()" title="New plot board" aria-label="New plot board">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        class="icon-btn sidebar-collapse-btn"
+        (click)="toggleSidebar()"
+        [attr.aria-expanded]="open"
+        aria-controls="plot-board-sidebar"
+        title="Hide sidebar"
+        aria-label="Hide sidebar"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+    </div>
+  </div>
+  @if (duplicateError) {
+    <p class="plot-board-sidebar-error">{{ duplicateError }}</p>
+  }
+  <ul class="plot-board-list">
+    @for (rel of plotboardPaths; track rel) {
+      <li class="plot-board-list-item">
+        <a
+          class="plot-board-list-hit"
+          [class.active]="isCurrentPath(rel)"
+          [routerLink]="routerLinkForPlotboard(rel)"
+        >
+          <span class="plot-board-list-title">{{ displayStem(rel) }}</span>
+          <span class="plot-board-list-path" [title]="rel">{{ rel }}</span>
+        </a>
+        <div class="plot-board-list-side-actions">
+          <button
+            type="button"
+            class="plot-board-list-action"
+            (click)="duplicatePlotBoardForPath(rel); $event.preventDefault(); $event.stopPropagation()"
+            title="Copy file with a new name (e.g. name-2 or name-3)"
+          >
+            Duplicate
+          </button>
+          <button
+            type="button"
+            class="plot-board-list-action"
+            (click)="openRenameDialogForPath(rel); $event.preventDefault(); $event.stopPropagation()"
+          >
+            Rename
+          </button>
+          <button
+            type="button"
+            class="plot-board-list-action plot-board-list-action-danger"
+            (click)="openDeletePlotBoardDialogForPath(rel); $event.preventDefault(); $event.stopPropagation()"
+          >
+            Delete
+          </button>
+        </div>
+      </li>
+    }
+  </ul>
+</aside>
+
+@if (showRenameDialog) {
+  <div class="rename-overlay" (click)="cancelRename()">
+    <div class="rename-dialog" (click)="$event.stopPropagation()">
+      <h4>Rename plot board file</h4>
+      <p class="rename-hint">The file will be renamed using a slug (no spaces). If a file already exists with that name, rename is blocked.</p>
+      <input type="text" class="rename-input" [(ngModel)]="renameValue" (keydown.escape)="cancelRename()" />
+      @if (renameError) {
+        <p class="rename-error">{{ renameError }}</p>
+      }
+      <div class="rename-actions">
+        <button type="button" class="btn-action" (click)="cancelRename()">Cancel</button>
+        <button type="button" class="btn-primary" (click)="applyRename()">Rename</button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (showNewPlotBoardDialog) {
+  <div class="rename-overlay" (click)="cancelNewPlotBoard()">
+    <div class="rename-dialog" (click)="$event.stopPropagation()">
+      <h4>New plot board</h4>
+      <p class="rename-hint">Saved at the project root as <code>&lt;slug&gt;.plotboard.md</code>. The name is turned into a safe filename (no spaces).</p>
+      <input
+        type="text"
+        class="rename-input"
+        [(ngModel)]="newPlotBoardName"
+        (keydown.escape)="cancelNewPlotBoard()"
+        (keydown.enter)="applyNewPlotBoard()"
+        placeholder="e.g. Main arc"
+      />
+      @if (newPlotBoardError) {
+        <p class="rename-error">{{ newPlotBoardError }}</p>
+      }
+      <div class="rename-actions">
+        <button type="button" class="btn-action" (click)="cancelNewPlotBoard()">Cancel</button>
+        <button type="button" class="btn-primary" (click)="applyNewPlotBoard()">Create</button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (showDeletePlotBoardDialog) {
+  <div class="rename-overlay" (click)="cancelDeletePlotBoard()">
+    <div class="rename-dialog" (click)="$event.stopPropagation()">
+      <h4>Delete plot board?</h4>
+      @if (deleteDialogPath; as path) {
+        <p class="rename-hint">
+          Remove <strong>{{ displayStem(path) }}</strong> from disk? This cannot be undone.
+        </p>
+      }
+      @if (deletePlotBoardError) {
+        <p class="rename-error">{{ deletePlotBoardError }}</p>
+      }
+      <div class="rename-actions">
+        <button type="button" class="btn-action" (click)="cancelDeletePlotBoard()">Cancel</button>
+        <button type="button" class="btn-danger-outline" (click)="confirmDeletePlotBoard()">Delete</button>
+      </div>
+    </div>
+  </div>
+}

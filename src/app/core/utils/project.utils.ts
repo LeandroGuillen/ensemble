@@ -42,6 +42,7 @@ export function assertProjectLoaded(
  * Convenience wrapper around assertProjectLoaded that returns the project.
  *
  * @param project - The project to check (may be null)
+ * @param operation - Optional operation name for better error messages
  * @returns The project (guaranteed non-null)
  * @throws Error if project is null
  *
@@ -51,7 +52,7 @@ export function assertProjectLoaded(
  * // Guaranteed to be non-null here
  * ```
  */
-export function requireProject(project: Project | null): Project {
-  assertProjectLoaded(project);
+export function requireProject(project: Project | null, operation?: string): Project {
+  assertProjectLoaded(project, operation);
   return project;
 }

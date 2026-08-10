@@ -94,10 +94,7 @@ export class ProjectService {
    * Legacy: stored value 'casts' (no path separators) is treated as 'characters/casts'.
    */
   getCastsFolderPath(): string {
-    const project = this.currentProjectSubject.value;
-    if (!project?.path) {
-      throw new Error('No project loaded');
-    }
+    const project = requireProject(this.currentProjectSubject.value);
     const raw = project.metadata?.settings?.castsFolder?.trim() || DEFAULT_CASTS_FOLDER;
     // Legacy: "casts" alone meant "under characters folder"
     const relative = raw.includes('/') ? raw : `${DEFAULT_CHARACTERS_FOLDER}/${raw}`;
@@ -110,10 +107,7 @@ export class ProjectService {
    * Uses settings.namesFile if set (relative to project root), otherwise defaults to 'characters/names.md'.
    */
   getNamesFilePath(): string {
-    const project = this.currentProjectSubject.value;
-    if (!project?.path) {
-      throw new Error('No project loaded');
-    }
+    const project = requireProject(this.currentProjectSubject.value);
     const relative = project.metadata?.settings?.namesFile?.trim() || DEFAULT_NAMES_FILE;
     const normalized = normalizeRelativeFolder(relative, DEFAULT_NAMES_FILE);
     return pathJoin(project.path, normalized);

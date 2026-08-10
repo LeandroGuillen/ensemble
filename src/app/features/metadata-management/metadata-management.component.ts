@@ -1,5 +1,6 @@
 import { Component, Input, OnChanges, OnInit, OnDestroy, SimpleChanges } from '@angular/core';
 
+import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { debounceTime, Subject, takeUntil } from 'rxjs';
 import { MetadataService } from '../../core/services/metadata.service';
@@ -19,6 +20,7 @@ import { ColorPaletteConfig } from '../../core/interfaces/color-palette.interfac
 import { BASE_COLOR_NAMES } from '../../core/interfaces/color-palette.interface';
 import { DEFAULT_BASE_COLORS } from '../../core/utils/color-palette.utils';
 import { slugify } from '../../core/utils/slug.utils';
+import { requireProject } from '../../core/utils/project.utils';
 import { DEFAULT_CHARACTER_STYLE_ID } from '../../core/constants/project.constants';
 import type { SettingsSectionId } from '../settings/settings-section';
 import { SettingsSearchableDirective } from '../settings/settings-searchable.directive';
@@ -38,7 +40,7 @@ interface TagFormData {
 
 @Component({
     selector: 'app-metadata-management',
-    imports: [FormsModule, ReactiveFormsModule, SettingsSearchableDirective],
+    imports: [FormsModule, ReactiveFormsModule, SettingsSearchableDirective, DragDropModule],
     templateUrl: './metadata-management.component.html',
     styleUrls: ['./metadata-management.component.scss']
 })
@@ -91,14 +93,6 @@ export class MetadataManagementComponent implements OnInit, OnDestroy, OnChanges
   checkingForUpdates = false;
 
   zoomPercent = 100;
-
-  // Drag and drop state for categories
-  draggedIndex: number | null = null;
-  dragOverIndex: number | null = null;
-
-  // Drag and drop state for tags
-  tagDraggedIndex: number | null = null;
-  tagDragOverIndex: number | null = null;
 
   // Color presets - uses the shared color palette
   colorPresets: string[] = [];
@@ -219,10 +213,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy, OnChanges
       this.loading = true;
       this.error = null;
       
-      const project = this.projectService.getCurrentProject();
-      if (!project) {
-        throw new Error('No project loaded');
-      }
+      const project = requireProject(this.projectService.getCurrentProject());
       
       await this.metadataService.loadMetadata(project.path);
     } catch (error) {
@@ -622,75 +613,15 @@ export class MetadataManagementComponent implements OnInit, OnDestroy, OnChanges
     return !this.isDefaultCategory(category.id);
   }
 
-  // Drag and Drop Methods for Categories
-  onDragStart(event: DragEvent, index: number): void {
-    this.draggedIndex = index;
-    if (event.dataTransfer) {
-      event.dataTransfer.effectAllowed = 'move';
-      event.dataTransfer.setData('text/html', ''); // Required for Firefox
-    }
-  }
-
-  onDragOver(event: DragEvent, index: number): void {
-    event.preventDefault();
-    event.stopPropagation();
-    if (event.dataTransfer) {
-      event.dataTransfer.dropEffect = 'move';
-    }
-    // Don't apply drag-over to the dragged item itself
-    if (this.draggedIndex !== null && this.draggedIndex !== index) {
-      this.dragOverIndex = index;
-    }
-  }
-
-  onDrop(event: DragEvent, dropIndex: number): void {
-    event.preventDefault();
-    event.stopPropagation();
-
-    if (this.draggedIndex !== null) {
-      this.performReorder(dropIndex);
-    }
-
-    this.draggedIndex = null;
-    this.dragOverIndex = null;
-  }
-
-  onDragEnd(): void {
-    // If we have a valid dragOverIndex, treat it as a drop at that position
-    if (this.draggedIndex !== null && this.dragOverIndex !== null) {
-      this.performReorder(this.dragOverIndex);
-    }
-
-    this.draggedIndex = null;
-    this.dragOverIndex = null;
-  }
-
-  private performReorder(dropIndex: number): void {
-    if (this.draggedIndex === null) {
+  // Drag and Drop (CDK) for Categories / Tags
+  onCategoryDropped(event: CdkDragDrop<Category[]>): void {
+    if (event.previousIndex === event.currentIndex) {
       return;
     }
-
-    // Don't do anything if dropping in the same position
-    if (this.draggedIndex === dropIndex) {
-      return;
-    }
-
-    // Reorder the categories array
-    const newCategories = [...this.categories];
-    const draggedCategory = newCategories[this.draggedIndex];
-
-    // Remove from old position
-    newCategories.splice(this.draggedIndex, 1);
-
-    // Adjust drop index if dropping after the removed item
-    const adjustedDropIndex = dropIndex > this.draggedIndex ? dropIndex - 1 : dropIndex;
-
-    // Insert at new position
-    newCategories.splice(adjustedDropIndex, 0, draggedCategory);
-
-    // Update categories in metadata and save
-    this.categories = newCategories;
-    this.saveReorderedCategories(newCategories);
+    const next = [...this.categories];
+    moveItemInArray(next, event.previousIndex, event.currentIndex);
+    this.categories = next;
+    void this.saveReorderedCategories(next);
   }
 
   private async saveReorderedCategories(newCategories: Category[]): Promise<void> {
@@ -717,75 +648,14 @@ export class MetadataManagementComponent implements OnInit, OnDestroy, OnChanges
     }
   }
 
-  // Drag and Drop Methods for Tags
-  onTagDragStart(event: DragEvent, index: number): void {
-    this.tagDraggedIndex = index;
-    if (event.dataTransfer) {
-      event.dataTransfer.effectAllowed = 'move';
-      event.dataTransfer.setData('text/html', ''); // Required for Firefox
-    }
-  }
-
-  onTagDragOver(event: DragEvent, index: number): void {
-    event.preventDefault();
-    event.stopPropagation();
-    if (event.dataTransfer) {
-      event.dataTransfer.dropEffect = 'move';
-    }
-    // Don't apply drag-over to the dragged item itself
-    if (this.tagDraggedIndex !== null && this.tagDraggedIndex !== index) {
-      this.tagDragOverIndex = index;
-    }
-  }
-
-  onTagDrop(event: DragEvent, dropIndex: number): void {
-    event.preventDefault();
-    event.stopPropagation();
-
-    if (this.tagDraggedIndex !== null) {
-      this.performTagReorder(dropIndex);
-    }
-
-    this.tagDraggedIndex = null;
-    this.tagDragOverIndex = null;
-  }
-
-  onTagDragEnd(): void {
-    // If we have a valid tagDragOverIndex, treat it as a drop at that position
-    if (this.tagDraggedIndex !== null && this.tagDragOverIndex !== null) {
-      this.performTagReorder(this.tagDragOverIndex);
-    }
-
-    this.tagDraggedIndex = null;
-    this.tagDragOverIndex = null;
-  }
-
-  private performTagReorder(dropIndex: number): void {
-    if (this.tagDraggedIndex === null) {
+  onTagDropped(event: CdkDragDrop<Tag[]>): void {
+    if (event.previousIndex === event.currentIndex) {
       return;
     }
-
-    // Don't do anything if dropping in the same position
-    if (this.tagDraggedIndex === dropIndex) {
-      return;
-    }
-
-    // Reorder the tags array
-    const newTags = [...this.tags];
-    const draggedTag = newTags[this.tagDraggedIndex];
-
-    // Remove from old position
-    newTags.splice(this.tagDraggedIndex, 1);
-
-    // Adjust drop index if dropping after the removed item
-    const adjustedDropIndex = dropIndex > this.tagDraggedIndex ? dropIndex - 1 : dropIndex;
-
-    // Insert at new position
-    newTags.splice(adjustedDropIndex, 0, draggedTag);
-
-    // Update tags in metadata and save
-    this.tags = newTags;
-    this.saveReorderedTags(newTags);
+    const next = [...this.tags];
+    moveItemInArray(next, event.previousIndex, event.currentIndex);
+    this.tags = next;
+    void this.saveReorderedTags(next);
   }
 
   private async saveReorderedTags(newTags: Tag[]): Promise<void> {

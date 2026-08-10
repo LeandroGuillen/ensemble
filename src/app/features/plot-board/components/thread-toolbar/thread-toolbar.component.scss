@@ -1,0 +1,124 @@
+:host {
+  display: contents;
+}
+
+.plot-board-floating-thread-toolbars {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.thread-toolbar-color-wrap {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: flex-start;
+}
+
+.thread-hover-toolbar {
+  position: fixed;
+  transform: translateX(-50%);
+
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 8px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+
+  max-width: min(100vw - 16px, 260px);
+  box-sizing: border-box;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.14s ease,
+    visibility 0.14s ease;
+
+  &.thread-hover-toolbar--visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+}
+
+.thread-color-dropdown {
+  position: absolute;
+  z-index: 120;
+  top: calc(100% + 4px);
+  left: 0;
+  transform: none;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  padding: var(--spacing-sm);
+}
+
+.btn-icon-sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    color: var(--color-text-primary);
+    background: var(--color-bg-tertiary);
+  }
+
+  &.btn-danger:hover {
+    color: var(--color-error);
+    background: rgba(248, 113, 113, 0.1);
+  }
+}
+
+.confirm-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px var(--spacing-sm);
+  background: rgba(248, 113, 113, 0.12);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-sm);
+  color: var(--color-error);
+  cursor: pointer;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    background: rgba(248, 113, 113, 0.25);
+  }
+}
+
+.icon-clear-btn {
+  display: block;
+  width: 100%;
+  padding: var(--spacing-xs);
+  margin-top: var(--spacing-xs);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  font-size: 0.6875rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    color: var(--color-error);
+    border-color: var(--color-error);
+  }
+}

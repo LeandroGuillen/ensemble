@@ -1,0 +1,67 @@
+<div class="cell-edit-popover" (keydown.escape)="onEscape($event)">
+  <div class="popover-toolbar">
+    <button
+      type="button"
+      class="toolbar-btn"
+      [class.active]="icon"
+      (click)="toggleEmojiPicker($event)"
+      title="Set icon"
+    >
+      @if (icon) {
+        <span>{{ icon }}</span>
+      } @else {
+        <span class="toolbar-icon-placeholder">☺</span>
+      }
+    </button>
+    @if (icon) {
+      <button type="button" class="toolbar-btn btn-clear" (click)="clearIcon($event)" title="Remove icon">
+        &times;
+      </button>
+    }
+    <span class="toolbar-spacer"></span>
+    <app-color-swatch-picker
+      class="cell-editor-swatches"
+      [colors]="paletteColors"
+      [selectedColor]="color"
+      (colorSelect)="onColorSelect($event)"
+    />
+  </div>
+  @if (showEmojiPicker) {
+    <app-emoji-picker
+      variant="dropdown"
+      [selectedEmoji]="icon"
+      (emojiSelect)="onEmojiSelect($event)"
+    />
+  }
+  <textarea
+    #cellEditTextarea
+    class="cell-edit-textarea"
+    [ngModel]="value"
+    (ngModelChange)="valueChange.emit($event)"
+    (input)="onTextareaInput()"
+    (keydown)="onTextareaKeydown($event)"
+    placeholder="Event description (optional)..."
+  ></textarea>
+  <div class="popover-footer">
+    <div class="popover-footer-left">
+      @if (!confirmDelete && canDelete) {
+        <button type="button" class="btn-delete-cell" (click)="onRequestDelete($event)">
+          Delete
+        </button>
+      }
+      @if (confirmDelete) {
+        <button type="button" class="btn-delete-cell btn-delete-confirm" (click)="onConfirmDelete($event)">
+          Confirm delete
+        </button>
+      }
+    </div>
+    <button type="button" class="btn-save-cell" (click)="onSave($event)" [attr.title]="saveTitle">
+      Save
+      <span class="cell-save-kbd-hint" aria-hidden="true">
+        <kbd class="shortcut-hint">{{ saveShortcutModifierLabel }}</kbd>
+        <span class="cell-save-kbd-plus">+</span>
+        <kbd class="shortcut-hint">↵</kbd>
+      </span>
+    </button>
+  </div>
+</div>

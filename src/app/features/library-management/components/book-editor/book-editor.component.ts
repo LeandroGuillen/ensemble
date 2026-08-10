@@ -5,6 +5,7 @@ import { Book, Saga, Series } from '../../../../core/interfaces/project.interfac
 import { Character } from '../../../../core/interfaces/character.interface';
 import { CharacterPickerService } from '../../../../core/services/character-picker.service';
 import { CharacterService } from '../../../../core/services/character.service';
+import { ModalService } from '../../../../core/services/modal.service';
 import { ProjectService } from '../../../../core/services/project.service';
 import { getBookDisplayName } from '../../../../core/utils/book-display.utils';
 
@@ -89,7 +90,8 @@ export class BookEditorComponent implements OnInit, OnChanges {
     private fb: FormBuilder,
     private characterPicker: CharacterPickerService,
     private characterService: CharacterService,
-    private projectService: ProjectService
+    private projectService: ProjectService,
+    private modalService: ModalService
   ) {
     this.bookForm = this.fb.group({
       code: ['', [Validators.maxLength(50)]],
@@ -286,8 +288,15 @@ export class BookEditorComponent implements OnInit, OnChanges {
     this.mouseDownOnOverlay = false;
   }
 
-  onDelete(): void {
-    if (this.book && confirm(`Are you sure you want to delete "${getBookDisplayName(this.book)}"?`)) {
+  async onDelete(): Promise<void> {
+    if (!this.book) return;
+    if (
+      await this.modalService.confirm(
+        `Are you sure you want to delete "${getBookDisplayName(this.book)}"?`,
+        'Delete Book',
+        { confirmText: 'Delete', danger: true }
+      )
+    ) {
       this.delete.emit(this.book);
     }
   }

@@ -155,21 +155,16 @@
                 </div>
               }
               <!-- Categories List -->
-              <div class="items-list">
-                @for (category of categories; track category; let i = $index) {
+              <div class="items-list" cdkDropList (cdkDropListDropped)="onCategoryDropped($event)">
+                @for (category of categories; track category.id; let i = $index) {
                   <div
                     class="item-row"
-                    draggable="true"
-                    (dragstart)="onDragStart($event, i)"
-                    (dragover)="onDragOver($event, i)"
-                    (drop)="onDrop($event, i)"
-                    (dragend)="onDragEnd()"
-                    [class.dragging]="draggedIndex === i"
-                    [class.drag-over]="dragOverIndex === i">
+                    cdkDrag
+                    [cdkDragDisabled]="!!editingCategory && editingCategory.id === category.id">
                     <!-- Drag Handle -->
                     @if (!editingCategory || editingCategory.id !== category.id) {
-                      <div class="drag-handle" draggable="false">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" draggable="false">
+                      <div class="drag-handle" cdkDragHandle>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                           <circle cx="6" cy="3" r="1.5"/>
                           <circle cx="10" cy="3" r="1.5"/>
                           <circle cx="6" cy="8" r="1.5"/>
@@ -181,7 +176,7 @@
                     }
                     <!-- Regular item display -->
                     @if (!editingCategory || editingCategory.id !== category.id) {
-                      <div class="item-content" (click)="showEditCategoryForm(category)" draggable="false">
+                      <div class="item-content" (click)="showEditCategoryForm(category)">
                         <div class="item-color" [style.background-color]="category.color"></div>
                         <div class="item-info">
                           <div class="item-name-row">
@@ -197,7 +192,7 @@
                       </div>
                     }
                     @if (!editingCategory || editingCategory.id !== category.id) {
-                      <div class="item-actions" draggable="false">
+                      <div class="item-actions">
                         <button
                           class="btn-icon btn-danger"
                           (click)="deleteCategory(category); $event.stopPropagation()"
@@ -305,15 +300,6 @@
                         </form>
                       </div>
                     }
-                  </div>
-                }
-                <!-- Drop zone for last position -->
-                @if (draggedIndex !== null) {
-                  <div
-                    class="drop-zone-last"
-                    (dragover)="onDragOver($event, categories.length)"
-                    (drop)="onDrop($event, categories.length)"
-                    [class.drag-over]="dragOverIndex === categories.length">
                   </div>
                 }
               </div>
@@ -432,21 +418,16 @@
                 </div>
               }
               <!-- Tags List -->
-              <div class="items-list">
-                @for (tag of tags; track tag; let i = $index) {
+              <div class="items-list" cdkDropList (cdkDropListDropped)="onTagDropped($event)">
+                @for (tag of tags; track tag.id; let i = $index) {
                   <div
                     class="item-row"
-                    draggable="true"
-                    (dragstart)="onTagDragStart($event, i)"
-                    (dragover)="onTagDragOver($event, i)"
-                    (drop)="onTagDrop($event, i)"
-                    (dragend)="onTagDragEnd()"
-                    [class.dragging]="tagDraggedIndex === i"
-                    [class.drag-over]="tagDragOverIndex === i">
+                    cdkDrag
+                    [cdkDragDisabled]="!!editingTag && editingTag.id === tag.id">
                     <!-- Drag Handle -->
                     @if (!editingTag || editingTag.id !== tag.id) {
-                      <div class="drag-handle" draggable="false">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" draggable="false">
+                      <div class="drag-handle" cdkDragHandle>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                           <circle cx="6" cy="3" r="1.5"/>
                           <circle cx="10" cy="3" r="1.5"/>
                           <circle cx="6" cy="8" r="1.5"/>
@@ -458,7 +439,7 @@
                     }
                     <!-- Regular item display -->
                     @if (!editingTag || editingTag.id !== tag.id) {
-                      <div class="item-content" (click)="showEditTagForm(tag)" draggable="false">
+                      <div class="item-content" (click)="showEditTagForm(tag)">
                         <div class="item-color" [style.background-color]="tag.color"></div>
                         <div class="item-info">
                           <span class="item-name">{{ tag.name }}</span>
@@ -466,7 +447,7 @@
                       </div>
                     }
                     @if (!editingTag || editingTag.id !== tag.id) {
-                      <div class="item-actions" draggable="false">
+                      <div class="item-actions">
                         <button
                           class="btn-icon btn-danger"
                           (click)="deleteTag(tag); $event.stopPropagation()"
@@ -534,15 +515,6 @@
                         </form>
                       </div>
                     }
-                  </div>
-                }
-                <!-- Drop zone for last position -->
-                @if (tagDraggedIndex !== null) {
-                  <div
-                    class="drop-zone-last"
-                    (dragover)="onTagDragOver($event, tags.length)"
-                    (drop)="onTagDrop($event, tags.length)"
-                    [class.drag-over]="tagDragOverIndex === tags.length">
                   </div>
                 }
               </div>

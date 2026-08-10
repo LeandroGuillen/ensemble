@@ -26,6 +26,7 @@ import {
   LoggingService,
   NotificationService,
   ModalService,
+  MetadataHelperService,
 } from "../../core/services";
 import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
 
@@ -78,8 +79,9 @@ export class CastDetailComponent implements OnInit, OnDestroy {
     private ngZone: NgZone,
     private cdr: ChangeDetectorRef,
     private logger: LoggingService,
-    private notificationService: NotificationService
-    , private modalService: ModalService
+    private notificationService: NotificationService,
+    private modalService: ModalService,
+    private metadataHelper: MetadataHelperService
   ) {
     this.castForm = this.fb.group({
       name: ["", [Validators.required, Validators.maxLength(100)]],
@@ -355,13 +357,11 @@ export class CastDetailComponent implements OnInit, OnDestroy {
   }
 
   getCategoryName(categoryId: string): string {
-    const category = this.categories.find((cat) => cat.id === categoryId);
-    return category?.name || categoryId;
+    return this.metadataHelper.getCategoryName(categoryId);
   }
 
   getCategoryColor(categoryId: string): string {
-    const category = this.categories.find((cat) => cat.id === categoryId);
-    return category?.color || "#95a5a6";
+    return this.metadataHelper.getCategoryColor(categoryId);
   }
 
   // Get appropriate text color (black or white) based on background brightness

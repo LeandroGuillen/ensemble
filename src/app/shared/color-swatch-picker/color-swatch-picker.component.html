@@ -1,0 +1,12 @@
+<div class="color-swatches">
+  @for (color of colors; track color) {
+    <button
+      type="button"
+      class="color-swatch"
+      [style.backgroundColor]="color"
+      [class.active]="selectedColor === color"
+      (click)="onSwatchClick(color, $event)"
+      title="Set color"
+    ></button>
+  }
+</div>

@@ -1,0 +1,133 @@
+@if (visible) {
+  <div class="dialog-backdrop" (click)="onBackdropClick()">
+    <section
+      class="image-picker-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="image-picker-title"
+      (click)="$event.stopPropagation()"
+    >
+      @if (imagePickerService.state$ | async; as state) {
+        <header class="dialog-header">
+          <div>
+            <h2 id="image-picker-title">Choose project image</h2>
+            <nav class="image-breadcrumbs" aria-label="Image folder">
+              <button type="button" (click)="imagePickerService.navigateTo('')">
+                {{ state.imagesFolderLabel }}
+              </button>
+              @for (crumb of imagePickerService.breadcrumbs; track crumb.path) {
+                <span>/</span>
+                <button type="button" (click)="imagePickerService.navigateTo(crumb.path)">
+                  {{ crumb.label }}
+                </button>
+              }
+            </nav>
+          </div>
+          <button type="button" class="dialog-close" (click)="onCloseClick()">×</button>
+        </header>
+
+        <div class="image-browser-toolbar">
+          <div class="image-navigation-controls">
+            <button
+              type="button"
+              class="btn btn-secondary image-history-button"
+              (click)="imagePickerService.goBack()"
+              [disabled]="!state.canGoBack || state.isLoading"
+              title="Previous folder"
+              aria-label="Previous folder"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M15 5l-7 7 7 7"/>
+              </svg>
+            </button>
+            <button
+              type="button"
+              class="btn btn-secondary image-history-button"
+              (click)="imagePickerService.goForward()"
+              [disabled]="!state.canGoForward || state.isLoading"
+              title="Next folder"
+              aria-label="Next folder"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M9 5l7 7-7 7"/>
+              </svg>
+            </button>
+            <button
+              type="button"
+              class="btn btn-secondary image-up-button"
+              (click)="imagePickerService.goToParent()"
+              [disabled]="!state.currentDirectory || state.isLoading"
+              title="Go to parent folder"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 15l7-7 7 7"/>
+              </svg>
+              Up
+            </button>
+            <button
+              type="button"
+              class="btn btn-secondary image-up-button"
+              (click)="openInExplorer()"
+              [disabled]="state.isLoading"
+              title="Open this folder in your file explorer"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M3 7h6l2 2h10v10H3z"/>
+              </svg>
+              Open
+            </button>
+          </div>
+          <input
+            type="search"
+            class="form-control"
+            [(ngModel)]="imageSearch"
+            placeholder="Filter this folder…"
+          />
+        </div>
+
+        @if (state.isLoading) {
+          <div class="picker-state"><span class="spinner"></span> Loading images…</div>
+        } @else if (
+          imagePickerService.filterImages(imageSearch).length === 0 &&
+          imagePickerService.filterDirectories(imageSearch).length === 0
+        ) {
+          <div class="picker-state">This folder has no matching images or folders.</div>
+        } @else {
+          <div class="image-picker-grid">
+            @for (directory of imagePickerService.filterDirectories(imageSearch); track directory.name) {
+              <button
+                type="button"
+                class="image-picker-item image-folder-item"
+                (click)="imagePickerService.openSubdirectory(directory.name)"
+                [title]="directory.name"
+              >
+                <div class="folder-preview" [class.empty]="!directory.previewUrl">
+                  @if (directory.previewUrl) {
+                    <img [src]="directory.previewUrl" alt="" />
+                  }
+                  <div class="folder-label">
+                    <span aria-hidden="true">📁</span>
+                    <strong>{{ directory.name }}</strong>
+                  </div>
+                </div>
+              </button>
+            }
+            @for (image of imagePickerService.filterImages(imageSearch); track image.relativePath) {
+              <button
+                type="button"
+                class="image-picker-item"
+                (click)="selectImage(image)"
+                [title]="image.relativePath"
+              >
+                @if (image.previewUrl) {
+                  <img [src]="image.previewUrl" [alt]="image.relativePath" />
+                }
+                <span>{{ imagePickerService.getProjectImageName(image) }}</span>
+              </button>
+            }
+          </div>
+        }
+      }
+    </section>
+  </div>
+}

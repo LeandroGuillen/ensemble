@@ -4,6 +4,7 @@ import { PinboardConnection, PinboardPin, PinboardData } from '../interfaces/pin
 import { generateId } from '../utils/id.utils';
 import { DEFAULT_CONNECTION_COLOR, DEFAULT_CONNECTION_LABEL_COLOR } from '../constants/project.constants';
 import { resolveThumbnailForStyle } from '../utils/thumbnail.utils';
+import { requireProject } from '../utils/project.utils';
 import { ProjectService } from './project.service';
 import { CharacterService } from './character.service';
 import { LoggingService } from './logging.service';
@@ -87,9 +88,7 @@ export class PinboardService {
    * Creates a new connection and saves to ensemble.json
    */
   async createConnection(connection: Omit<PinboardConnection, 'id'>): Promise<PinboardConnection> {
-    if (!this.currentProjectPath) {
-      throw new Error('No project loaded');
-    }
+    requireProject(this.projectService.getCurrentProject());
 
     const newConnection: PinboardConnection = {
       id: generateId(),
@@ -112,9 +111,7 @@ export class PinboardService {
    * Updates an existing connection and saves to ensemble.json
    */
   async updateConnection(id: string, updates: Partial<PinboardConnection>): Promise<PinboardConnection | null> {
-    if (!this.currentProjectPath) {
-      throw new Error('No project loaded');
-    }
+    requireProject(this.projectService.getCurrentProject());
 
     const currentData = this.pinboardDataSubject.value;
     const edgeIndex = currentData.edges.findIndex(edge => edge.id === id);
@@ -140,9 +137,7 @@ export class PinboardService {
    * Deletes a connection and saves to ensemble.json
    */
   async deleteConnection(id: string): Promise<boolean> {
-    if (!this.currentProjectPath) {
-      throw new Error('No project loaded');
-    }
+    requireProject(this.projectService.getCurrentProject());
 
     const currentData = this.pinboardDataSubject.value;
     const filteredEdges = currentData.edges.filter(edge => edge.id !== id);
@@ -164,9 +159,7 @@ export class PinboardService {
    * Updates pin position and saves to ensemble.json
    */
   async updatePinPosition(pinId: string, position: { x: number; y: number }): Promise<void> {
-    if (!this.currentProjectPath) {
-      throw new Error('No project loaded');
-    }
+    requireProject(this.projectService.getCurrentProject());
 
     const currentData = this.pinboardDataSubject.value;
     const pinIndex = currentData.nodes.findIndex(node => node.id === pinId);
@@ -191,9 +184,7 @@ export class PinboardService {
    * Ensures pins exist for all characters without overwriting existing positions
    */
   async ensurePinsForCharacters(characters: any[]): Promise<void> {
-    if (!this.currentProjectPath) {
-      throw new Error('No project loaded');
-    }
+    requireProject(this.projectService.getCurrentProject());
 
     // Don't sync pins until pinboard has been loaded
     if (!this.pinboardLoaded) {
@@ -267,9 +258,7 @@ export class PinboardService {
    * Removes all connections for a specific character (for referential integrity)
    */
   async removeCharacterConnections(characterId: string): Promise<void> {
-    if (!this.currentProjectPath) {
-      throw new Error('No project loaded');
-    }
+    requireProject(this.projectService.getCurrentProject());
 
     const currentData = this.pinboardDataSubject.value;
 
@@ -448,9 +437,7 @@ export class PinboardService {
    * Updates pinboard data from vis.js Network positions
    */
   async updateFromVisJsPositions(positions: { [pinId: string]: { x: number; y: number } }): Promise<void> {
-    if (!this.currentProjectPath) {
-      throw new Error('No project loaded');
-    }
+    requireProject(this.projectService.getCurrentProject());
 
     const currentData = this.pinboardDataSubject.value;
     const updatedNodes = currentData.nodes.map(node => ({
@@ -555,9 +542,7 @@ export class PinboardService {
    * Adds a single pin to the pinboard at an unoccupied position
    */
   async addPin(character: any, gridSize: number = 100): Promise<void> {
-    if (!this.currentProjectPath) {
-      throw new Error('No project loaded');
-    }
+    requireProject(this.projectService.getCurrentProject());
 
     const currentData = this.pinboardDataSubject.value;
 
@@ -596,9 +581,7 @@ export class PinboardService {
    * Removes a pin from the current pinboard (and its connections)
    */
   async removePin(characterId: string): Promise<void> {
-    if (!this.currentProjectPath) {
-      throw new Error('No project loaded');
-    }
+    requireProject(this.projectService.getCurrentProject());
 
     const currentData = this.pinboardDataSubject.value;
 

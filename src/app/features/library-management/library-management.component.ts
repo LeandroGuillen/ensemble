@@ -25,6 +25,7 @@ import {
   buildLibraryGrouping,
   placementKey,
 } from "../../core/utils/library-grouping.utils";
+import { requireProject } from "../../core/utils/project.utils";
 import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
 import { BookEditorComponent } from "./components/book-editor/book-editor.component";
 import { BookItemComponent } from "./components/book-item/book-item.component";
@@ -223,10 +224,7 @@ export class LibraryManagementComponent implements OnInit, OnDestroy {
       this.loading = true;
       this.error = null;
 
-      const project = this.projectService.getCurrentProject();
-      if (!project) {
-        throw new Error("No project loaded");
-      }
+      const project = requireProject(this.projectService.getCurrentProject());
 
       await this.metadataService.loadMetadata(project.path);
     } catch (error) {

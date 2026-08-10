@@ -1,0 +1,112 @@
+@if (visible) {
+  <div class="modal-overlay" (click)="onOverlayClick()">
+    <div class="modal-dialog" (click)="onDialogClick($event)">
+      <div class="modal-header">
+        <h3>{{ title }}</h3>
+        <button class="close-btn" (click)="onClose()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form (ngSubmit)="onSubmit()">
+          <div class="connection-preview">
+            <div class="preview-nodes">
+              <div class="preview-node-container">
+                <div class="preview-node">
+                  @if (sourceCharacter) {
+                    @if (sourceThumbnail) {
+                      <img [src]="sourceThumbnail" [alt]="sourceCharacter.name" />
+                    }
+                    @if (!sourceThumbnail) {
+                      <div class="preview-node-placeholder">
+                        {{ sourceCharacter.name.charAt(0).toUpperCase() }}
+                      </div>
+                    }
+                  }
+                </div>
+                @if (form.arrowTo) {
+                  <div class="preview-arrow-indicator" [style.border-color]="form.color" [style.color]="form.color">
+                    <svg width="16" height="16" viewBox="0 0 16 16">
+                      <path d="M14 8 L4 8 M4 8 L8 4 M4 8 L8 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </svg>
+                  </div>
+                }
+              </div>
+              <div class="preview-line" [style.border-color]="form.color">
+                @if (form.label) {
+                  <span class="preview-label" [style.color]="form.labelColor">
+                    {{ form.label }}
+                  </span>
+                }
+              </div>
+              <div class="preview-node-container">
+                @if (form.arrowFrom) {
+                  <div class="preview-arrow-indicator" [style.border-color]="form.color" [style.color]="form.color">
+                    <svg width="16" height="16" viewBox="0 0 16 16">
+                      <path d="M2 8 L12 8 M12 8 L8 4 M12 8 L8 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </svg>
+                  </div>
+                }
+                <div class="preview-node">
+                  @if (targetCharacter) {
+                    @if (targetThumbnail) {
+                      <img [src]="targetThumbnail" [alt]="targetCharacter.name" />
+                    }
+                    @if (!targetThumbnail) {
+                      <div class="preview-node-placeholder">
+                        {{ targetCharacter.name.charAt(0).toUpperCase() }}
+                      </div>
+                    }
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="connectionLabel">Label:</label>
+            <input
+              type="text"
+              id="connectionLabel"
+              [(ngModel)]="form.label"
+              name="label"
+              placeholder="Optional label"
+              />
+          </div>
+          <div class="form-group color-group">
+            <app-color-selector
+              label="Connection Color"
+              [color]="form.color"
+              [usedColors]="usedConnectionColors"
+              (colorChange)="form.color = $event"
+            ></app-color-selector>
+            <app-color-selector
+              label="Label Color"
+              [color]="form.labelColor"
+              [usedColors]="usedLabelColors"
+              (colorChange)="form.labelColor = $event"
+            ></app-color-selector>
+          </div>
+          <div class="form-group checkbox-group">
+            <label>
+              <input type="checkbox" [(ngModel)]="form.arrowFrom" name="arrowFrom" />
+              Arrow from source
+            </label>
+          </div>
+          <div class="form-group checkbox-group">
+            <label>
+              <input type="checkbox" [(ngModel)]="form.arrowTo" name="arrowTo" />
+              Arrow to target
+            </label>
+          </div>
+          <div class="modal-actions">
+            @if (mode === 'edit') {
+              <button type="button" class="btn btn-danger" (click)="onDelete()">Delete</button>
+            }
+            <button type="button" class="btn btn-secondary" (click)="onClose()">Cancel</button>
+            <button type="submit" class="btn btn-primary">
+              {{ mode === 'edit' ? 'Save Changes' : 'Create Connection' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+}

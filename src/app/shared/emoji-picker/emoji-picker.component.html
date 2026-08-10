@@ -1,0 +1,24 @@
+<div class="emoji-picker-root" [class.emoji-picker-root--dropdown]="variant === 'dropdown'">
+  @for (group of groups; track group) {
+    <div class="emoji-group">
+      <div class="emoji-group-label">{{ group.label }}</div>
+      <div class="emoji-group-grid">
+        @for (emoji of group.emojis; track emoji) {
+          <button
+            type="button"
+            class="emoji-btn"
+            [class.active]="selectedEmoji === emoji"
+            (click)="onEmojiClick(emoji, $event)"
+          >
+            {{ emoji }}
+          </button>
+        }
+      </div>
+    </div>
+  }
+  @if (showClear && selectedEmoji) {
+    <button type="button" class="icon-clear-btn" (click)="onClearClick($event)">
+      {{ clearLabel }}
+    </button>
+  }
+</div>

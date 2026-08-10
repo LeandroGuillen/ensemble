@@ -604,10 +604,7 @@ export class CharacterService {
     }
 
     // Get current project metadata to validate book references
-    const project = this.projectService.getCurrentProject();
-    if (!project || !project.metadata) {
-      throw new Error('No project metadata available for book validation');
-    }
+    const project = requireProject(this.projectService.getCurrentProject());
 
     const availableBooks = project.metadata.books || [];
     const availableBookIds = availableBooks.map((book) => book.id);
@@ -629,10 +626,7 @@ export class CharacterService {
       return;
     }
 
-    const project = this.projectService.getCurrentProject();
-    if (!project || !project.metadata) {
-      throw new Error('No project metadata available for book category validation');
-    }
+    const project = requireProject(this.projectService.getCurrentProject());
 
     const availableBookIds = new Set((project.metadata.books || []).map((book) => book.id));
     const availableCategoryIds = new Set(

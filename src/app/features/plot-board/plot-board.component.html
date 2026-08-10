@@ -7,7 +7,7 @@
           [class.active]="zoomLevel === 1"
           (click)="setZoom(1)"
           title="Compact view"
-          >
+        >
           Compact
         </button>
         <button
@@ -15,7 +15,7 @@
           [class.active]="zoomLevel === 2"
           (click)="setZoom(2)"
           title="Medium view"
-          >
+        >
           Medium
         </button>
         <button
@@ -23,7 +23,7 @@
           [class.active]="zoomLevel === 3"
           (click)="setZoom(3)"
           title="Full view"
-          >
+        >
           Full
         </button>
       </div>
@@ -42,84 +42,15 @@
     <div
       class="plot-board-sidebar-anim"
       [@plotBoardSidebar]="plotboardSidebarOpen ? 'open' : 'closed'"
-      >
-      <aside
-        class="plot-board-sidebar"
-        id="plot-board-sidebar"
-        [attr.aria-hidden]="!plotboardSidebarOpen"
-        >
-        <div class="plot-board-sidebar-header">
-          <h3 class="plot-board-sidebar-title">Plot boards</h3>
-          <div class="plot-board-sidebar-actions">
-            <button type="button" class="icon-btn" (click)="refreshPlotboards()" title="Refresh list from disk" aria-label="Refresh list from disk">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <polyline points="23 4 23 10 17 10"></polyline>
-                <polyline points="1 20 1 14 7 14"></polyline>
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-              </svg>
-            </button>
-            <button type="button" class="icon-btn" (click)="openNewPlotBoardDialog()" title="New plot board" aria-label="New plot board">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              class="icon-btn sidebar-collapse-btn"
-              (click)="togglePlotboardSidebar()"
-              [attr.aria-expanded]="plotboardSidebarOpen"
-              aria-controls="plot-board-sidebar"
-              title="Hide sidebar"
-              aria-label="Hide sidebar"
-              >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <polyline points="15 18 9 12 15 6"></polyline>
-              </svg>
-            </button>
-          </div>
-        </div>
-        @if (duplicateError) {
-          <p class="plot-board-sidebar-error">{{ duplicateError }}</p>
-        }
-        <ul class="plot-board-list">
-          @for (rel of plotboardPaths; track rel) {
-            <li class="plot-board-list-item">
-              <a
-                class="plot-board-list-hit"
-                [class.active]="isCurrentPath(rel)"
-                [routerLink]="routerLinkForPlotboard(rel)"
-                >
-                <span class="plot-board-list-title">{{ displayStem(rel) }}</span>
-                <span class="plot-board-list-path" [title]="rel">{{ rel }}</span>
-              </a>
-              <div class="plot-board-list-side-actions">
-                <button
-                  type="button"
-                  class="plot-board-list-action"
-                  (click)="duplicatePlotBoardForPath(rel); $event.preventDefault(); $event.stopPropagation()"
-                  title="Copy file with a new name (e.g. name-2 or name-3)"
-                  >
-                  Duplicate
-                </button>
-                <button
-                  type="button"
-                  class="plot-board-list-action"
-                  (click)="openRenameDialogForPath(rel); $event.preventDefault(); $event.stopPropagation()"
-                  >
-                  Rename
-                </button>
-                <button
-                  type="button"
-                  class="plot-board-list-action plot-board-list-action-danger"
-                  (click)="openDeletePlotBoardDialogForPath(rel); $event.preventDefault(); $event.stopPropagation()"
-                  >
-                  Delete
-                </button>
-              </div>
-            </li>
-          }
-        </ul>
-      </aside>
+    >
+      <app-plot-board-sidebar
+        [open]="plotboardSidebarOpen"
+        [currentPath]="currentPlotboardPath"
+        (openChange)="onSidebarOpenChange($event)"
+        (pathsChange)="onPathsChange($event)"
+        (suspendAutoSaveChange)="onSuspendAutoSaveChange($event)"
+        (beforeNavigate)="onBeforeNavigate()"
+      />
     </div>
 
     <div class="plot-board-main">
@@ -132,7 +63,7 @@
           aria-controls="plot-board-sidebar"
           title="Show sidebar"
           aria-label="Show sidebar"
-          >
+        >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <polyline points="9 18 15 12 9 6"></polyline>
           </svg>
@@ -148,8 +79,7 @@
         #boardContent
         tabindex="-1"
         [@plotBoardContent]="boardContentKey"
-        >
-        <!-- No file open -->
+      >
         @if (!hasOpenFile) {
           <div class="empty-state">
             <p class="empty-title">No plot board selected</p>
@@ -157,13 +87,12 @@
               Plot boards are Markdown files named <code>*.plotboard.md</code> anywhere in the project. Create one here or add files on disk and press refresh.
             </p>
             <div class="empty-actions">
-              <button class="btn-primary" (click)="openNewPlotBoardDialog()">New plot board</button>
-              <button class="btn-action" (click)="refreshPlotboards()">Refresh list</button>
+              <button class="btn-primary" (click)="sidebar?.openNewPlotBoardDialog()">New plot board</button>
+              <button class="btn-action" (click)="sidebar?.refreshList()">Refresh list</button>
             </div>
           </div>
         }
 
-        <!-- File open: empty grid -->
         @if (hasOpenFile && board.threads.length === 0 && board.rows.length === 0) {
           <div class="empty-state">
             <p class="empty-title">No plot threads yet</p>
@@ -174,23 +103,18 @@
           </div>
         }
 
-        <!-- Timeline grid -->
         @if (hasOpenFile && (board.threads.length > 0 || board.rows.length > 0)) {
-          <div
-            class="board-grid"
-            [style.gridTemplateColumns]="gridTemplateColumns"
-            >
-            <!-- Header row: corner + thread headers -->
+          <div class="board-grid" [style.gridTemplateColumns]="gridTemplateColumns">
             <div class="corner-cell"></div>
             @for (thread of board.threads; track thread; let ti = $index) {
               <div
                 class="thread-header"
                 [class.thread-header--picker-open]="showThreadIconPicker === thread.id"
-                [class.drag-over-reorder]="isThreadHeaderDragOver(ti)"
-                (dragover)="onThreadHeaderDragOver($event, ti)"
-                (dragleave)="onThreadHeaderDragLeave($event, ti)"
+                [class.drag-over-reorder]="reorder.isThreadHeaderDragOver(ti)"
+                (dragover)="reorder.onThreadHeaderDragOver($event, ti)"
+                (dragleave)="reorder.onThreadHeaderDragLeave($event, ti)"
                 (drop)="onThreadHeaderDrop($event, ti)"
-                >
+              >
                 <div class="thread-header-inner">
                   <div class="thread-header-content">
                     <div
@@ -198,21 +122,20 @@
                       #threadNameRow
                       (mouseenter)="onThreadNameRowEnter(thread.id, threadNameRow)"
                       (mouseleave)="onThreadNameRowLeave(thread.id)"
-                      >
+                    >
                       <div
                         class="thread-name-cluster"
                         [class.thread-name-cluster--has-icon]="!!thread.icon"
-                        >
-                        <!-- Thread icon + picker (out of flow when empty so the name centers alone) -->
+                      >
                         <div
                           class="thread-icon-picker-anchor"
                           [class.thread-icon-picker-anchor--empty]="!thread.icon"
-                          >
+                        >
                           <span
                             class="thread-icon-btn thread-icon-picker-area"
                             (click)="toggleThreadIconPicker(thread.id); $event.stopPropagation()"
                             [attr.title]="thread.icon ? 'Change icon' : null"
-                            >
+                          >
                             @if (thread.icon) {
                               <span>{{ thread.icon }}</span>
                             }
@@ -221,50 +144,28 @@
                             }
                           </span>
                           @if (showThreadIconPicker === thread.id) {
-                            <div
-                              class="icon-picker-dropdown thread-icon-picker-area"
-                              >
-                              @for (group of emojiGroups; track group) {
-                                <div class="emoji-group">
-                                  <div class="emoji-group-label">{{ group.label }}</div>
-                                  <div class="emoji-group-grid">
-                                    @for (emoji of group.emojis; track emoji) {
-                                      <button
-                                        class="emoji-btn"
-                                        [class.active]="thread.icon === emoji"
-                                        (click)="selectThreadIcon(thread.id, emoji); $event.stopPropagation()"
-                                        >
-                                        {{ emoji }}
-                                      </button>
-                                    }
-                                  </div>
-                                </div>
-                              }
-                              @if (thread.icon) {
-                                <button
-                                  class="icon-clear-btn"
-                                  (click)="clearThreadIcon(thread.id); $event.stopPropagation()"
-                                  >
-                                  Clear icon
-                                </button>
-                              }
+                            <div class="icon-picker-dropdown thread-icon-picker-area">
+                              <app-emoji-picker
+                                [selectedEmoji]="thread.icon || ''"
+                                [showClear]="!!thread.icon"
+                                (emojiSelect)="selectThreadIcon(thread.id, $event)"
+                                (clear)="clearThreadIcon(thread.id)"
+                              />
                             </div>
                           }
                         </div>
-                        <!-- Thread name (display) -->
                         @if (editingThreadName !== thread.id) {
                           <span
                             class="thread-name thread-name--draggable"
                             draggable="true"
-                            (dragstart)="onThreadNameDragStart($event, ti)"
-                            (dragend)="onThreadNameDragEnd($event)"
+                            (dragstart)="reorder.onThreadNameDragStart($event, ti, editingThreadName)"
+                            (dragend)="reorder.onThreadNameDragEnd($event)"
                             (dblclick)="startEditThreadName(thread.id); $event.preventDefault()"
                             [attr.title]="threadNameHoverTitle(thread)"
-                            >
+                          >
                             {{ thread.name }}
                           </span>
                         }
-                        <!-- Thread name (editing) -->
                         @if (editingThreadName === thread.id) {
                           <input
                             #threadNameInput
@@ -273,12 +174,11 @@
                             (blur)="finishEditThreadName()"
                             (keydown.enter)="finishEditThreadName()"
                             (keydown.escape)="editingThreadName = null"
-                            />
+                          />
                         }
                       </div>
                     </div>
                   </div>
-                  <!-- Linked characters (thumbnails) -->
                   @if (getThreadCharacters(thread.id).length > 0) {
                     <div class="linked-characters">
                       @for (char of getThreadCharacters(thread.id); track char) {
@@ -287,13 +187,13 @@
                           [class.pending-removal]="isCharacterPendingRemoval(thread.id, char.id)"
                           [title]="isCharacterPendingRemoval(thread.id, char.id) ? 'Click again to remove ' + char.name : char.name"
                           (click)="onCharacterThumbClick(thread.id, char.id); $event.stopPropagation()"
-                          >
+                        >
                           @if (getCharacterThumbnail(char.id)) {
                             <img
                               [src]="getCharacterThumbnail(char.id)"
                               [alt]="char.name"
                               class="thumb-img"
-                              />
+                            />
                           }
                           @if (!getCharacterThumbnail(char.id)) {
                             <span class="thumb-fallback">
@@ -310,24 +210,22 @@
                 </div>
               </div>
             }
-            <!-- Data rows -->
             @for (row of board.rows; track row; let rowIdx = $index; let isLast = $last) {
-              <!-- Row label -->
               <div
                 class="row-label"
                 [class.row-label--picker-open]="showRowIconPicker === rowIdx"
-                [class.drag-over-reorder]="isRowLabelDragOver(rowIdx)"
-                (dragover)="onRowLabelDragOver($event, rowIdx)"
-                (dragleave)="onRowLabelDragLeave($event, rowIdx)"
+                [class.drag-over-reorder]="reorder.isRowLabelDragOver(rowIdx)"
+                (dragover)="reorder.onRowLabelDragOver($event, rowIdx)"
+                (dragleave)="reorder.onRowLabelDragLeave($event, rowIdx)"
                 (drop)="onRowLabelDrop($event, rowIdx)"
-                >
+              >
                 <div class="row-label-content">
                   <div class="row-icon-picker-anchor">
                     <span
                       class="row-icon-btn row-icon-picker-area"
                       (click)="toggleRowIconPicker(rowIdx); $event.stopPropagation()"
                       [title]="row.icon ? 'Change icon' : 'Add icon'"
-                      >
+                    >
                       @if (row.icon) {
                         <span>{{ row.icon }}</span>
                       }
@@ -337,30 +235,12 @@
                     </span>
                     @if (showRowIconPicker === rowIdx) {
                       <div class="icon-picker-dropdown row-icon-picker-area">
-                        @for (group of emojiGroups; track group) {
-                          <div class="emoji-group">
-                            <div class="emoji-group-label">{{ group.label }}</div>
-                            <div class="emoji-group-grid">
-                              @for (emoji of group.emojis; track emoji) {
-                                <button
-                                  class="emoji-btn"
-                                  [class.active]="row.icon === emoji"
-                                  (click)="selectRowIcon(rowIdx, emoji); $event.stopPropagation()"
-                                  >
-                                  {{ emoji }}
-                                </button>
-                              }
-                            </div>
-                          </div>
-                        }
-                        @if (row.icon) {
-                          <button
-                            class="icon-clear-btn"
-                            (click)="clearRowIcon(rowIdx); $event.stopPropagation()"
-                            >
-                            Clear icon
-                          </button>
-                        }
+                        <app-emoji-picker
+                          [selectedEmoji]="row.icon || ''"
+                          [showClear]="!!row.icon"
+                          (emojiSelect)="selectRowIcon(rowIdx, $event)"
+                          (clear)="clearRowIcon(rowIdx)"
+                        />
                       </div>
                     }
                   </div>
@@ -368,11 +248,11 @@
                     <span
                       class="row-name row-name--draggable"
                       draggable="true"
-                      (dragstart)="onRowNameDragStart($event, rowIdx)"
-                      (dragend)="onRowNameDragEnd($event)"
+                      (dragstart)="reorder.onRowNameDragStart($event, rowIdx, editingRowName)"
+                      (dragend)="reorder.onRowNameDragEnd($event)"
                       (dblclick)="startEditRowName(rowIdx); $event.preventDefault()"
                       [attr.title]="rowNameHoverTitle(row)"
-                      >
+                    >
                       {{ row.name }}
                     </span>
                   }
@@ -384,14 +264,14 @@
                       (blur)="finishEditRowName()"
                       (keydown.enter)="finishEditRowName()"
                       (keydown.escape)="editingRowName = null"
-                      />
+                    />
                   }
                   @if (confirmDeleteRowIndex !== rowIdx) {
                     <button
                       class="btn-icon-sm btn-danger row-remove"
                       (click)="requestDeleteRow(rowIdx); $event.stopPropagation()"
                       title="Remove row"
-                      >
+                    >
                       &times;
                     </button>
                   }
@@ -399,39 +279,36 @@
                     <button
                       class="confirm-delete-btn"
                       (click)="confirmDeleteRow(rowIdx); $event.stopPropagation()"
-                      >
+                    >
                       Confirm delete
                     </button>
                   }
                 </div>
               </div>
-              <!-- Thread cells -->
               @for (thread of board.threads; track thread) {
                 <div
                   class="thread-cell"
                   [attr.data-nav-row]="rowIdx"
                   [attr.data-nav-thread]="thread.id"
                   [class.thread-cell--keyboard-focus]="isKeyboardFocusCell(rowIdx, thread.id)"
-                  [class.drag-over]="isDragOver(rowIdx, thread.id)"
+                  [class.drag-over]="reorder.isDragOver(rowIdx, thread.id)"
                   [class.is-last-row]="isLast"
                   (pointerdown)="onThreadCellPointerDown(rowIdx, thread.id)"
-                  (dragover)="onCellDragOver($event, rowIdx, thread.id)"
-                  (dragleave)="onCellDragLeave($event, rowIdx, thread.id)"
+                  (dragover)="reorder.onCellDragOver($event, rowIdx, thread.id)"
+                  (dragleave)="reorder.onCellDragLeave($event, rowIdx, thread.id)"
                   (drop)="onCellDrop($event, rowIdx, thread.id)"
-                  >
-                  <!-- Vertical thread line -->
+                >
                   <div class="thread-line" [style.backgroundColor]="thread.color || null"></div>
-                  <!-- Event box (when cell has content and not being edited) -->
                   @if (hasCellContent(rowIdx, thread.id) && !isEditingCell(rowIdx, thread.id)) {
                     <div
                       class="event-box"
                       draggable="true"
-                      (dragstart)="onBoxDragStart($event, rowIdx, thread.id)"
-                      (dragend)="onBoxDragEnd($event)"
+                      (dragstart)="reorder.onBoxDragStart($event, rowIdx, thread.id)"
+                      (dragend)="reorder.onBoxDragEnd($event)"
                       [style.borderColor]="getBoxBorderColor(rowIdx, thread.id)"
                       (dblclick)="startEditCell(rowIdx, thread.id)"
                       [attr.title]="cellHoverTitle(rowIdx, thread.id)"
-                      >
+                    >
                       @if (getCellMeta(rowIdx, thread.id)?.icon) {
                         <span class="event-icon">
                           {{ getCellMeta(rowIdx, thread.id)?.icon }}
@@ -442,122 +319,22 @@
                       }
                     </div>
                   }
-                  <!-- Edit popover (inline, replaces the box during editing) -->
                   @if (isEditingCell(rowIdx, thread.id)) {
-                    <div
-                      class="cell-edit-popover"
-                      (keydown.escape)="onCellEditPopoverEscape($event)"
-                      >
-                      <div class="popover-toolbar">
-                        <!-- Emoji toggle -->
-                        <button
-                          class="toolbar-btn"
-                          [class.active]="editingCellIcon"
-                          (click)="toggleEmojiPicker(); $event.stopPropagation()"
-                          title="Set icon"
-                          >
-                          @if (editingCellIcon) {
-                            <span>{{ editingCellIcon }}</span>
-                          }
-                          @if (!editingCellIcon) {
-                            <span class="toolbar-icon-placeholder">☺</span>
-                          }
-                        </button>
-                        <!-- Clear icon -->
-                        @if (editingCellIcon) {
-                          <button
-                            class="toolbar-btn btn-clear"
-                            (click)="clearIcon(); $event.stopPropagation()"
-                            title="Remove icon"
-                            >
-                            &times;
-                          </button>
-                        }
-                        <span class="toolbar-spacer"></span>
-                        <!-- Color swatches -->
-                        <div class="color-swatches">
-                          @for (color of paletteColors; track color) {
-                            <button
-                              class="color-swatch"
-                              [style.backgroundColor]="color"
-                              [class.active]="editingCellColor === color"
-                              (click)="selectColor(color); $event.stopPropagation()"
-                              title="Set outline color"
-                            ></button>
-                          }
-                        </div>
-                      </div>
-                      <!-- Emoji picker dropdown -->
-                      @if (showEmojiPicker) {
-                        <div class="emoji-picker">
-                          @for (group of emojiGroups; track group) {
-                            <div class="emoji-group">
-                              <div class="emoji-group-label">{{ group.label }}</div>
-                              <div class="emoji-group-grid">
-                                @for (emoji of group.emojis; track emoji) {
-                                  <button
-                                    class="emoji-btn"
-                                    [class.active]="editingCellIcon === emoji"
-                                    (click)="selectEmoji(emoji); $event.stopPropagation()"
-                                    >
-                                    {{ emoji }}
-                                  </button>
-                                }
-                              </div>
-                            </div>
-                          }
-                        </div>
-                      }
-                      <textarea
-                        #cellEditTextarea
-                        class="cell-edit-textarea"
-                        [(ngModel)]="editingCellValue"
-                        (input)="layoutCellEditTextarea()"
-                        (keydown)="onCellEditTextareaKeydown($event)"
-                        placeholder="Event description (optional)..."
-                      ></textarea>
-                      <div class="popover-footer">
-                        <div class="popover-footer-left">
-                          @if (!confirmDeleteCell && (getCellValue(editingCell!.row, editingCell!.threadId) || getCellMeta(editingCell!.row, editingCell!.threadId)?.icon)) {
-                            <button
-                              type="button"
-                              class="btn-delete-cell"
-                              (click)="requestDeleteCell(); $event.stopPropagation()"
-                              >
-                              Delete
-                            </button>
-                          }
-                          @if (confirmDeleteCell) {
-                            <button
-                              type="button"
-                              class="btn-delete-cell btn-delete-confirm"
-                              (click)="confirmDeleteCellAction(); $event.stopPropagation()"
-                              >
-                              Confirm delete
-                            </button>
-                          }
-                        </div>
-                        <button
-                          type="button"
-                          class="btn-save-cell"
-                          (click)="finishEditCell(); $event.stopPropagation()"
-                [attr.title]="
-                  cellSaveShortcutModifierLabel === '⌘'
-                    ? 'Save (⌘ Enter)'
-                    : 'Save (Ctrl+Enter)'
-                "
-                          >
-                          Save
-                          <span class="cell-save-kbd-hint" aria-hidden="true">
-                            <kbd class="shortcut-hint">{{ cellSaveShortcutModifierLabel }}</kbd>
-                            <span class="cell-save-kbd-plus">+</span>
-                            <kbd class="shortcut-hint">↵</kbd>
-                          </span>
-                        </button>
-                      </div>
-                    </div>
+                    <app-cell-editor-popover
+                      [(value)]="editingCellValue"
+                      [(icon)]="editingCellIcon"
+                      [(color)]="editingCellColor"
+                      [paletteColors]="paletteColors"
+                      [saveShortcutModifierLabel]="cellSaveShortcutModifierLabel"
+                      [(showEmojiPicker)]="showEmojiPicker"
+                      [(confirmDelete)]="confirmDeleteCell"
+                      [canDelete]="!!(getCellValue(rowIdx, thread.id) || getCellMeta(rowIdx, thread.id)?.icon)"
+                      (save)="finishEditCell()"
+                      (cancel)="cancelEditCell()"
+                      (requestDelete)="requestDeleteCell()"
+                      (confirmDeleteAction)="confirmDeleteCellAction()"
+                    />
                   }
-                  <!-- Empty cell drop target -->
                   @if (!hasCellContent(rowIdx, thread.id) && !isEditingCell(rowIdx, thread.id)) {
                     <div
                       class="empty-cell-target"
@@ -574,153 +351,18 @@
     </div>
   </div>
 
-  <!-- Sibling of .plot-board-body + app-page-header so z-index stacks above sticky header (90) -->
   @if (hasOpenFile && board.threads.length > 0) {
-    <div
-      class="plot-board-floating-thread-toolbars"
-      >
-      @for (thread of board.threads; track thread) {
-        <div
-          class="thread-hover-toolbar"
-          [class.thread-hover-toolbar--visible]="isThreadToolbarVisible(thread.id)"
-          [style.top.px]="getThreadToolbarTop(thread.id)"
-          [style.left.px]="getThreadToolbarLeft(thread.id)"
-          (mouseenter)="onThreadToolbarMouseEnter(thread.id)"
-          (mouseleave)="onThreadToolbarMouseLeave(thread.id)"
-          role="toolbar"
-          [attr.aria-label]="'Actions for ' + thread.name"
-          [attr.aria-hidden]="!isThreadToolbarVisible(thread.id)"
-          >
-          <div class="thread-toolbar-color-wrap thread-color-picker-area">
-            <button
-              type="button"
-              class="btn-icon-sm"
-              [style.color]="thread.color || null"
-              (click)="toggleThreadColorPicker(thread.id); $event.stopPropagation()"
-              title="Thread color"
-              >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                <circle cx="12" cy="12" r="5"/>
-              </svg>
-            </button>
-            @if (showThreadColorPicker === thread.id) {
-              <div class="thread-color-dropdown">
-                <div class="thread-color-swatches">
-                  @for (color of paletteColors; track color) {
-                    <button
-                      type="button"
-                      class="color-swatch"
-                      [style.backgroundColor]="color"
-                      [class.active]="thread.color === color"
-                      (click)="selectThreadColor(thread.id, color); $event.stopPropagation()"
-                      title="Set thread color"
-                    ></button>
-                  }
-                </div>
-                @if (thread.color) {
-                  <button
-                    type="button"
-                    class="icon-clear-btn"
-                    (click)="clearThreadColor(thread.id); $event.stopPropagation()"
-                    >
-                    Clear color
-                  </button>
-                }
-              </div>
-            }
-          </div>
-          <button
-            class="btn-icon-sm"
-            (click)="addCharacterToThread(thread.id); $event.stopPropagation()"
-            title="Link character"
-            >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
-              <line x1="20" y1="8" x2="20" y2="14"/>
-              <line x1="17" y1="11" x2="23" y2="11"/>
-            </svg>
-          </button>
-          @if (confirmDeleteThreadId !== thread.id) {
-            <button
-              class="btn-icon-sm btn-danger"
-              (click)="requestDeleteThread(thread.id); $event.stopPropagation()"
-              title="Remove thread"
-              >
-              &times;
-            </button>
-          }
-          @if (confirmDeleteThreadId === thread.id) {
-            <button
-              class="confirm-delete-btn"
-              (click)="confirmDeleteThread(thread.id); $event.stopPropagation()"
-              >
-              Confirm
-            </button>
-          }
-        </div>
-      }
-    </div>
-  }
-
-  @if (showRenameDialog) {
-    <div class="rename-overlay" (click)="cancelRename()">
-      <div class="rename-dialog" (click)="$event.stopPropagation()">
-        <h4>Rename plot board file</h4>
-        <p class="rename-hint">The file will be renamed using a slug (no spaces). If a file already exists with that name, rename is blocked.</p>
-        <input type="text" class="rename-input" [(ngModel)]="renameValue" (keydown.escape)="cancelRename()" />
-        @if (renameError) {
-          <p class="rename-error">{{ renameError }}</p>
-        }
-        <div class="rename-actions">
-          <button type="button" class="btn-action" (click)="cancelRename()">Cancel</button>
-          <button type="button" class="btn-primary" (click)="applyRename()">Rename</button>
-        </div>
-      </div>
-    </div>
-  }
-
-  @if (showNewPlotBoardDialog) {
-    <div class="rename-overlay" (click)="cancelNewPlotBoard()">
-      <div class="rename-dialog" (click)="$event.stopPropagation()">
-        <h4>New plot board</h4>
-        <p class="rename-hint">Saved at the project root as <code>&lt;slug&gt;.plotboard.md</code>. The name is turned into a safe filename (no spaces).</p>
-        <input
-          type="text"
-          class="rename-input"
-          [(ngModel)]="newPlotBoardName"
-          (keydown.escape)="cancelNewPlotBoard()"
-          (keydown.enter)="applyNewPlotBoard()"
-          placeholder="e.g. Main arc"
-          />
-        @if (newPlotBoardError) {
-          <p class="rename-error">{{ newPlotBoardError }}</p>
-        }
-        <div class="rename-actions">
-          <button type="button" class="btn-action" (click)="cancelNewPlotBoard()">Cancel</button>
-          <button type="button" class="btn-primary" (click)="applyNewPlotBoard()">Create</button>
-        </div>
-      </div>
-    </div>
-  }
-
-  @if (showDeletePlotBoardDialog) {
-    <div class="rename-overlay" (click)="cancelDeletePlotBoard()">
-      <div class="rename-dialog" (click)="$event.stopPropagation()">
-        <h4>Delete plot board?</h4>
-        @if (deleteDialogPath; as path) {
-          <p class="rename-hint">
-            Remove <strong>{{ displayStem(path) }}</strong> from disk? This cannot be undone.
-          </p>
-        }
-        @if (deletePlotBoardError) {
-          <p class="rename-error">{{ deletePlotBoardError }}</p>
-        }
-        <div class="rename-actions">
-          <button type="button" class="btn-action" (click)="cancelDeletePlotBoard()">Cancel</button>
-          <button type="button" class="btn-danger-outline" (click)="confirmDeletePlotBoard()">Delete</button>
-        </div>
-      </div>
-    </div>
+    <app-thread-toolbar
+      [threads]="board.threads"
+      [paletteColors]="paletteColors"
+      [confirmDeleteThreadId]="confirmDeleteThreadId"
+      [showThreadColorPicker]="showThreadColorPicker"
+      (toggleColorPicker)="onToggleThreadColorPicker($event)"
+      (selectColor)="onSelectThreadColor($event)"
+      (clearColor)="onClearThreadColor($event)"
+      (addCharacter)="addCharacterToThread($event)"
+      (requestDelete)="requestDeleteThread($event)"
+      (confirmDelete)="confirmDeleteThread($event)"
+    />
   }
 </div>

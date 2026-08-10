@@ -1,0 +1,27 @@
+.color-swatches {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+  flex-wrap: wrap;
+  max-width: 180px;
+  justify-content: center;
+}
+
+.color-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: transform var(--transition-fast), border-color var(--transition-fast);
+
+  &:hover {
+    transform: scale(1.25);
+  }
+
+  &.active {
+    border-color: var(--color-text-primary);
+    transform: scale(1.2);
+  }
+}

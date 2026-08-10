@@ -2,7 +2,7 @@
 import { Component, ElementRef, EventEmitter, HostListener, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Book, Cast, Category, Character, Tag } from '../../core/interfaces';
-import { getBookDisplayName } from '../../core/utils/book-display.utils';
+import { MetadataHelperService } from '../../core/services/metadata-helper.service';
 import { BookSelectorComponent } from '../book-selector/book-selector.component';
 import { CastDropdownComponent } from '../cast-dropdown/cast-dropdown.component';
 import { CategoryToggleComponent, ToggleOption } from '../category-toggle/category-toggle.component';
@@ -69,7 +69,10 @@ export class CharacterFilterComponent {
     { id: 'pov', name: 'PoV only', tooltip: 'Show only point-of-view characters for the selected book (or any book)' },
   ];
 
-  constructor(private host: ElementRef<HTMLElement>) {}
+  constructor(
+    private host: ElementRef<HTMLElement>,
+    private metadataHelper: MetadataHelperService
+  ) {}
 
   toggleExpanded(): void {
     this.isExpanded = !this.isExpanded;
@@ -147,23 +150,19 @@ export class CharacterFilterComponent {
   }
 
   getCategoryName(categoryId: string): string {
-    const category = this.categories.find((cat) => cat.id === categoryId);
-    return category?.name || categoryId;
+    return this.metadataHelper.getCategoryName(categoryId);
   }
 
   getTagName(tagId: string): string {
-    const tag = this.tags.find((t) => t.id === tagId);
-    return tag?.name || tagId;
+    return this.metadataHelper.getTagName(tagId);
   }
 
   getCastName(castId: string): string {
-    const cast = this.casts.find((c) => c.id === castId);
-    return cast?.name || castId;
+    return this.metadataHelper.getCastName(castId);
   }
 
   getBookName(bookId: string): string {
-    const book = this.books.find((b) => b.id === bookId);
-    return book ? getBookDisplayName(book) : bookId;
+    return this.metadataHelper.getBookName(bookId);
   }
 
   getBookCharacterCounts(): Map<string, number> {

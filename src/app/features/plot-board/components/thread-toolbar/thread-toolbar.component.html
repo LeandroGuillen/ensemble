@@ -1,0 +1,71 @@
+<div class="plot-board-floating-thread-toolbars">
+  @for (thread of threads; track thread) {
+    <div
+      class="thread-hover-toolbar"
+      [class.thread-hover-toolbar--visible]="isVisible(thread.id)"
+      [style.top.px]="toolbar.getTop(thread.id)"
+      [style.left.px]="toolbar.getLeft(thread.id)"
+      (mouseenter)="onToolbarMouseEnter(thread.id)"
+      (mouseleave)="onToolbarMouseLeave(thread.id)"
+      role="toolbar"
+      [attr.aria-label]="'Actions for ' + thread.name"
+      [attr.aria-hidden]="!isVisible(thread.id)"
+    >
+      <div class="thread-toolbar-color-wrap thread-color-picker-area">
+        <button
+          type="button"
+          class="btn-icon-sm"
+          [style.color]="thread.color || null"
+          (click)="onToggleColorPicker(thread.id, $event)"
+          title="Thread color"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+            <circle cx="12" cy="12" r="5"/>
+          </svg>
+        </button>
+        @if (showThreadColorPicker === thread.id) {
+          <div class="thread-color-dropdown">
+            <app-color-swatch-picker
+              [colors]="paletteColors"
+              [selectedColor]="thread.color || ''"
+              (colorSelect)="onColorSelected(thread.id, $event)"
+            />
+            @if (thread.color) {
+              <button type="button" class="icon-clear-btn" (click)="onClearColor(thread.id, $event)">
+                Clear color
+              </button>
+            }
+          </div>
+        }
+      </div>
+      <button
+        type="button"
+        class="btn-icon-sm"
+        (click)="onAddCharacter(thread.id, $event)"
+        title="Link character"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <line x1="20" y1="8" x2="20" y2="14"/>
+          <line x1="17" y1="11" x2="23" y2="11"/>
+        </svg>
+      </button>
+      @if (confirmDeleteThreadId !== thread.id) {
+        <button
+          type="button"
+          class="btn-icon-sm btn-danger"
+          (click)="onRequestDelete(thread.id, $event)"
+          title="Remove thread"
+        >
+          &times;
+        </button>
+      }
+      @if (confirmDeleteThreadId === thread.id) {
+        <button type="button" class="confirm-delete-btn" (click)="onConfirmDelete(thread.id, $event)">
+          Confirm
+        </button>
+      }
+    </div>
+  }
+</div>
