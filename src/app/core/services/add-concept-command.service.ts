@@ -20,18 +20,19 @@ export class AddConceptCommandService {
 
   /** Register (or refresh) the global New Concept palette command. */
   register(): void {
-    this.commandPaletteService.removeCommand('add-concept');
-    this.commandPaletteService.addCommand({
-      id: 'add-concept',
-      label: 'New Concept',
-      icon: '➕',
-      keywords: ['concept', 'concepts', 'new', 'create', 'idea', 'brainstorm', 'add'],
-      group: 'Concepts',
-      action: () => {
-        // Defer so the palette can finish closing before prompt reopens it
-        setTimeout(() => void this.run(), 0);
+    this.commandPaletteService.replaceGroup('Concepts', [
+      {
+        id: 'add-concept',
+        label: 'New Concept',
+        icon: '➕',
+        keywords: ['concept', 'concepts', 'new', 'create', 'idea', 'brainstorm', 'add'],
+        group: 'Concepts',
+        action: () => {
+          // Defer so the palette can finish closing before prompt reopens it
+          setTimeout(() => void this.run(), 0);
+        },
       },
-    });
+    ]);
   }
 
   async run(): Promise<void> {

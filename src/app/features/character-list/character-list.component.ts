@@ -207,8 +207,13 @@ export class CharacterListComponent implements OnInit {
       this.povOnly = true;
     }
 
-    // Register command palette commands
+    // Register command palette commands (cleared when leaving this page)
     this.registerCommands();
+    this.destroyRef.onDestroy(() => {
+      this.commandPaletteService.replaceGroup('create', []);
+      this.commandPaletteService.replaceGroup('view', []);
+      this.commandPaletteService.replaceGroup('characters', []);
+    });
 
     // Subscribe to project changes
     this.projectService.currentProject$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((project) => {
@@ -342,41 +347,33 @@ export class CharacterListComponent implements OnInit {
   }
 
   private registerCommands(): void {
-    const currentCommands = this.commandPaletteService['commandsSubject'].value;
-    const otherCommands = currentCommands.filter(
-      (cmd) => cmd.group !== 'actions' && cmd.group !== 'characters'
-    );
-
-    const baseCommands = [
+    // Drop legacy combined group if present from earlier builds
+    this.commandPaletteService.replaceGroup('actions', []);
+    this.commandPaletteService.replaceGroup('create', [
       {
         id: 'new-character',
         label: 'New Character',
         icon: '➕',
-        keywords: ['create', 'add', 'character'],
-        group: 'actions',
+        keywords: ['create', 'add', 'character', 'new'],
+        group: 'create',
         action: () => this.createNewCharacter(),
       },
+    ]);
+    this.commandPaletteService.replaceGroup('view', [
       {
         id: 'toggle-view',
         label: `Toggle View (Currently: ${
-          this.viewMode === 'grid' ? 'Grid' : this.viewMode === 'list' ? 'List' : 'Compact'
+          this.viewMode === 'grid' ? 'Grid' : this.viewMode === 'list' ? 'List' : this.viewMode === 'compact' ? 'Compact' : 'Gallery'
         })`,
-        icon: this.viewMode === 'grid' ? '📋' : this.viewMode === 'list' ? '📱' : '📄',
-        keywords: ['view', 'grid', 'list', 'compact', 'toggle', 'switch'],
-        group: 'actions',
+        icon: this.viewMode === 'grid' ? '📋' : this.viewMode === 'list' ? '📱' : this.viewMode === 'compact' ? '📄' : '🖼️',
+        keywords: ['view', 'grid', 'list', 'compact', 'gallery', 'toggle', 'switch'],
+        group: 'view',
         action: () => this.toggleViewMode(),
       },
-    ];
-
-    this.commandPaletteService.registerCommands([...otherCommands, ...baseCommands]);
+    ]);
   }
 
   private updateCharacterCommands(characters: Character[]): void {
-    // Remove old character commands
-    const currentCommands = this.commandPaletteService['commandsSubject'].value;
-    const nonCharacterCommands = currentCommands.filter((cmd) => cmd.group !== 'characters');
-
-    // Create commands for each character
     const characterCommands = characters.map((character) => ({
       id: `character-${character.id}`,
       label: character.name,
@@ -392,8 +389,7 @@ export class CharacterListComponent implements OnInit {
       action: () => this.editCharacter(character),
     }));
 
-    // Register all commands
-    this.commandPaletteService.registerCommands([...nonCharacterCommands, ...characterCommands]);
+    this.commandPaletteService.replaceGroup('characters', characterCommands);
   }
 
   async loadCharacters(): Promise<void> {
@@ -881,11 +877,13 @@ getFilterSummary(): string {
       this.viewMode = 'grid';
     }
     this.preferences.setViewMode(this.viewMode);
+    this.registerCommands();
   }
 
   setViewMode(mode: 'grid' | 'list' | 'compact' | 'gallery'): void {
     this.viewMode = mode;
     this.preferences.setViewMode(this.viewMode);
+    this.registerCommands();
   }
 
   setColumns(count: 1 | 2): void {

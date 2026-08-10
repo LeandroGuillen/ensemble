@@ -152,39 +152,33 @@ export class AppComponent implements OnInit {
    */
   private registerThemeCommands(): void {
     const themes = this.themeService.getAvailableThemes();
-    const currentTheme = this.themeService.getCurrentTheme();
 
-    // Remove existing theme commands (if any)
-    themes.forEach(theme => {
-      this.commandPaletteService.removeCommand(`theme-${theme.id}`);
-    });
-    this.commandPaletteService.removeCommand('keyboard-shortcuts');
-
-    // Add commands for each theme
-    themes.forEach(theme => {
-      this.commandPaletteService.addCommand({
+    this.commandPaletteService.replaceGroup(
+      'Appearance',
+      themes.map((theme) => ({
         id: `theme-${theme.id}`,
         label: `Switch to ${theme.name}`,
         keywords: ['theme', 'appearance', 'color', 'style', theme.name.toLowerCase(), theme.id],
         action: () => {
-          this.themeService.setTheme(theme.id).catch(error => {
+          this.themeService.setTheme(theme.id).catch((error) => {
             this.logger.error('Failed to set theme', error);
           });
         },
-        group: 'Appearance'
-      });
-    });
+        group: 'Appearance',
+      }))
+    );
 
-    // Add keyboard shortcuts command
-    this.commandPaletteService.addCommand({
-      id: 'keyboard-shortcuts',
-      label: 'Show Keyboard Shortcuts',
-      keywords: ['shortcuts', 'keyboard', 'keys', 'help', '?'],
-      action: () => {
-        this.shortcutsService.open();
+    this.commandPaletteService.replaceGroup('Help', [
+      {
+        id: 'keyboard-shortcuts',
+        label: 'Show Keyboard Shortcuts',
+        keywords: ['shortcuts', 'keyboard', 'keys', 'help', '?'],
+        action: () => {
+          this.shortcutsService.open();
+        },
+        group: 'Help',
       },
-      group: 'Help'
-    });
+    ]);
   }
 
   onConfirmationConfirm(): void {

@@ -12,6 +12,17 @@ export interface Command {
   group?: string;
 }
 
+/** Display order for command groups. Unknown groups sort after these, before ungrouped. */
+const GROUP_ORDER = [
+  'create',
+  'Concepts',
+  'Names',
+  'characters',
+  'view',
+  'Appearance',
+  'Help',
+] as const;
+
 @Injectable({
   providedIn: 'root'
 })
@@ -19,6 +30,7 @@ export class CommandPaletteService {
   private isOpenSubject = new BehaviorSubject<boolean>(false);
   public isOpen$ = this.isOpenSubject.asObservable();
 
+  /** What the palette UI currently shows (durable list, or a temporary pick/prompt list). */
   private commandsSubject = new BehaviorSubject<Command[]>([]);
   public commands$ = this.commandsSubject.asObservable();
 
@@ -31,14 +43,22 @@ export class CommandPaletteService {
   private promptModeSubject = new BehaviorSubject<boolean>(false);
   public promptMode$ = this.promptModeSubject.asObservable();
 
+  /** Source of truth for registered commands — never overwritten by pick/prompt UI. */
+  private durableCommands: Command[] = [];
+  private transientActive = false;
+
   private pickResolver: ((command: Command | null) => void) | null = null;
   private promptResolver: ((value: string | null) => void) | null = null;
-  private savedCommands: Command[] | null = null;
   private modeCloseSub: Subscription | null = null;
 
   constructor() { }
 
   open(): void {
+    // Normal open must always show the durable registry, never a leftover pick/prompt list.
+    if (!this.transientActive) {
+      this.publishDurable();
+      this.resetChrome();
+    }
     this.isOpenSubject.next(true);
   }
 
@@ -47,21 +67,68 @@ export class CommandPaletteService {
   }
 
   toggle(): void {
-    this.isOpenSubject.next(!this.isOpenSubject.value);
+    if (this.isOpenSubject.value) {
+      this.close();
+    } else {
+      this.open();
+    }
   }
 
+  /** Replace the entire durable command list. Prefer {@link replaceGroup} for page-scoped updates. */
   registerCommands(commands: Command[]): void {
-    this.commandsSubject.next(commands);
+    this.durableCommands = [...commands];
+    if (!this.transientActive) {
+      this.publishDurable();
+    }
+  }
+
+  /**
+   * Replace all commands in a group, preserving every other group and this group's slot.
+   * Safe to call while prompt/pick is open — updates the durable list only.
+   */
+  replaceGroup(group: string, commands: Command[]): void {
+    const firstIdx = this.durableCommands.findIndex((cmd) => cmd.group === group);
+    const others = this.durableCommands.filter((cmd) => cmd.group !== group);
+
+    if (commands.length === 0) {
+      this.durableCommands = others;
+    } else if (firstIdx === -1) {
+      this.durableCommands = [...others, ...commands];
+    } else {
+      const insertAt = this.durableCommands
+        .slice(0, firstIdx)
+        .filter((cmd) => cmd.group !== group).length;
+      this.durableCommands = [
+        ...others.slice(0, insertAt),
+        ...commands,
+        ...others.slice(insertAt),
+      ];
+    }
+
+    if (!this.transientActive) {
+      this.publishDurable();
+    }
   }
 
   addCommand(command: Command): void {
-    const currentCommands = this.commandsSubject.value;
-    this.commandsSubject.next([...currentCommands, command]);
+    const idx = this.durableCommands.findIndex((cmd) => cmd.id === command.id);
+    if (idx >= 0) {
+      const next = [...this.durableCommands];
+      next[idx] = command;
+      this.durableCommands = next;
+    } else {
+      this.durableCommands = [...this.durableCommands, command];
+    }
+    if (!this.transientActive) {
+      this.publishDurable();
+    }
   }
 
   removeCommand(id: string): void {
-    const currentCommands = this.commandsSubject.value;
-    this.commandsSubject.next(currentCommands.filter(cmd => cmd.id !== id));
+    this.durableCommands = this.durableCommands.filter((cmd) => cmd.id !== id);
+    if (!this.transientActive) {
+      this.publishDurable();
+    }
   }
 
   /**
@@ -87,7 +154,7 @@ export class CommandPaletteService {
       }));
 
       this.commandsSubject.next(pickerCommands);
-      this.open();
+      this.isOpenSubject.next(true);
       this.watchCloseForCancel(() => this.resolvePick(null));
     });
   }
@@ -105,7 +172,7 @@ export class CommandPaletteService {
       this.enterLabelSubject.next('Confirm');
       this.promptModeSubject.next(true);
       this.commandsSubject.next([]);
-      this.open();
+      this.isOpenSubject.next(true);
       this.watchCloseForCancel(() => this.resolvePrompt(null));
     });
   }
@@ -122,10 +189,35 @@ export class CommandPaletteService {
     return this.promptModeSubject.value;
   }
 
+  private publishDurable(): void {
+    this.commandsSubject.next(this.sortCommands(this.durableCommands));
+  }
+
+  private sortCommands(commands: Command[]): Command[] {
+    const rank = (group?: string): number => {
+      if (!group) return GROUP_ORDER.length + 1;
+      const idx = (GROUP_ORDER as readonly string[]).indexOf(group);
+      return idx === -1 ? GROUP_ORDER.length : idx;
+    };
+
+    return [...commands]
+      .map((cmd, index) => ({ cmd, index }))
+      .sort((a, b) => {
+        const byGroup = rank(a.cmd.group) - rank(b.cmd.group);
+        if (byGroup !== 0) return byGroup;
+        return a.index - b.index;
+      })
+      .map(({ cmd }) => cmd);
+  }
+
+  private resetChrome(): void {
+    this.placeholderSubject.next('Type a command or search...');
+    this.enterLabelSubject.next('Execute');
+    this.promptModeSubject.next(false);
+  }
+
   private beginTransientMode(): void {
-    if (this.savedCommands === null) {
-      this.savedCommands = this.commandsSubject.value;
-    }
+    this.transientActive = true;
   }
 
   private watchCloseForCancel(onCancel: () => void): void {
@@ -154,15 +246,10 @@ export class CommandPaletteService {
   private endTransientMode(): void {
     this.modeCloseSub?.unsubscribe();
     this.modeCloseSub = null;
+    this.transientActive = false;
 
-    if (this.savedCommands !== null) {
-      this.commandsSubject.next(this.savedCommands);
-      this.savedCommands = null;
-    }
-
-    this.placeholderSubject.next('Type a command or search...');
-    this.enterLabelSubject.next('Execute');
-    this.promptModeSubject.next(false);
+    this.publishDurable();
+    this.resetChrome();
 
     if (this.isOpenSubject.value) {
       this.close();

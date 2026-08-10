@@ -21,18 +21,19 @@ export class AddNameCommandService {
 
   /** Register (or refresh) the global New Name palette command. */
   register(): void {
-    this.commandPaletteService.removeCommand('add-name');
-    this.commandPaletteService.addCommand({
-      id: 'add-name',
-      label: 'New Name',
-      icon: '➕',
-      keywords: ['name', 'names', 'new', 'create', 'list', 'add'],
-      group: 'Names',
-      action: () => {
-        // Defer so the palette can finish closing before prompt/pick reopen it
-        setTimeout(() => void this.run(), 0);
+    this.commandPaletteService.replaceGroup('Names', [
+      {
+        id: 'add-name',
+        label: 'New Name',
+        icon: '➕',
+        keywords: ['name', 'names', 'new', 'create', 'list', 'add'],
+        group: 'Names',
+        action: () => {
+          // Defer so the palette can finish closing before prompt/pick reopen it
+          setTimeout(() => void this.run(), 0);
+        },
       },
-    });
+    ]);
   }
 
   async run(): Promise<void> {

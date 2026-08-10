@@ -13,12 +13,15 @@
         <span class="command-search-hint">ESC to close</span>
       </div>
       @if (filteredCommands.length > 0) {
-        <div class="command-list">
-          @for (command of filteredCommands; track command; let i = $index) {
+        <div
+          class="command-list"
+          #commandList
+          (mousemove)="onListMouseMove($event)">
+          @for (command of filteredCommands; track command.id; let i = $index) {
             <div
               class="command-item"
               [class.selected]="i === selectedIndex"
-              (mouseenter)="selectCommand(i)"
+              (mouseenter)="onItemMouseEnter(i)"
               (click)="executeCommand(command)">
               @if (command.thumbnail) {
                 <div class="command-thumbnail">
@@ -56,6 +59,7 @@
       <div class="command-footer">
         <div class="command-shortcuts">
           <span class="shortcut-item"><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
+          <span class="shortcut-item"><kbd>PgUp</kbd><kbd>PgDn</kbd> Jump</span>
           <span class="shortcut-item"><kbd>Enter</kbd> {{ enterLabel }}</span>
           <span class="shortcut-item"><kbd>ESC</kbd> Close</span>
         </div>
