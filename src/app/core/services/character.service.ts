@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { Character, CharacterFormData, CharacterFrontmatter, CharacterPrompt } from '../interfaces/character.interface';
 import { Category } from '../interfaces/project.interface';
-import { MarkdownUtils } from '../utils/markdown.utils';
+import { parseMarkdown, generateMarkdown } from '../utils/markdown.utils';
 import { slugify } from '../utils/slug.utils';
 import { pathJoin, pathBasename, pathDirname } from '../utils/path.utils';
 import { parseThumbnailReference, resolveThumbnailPath, resolveThumbnailForStyle, normalizeThumbnailsMap, thumbnailCacheKey } from '../utils/thumbnail.utils';
@@ -46,7 +47,7 @@ export class CharacterService {
     private metadataService: MetadataService
   ) {
     // Subscribe to file changes to auto-reload characters
-    this.fileWatcherService.fileChanges$.subscribe((event) => {
+    this.fileWatcherService.fileChanges$.pipe(takeUntilDestroyed()).subscribe((event) => {
       this.handleFileChange(event);
     });
   }
@@ -287,7 +288,7 @@ export class CharacterService {
         return null;
       }
 
-      const parseResult = MarkdownUtils.parseMarkdown<CharacterFrontmatter>(readResult.content!);
+      const parseResult = parseMarkdown<CharacterFrontmatter>(readResult.content!);
       if (!parseResult.success) {
         this.logger.error(`Failed to parse character file ${absolutePath}:`, parseResult.error);
         return null;
@@ -302,6 +303,11 @@ export class CharacterService {
       }
 
       const books = frontmatter.books || [];
+      const { created, modified } = await this.resolveCharacterTimestamps(
+        absolutePath,
+        frontmatter.created,
+        frontmatter.modified
+      );
       const character: Character = {
         id: relativePath,
         name: frontmatter.name,
@@ -312,8 +318,8 @@ export class CharacterService {
         thumbnails: normalizeThumbnailsMap(frontmatter.thumbnails),
         prompts: normalizePrompts(frontmatter.prompts),
         content: content || '',
-        created: frontmatter.created ? new Date(frontmatter.created) : new Date(),
-        modified: frontmatter.modified ? new Date(frontmatter.modified) : new Date(),
+        created,
+        modified,
         filePath: absolutePath,
       };
 
@@ -322,6 +328,46 @@ export class CharacterService {
       this.logger.error(`Failed to load character from ${absolutePath}`, error);
       return null;
     }
+  }
+
+  /**
+   * Parse frontmatter ISO timestamps into Dates; when missing, backfill from file stats.
+   * Character keeps Date; CharacterFrontmatter stores ISO strings on disk.
+   */
+  private async resolveCharacterTimestamps(
+    absolutePath: string,
+    createdRaw?: string,
+    modifiedRaw?: string
+  ): Promise<{ created: Date; modified: Date }> {
+    let created = createdRaw ? new Date(createdRaw) : null;
+    let modified = modifiedRaw ? new Date(modifiedRaw) : null;
+
+    if (created && Number.isNaN(created.getTime())) {
+      created = null;
+    }
+    if (modified && Number.isNaN(modified.getTime())) {
+      modified = null;
+    }
+
+    if (!created || !modified) {
+      const statsResult = await this.electronService.getFileStats(absolutePath);
+      if (statsResult.success && statsResult.stats) {
+        const ctime = new Date(statsResult.stats.ctime);
+        const mtime = new Date(statsResult.stats.mtime);
+        if (!created && !Number.isNaN(ctime.getTime())) {
+          created = ctime;
+        }
+        if (!modified && !Number.isNaN(mtime.getTime())) {
+          modified = mtime;
+        }
+      }
+    }
+
+    const fallback = new Date();
+    return {
+      created: created ?? fallback,
+      modified: modified ?? created ?? fallback,
+    };
   }
 
   /**
@@ -584,7 +630,7 @@ export class CharacterService {
         modified: character.modified.toISOString(),
       };
 
-      const markdownContent = MarkdownUtils.generateMarkdown(frontmatter, character.content);
+      const markdownContent = generateMarkdown(frontmatter, character.content);
 
       const writeResult = await this.electronService.writeFileAtomic(character.filePath, markdownContent);
       if (!writeResult.success) {

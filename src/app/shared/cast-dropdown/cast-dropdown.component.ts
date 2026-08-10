@@ -1,16 +1,5 @@
+import { Component, EventEmitter, Input, Output, OnInit, HostListener, NgZone, ChangeDetectorRef } from '@angular/core';
 
-import {
-  Component,
-  EventEmitter,
-  Input,
-  Output,
-  OnInit,
-  OnDestroy,
-  HostListener,
-  NgZone,
-  ChangeDetectorRef,
-} from "@angular/core";
-import { Subject, takeUntil } from "rxjs";
 import { Cast, Character } from "../../core/interfaces";
 import { ElectronService, LoggingService } from "../../core/services";
 
@@ -20,7 +9,7 @@ import { ElectronService, LoggingService } from "../../core/services";
     templateUrl: "./cast-dropdown.component.html",
     styleUrls: ["./cast-dropdown.component.scss"]
 })
-export class CastDropdownComponent implements OnInit, OnDestroy {
+export class CastDropdownComponent implements OnInit {
   @Input() casts: Cast[] = [];
   @Input() characters: Character[] = [];
   @Input() selectedCastId: string = "";
@@ -29,8 +18,6 @@ export class CastDropdownComponent implements OnInit, OnDestroy {
   @Input() showCharacterThumbnails: boolean = true; // Whether to show character thumbnails in collage
 
   @Output() castChange = new EventEmitter<string>();
-
-  private destroy$ = new Subject<void>();
 
   isDropdownOpen = false;
   characterThumbnailDataUrls: Map<string, string> = new Map();
@@ -46,11 +33,6 @@ export class CastDropdownComponent implements OnInit, OnDestroy {
     if (this.showCharacterThumbnails) {
       this.loadCharacterThumbnails();
     }
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
   }
 
   @HostListener("document:click", ["$event"])

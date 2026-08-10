@@ -1,3 +1,5 @@
+import { DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import {
   AfterViewInit,
@@ -18,8 +20,7 @@ import {
 } from "@angular/forms";
 import { ActivatedRoute, Router, RouterLink } from "@angular/router";
 import { Location } from "@angular/common";
-import { Subject } from "rxjs";
-import { debounceTime, takeUntil } from "rxjs/operators";
+import { debounceTime } from "rxjs/operators";
 import { merge } from "rxjs";
 import {
   Book,
@@ -88,7 +89,7 @@ export class CharacterDetailComponent
 {
   @ViewChild("nameInput") nameInput?: ElementRef<HTMLInputElement>;
 
-  private destroy$ = new Subject<void>();
+  private readonly destroyRef = inject(DestroyRef);
 
   characterForm: FormGroup;
   character: Character | null = null;
@@ -175,7 +176,7 @@ export class CharacterDetailComponent
   ngOnInit(): void {
     // Subscribe to project changes
     this.projectService.currentProject$
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((project) => {
         this.currentProject = project;
         this.categories = this.projectService.getCategories();
@@ -227,7 +228,7 @@ export class CharacterDetailComponent
     // Subscribe to AI settings
     this.aiService
       .getAiSettings()
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((settings) => {
         this.aiEnabled = settings?.enabled || false;
         this.cdr.markForCheck();
@@ -235,7 +236,7 @@ export class CharacterDetailComponent
 
     // Subscribe to route parameter changes (not just snapshot)
     this.route.paramMap
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((params) => {
         const characterId = params.get("id");
         if (characterId && characterId !== "new") {
@@ -266,7 +267,7 @@ export class CharacterDetailComponent
 
     // Check for query params (e.g., from Backstage)
     this.route.queryParams
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((params) => {
         if (params["name"] && !this.isEditing) {
           this.characterForm.patchValue({ name: params["name"] });
@@ -281,7 +282,7 @@ export class CharacterDetailComponent
       this.characterForm.valueChanges,
       this.characterForm.statusChanges
     )
-      .pipe(debounceTime(0), takeUntil(this.destroy$))
+      .pipe(debounceTime(0), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.updateFieldErrors();
         this.cdr.markForCheck();
@@ -290,7 +291,7 @@ export class CharacterDetailComponent
     // Update content tabs when books selection changes
     this.characterForm
       .get("books")
-      ?.valueChanges.pipe(takeUntil(this.destroy$))
+      ?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((bookIds: string[]) => {
         this.pruneBookCategories(bookIds || []);
         this.updateContentTabs();
@@ -308,8 +309,6 @@ export class CharacterDetailComponent
     if (this.textInputFocused) {
       this.cdr.reattach();
     }
-    this.destroy$.next();
-    this.destroy$.complete();
   }
 
   private keydownListener = (event: KeyboardEvent) => {

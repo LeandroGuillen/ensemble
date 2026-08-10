@@ -59,8 +59,13 @@ describe('CharacterService', () => {
       'moveDirectory',
       'copyFile',
       'deleteFile',
-      'deleteDirectoryRecursive'
+      'deleteDirectoryRecursive',
+      'getFileStats',
     ]);
+    electronSpy.getFileStats.and.returnValue(Promise.resolve({
+      success: true,
+      stats: { mtime: new Date('2024-01-02T00:00:00Z'), ctime: new Date('2024-01-01T00:00:00Z') },
+    }));
     const projectSpy = jasmine.createSpyObj('ProjectService', [
       'getCurrentProject',
       'getCharactersFolderPath',

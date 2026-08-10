@@ -1,31 +1,25 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { NotificationService, Notification } from '../../core/services/notification.service';
-import { Subject, takeUntil } from 'rxjs';
-
 @Component({
     selector: 'app-notification',
     imports: [],
     templateUrl: './notification.component.html',
     styleUrls: ['./notification.component.scss']
 })
-export class NotificationComponent implements OnInit, OnDestroy {
+export class NotificationComponent implements OnInit {
   notifications: Notification[] = [];
-  private destroy$ = new Subject<void>();
+  private readonly destroyRef = inject(DestroyRef);
 
   constructor(private notificationService: NotificationService) {}
 
   ngOnInit(): void {
     this.notificationService.notifications$
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(notification => {
         this.addNotification(notification);
       });
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
   }
 
   private addNotification(notification: Notification): void {

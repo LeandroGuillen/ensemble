@@ -29,16 +29,22 @@ export function generateId(): string {
  * Converts a slug to an ID format (for backward compatibility)
  *
  * Replaces all non-alphanumeric characters with hyphens and converts to lowercase.
+ * Collapses repeated hyphens and strips leading/trailing hyphens (same as `slugify`).
  *
  * @param slug - The slug string to convert
  * @returns The ID-formatted string
  *
  * @example
  * ```typescript
- * slugToId("John Doe!"); // "john-doe-"
+ * slugToId("John Doe!"); // "john-doe"
  * slugToId("main_character"); // "main-character"
  * ```
  */
 export function slugToId(slug: string): string {
-  return slug.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+  return slug
+    .replace(/[^a-zA-Z0-9]/g, '-')
+    .toLowerCase()
+    .replace(/-+/g, '-')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '');
 }

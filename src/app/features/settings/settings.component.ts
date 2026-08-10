@@ -1,7 +1,7 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subject, takeUntil } from 'rxjs';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { MetadataManagementComponent } from '../metadata-management/metadata-management.component';
 import { AiSettingsComponent } from '../ai-settings/ai-settings.component';
@@ -55,7 +55,7 @@ const SETTINGS_NAV_EXPANDED_GROUPS_KEY = 'settingsNavExpandedGroups';
   styleUrls: ['./settings.component.scss'],
 })
 export class SettingsComponent implements OnInit, OnDestroy {
-  private destroy$ = new Subject<void>();
+  private readonly destroyRef = inject(DestroyRef);
 
   activeSection: SettingsSectionId = DEFAULT_SETTINGS_SECTION;
   expandedGroups = new Set<string>();
@@ -134,7 +134,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.route.queryParamMap.pipe(takeUntil(this.destroy$)).subscribe((params) => {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const requested = params.get('section');
       const resolved = this.resolveSection(requested);
       if (resolved) {
@@ -161,8 +161,6 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.settingsSearch.clear();
-    this.destroy$.next();
-    this.destroy$.complete();
   }
 
   onSearchChange(query: string): void {

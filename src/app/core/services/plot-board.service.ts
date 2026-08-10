@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 import { PlotBoard, PlotBoardFrontmatter, PlotCellMeta, PlotRow, PlotThread } from '../interfaces/plot-board.interface';
-import { MarkdownUtils } from '../utils/markdown.utils';
+import { parseMarkdown, generateMarkdown } from '../utils/markdown.utils';
 import { pathJoin } from '../utils/path.utils';
 import { nextPlotBoardDuplicateStem, slugify } from '../utils/slug.utils';
 import { ElectronService } from './electron.service';
@@ -290,7 +290,7 @@ export class PlotBoardService {
   }
 
   parseFile(raw: string): PlotBoard {
-    const parseResult = MarkdownUtils.parseMarkdown<PlotBoardFrontmatter>(raw);
+    const parseResult = parseMarkdown<PlotBoardFrontmatter>(raw);
 
     const threads: PlotThread[] = parseResult.success && parseResult.data?.frontmatter?.threads
       ? parseResult.data.frontmatter.threads
@@ -411,7 +411,7 @@ export class PlotBoardService {
     }
 
     const tableStr = tableLines.join('\n');
-    return MarkdownUtils.generateMarkdown(frontmatter, tableStr);
+    return generateMarkdown(frontmatter, tableStr);
   }
 
   private cleanCellMeta(

@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy } from "@angular/core";
+import { DestroyRef, inject, Component, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NgTemplateOutlet } from "@angular/common";
 
 import {
@@ -8,7 +9,6 @@ import {
   FormGroup,
   Validators,
 } from "@angular/forms";
-import { Subject, takeUntil } from "rxjs";
 import { MetadataService } from "../../core/services/metadata.service";
 import { ProjectService } from "../../core/services/project.service";
 import { LoggingService } from "../../core/services/logging.service";
@@ -65,8 +65,8 @@ type DragKind = "book" | "series" | "saga";
   templateUrl: "./library-management.component.html",
   styleUrls: ["./library-management.component.scss"],
 })
-export class LibraryManagementComponent implements OnInit, OnDestroy {
-  private destroy$ = new Subject<void>();
+export class LibraryManagementComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
 
   books: Book[] = [];
   seriesList: Series[] = [];
@@ -176,7 +176,7 @@ export class LibraryManagementComponent implements OnInit, OnDestroy {
     this.loadData();
 
     this.metadataService.metadata$
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((metadata) => {
         if (metadata) {
           this.books = metadata.books || [];
@@ -190,11 +190,6 @@ export class LibraryManagementComponent implements OnInit, OnDestroy {
   setViewMode(mode: "gallery" | "list"): void {
     this.viewMode = mode;
     localStorage.setItem("libraryViewMode", mode);
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
   }
 
   private refreshGrouping(): void {

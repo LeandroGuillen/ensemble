@@ -1,11 +1,11 @@
 
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { animate, state, style, transition, trigger } from '@angular/animations';
-import { ChangeDetectorRef, Component, ElementRef, HostListener, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, HostListener, NgZone, OnInit, ViewChild, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Observable, Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { Observable } from 'rxjs';
 import { Book, Cast, Category, Character, CharacterStyle, Project, Tag } from '../../core/interfaces';
 import { CharacterService, ElectronService, MetadataService, NotificationService, ProjectService, LoggingService, CharacterEditDialogService } from '../../core/services';
 import { MetadataHelperService } from '../../core/services/metadata-helper.service';
@@ -49,14 +49,14 @@ import {
       ]),
     ]
 })
-export class CharacterListComponent implements OnInit, OnDestroy {
+export class CharacterListComponent implements OnInit {
   @ViewChild('scrollableContent', { static: false })
   private scrollableContentRef: ElementRef<HTMLDivElement> | null = null;
 
   private readonly dragAutoScrollThresholdPx = 120;
   private readonly dragAutoScrollMaxStepPx = 18;
 
-  private destroy$ = new Subject<void>();
+  private readonly destroyRef = inject(DestroyRef);
 
   characters$: Observable<Character[]>;
   categories: Category[] = [];
@@ -211,7 +211,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     this.registerCommands();
 
     // Subscribe to project changes
-    this.projectService.currentProject$.pipe(takeUntil(this.destroy$)).subscribe((project) => {
+    this.projectService.currentProject$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((project) => {
       this.currentProject = project;
       this.categories = this.projectService.getCategories();
       this.tags = this.projectService.getTags();
@@ -236,7 +236,7 @@ export class CharacterListComponent implements OnInit, OnDestroy {
     });
 
     // Subscribe to character changes and apply filters
-    this.characters$.pipe(takeUntil(this.destroy$)).subscribe((characters) => {
+    this.characters$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((characters) => {
       this.allCharacters = characters;
       this.filteredCharacters = this.filterAndSortCharacters(characters);
       this.recomputeGroups();
@@ -248,11 +248,6 @@ export class CharacterListComponent implements OnInit, OnDestroy {
         this.updateCharacterCommands(characters);
       });
     });
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
   }
 
   @HostListener('document:keydown', ['$event'])

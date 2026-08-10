@@ -1,10 +1,5 @@
-import {
-  Component,
-  OnInit,
-  OnDestroy,
-  NgZone,
-  ChangeDetectorRef,
-} from "@angular/core";
+import { DestroyRef, inject, Component, OnInit, NgZone, ChangeDetectorRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from "@angular/router";
 
 import {
@@ -14,7 +9,6 @@ import {
   FormGroup,
   Validators,
 } from "@angular/forms";
-import { Subject, takeUntil } from "rxjs";
 import { Cast, Category } from "../../core/interfaces/project.interface";
 import { Character } from "../../core/interfaces/character.interface";
 import {
@@ -42,8 +36,8 @@ import { PageHeaderComponent } from "../../shared/page-header/page-header.compon
     templateUrl: "./cast-detail.component.html",
     styleUrls: ["./cast-detail.component.scss"]
 })
-export class CastDetailComponent implements OnInit, OnDestroy {
-  private destroy$ = new Subject<void>();
+export class CastDetailComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
 
   castId: string | null = null;
   isNewCast = false;
@@ -97,7 +91,7 @@ export class CastDetailComponent implements OnInit, OnDestroy {
     this.loadCharactersIfNeeded();
 
     // Get cast ID from route
-    this.route.paramMap.pipe(takeUntil(this.destroy$)).subscribe((params) => {
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const id = params.get("id");
       this.isNewCast = id === "new";
       this.castId = this.isNewCast ? null : id;
@@ -106,7 +100,7 @@ export class CastDetailComponent implements OnInit, OnDestroy {
 
     // Subscribe to metadata changes for categories
     this.metadataService.metadata$
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((metadata) => {
         if (metadata) {
           this.categories = metadata.categories || [];
@@ -116,16 +110,11 @@ export class CastDetailComponent implements OnInit, OnDestroy {
     // Subscribe to character changes
     this.characterService
       .getCharacters()
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((characters) => {
         this.characters = characters;
         this.loadCharacterThumbnails(characters);
       });
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
   }
 
   private async loadCharactersIfNeeded(): Promise<void> {

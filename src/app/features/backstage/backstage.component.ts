@@ -1,17 +1,16 @@
-import { Component, OnInit, OnDestroy, HostListener, SecurityContext } from "@angular/core";
+import { DestroyRef, inject, Component, OnInit, HostListener, SecurityContext } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { FormsModule } from "@angular/forms";
 import { Router } from "@angular/router";
 import { DomSanitizer, SafeHtml } from "@angular/platform-browser";
-import { Subject } from "rxjs";
-import { takeUntil } from "rxjs/operators";
 import { AiService } from "../../core/services/ai.service";
 import { BackstageService } from "../../core/services/backstage.service";
 import { CharacterEditDialogService } from "../../core/services/character-edit-dialog.service";
 import { ElectronService } from "../../core/services/electron.service";
 import { LoggingService } from "../../core/services/logging.service";
 import { ModalService } from "../../core/services/modal.service";
-import { MarkdownUtils } from "../../core/utils/markdown.utils";
+import { escapeHtml, markdownToHtml } from "../../core/utils/markdown.utils";
 import {
   CharacterConcept,
   NameList,
@@ -27,8 +26,8 @@ import { PageHeaderComponent } from "../../shared/page-header/page-header.compon
     templateUrl: "./backstage.component.html",
     styleUrls: ["./backstage.component.scss"]
 })
-export class BackstageComponent implements OnInit, OnDestroy {
-  private destroy$ = new Subject<void>();
+export class BackstageComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
 
   concepts: CharacterConcept[] = [];
   nameLists: NameList[] = [];
@@ -94,7 +93,7 @@ export class BackstageComponent implements OnInit, OnDestroy {
     
     this.backstageService
       .getBackstageData()
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((data) => {
         this.concepts = data.concepts;
         this.nameLists = data.nameLists;
@@ -103,7 +102,7 @@ export class BackstageComponent implements OnInit, OnDestroy {
 
     this.aiService
       .getAiSettings()
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((settings) => {
         this.aiEnabled = !!settings?.enabled;
       });
@@ -468,7 +467,7 @@ export class BackstageComponent implements OnInit, OnDestroy {
   // Helper to format name for display (render markdown strikethrough)
   formatNameForDisplay(name: string | undefined): string {
     if (!name) return 'Unnamed';
-    const escaped = MarkdownUtils.escapeHtml(name);
+    const escaped = escapeHtml(name);
     return escaped.replace(/~~(.+?)~~/g, '<del>$1</del>');
   }
 
@@ -476,7 +475,7 @@ export class BackstageComponent implements OnInit, OnDestroy {
   renderMarkdown(markdown: string | undefined): SafeHtml {
     if (!markdown) return '';
 
-    const html = MarkdownUtils.markdownToHtml(markdown);
+    const html = markdownToHtml(markdown);
     const sanitized = this.sanitizer.sanitize(SecurityContext.HTML, html);
     return this.sanitizer.bypassSecurityTrustHtml(sanitized || '');
   }
@@ -536,12 +535,6 @@ export class BackstageComponent implements OnInit, OnDestroy {
         panel.focus();
       }
     }, 0);
-  }
-
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
   }
 
   async addConcept(): Promise<void> {

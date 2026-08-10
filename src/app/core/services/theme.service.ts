@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { Theme } from '../interfaces/theme.interface';
 import { themes, getThemeById, getDefaultTheme } from '../themes';
@@ -21,7 +22,7 @@ export class ThemeService {
     private logger: LoggingService
   ) {
     // Subscribe to project changes to reload theme
-    this.projectService.currentProject$.subscribe(project => {
+    this.projectService.currentProject$.pipe(takeUntilDestroyed()).subscribe(project => {
       if (project) {
         // Only re-initialize if project path changed
         if (project.path !== this.currentProjectPath) {

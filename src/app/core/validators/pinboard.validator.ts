@@ -1,9 +1,11 @@
 import { PinboardConnection, PinboardPin, PinboardData } from '../interfaces/pinboard.interface';
+import { LegacyPinboardConnectionFields } from '../interfaces/legacy.interface';
 import { ValidationResult, ValidationError } from '../interfaces/validation.interface';
 
 export class PinboardValidator {
   static validateConnection(connection: PinboardConnection): ValidationResult {
     const errors: ValidationError[] = [];
+    const legacy = connection as PinboardConnection & LegacyPinboardConnectionFields;
 
     // Required field validations
     if (!connection.id || connection.id.trim().length === 0) {
@@ -54,8 +56,8 @@ export class PinboardValidator {
       });
     }
 
-    // Data type validations
-    if (typeof connection.bidirectional !== 'boolean') {
+    // Legacy disk field: only validate type when present
+    if (legacy.bidirectional !== undefined && typeof legacy.bidirectional !== 'boolean') {
       errors.push({
         field: 'bidirectional',
         message: 'Bidirectional must be a boolean value',

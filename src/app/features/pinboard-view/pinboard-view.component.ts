@@ -2,17 +2,20 @@ import {
   AfterViewInit,
   ChangeDetectorRef,
   Component,
+  DestroyRef,
   ElementRef,
   HostListener,
+  inject,
   NgZone,
   OnDestroy,
   OnInit,
   ViewChild,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { animate, state, style, transition, trigger } from '@angular/animations';
-import { Observable, Subscription } from 'rxjs';
 import { take } from 'rxjs/operators';
 import { Character, Pinboard, PinboardConnection } from '../../core/interfaces';
+import { LegacyPinboardConnectionFields } from '../../core/interfaces/legacy.interface';
 import { DEFAULT_CONNECTION_COLOR } from '../../core/constants/project.constants';
 import {
   CharacterService,
@@ -64,7 +67,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
   pinboardData$ = this.pinboardService.getPinboardData();
   characters$ = this.characterService.getCharacters();
 
-  private subscriptions = new Subscription();
+  private readonly destroyRef = inject(DestroyRef);
 
   sidebarOpen = true;
   showConnectionDialog = false;
@@ -133,7 +136,6 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
     this.networkService.saveViewState();
     this.interactionService.detach();
     this.networkService.destroy();
-    this.subscriptions.unsubscribe();
   }
 
   @HostListener('document:keydown.escape', ['$event'])
@@ -246,7 +248,6 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
         label: this.connectionForm.label || '',
         color: this.connectionForm.color,
         labelColor: this.connectionForm.labelColor || '#ffffff',
-        bidirectional: this.connectionForm.arrowFrom && this.connectionForm.arrowTo,
         arrowFrom: this.connectionForm.arrowFrom ?? false,
         arrowTo: this.connectionForm.arrowTo ?? false,
       };
@@ -463,8 +464,9 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private subscribeToData(): void {
-    this.subscriptions.add(
-      this.characters$.subscribe(async (characters) => {
+    this.characters$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(async (characters) => {
         const hadNoCharacters = this.characters.length === 0;
         this.characters = characters;
         await this.loadThumbnailDataUrls(characters);
@@ -472,22 +474,22 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
         if (hadNoCharacters && characters.length > 0 && this.networkService.getNetwork()) {
           await this.refreshPinboardData();
         }
-      })
-    );
+      });
 
-    this.subscriptions.add(
-      this.pinboardData$.subscribe(async () => {
+    this.pinboardData$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(async () => {
         await this.refreshPinboardData();
-      })
-    );
+      });
   }
 
   private subscribeToPinboardChanges(): void {
     const initialPinboard = this.projectService.getCurrentPinboard();
     let previousPinboardId: string | null = initialPinboard?.id || null;
 
-    this.subscriptions.add(
-      this.pinboardService.currentPinboardId$.subscribe(async (pinboardId) => {
+    this.pinboardService.currentPinboardId$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(async (pinboardId) => {
         if (pinboardId) {
           if (previousPinboardId && previousPinboardId !== pinboardId) {
             await this.networkService.saveViewStateForPinboard(previousPinboardId);
@@ -499,15 +501,14 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
           this.loadPinboards();
           previousPinboardId = pinboardId;
         }
-      })
-    );
+      });
 
-    this.subscriptions.add(
-      this.projectService.currentProject$.subscribe(() => {
+    this.projectService.currentProject$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
         this.loadPinboards();
         this.currentPinboard = this.projectService.getCurrentPinboard();
-      })
-    );
+      });
   }
 
   private loadPinboards(): void {
@@ -581,6 +582,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private async openEditDialog(connection: PinboardConnection): Promise<void> {
     this.editingConnection = connection;
+    const legacy = connection as PinboardConnection & LegacyPinboardConnectionFields;
 
     if (connection.arrowFrom !== undefined && connection.arrowTo !== undefined) {
       this.connectionForm = {
@@ -599,8 +601,8 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
         label: connection.label || '',
         color: connection.color,
         labelColor: connection.labelColor || '#ffffff',
-        arrowFrom: connection.bidirectional,
-        arrowTo: connection.bidirectional || true,
+        arrowFrom: legacy.bidirectional ?? false,
+        arrowTo: legacy.bidirectional ?? true,
       };
     }
 

@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { BackstageData, CharacterConcept, NameList } from '../interfaces/backstage.interface';
 import { ElectronService } from './electron.service';
@@ -22,7 +23,7 @@ export class BackstageService {
     private logger: LoggingService
   ) {
     // Subscribe to project changes
-    this.projectService.currentProject$.subscribe((project) => {
+    this.projectService.currentProject$.pipe(takeUntilDestroyed()).subscribe((project) => {
       if (project) {
         this.currentProjectPath = project.path;
         this.loadBackstageData();

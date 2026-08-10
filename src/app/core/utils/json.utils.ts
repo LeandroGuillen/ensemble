@@ -68,18 +68,56 @@ export class JsonUtils {
   }
 
   /**
-   * Compares two JSON objects for equality
+   * Deep structural equality for JSON-compatible values.
+   * Compares objects by key set (order-independent) and arrays by index.
+   * Does not treat `undefined` properties as present.
    */
   static deepEqual<T = any>(obj1: T, obj2: T): boolean {
-    try {
-      return JSON.stringify(obj1) === JSON.stringify(obj2);
-    } catch {
+    if (Object.is(obj1, obj2)) {
+      return true;
+    }
+
+    if (obj1 === null || obj2 === null || typeof obj1 !== typeof obj2) {
       return false;
     }
+
+    if (typeof obj1 !== 'object') {
+      return false;
+    }
+
+    if (Array.isArray(obj1) || Array.isArray(obj2)) {
+      if (!Array.isArray(obj1) || !Array.isArray(obj2) || obj1.length !== obj2.length) {
+        return false;
+      }
+      return obj1.every((item, index) => this.deepEqual(item, obj2[index]));
+    }
+
+    const keys1 = Object.keys(obj1 as object);
+    const keys2 = Object.keys(obj2 as object);
+    if (keys1.length !== keys2.length) {
+      return false;
+    }
+
+    const keySet2 = new Set(keys2);
+    for (const key of keys1) {
+      if (!keySet2.has(key)) {
+        return false;
+      }
+      if (!this.deepEqual((obj1 as any)[key], (obj2 as any)[key])) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
-   * Creates a deep copy of a JSON-serializable object
+   * Creates a deep copy of a JSON-serializable object.
+   *
+   * Contract: values must survive `JSON.stringify` / `JSON.parse`.
+   * - `Date` becomes an ISO string
+   * - `undefined`, functions, and symbols are dropped
+   * - `Map` / `Set` / class instances are not preserved
+   * - object key order is not guaranteed after round-trip
    */
   static deepClone<T = any>(obj: T): T {
     try {

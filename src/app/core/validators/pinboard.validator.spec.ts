@@ -10,7 +10,8 @@ describe('PinboardValidator', () => {
       type: 'friend',
       label: 'Friends',
       color: '#FF0000',
-      bidirectional: false
+      arrowFrom: false,
+      arrowTo: true,
     });
 
     it('should validate valid connection', () => {
@@ -227,7 +228,8 @@ describe('PinboardValidator', () => {
           type: 'friend',
           label: 'Friends',
           color: '#FF0000',
-          bidirectional: false
+          arrowFrom: false,
+          arrowTo: true,
         }
       ]
     });
@@ -303,7 +305,8 @@ describe('PinboardValidator', () => {
         type: 'friend',
         label: 'Friends',
         color: '#FF0000',
-        bidirectional: false
+        arrowFrom: false,
+        arrowTo: true,
       });
       const result = PinboardValidator.validatePinboardData(data);
       

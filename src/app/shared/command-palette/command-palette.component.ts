@@ -1,16 +1,15 @@
-import { Component, OnInit, OnDestroy, HostListener, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, HostListener, ViewChild, ElementRef, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { FormsModule } from '@angular/forms';
 import { CommandPaletteService, Command } from './command-palette.service';
-import { Subject, takeUntil } from 'rxjs';
-
 @Component({
     selector: 'app-command-palette',
     imports: [FormsModule],
     templateUrl: './command-palette.component.html',
     styleUrl: './command-palette.component.scss'
 })
-export class CommandPaletteComponent implements OnInit, OnDestroy {
+export class CommandPaletteComponent implements OnInit {
   @ViewChild('searchInput') searchInput?: ElementRef<HTMLInputElement>;
 
   isOpen = false;
@@ -21,13 +20,13 @@ export class CommandPaletteComponent implements OnInit, OnDestroy {
   placeholder = 'Type a command or search...';
   enterLabel = 'Execute';
 
-  private destroy$ = new Subject<void>();
+  private readonly destroyRef = inject(DestroyRef);
 
   constructor(private commandPaletteService: CommandPaletteService) {}
 
   ngOnInit(): void {
     this.commandPaletteService.isOpen$
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(isOpen => {
         this.isOpen = isOpen;
         if (isOpen) {
@@ -39,24 +38,19 @@ export class CommandPaletteComponent implements OnInit, OnDestroy {
       });
 
     this.commandPaletteService.commands$
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(commands => {
         this.commands = commands;
         this.filterCommands();
       });
 
     this.commandPaletteService.placeholder$
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(p => this.placeholder = p);
 
     this.commandPaletteService.enterLabel$
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(l => this.enterLabel = l);
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
   }
 
   @HostListener('document:keydown', ['$event'])

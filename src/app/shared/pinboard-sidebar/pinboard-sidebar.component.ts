@@ -1,7 +1,6 @@
-import { Component, OnInit, OnDestroy, Output, EventEmitter } from '@angular/core';
-
+import { Component, OnInit, Output, EventEmitter, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
-import { Subscription } from 'rxjs';
 import { Pinboard } from '../../core/interfaces/pinboard.interface';
 import { ProjectService } from '../../core/services/project.service';
 import { PinboardService } from '../../core/services/pinboard.service';
@@ -12,7 +11,7 @@ import { PinboardService } from '../../core/services/pinboard.service';
     templateUrl: './pinboard-sidebar.component.html',
     styleUrls: ['./pinboard-sidebar.component.scss']
 })
-export class PinboardSidebarComponent implements OnInit, OnDestroy {
+export class PinboardSidebarComponent implements OnInit {
   @Output() createPinboard = new EventEmitter<void>();
   @Output() renamePinboard = new EventEmitter<string>();
   @Output() deletePinboard = new EventEmitter<string>();
@@ -23,7 +22,7 @@ export class PinboardSidebarComponent implements OnInit, OnDestroy {
   contextMenuPinboardId: string | null = null;
   contextMenuPosition: { x: number; y: number } | null = null;
 
-  private subscriptions = new Subscription();
+  private readonly destroyRef = inject(DestroyRef);
 
   constructor(
     private projectService: ProjectService,
@@ -32,25 +31,19 @@ export class PinboardSidebarComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    // Subscribe to pinboard list changes
-    this.subscriptions.add(
-      this.projectService.currentProject$.subscribe(() => {
+    this.projectService.currentProject$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
         this.loadPinboards();
-      })
-    );
+      });
 
-    // Subscribe to current pinboard ID changes
-    this.subscriptions.add(
-      this.pinboardService.currentPinboardId$.subscribe(id => {
+    this.pinboardService.currentPinboardId$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(id => {
         this.currentPinboardId = id;
-      })
-    );
+      });
 
     this.loadPinboards();
-  }
-
-  ngOnDestroy(): void {
-    this.subscriptions.unsubscribe();
   }
 
   private loadPinboards(): void {
@@ -95,4 +88,3 @@ export class PinboardSidebarComponent implements OnInit, OnDestroy {
     return id === this.currentPinboardId;
   }
 }
-

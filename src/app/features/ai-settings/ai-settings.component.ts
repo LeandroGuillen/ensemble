@@ -1,6 +1,7 @@
-import { Component, Input, OnDestroy, OnInit } from '@angular/core';
+import { Component, Input, OnInit, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { debounceTime, merge, Subject, takeUntil } from 'rxjs';
+import { debounceTime, merge } from 'rxjs';
 import {
   AiSettings,
   ImageGenerationProviderId,
@@ -18,8 +19,8 @@ import { SettingsSearchableDirective } from '../settings/settings-searchable.dir
     templateUrl: './ai-settings.component.html',
     styleUrls: ['./ai-settings.component.scss']
 })
-export class AiSettingsComponent implements OnInit, OnDestroy {
-  private destroy$ = new Subject<void>();
+export class AiSettingsComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
 
   /** Which settings panel section to render (driven by parent Settings page). */
   @Input() activeSection: SettingsSectionId = 'ai';
@@ -72,7 +73,7 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
     this.loadSettings();
     this.loadImageSettings();
     merge(this.aiForm.valueChanges, this.imageForm.valueChanges)
-      .pipe(debounceTime(600), takeUntil(this.destroy$))
+      .pipe(debounceTime(600), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         void this.saveSettings(true);
       });
@@ -117,11 +118,6 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
     };
   }
 
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-  }
-
   private createForm(): FormGroup {
     return this.fb.group({
       enabled: [false],
@@ -137,7 +133,7 @@ export class AiSettingsComponent implements OnInit, OnDestroy {
   private loadSettings(): void {
     this.aiService
       .getAiSettings()
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((settings) => {
         if (settings) {
           this.aiForm.patchValue(settings, { emitEvent: false });

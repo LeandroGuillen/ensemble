@@ -1,6 +1,6 @@
-import { Component, HostListener, OnInit, OnDestroy } from '@angular/core';
+import { Component, HostListener, OnInit, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
-import { Subject, takeUntil } from 'rxjs';
 import { KeyboardShortcutsService, Shortcut } from './keyboard-shortcuts.service';
 
 @Component({
@@ -9,29 +9,24 @@ import { KeyboardShortcutsService, Shortcut } from './keyboard-shortcuts.service
     templateUrl: './keyboard-shortcuts-dialog.component.html',
     styleUrls: ['./keyboard-shortcuts-dialog.component.scss']
 })
-export class KeyboardShortcutsDialogComponent implements OnInit, OnDestroy {
+export class KeyboardShortcutsDialogComponent implements OnInit {
   isOpen = false;
   shortcuts: Shortcut[] = [];
   groupedShortcuts: { [category: string]: Shortcut[] } = {};
 
-  private destroy$ = new Subject<void>();
+  private readonly destroyRef = inject(DestroyRef);
 
   constructor(private shortcutsService: KeyboardShortcutsService) {}
 
   ngOnInit(): void {
     this.shortcutsService.isOpen$
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(isOpen => {
         this.isOpen = isOpen;
         if (isOpen) {
           this.loadShortcuts();
         }
       });
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
   }
 
   @HostListener('document:keydown', ['$event'])

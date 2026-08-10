@@ -1,6 +1,8 @@
 import { Injectable } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { PinboardConnection, PinboardPin, PinboardData } from '../interfaces/pinboard.interface';
+import { LegacyPinboardConnectionFields } from '../interfaces/legacy.interface';
 import { generateId } from '../utils/id.utils';
 import { DEFAULT_CONNECTION_COLOR, DEFAULT_CONNECTION_LABEL_COLOR } from '../constants/project.constants';
 import { resolveThumbnailForStyle } from '../utils/thumbnail.utils';
@@ -26,7 +28,7 @@ export class PinboardService {
     private logger: LoggingService
   ) {
     // Subscribe to project changes to load pinboard data
-    this.projectService.currentProject$.subscribe(project => {
+    this.projectService.currentProject$.pipe(takeUntilDestroyed()).subscribe(project => {
       if (project && project.path !== this.currentProjectPath) {
         this.currentProjectPath = project.path;
         this.loadPinboardFromProject(project);
@@ -358,12 +360,13 @@ export class PinboardService {
     });
     
     const visEdges = currentData.edges.map(edge => {
-      // Determine arrows based on arrowFrom/arrowTo or bidirectional (for backward compatibility)
+      // Determine arrows based on arrowFrom/arrowTo or legacy bidirectional
       let arrows: string | object = {};
-      
+      const legacy = edge as PinboardConnection & LegacyPinboardConnectionFields;
+
       // Check if we're using the new format (both arrowFrom and arrowTo are explicitly set)
       const usingNewFormat = edge.arrowFrom !== undefined && edge.arrowTo !== undefined;
-      
+
       if (usingNewFormat) {
         // New format: use arrowFrom/arrowTo explicitly
         // Both are explicitly set (could be true or false)
@@ -378,8 +381,8 @@ export class PinboardService {
           arrows = { to: { enabled: false }, from: { enabled: false } };
         }
       } else {
-        // Legacy format: use bidirectional
-        if (edge.bidirectional) {
+        // Legacy format: use bidirectional from disk-only field
+        if (legacy.bidirectional) {
           arrows = { to: { enabled: true }, from: { enabled: true } };
         } else {
           arrows = { to: { enabled: true }, from: { enabled: false } }; // Default old behavior
