@@ -1,14 +1,8 @@
-import {
-  Component,
-  OnInit,
-  OnDestroy,
-  NgZone,
-  ChangeDetectorRef,
-} from "@angular/core";
+import { DestroyRef, inject, Component, OnInit, NgZone, ChangeDetectorRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from "@angular/router";
 
 import { FormsModule } from "@angular/forms";
-import { Subject, takeUntil } from "rxjs";
 import { Cast, Category } from "../../core/interfaces/project.interface";
 import { Character } from "../../core/interfaces/character.interface";
 import {
@@ -30,8 +24,8 @@ import { PageHeaderComponent } from "../../shared/page-header/page-header.compon
     templateUrl: "./cast-list.component.html",
     styleUrls: ["./cast-list.component.scss"]
 })
-export class CastListComponent implements OnInit, OnDestroy {
-  private destroy$ = new Subject<void>();
+export class CastListComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
 
   casts: Cast[] = [];
   allCasts: Cast[] = [];
@@ -84,7 +78,7 @@ export class CastListComponent implements OnInit, OnDestroy {
     // Subscribe to CastService for casts with folder data
     this.castService
       .getCasts()
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((casts) => {
         this.allCasts = casts;
         this.casts = casts;
@@ -94,7 +88,7 @@ export class CastListComponent implements OnInit, OnDestroy {
 
     // Subscribe to metadata changes for categories
     this.metadataService.metadata$
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((metadata) => {
         if (metadata) {
           this.categories = metadata.categories || [];
@@ -104,7 +98,7 @@ export class CastListComponent implements OnInit, OnDestroy {
     // Subscribe to character changes
     this.characterService
       .getCharacters()
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((characters) => {
         this.characters = characters;
         this.loadCharacterThumbnails(characters);
@@ -135,11 +129,6 @@ export class CastListComponent implements OnInit, OnDestroy {
     } catch (error) {
       this.logger.error("Failed to load casts:", error);
     }
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
   }
 
   private async loadCharacterThumbnails(

@@ -13,6 +13,7 @@ import {
   ProjectSettings,
   Tag,
 } from '../interfaces/project.interface';
+import { LegacyProjectMetadataFields } from '../interfaces/legacy.interface';
 import { generateId } from '../utils/id.utils';
 import { pathBasename, pathJoin } from '../utils/path.utils';
 import { sanitizeFilename } from '../utils/slug.utils';
@@ -765,13 +766,14 @@ export class ProjectService {
       plotBoardZoom?: number;
     };
     const s = metadata.settings as LegacySettings;
+    const legacyMeta = metadata as ProjectMetadata & LegacyProjectMetadataFields;
 
-    if (metadata.currentPinboardId !== undefined) {
+    if (legacyMeta.currentPinboardId !== undefined) {
       const ls = this.ensureLastSession(metadata);
       if (ls.lastPinboardId === undefined) {
-        ls.lastPinboardId = metadata.currentPinboardId;
+        ls.lastPinboardId = legacyMeta.currentPinboardId;
       }
-      delete metadata.currentPinboardId;
+      delete legacyMeta.currentPinboardId;
     }
 
     let ls = metadata.lastSession;

@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { ColorPaletteConfig } from '../interfaces/color-palette.interface';
 import { MetadataService } from './metadata.service';
@@ -19,7 +20,7 @@ export class ColorPaletteService {
     private themeService: ThemeService
   ) {
     // Subscribe to project changes
-    this.projectService.currentProject$.subscribe(project => {
+    this.projectService.currentProject$.pipe(takeUntilDestroyed()).subscribe(project => {
       if (project) {
         this.loadPalette();
       } else {
@@ -28,7 +29,7 @@ export class ColorPaletteService {
     });
 
     // Subscribe to theme changes to reload palette with theme defaults
-    this.themeService.currentTheme$.subscribe(() => {
+    this.themeService.currentTheme$.pipe(takeUntilDestroyed()).subscribe(() => {
       // Only reload if no custom palette exists
       const settings = this.metadataService.getSettings();
       if (!settings?.colorPalette) {

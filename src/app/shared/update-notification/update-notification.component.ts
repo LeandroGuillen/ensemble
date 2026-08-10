@@ -1,18 +1,17 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { UpdateService, UpdateStatus } from '../../core/services/update.service';
-import { Subject, takeUntil } from 'rxjs';
-
 @Component({
     selector: 'app-update-notification',
     imports: [],
     templateUrl: './update-notification.component.html',
     styleUrls: ['./update-notification.component.scss']
 })
-export class UpdateNotificationComponent implements OnInit, OnDestroy {
+export class UpdateNotificationComponent implements OnInit {
   updateStatus: UpdateStatus | null = null;
   isVisible = false;
-  private destroy$ = new Subject<void>();
+  private readonly destroyRef = inject(DestroyRef);
 
   constructor(private updateService: UpdateService) {}
 
@@ -29,7 +28,7 @@ export class UpdateNotificationComponent implements OnInit, OnDestroy {
 
     // Subscribe to future status changes
     this.updateService.updateStatus$
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(status => {
         this.updateStatus = status;
         // Show notification for relevant statuses
@@ -38,11 +37,6 @@ export class UpdateNotificationComponent implements OnInit, OnDestroy {
                         status.status === 'downloaded' ||
                         status.status === 'error';
       });
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
   }
 
   async onDownload(): Promise<void> {

@@ -7,7 +7,7 @@
  */
 
 import { Category, Tag } from '../interfaces/project.interface';
-import { COLOR_PALETTE } from '../utils/color-palette.utils';
+import { DEFAULT_BASE_COLORS } from '../utils/color-palette.utils';
 
 // ---- Filenames -------------------------------------------------------------
 export const ENSEMBLE_JSON_FILE = 'ensemble.json';
@@ -33,17 +33,17 @@ export const DEFAULT_CONNECTION_LABEL_COLOR = '#ffffff';
 
 // ---- Default category/tag seed for new projects ----------------------------
 export const DEFAULT_CATEGORIES: ReadonlyArray<Category> = [
-  { id: 'main-character', name: 'Main Character', color: COLOR_PALETTE[0] },
-  { id: 'supporting', name: 'Supporting Character', color: COLOR_PALETTE[1] },
-  { id: 'antagonist', name: 'Antagonist', color: COLOR_PALETTE[2] },
-  { id: 'minor', name: 'Minor Character', color: COLOR_PALETTE[3] },
+  { id: 'main-character', name: 'Main Character', color: DEFAULT_BASE_COLORS[0] },
+  { id: 'supporting', name: 'Supporting Character', color: DEFAULT_BASE_COLORS[1] },
+  { id: 'antagonist', name: 'Antagonist', color: DEFAULT_BASE_COLORS[2] },
+  { id: 'minor', name: 'Minor Character', color: DEFAULT_BASE_COLORS[3] },
 ];
 
 export const DEFAULT_TAGS: ReadonlyArray<Tag> = [
-  { id: 'magic-user', name: 'Magic User', color: COLOR_PALETTE[6] },
-  { id: 'noble', name: 'Noble', color: COLOR_PALETTE[7] },
-  { id: 'warrior', name: 'Warrior', color: COLOR_PALETTE[2] },
-  { id: 'scholar', name: 'Scholar', color: COLOR_PALETTE[5] },
+  { id: 'magic-user', name: 'Magic User', color: DEFAULT_BASE_COLORS[6] },
+  { id: 'noble', name: 'Noble', color: DEFAULT_BASE_COLORS[7] },
+  { id: 'warrior', name: 'Warrior', color: DEFAULT_BASE_COLORS[2] },
+  { id: 'scholar', name: 'Scholar', color: DEFAULT_BASE_COLORS[5] },
 ];
 
 // ---- Path normalization ----------------------------------------------------

@@ -1,10 +1,10 @@
-import { Component, OnInit, HostListener, OnDestroy } from "@angular/core";
+import { DestroyRef, inject, Component, OnInit, HostListener } from "@angular/core";
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterOutlet, NavigationEnd } from "@angular/router";
 
 import { Title } from "@angular/platform-browser";
 import { ProjectService, ElectronService, ThemeService, LoggingService, ZoomService } from "./core/services";
 import { filter } from "rxjs/operators";
-import { Subject, takeUntil } from "rxjs";
 import { CommandPaletteComponent } from "./shared/command-palette/command-palette.component";
 import { CommandPaletteService } from "./shared/command-palette/command-palette.service";
 import { SidebarComponent } from "./shared/sidebar/sidebar.component";
@@ -21,12 +21,12 @@ import { ModalService, ConfirmationRequest } from "./core/services/modal.service
     templateUrl: "./app.component.html",
     styleUrls: ["./app.component.scss"]
 })
-export class AppComponent implements OnInit, OnDestroy {
+export class AppComponent implements OnInit {
   title = "Ensemble";
   hasProject = false;
   isWelcomeScreen = false;
   private projectLoadedAndReady = false;
-  private destroy$ = new Subject<void>();
+  private readonly destroyRef = inject(DestroyRef);
 
   // Confirmation dialog state
   confirmationVisible = false;
@@ -84,7 +84,7 @@ export class AppComponent implements OnInit, OnDestroy {
     }
 
     this.projectService.currentProject$
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((project: any) => {
         this.hasProject = !!project;
         // Only redirect to project selector if we're already past initial load
@@ -116,7 +116,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
     // Subscribe to confirmation requests
     this.modalService.confirmation$
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((request) => {
         this.currentConfirmation = request;
         this.confirmationVisible = true;
@@ -197,10 +197,5 @@ export class AppComponent implements OnInit, OnDestroy {
       this.currentConfirmation = null;
       this.confirmationVisible = false;
     }
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
   }
 }

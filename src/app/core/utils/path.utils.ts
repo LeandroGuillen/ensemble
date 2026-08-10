@@ -67,9 +67,7 @@ export function pathBasename(path: string, ext?: string): string {
 }
 
 /**
- * Gets the directory name from a path
- *
- * Synchronous alternative to electronService.pathDirname().
+ * Gets the directory name from a path (Node `path.posix.dirname` semantics).
  *
  * @param path - The path to extract dirname from
  * @returns The directory path
@@ -80,12 +78,38 @@ export function pathBasename(path: string, ext?: string): string {
  * // Returns: "/home/user"
  *
  * pathDirname('/home/user/folder/')
- * // Returns: "/home/user/folder"
+ * // Returns: "/home/user"
+ *
+ * pathDirname('characters/_x.md')
+ * // Returns: "characters"
+ *
+ * pathDirname('_x.md')
+ * // Returns: "."
  * ```
  */
-export function pathDirname(path: string): string {
-  const parts = path.split('/').filter(p => p.length > 0);
-  return parts.length > 1 ? '/' + parts.slice(0, -1).join('/') : '/';
+export function pathDirname(filePath: string): string {
+  if (filePath.length === 0) {
+    return '.';
+  }
+
+  let normalized = filePath.replace(/\\/g, '/');
+
+  // Strip trailing slashes except for root "/"
+  if (normalized !== '/') {
+    normalized = normalized.replace(/\/+$/, '');
+  }
+  if (normalized.length === 0) {
+    return '.';
+  }
+
+  const lastSlash = normalized.lastIndexOf('/');
+  if (lastSlash === -1) {
+    return '.';
+  }
+  if (lastSlash === 0) {
+    return '/';
+  }
+  return normalized.slice(0, lastSlash);
 }
 
 /**

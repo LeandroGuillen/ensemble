@@ -113,14 +113,21 @@ Git: one commit per batch. Verify with `npm run build` (and `npm test` if applic
 - [x] G5. Remove four pure path IPC channels (`pathJoin`/`pathBasename`/`pathDirname`/
       `sanitizeFilename`); migrate callers to `path.utils.ts`/`slug.utils.ts`.
 
-## Batch H — Types & utils polish  ·  Status: [ ]
-- [ ] H1. Fix `Character.created/modified: Date` vs `CharacterFrontmatter.created?: string`; backfill from `fs.stat` mtime when missing.
-- [ ] H2. Move deprecated `currentPinboardId` and `bidirectional` to legacy interfaces used only by the loader.
-- [ ] H3. Complete interfaces barrel (`theme`, `color-palette`); convert `MarkdownUtils` static class to module functions.
-- [ ] H4. Fix `JsonUtils.deepEqual` (stringify is order-sensitive); document `deepClone` JSON-only contract.
-- [ ] H5. Align `pathDirname` with `path.posix.dirname`; align `slugToId` trailing hyphen with `slugify`; drop deprecated `COLOR_PALETTE`.
-- [ ] H6. Adopt `takeUntilDestroyed()` in 8 services + eligible components.
-- [ ] H7. (Optional, riskiest) `OnPush` for large components after E1/E2/E3; remove `detach/reattach` hack in `character-detail`.
+## Batch H — Types & utils polish  ·  Status: [x]
+- [x] H1. Fix `Character.created/modified: Date` vs `CharacterFrontmatter.created?: string`; backfill from `fs.stat` mtime when missing.
+      Loader keeps Date on `Character` and ISO strings on frontmatter; missing/invalid
+      stamps use `getFileStats` ctime/mtime instead of `new Date()`.
+- [x] H2. Move deprecated `currentPinboardId` and `bidirectional` to legacy interfaces used only by the loader.
+      New `legacy.interface.ts`; removed from modern `ProjectMetadata` /
+      `PinboardConnection`. Migration + pinboard vis/edit paths cast to legacy fields.
+- [x] H3. Complete interfaces barrel (`theme`, `color-palette`); convert `MarkdownUtils` static class to module functions.
+- [x] H4. Fix `JsonUtils.deepEqual` (stringify is order-sensitive); document `deepClone` JSON-only contract.
+- [x] H5. Align `pathDirname` with `path.posix.dirname`; align `slugToId` trailing hyphen with `slugify`; drop deprecated `COLOR_PALETTE`.
+- [x] H6. Adopt `takeUntilDestroyed()` in 8 services + eligible components.
+      Services: character, pinboard, metadata, theme, color-palette (×2), backstage, ai.
+      Components/directives using destroy$ or Subscription bags migrated; pinboard-view /
+      sidebar included. (cast-dropdown had no live subscriptions — left alone.)
+- [ ] H7. (Optional, riskiest) `OnPush` for large components after E1/E2/E3; remove `detach/reattach` hack in `character-detail`. Deferred.
 
 ---
 

@@ -7,11 +7,12 @@ import {
   OnDestroy,
   OnInit,
   Output,
+  DestroyRef,
+  inject
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { AsyncPipe } from '@angular/common';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
 import { ProjectImage } from '../../core/interfaces';
 import { ImagePickerService } from '../../core/services/image-picker.service';
 import { ElectronService } from '../../core/services/electron.service';
@@ -30,7 +31,7 @@ export class ImagePickerDialogComponent implements OnInit, OnDestroy {
   @Output() explorerError = new EventEmitter<string>();
 
   imageSearch = '';
-  private destroy$ = new Subject<void>();
+  private readonly destroyRef = inject(DestroyRef);
 
   private browserNavigationCommandListener = (
     _event: unknown,
@@ -53,7 +54,7 @@ export class ImagePickerDialogComponent implements OnInit, OnDestroy {
       this.browserNavigationCommandListener
     );
     this.imagePickerService.state$
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((state) => {
         if (!state.isOpen && this.visible) {
           this.visible = false;
@@ -67,8 +68,6 @@ export class ImagePickerDialogComponent implements OnInit, OnDestroy {
     this.electronService.removeBrowserNavigationCommandListener(
       this.browserNavigationCommandListener
     );
-    this.destroy$.next();
-    this.destroy$.complete();
   }
 
   @HostListener('document:keydown', ['$event'])

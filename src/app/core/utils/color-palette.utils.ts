@@ -2,7 +2,7 @@
  * Default base color palette for categories and tags
  * These are 10 distinct, visually unique colors that can be used
  * for any number of categories or tags
- * 
+ *
  * Note: Use ColorPaletteService to get the current palette,
  * which may include theme overrides and extra colors
  */
@@ -20,28 +20,22 @@ export const DEFAULT_BASE_COLORS = [
 ] as const;
 
 /**
- * @deprecated Use ColorPaletteService.getAllColors() instead
- * Kept for backward compatibility
- */
-export const COLOR_PALETTE = DEFAULT_BASE_COLORS;
-
-/**
  * Gets a color from the palette by index (wraps around if index exceeds palette size)
  */
 export function getColorFromPalette(index: number): string {
-  return COLOR_PALETTE[index % COLOR_PALETTE.length];
+  return DEFAULT_BASE_COLORS[index % DEFAULT_BASE_COLORS.length];
 }
 
 /**
  * Gets the next available color from the palette that hasn't been used
  */
 export function getNextAvailableColor(usedColors: string[]): string {
-  for (const color of COLOR_PALETTE) {
+  for (const color of DEFAULT_BASE_COLORS) {
     if (!usedColors.includes(color)) {
       return color;
     }
   }
   // If all colors are used, return the first one
-  return COLOR_PALETTE[0];
+  return DEFAULT_BASE_COLORS[0];
 }
 

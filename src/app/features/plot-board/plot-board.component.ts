@@ -9,13 +9,16 @@ import {
   OnInit,
   ViewChild,
   afterNextRender,
+  DestroyRef,
+  inject
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { FormsModule } from '@angular/forms';
 import { animate, state, style, transition, trigger } from '@angular/animations';
 import { ActivatedRoute, Router, UrlSegment } from '@angular/router';
 import { Subject } from 'rxjs';
-import { takeUntil, debounceTime } from 'rxjs/operators';
+import { debounceTime } from 'rxjs/operators';
 import { PlotBoardService } from '../../core/services/plot-board.service';
 import { CharacterService } from '../../core/services/character.service';
 import { CharacterPickerService } from '../../core/services/character-picker.service';
@@ -66,7 +69,7 @@ export type ZoomLevel = 1 | 2 | 3;
   ],
 })
 export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
-  private destroy$ = new Subject<void>();
+  private readonly destroyRef = inject(DestroyRef);
   private saveRequest$ = new Subject<void>();
   private suspendAutoSave = false;
 
@@ -147,23 +150,23 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     this.saveRequest$
-      .pipe(debounceTime(500), takeUntil(this.destroy$))
+      .pipe(debounceTime(500), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.persistBoard());
 
     this.characterService.characters$
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((chars) => {
         this.characters = chars;
         this.refreshThumbnails();
       });
 
     this.colorPaletteService.palette$
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.paletteColors = this.colorPaletteService.getAllColors();
       });
 
-    this.route.url.pipe(takeUntil(this.destroy$)).subscribe((segments) => {
+    this.route.url.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((segments) => {
       void this.onRouteSegments(segments);
     });
   }
@@ -182,8 +185,6 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     this.threadToolbar.destroy();
     void this.flushSaveIfNeeded();
-    this.destroy$.next();
-    this.destroy$.complete();
   }
 
   onThreadNameRowEnter(threadId: string, anchor: HTMLElement): void {

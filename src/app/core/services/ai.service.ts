@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { AiSettings } from '../interfaces/project.interface';
 import { ElectronService } from './electron.service';
@@ -58,7 +59,7 @@ export class AiService {
 
   constructor(private electronService: ElectronService, private projectService: ProjectService) {
     // Subscribe to project changes to load AI settings
-    this.projectService.currentProject$.subscribe((project) => {
+    this.projectService.currentProject$.pipe(takeUntilDestroyed()).subscribe((project) => {
       if (project?.metadata.settings.ai) {
         this.aiSettings$.next(project.metadata.settings.ai);
       } else {

@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BehaviorSubject } from 'rxjs';
 import { Character, CharacterFormData } from '../interfaces/character.interface';
 import { Book, Cast, Category, ProjectMetadata, ProjectSettings, Saga, Series, Tag } from '../interfaces/project.interface';
@@ -7,7 +8,7 @@ import { CharacterValidator } from '../validators/character.validator';
 import { ProjectValidator } from '../validators/project.validator';
 import { pathJoin } from '../utils/path.utils';
 import { slugify } from '../utils/slug.utils';
-import { MarkdownUtils } from '../utils/markdown.utils';
+import { parseMarkdown, generateMarkdown } from '../utils/markdown.utils';
 import {
   getBookDisplayName,
   normalizeBookCode,
@@ -35,7 +36,7 @@ export class MetadataService {
     private logger: LoggingService
   ) {
     // Subscribe to project changes to keep metadata in sync
-    this.projectService.currentProject$.subscribe((project) => {
+    this.projectService.currentProject$.pipe(takeUntilDestroyed()).subscribe((project) => {
       if (project) {
         this.metadataSubject.next(project.metadata);
         this.currentProjectPath = project.path;
@@ -1359,7 +1360,7 @@ export class MetadataService {
         }
         
         // Parse frontmatter to check if this character references the book
-        const parsed = MarkdownUtils.parseMarkdown(readResult.content);
+        const parsed = parseMarkdown(readResult.content);
         if (!parsed.success || !parsed.data) {
           this.logger.warn(`Failed to parse character file ${filePath}:`, parsed.error);
           continue;
@@ -1373,7 +1374,7 @@ export class MetadataService {
           const updatedFrontmatter = { ...frontmatter, books: updatedBooks };
           
           // Update the file
-          const updatedContent = MarkdownUtils.generateMarkdown(updatedFrontmatter, parsed.data.content);
+          const updatedContent = generateMarkdown(updatedFrontmatter, parsed.data.content);
           const writeResult = await this.electronService.writeFileAtomic(filePath, updatedContent);
           
           if (!writeResult.success) {

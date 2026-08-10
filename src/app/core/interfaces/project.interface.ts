@@ -40,8 +40,6 @@ export interface ProjectMetadata {
   sagas?: Saga[];
   settings: ProjectSettings;
   pinboards?: Pinboard[];  // New: array of pinboards
-  /** @deprecated Migrated to lastSession.lastPinboardId on load; do not write. */
-  currentPinboardId?: string;
   lastSession?: ProjectLastSession;
 }
 
@@ -53,7 +51,6 @@ export interface PinboardConnection {
   label: string;
   color: string;
   labelColor?: string; // Optional: color for the label text (defaults to white with black outline)
-  bidirectional: boolean; // Legacy: true = both arrows, false = arrow to target only
   arrowFrom?: boolean; // Optional: arrow pointing from source
   arrowTo?: boolean;    // Optional: arrow pointing to target
 }

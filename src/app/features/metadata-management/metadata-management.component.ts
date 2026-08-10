@@ -1,8 +1,9 @@
-import { Component, Input, OnChanges, OnInit, OnDestroy, SimpleChanges } from '@angular/core';
+import { Component, Input, OnChanges, OnInit, SimpleChanges, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { debounceTime, Subject, takeUntil } from 'rxjs';
+import { debounceTime } from 'rxjs';
 import { MetadataService } from '../../core/services/metadata.service';
 import { LoggingService } from '../../core/services/logging.service';
 import { ProjectService } from '../../core/services/project.service';
@@ -44,8 +45,8 @@ interface TagFormData {
     templateUrl: './metadata-management.component.html',
     styleUrls: ['./metadata-management.component.scss']
 })
-export class MetadataManagementComponent implements OnInit, OnDestroy, OnChanges {
-  private destroy$ = new Subject<void>();
+export class MetadataManagementComponent implements OnInit, OnChanges {
+  private readonly destroyRef = inject(DestroyRef);
 
   /** Which settings panel section to render (driven by parent Settings page). */
   @Input() activeSection: SettingsSectionId = 'general';
@@ -141,14 +142,14 @@ export class MetadataManagementComponent implements OnInit, OnDestroy, OnChanges
     
     // Subscribe to current theme changes
     this.themeService.currentTheme$
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(theme => {
         this.currentTheme = theme;
       });
     
     // Subscribe to color palette changes
     this.colorPaletteService.palette$
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(palette => {
         this.colorPalette = palette;
         if (palette) {
@@ -158,7 +159,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy, OnChanges
     
     // Subscribe to zoom level (for display in General settings)
     this.zoomService.zoomLevel$
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.zoomPercent = this.zoomService.getZoomPercent();
       });
@@ -166,7 +167,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy, OnChanges
 
     // Subscribe to update status changes
     this.updateService.updateStatus$
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(status => {
         this.updateStatus = status;
         // Reset checking flag when status changes from checking
@@ -179,7 +180,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy, OnChanges
     
     // Subscribe to metadata changes
     this.metadataService.metadata$
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(metadata => {
         if (metadata) {
           this.categories = metadata.categories;
@@ -191,7 +192,7 @@ export class MetadataManagementComponent implements OnInit, OnDestroy, OnChanges
       });
 
     this.settingsForm.valueChanges
-      .pipe(debounceTime(600), takeUntil(this.destroy$))
+      .pipe(debounceTime(600), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         void this.saveSettings();
       });
@@ -201,11 +202,6 @@ export class MetadataManagementComponent implements OnInit, OnDestroy, OnChanges
     if (changes['activeSection'] && this.activeSection === 'appearance') {
       this.colorPaletteExpanded = true;
     }
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
   }
 
   private async loadData(): Promise<void> {

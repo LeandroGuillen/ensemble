@@ -1,5 +1,5 @@
-import { Directive, HostBinding, Input, OnDestroy, OnInit } from '@angular/core';
-import { Subject, takeUntil } from 'rxjs';
+import { Directive, HostBinding, Input, OnInit, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SettingsSearchService } from './settings-search.service';
 
 /**
@@ -10,8 +10,8 @@ import { SettingsSearchService } from './settings-search.service';
   selector: '[settingsSearchable]',
   standalone: true,
 })
-export class SettingsSearchableDirective implements OnInit, OnDestroy {
-  private destroy$ = new Subject<void>();
+export class SettingsSearchableDirective implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   private terms: string[] = [];
   private visible = true;
 
@@ -42,12 +42,7 @@ export class SettingsSearchableDirective implements OnInit, OnDestroy {
   constructor(private search: SettingsSearchService) {}
 
   ngOnInit(): void {
-    this.search.query$.pipe(takeUntil(this.destroy$)).subscribe(() => this.updateVisibility());
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
+    this.search.query$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.updateVisibility());
   }
 
   private updateVisibility(): void {
