@@ -3,6 +3,19 @@
  */
 
 /**
+ * Sanitize a display name into a safe filename/folder segment (ASCII-oriented).
+ * Synchronous replacement for the removed `sanitize-filename` IPC channel.
+ */
+export function sanitizeFilename(filename: string): string {
+  return filename
+    .replace(/[<>:"|?*]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/[^\w\-_.]/g, '')
+    .toLowerCase()
+    .substring(0, 255);
+}
+
+/**
  * Converts a string into a URL-safe slug suitable for folder names
  * Preserves accented characters (á, é, í, ó, ú, ñ, etc.) for better readability
  * @param text - The text to convert to a slug

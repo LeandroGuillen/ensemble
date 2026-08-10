@@ -154,15 +154,15 @@ export class PlotBoardService {
       dirRel ? pathJoin(dirRel, `${s}.pinboard.md`) : `${s}.pinboard.md`;
 
     let relativePath = tryPath(stem);
-    let absCheck = await this.electronService.pathJoin(project.path, relativePath);
+    let absCheck = pathJoin(project.path, relativePath);
     while (await this.electronService.fileExists(absCheck)) {
       stem = `${base}-${counter++}`;
       relativePath = tryPath(stem);
-      absCheck = await this.electronService.pathJoin(project.path, relativePath);
+      absCheck = pathJoin(project.path, relativePath);
     }
 
     if (dirRel) {
-      const dirAbs = await this.electronService.pathJoin(project.path, dirRel);
+      const dirAbs = pathJoin(project.path, dirRel);
       const mkdir = await this.electronService.createDirectory(dirAbs);
       if (!mkdir.success) {
         return { success: false, error: mkdir.error || 'Could not create folder' };
@@ -171,7 +171,7 @@ export class PlotBoardService {
 
     const empty: PlotBoard = { threads: [], rows: [], cells: {}, cellMeta: {} };
     const content = this.generateFile(empty);
-    const fileAbs = await this.electronService.pathJoin(project.path, relativePath);
+    const fileAbs = pathJoin(project.path, relativePath);
     const write = await this.electronService.writeFileAtomic(fileAbs, content);
     if (!write.success) {
       return { success: false, error: write.error || 'Could not create file' };

@@ -36,7 +36,7 @@ describe('ProjectService', () => {
       'writeFile',
       'writeFileAtomic',
       'createDirectory',
-      'pathBasename',
+      'setWorkFolder',
       'getRecentProjects',
       'saveRecentProjects',
       'deleteFile',
@@ -61,6 +61,7 @@ describe('ProjectService', () => {
     notificationService = TestBed.inject(NotificationService) as jasmine.SpyObj<NotificationService>;
 
     electronService.isElectron.and.returnValue(true);
+    electronService.setWorkFolder.and.returnValue(Promise.resolve({ success: true }));
     electronService.getRecentProjects.and.returnValue(Promise.resolve([]));
     electronService.saveRecentProjects.and.returnValue(Promise.resolve({ success: true }));
     electronService.deleteFile.and.returnValue(Promise.resolve({ success: true }));
@@ -144,7 +145,6 @@ describe('ProjectService', () => {
       const projectPath = '/test/project';
       electronService.isDirectory.and.returnValue(Promise.resolve(true));
       electronService.fileExists.and.returnValue(Promise.resolve(false));
-      electronService.pathBasename.and.returnValue(Promise.resolve('project'));
       electronService.createDirectory.and.returnValue(Promise.resolve({ success: true }));
       electronService.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));
 

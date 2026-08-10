@@ -4,6 +4,8 @@ import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ProjectService, ElectronService, LoggingService } from '../../core/services';
 import { LEGACY_METADATA_JSON_FILE } from '../../core/constants/project.constants';
+import { pathBasename, pathJoin } from '../../core/utils/path.utils';
+import { sanitizeFilename } from '../../core/utils/slug.utils';
 import { ModalService } from '../../core/services/modal.service';
 
 interface RecentProject {
@@ -91,10 +93,10 @@ export class ProjectSelectorComponent implements OnInit {
           const isDir = exists ? await this.electronService.isDirectory(projectPath) : false;
           
           // Get project name from metadata or folder name
-          let projectName = await this.electronService.pathBasename(projectPath);
+          let projectName = pathBasename(projectPath);
           if (exists && isDir) {
             try {
-              const metadataPath = await this.electronService.pathJoin(projectPath, LEGACY_METADATA_JSON_FILE);
+              const metadataPath = pathJoin(projectPath, LEGACY_METADATA_JSON_FILE);
               const hasMetadata = await this.electronService.fileExists(metadataPath);
               if (hasMetadata) {
                 const result = await this.electronService.readFile(metadataPath);
@@ -119,8 +121,8 @@ export class ProjectSelectorComponent implements OnInit {
         } catch (error) {
           console.warn('Failed to check project path:', projectPath, error);
           // Ensure projectPath is a string before calling pathBasename
-          const fallbackName = typeof projectPath === 'string' 
-            ? await this.electronService.pathBasename(projectPath)
+          const fallbackName = typeof projectPath === 'string'
+            ? pathBasename(projectPath)
             : 'Unknown Project';
           this.recentProjects.push({
             path: projectPath,
@@ -236,8 +238,8 @@ export class ProjectSelectorComponent implements OnInit {
 
     try {
       // Create project folder path
-      const sanitizedName = await this.electronService.sanitizeFilename(this.newProjectName);
-      const projectPath = await this.electronService.pathJoin(this.newProjectPath, sanitizedName);
+      const sanitizedName = sanitizeFilename(this.newProjectName);
+      const projectPath = pathJoin(this.newProjectPath, sanitizedName);
 
       const project = await this.projectService.createProject(projectPath, this.newProjectName);
       if (project) {

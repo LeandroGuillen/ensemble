@@ -28,6 +28,7 @@ import {
   ModalService,
   MetadataHelperService,
 } from "../../core/services";
+import { pathJoin } from "../../core/utils/path.utils";
 import { contrastTextColor } from "../../core/utils/color-contrast.utils";
 import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
 
@@ -211,7 +212,7 @@ export class CastDetailComponent implements OnInit, OnDestroy {
     }
 
     try {
-      const thumbnailPath = await this.electronService.pathJoin(
+      const thumbnailPath = pathJoin(
         cast.folderPath,
         cast.thumbnail
       );

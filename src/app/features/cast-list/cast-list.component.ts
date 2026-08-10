@@ -21,6 +21,7 @@ import {
   ModalService,
   MetadataHelperService,
 } from "../../core/services";
+import { pathJoin } from "../../core/utils/path.utils";
 import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
 
 @Component({
@@ -186,7 +187,7 @@ export class CastListComponent implements OnInit, OnDestroy {
         )
         .map(async (cast) => {
           try {
-            const thumbnailPath = await this.electronService.pathJoin(
+            const thumbnailPath = pathJoin(
               cast.folderPath!,
               cast.thumbnail!
             );

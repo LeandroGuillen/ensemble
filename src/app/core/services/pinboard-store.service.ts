@@ -7,6 +7,7 @@ import {
   Project,
 } from '../interfaces/project.interface';
 import { generateId } from '../utils/id.utils';
+import { pathJoin } from '../utils/path.utils';
 import { assertIpcSuccess } from '../utils/ipc.utils';
 import { ENSEMBLE_JSON_FILE } from '../constants/project.constants';
 import { ElectronService } from './electron.service';
@@ -111,7 +112,7 @@ export class PinboardStoreService {
   }
 
   private async persist(project: Project): Promise<void> {
-    const path = await this.electronService.pathJoin(project.path, ENSEMBLE_JSON_FILE);
+    const path = pathJoin(project.path, ENSEMBLE_JSON_FILE);
     assertIpcSuccess(
       await this.electronService.writeFileAtomic(path, JSON.stringify(project.metadata, null, 2)),
       'Save pinboard metadata'

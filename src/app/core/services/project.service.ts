@@ -14,7 +14,8 @@ import {
   Tag,
 } from '../interfaces/project.interface';
 import { generateId } from '../utils/id.utils';
-import { pathJoin } from '../utils/path.utils';
+import { pathBasename, pathJoin } from '../utils/path.utils';
+import { sanitizeFilename } from '../utils/slug.utils';
 import { assertIpcSuccess } from '../utils/ipc.utils';
 import {
   ENSEMBLE_JSON_FILE,
@@ -140,6 +141,8 @@ export class ProjectService {
    */
   async loadProject(projectPath: string): Promise<Project | null> {
     try {
+      await this.electronService.setWorkFolder(projectPath);
+
       // Check if directory exists
       const isDir = await this.electronService.isDirectory(projectPath);
       if (!isDir) {
@@ -192,7 +195,7 @@ export class ProjectService {
         }
       } else {
         // Create default metadata if it doesn't exist
-        const projectName = await this.electronService.pathBasename(projectPath);
+        const projectName = pathBasename(projectPath);
         metadata = this.createDefaultMetadata(projectName);
         await this.saveMetadata(projectPath, metadata);
       }
@@ -238,6 +241,8 @@ export class ProjectService {
    */
   async createProject(projectPath: string, projectName: string): Promise<Project | null> {
     try {
+      await this.electronService.setWorkFolder(projectPath);
+
       // Check if directory already exists
       const exists = await this.electronService.fileExists(projectPath);
       if (exists) {
@@ -281,6 +286,8 @@ export class ProjectService {
    */
   async duplicateProject(sourceProjectPath: string, destinationPath: string, newProjectName: string): Promise<Project | null> {
     try {
+      await this.electronService.setWorkFolder(sourceProjectPath);
+
       // Validate source project exists and is a valid project
       const sourceExists = await this.electronService.fileExists(sourceProjectPath);
       if (!sourceExists) {
@@ -303,9 +310,11 @@ export class ProjectService {
       }
 
       // Validate destination path doesn't already contain a project
-      const sanitizedName = await this.electronService.sanitizeFilename(newProjectName);
-      const destProjectPath = await this.electronService.pathJoin(destinationPath, sanitizedName);
-      
+      const sanitizedName = sanitizeFilename(newProjectName);
+      const destProjectPath = pathJoin(destinationPath, sanitizedName);
+
+      await this.electronService.setWorkFolder(destProjectPath);
+
       const destExists = await this.electronService.fileExists(destProjectPath);
       if (destExists) {
         const destEnsemblePath = pathJoin(destProjectPath, ENSEMBLE_JSON_FILE);

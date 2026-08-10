@@ -127,7 +127,7 @@ export class BackstageService {
       .join('\n');
 
     const filePath = this.getConceptsFilePath();
-    const result = await this.electronService.writeFile(filePath, content);
+    const result = await this.electronService.writeFileAtomic(filePath, content);
 
     if (!result.success) {
       throw new Error(result.error || 'Failed to write concepts file');
@@ -264,7 +264,7 @@ export class BackstageService {
       .join('\n');
 
     const filePath = this.getNameListsFilePath();
-    const result = await this.electronService.writeFile(filePath, content);
+    const result = await this.electronService.writeFileAtomic(filePath, content);
 
     if (!result.success) {
       throw new Error(result.error || 'Failed to write name lists file');

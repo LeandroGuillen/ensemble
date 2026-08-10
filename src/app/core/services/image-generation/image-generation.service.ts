@@ -8,6 +8,7 @@ import {
 } from '../../interfaces/image-generation.interface';
 import { ImageGenerationSettings } from '../../interfaces/project.interface';
 import { asciiSlugify } from '../../utils/slug.utils';
+import { pathJoin } from '../../utils/path.utils';
 import { requireProject } from '../../utils/project.utils';
 import { ElectronService } from '../electron.service';
 import { ProjectService } from '../project.service';
@@ -86,7 +87,7 @@ export class ImageGenerationService {
       request.outputDirectory
     );
     const relativePath = await this.findAvailableRelativePath(project.path, baseRelativePath);
-    const absolutePath = await this.electronService.pathJoin(project.path, relativePath);
+    const absolutePath = pathJoin(project.path, relativePath);
     await provider.download(image, absolutePath);
     return relativePath.replace(/\\/g, '/');
   }
@@ -131,7 +132,7 @@ export class ImageGenerationService {
     const normalizedDirectory = normalizeRelativeDirectory(relativeDirectory);
     const imagesRoot = this.projectService.getImagesFolderPath();
     const absoluteDirectory = normalizedDirectory
-      ? await this.electronService.pathJoin(imagesRoot, ...normalizedDirectory.split('/'))
+      ? pathJoin(imagesRoot, ...normalizedDirectory.split('/'))
       : imagesRoot;
     if (!(await this.electronService.fileExists(absoluteDirectory))) {
       return { relativeDirectory: normalizedDirectory, directories: [], images: [] };
@@ -150,7 +151,7 @@ export class ImageGenerationService {
     const images = await Promise.all(
       imageNames.map(async (name): Promise<ProjectImage> => {
         const insideImages = normalizedDirectory ? `${normalizedDirectory}/${name}` : name;
-        const absolutePath = await this.electronService.pathJoin(absoluteDirectory, name);
+        const absolutePath = pathJoin(absoluteDirectory, name);
         return {
           relativePath: `${root}/${insideImages}`,
           absolutePath,
@@ -162,7 +163,7 @@ export class ImageGenerationService {
     const directoryNames = (listing.directories || []).sort((a, b) => a.localeCompare(b));
     const directories = await Promise.all(
       directoryNames.map(async (name) => {
-        const absolutePath = await this.electronService.pathJoin(absoluteDirectory, name);
+        const absolutePath = pathJoin(absoluteDirectory, name);
         const childListing = await this.electronService.readDirectoryFiles(absolutePath);
         const previewName = (childListing.files || [])
           .filter(isSupportedImageName)
@@ -171,7 +172,7 @@ export class ImageGenerationService {
           name,
           previewUrl: previewName
             ? await this.electronService.getImageAsDataUrl(
-                await this.electronService.pathJoin(absolutePath, previewName)
+                pathJoin(absolutePath, previewName)
               )
             : null,
         };
@@ -200,7 +201,7 @@ export class ImageGenerationService {
   private async findAvailableRelativePath(projectPath: string, requestedPath: string): Promise<string> {
     let candidate = requestedPath;
     let suffix = 2;
-    while (await this.electronService.fileExists(await this.electronService.pathJoin(projectPath, candidate))) {
+    while (await this.electronService.fileExists(pathJoin(projectPath, candidate))) {
       const dot = requestedPath.lastIndexOf('.');
       candidate =
         dot > -1

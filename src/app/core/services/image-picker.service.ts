@@ -6,6 +6,7 @@ import {
   ProjectImageFolder,
 } from '../interfaces';
 import { parseThumbnailReference } from '../utils/thumbnail.utils';
+import { pathJoin } from '../utils/path.utils';
 import { ImageGenerationService } from './image-generation/image-generation.service';
 import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
@@ -231,7 +232,7 @@ export class ImagePickerService {
 
     const imagesRoot = this.projectService.getImagesFolderPath();
     const absolutePath = this.snapshot.currentDirectory
-      ? await this.electronService.pathJoin(
+      ? pathJoin(
           imagesRoot,
           ...this.snapshot.currentDirectory.split('/')
         )

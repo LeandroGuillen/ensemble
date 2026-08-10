@@ -12,6 +12,7 @@
 
   "getRecentProjects": "get-recent-projects",
   "saveRecentProjects": "save-recent-projects",
+  "setWorkFolder": "set-work-folder",
 
   "createDirectory": "create-directory",
   "fileExists": "file-exists",
@@ -19,11 +20,6 @@
   "readFile": "read-file",
   "writeFile": "write-file",
   "writeFileAtomic": "write-file-atomic",
-
-  "pathJoin": "path-join",
-  "pathBasename": "path-basename",
-  "pathDirname": "path-dirname",
-  "sanitizeFilename": "sanitize-filename",
 
   "deleteFile": "delete-file",
   "listDirectory": "list-directory",

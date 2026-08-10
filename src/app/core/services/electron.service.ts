@@ -74,44 +74,15 @@ export class ElectronService {
     return await this.ipcRenderer.invoke(IpcChannels.writeFileAtomic, filePath, content);
   }
 
-  // Path operations
-  async pathJoin(...paths: string[]): Promise<string> {
+  /**
+   * Tell the main process which project root is active so FS IPC handlers can
+   * enforce the work-folder path sandbox (Batch G).
+   */
+  async setWorkFolder(folderPath: string | null): Promise<{ success: boolean; error?: string }> {
     if (!this.isElectron()) {
-      return paths.join('/'); // Fallback for non-Electron environments
+      return { success: false, error: 'Not running in Electron' };
     }
-    return await this.ipcRenderer.invoke(IpcChannels.pathJoin, ...paths);
-  }
-
-  async pathBasename(filePath: string, ext?: string): Promise<string> {
-    if (!this.isElectron()) {
-      const parts = filePath.split('/');
-      let basename = parts[parts.length - 1];
-      if (ext && basename.endsWith(ext)) {
-        basename = basename.slice(0, -ext.length);
-      }
-      return basename;
-    }
-    return await this.ipcRenderer.invoke(IpcChannels.pathBasename, filePath, ext);
-  }
-
-  async pathDirname(filePath: string): Promise<string> {
-    if (!this.isElectron()) {
-      const parts = filePath.split('/');
-      return parts.slice(0, -1).join('/');
-    }
-    return await this.ipcRenderer.invoke(IpcChannels.pathDirname, filePath);
-  }
-
-  async sanitizeFilename(filename: string): Promise<string> {
-    if (!this.isElectron()) {
-      return filename
-        .replace(/[<>:"|?*]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/[^\w\-_.]/g, '')
-        .toLowerCase()
-        .substring(0, 255);
-    }
-    return await this.ipcRenderer.invoke(IpcChannels.sanitizeFilename, filename);
+    return await this.ipcRenderer.invoke(IpcChannels.setWorkFolder, folderPath);
   }
 
   // Dialog operations

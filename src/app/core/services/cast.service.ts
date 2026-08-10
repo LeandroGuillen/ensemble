@@ -3,7 +3,7 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { Cast } from '../interfaces/project.interface';
 import { slugify } from '../utils/slug.utils';
 import { generateId } from '../utils/id.utils';
-import { pathJoin } from '../utils/path.utils';
+import { pathBasename, pathJoin } from '../utils/path.utils';
 import { assertIpcSuccess } from '../utils/ipc.utils';
 import { requireProject } from '../utils/project.utils';
 import { ElectronService } from './electron.service';
@@ -383,7 +383,7 @@ export class CastService {
 
     try {
       // Get original filename and extension
-      const originalFilename = await this.electronService.pathBasename(thumbnailPath);
+      const originalFilename = pathBasename(thumbnailPath);
       const extension = originalFilename.split('.').pop() || 'jpg';
       const thumbnailFilename = `thumbnail.${extension}`;
 

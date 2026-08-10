@@ -26,6 +26,7 @@ export interface IpcChannels {
 
   readonly getRecentProjects: string;
   readonly saveRecentProjects: string;
+  readonly setWorkFolder: string;
 
   readonly createDirectory: string;
   readonly fileExists: string;
@@ -33,11 +34,6 @@ export interface IpcChannels {
   readonly readFile: string;
   readonly writeFile: string;
   readonly writeFileAtomic: string;
-
-  readonly pathJoin: string;
-  readonly pathBasename: string;
-  readonly pathDirname: string;
-  readonly sanitizeFilename: string;
 
   readonly deleteFile: string;
   readonly listDirectory: string;

@@ -99,12 +99,19 @@ Git: one commit per batch. Verify with `npm run build` (and `npm test` if applic
       Added `MarkdownUtils.escapeHtml` / `markdownToHtml`; backstage `renderMarkdown`
       and `formatNameForDisplay` consume them (still DomSanitizer-gated).
 
-## Batch G — main.js split & safety  ·  Status: [ ]
-- [ ] G1. Split `main.js` into `main.js` + `lib/{window,fs-handlers,path-handlers,dialog-handlers,file-watcher,ai-http,updater}.js` with `register(ipcMain, deps)` exports. Collapse duplicated updater cache-search.
-- [ ] G2. Add `assertPathInsideWorkFolder` guard + `set-work-folder` channel. Whitelist `recent-projects.json`, update downloads, OS temp.
-- [ ] G3. Fix `write-file-atomic` fallback (no raw target overwrite). Migrate `backstage.service.ts` non-atomic writers.
-- [ ] G4. Replace ad-hoc glob with `picomatch` (or escaped regex); remove `_*.md` special case.
-- [ ] G5. Remove four pure path IPC channels (`pathJoin`/`pathBasename`/`pathDirname`/`sanitizeFilename`); migrate callers to `path.utils.ts`/`slug.utils.ts`.
+## Batch G — main.js split & safety  ·  Status: [x]
+- [x] G1. Split `main.js` into `main.js` + `lib/{window,fs-handlers,dialog-handlers,file-watcher,ai-http,updater}.js`
+      (+ `ipc-result`, `path-guard`, `normalize-relative-folder`) with `register(ipcMain, deps)`
+      exports. Collapsed duplicated updater cache-search into `resolveUpdateFilePath`.
+      (No `path-handlers` module — those channels were removed in G5.)
+- [x] G2. Add `assertPathInsideWorkFolder` guard + `set-work-folder` channel. Whitelist
+      `userData`/`temp`/`downloads`/`cache`/`os.tmpdir`; dialog-selected paths are
+      session-allowed; `ProjectService` calls `setWorkFolder` on load/create/duplicate.
+- [x] G3. Fix `write-file-atomic` fallback (no raw target overwrite — rename/retry temp only).
+      Migrate `backstage.service.ts` concept/name writers to `writeFileAtomic`.
+- [x] G4. Replace ad-hoc glob with `picomatch`; remove `_*.md` special case.
+- [x] G5. Remove four pure path IPC channels (`pathJoin`/`pathBasename`/`pathDirname`/
+      `sanitizeFilename`); migrate callers to `path.utils.ts`/`slug.utils.ts`.
 
 ## Batch H — Types & utils polish  ·  Status: [ ]
 - [ ] H1. Fix `Character.created/modified: Date` vs `CharacterFrontmatter.created?: string`; backfill from `fs.stat` mtime when missing.
