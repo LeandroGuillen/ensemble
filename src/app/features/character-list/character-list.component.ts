@@ -1,29 +1,27 @@
 
-import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { animate, state, style, transition, trigger } from '@angular/animations';
-import { ChangeDetectorRef, Component, ElementRef, HostListener, NgZone, OnInit, ViewChild, DestroyRef, inject } from '@angular/core';
+import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
+import { ChangeDetectorRef, Component, DestroyRef, ElementRef, HostListener, inject, OnInit, ViewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
 import { Observable } from 'rxjs';
 import { Book, Cast, Category, Character, CharacterStyle, Project, Tag } from '../../core/interfaces';
-import { CharacterService, ElectronService, MetadataService, NotificationService, ProjectService, LoggingService, CharacterEditDialogService } from '../../core/services';
+import { CharacterEditDialogService, CharacterService, LoggingService, MetadataService, NotificationService, ProjectService } from '../../core/services';
 import { MetadataHelperService } from '../../core/services/metadata-helper.service';
 import { ModalService } from '../../core/services/modal.service';
 import { PreferencesService } from '../../core/services/preferences.service';
-import { resolveThumbnailForStyle } from '../../core/utils/thumbnail.utils';
 import { resolveEffectiveCategory } from '../../core/utils/character-category.utils';
 import { contrastTextColor } from '../../core/utils/color-contrast.utils';
+import { resolveThumbnailForStyle } from '../../core/utils/thumbnail.utils';
 import { ToggleOption } from '../../shared/category-toggle/category-toggle.component';
 import { CharacterFilterComponent } from '../../shared/character-filter/character-filter.component';
-import { CommandPaletteService } from '../../shared/command-palette/command-palette.service';
 import { SelectableItem } from '../../shared/multi-select-buttons/multi-select-buttons.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import {
-  CharacterCompactViewComponent,
-  CharacterGalleryViewComponent,
-  CharacterGridViewComponent,
-  CharacterListViewComponent,
+    CharacterCompactViewComponent,
+    CharacterGalleryViewComponent,
+    CharacterGridViewComponent,
+    CharacterListViewComponent,
 } from './views';
 @Component({
     selector: 'app-character-list',
@@ -110,15 +108,11 @@ export class CharacterListComponent implements OnInit {
   constructor(
     private characterService: CharacterService,
     private projectService: ProjectService,
-    private electronService: ElectronService,
     private metadataService: MetadataService,
     public metadataHelper: MetadataHelperService,
     private modalService: ModalService,
     private preferences: PreferencesService,
-    private router: Router,
     private characterEditDialog: CharacterEditDialogService,
-    private commandPaletteService: CommandPaletteService,
-    private ngZone: NgZone,
     private cdr: ChangeDetectorRef,
     private logger: LoggingService,
     private notificationService: NotificationService
@@ -207,14 +201,6 @@ export class CharacterListComponent implements OnInit {
       this.povOnly = true;
     }
 
-    // Register command palette commands (cleared when leaving this page)
-    this.registerCommands();
-    this.destroyRef.onDestroy(() => {
-      this.commandPaletteService.replaceGroup('create', []);
-      this.commandPaletteService.replaceGroup('view', []);
-      this.commandPaletteService.replaceGroup('characters', []);
-    });
-
     // Subscribe to project changes
     this.projectService.currentProject$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((project) => {
       this.currentProject = project;
@@ -248,10 +234,7 @@ export class CharacterListComponent implements OnInit {
       this.updateCategoryDropListIds();
       // Sync cache from service first (to restore cached images)
       this.syncCacheFromService();
-      this.loadThumbnailDataUrls(characters).then(() => {
-        // Update command palette after thumbnails are loaded
-        this.updateCharacterCommands(characters);
-      });
+      void this.loadThumbnailDataUrls(characters);
     });
   }
 
@@ -344,52 +327,6 @@ export class CharacterListComponent implements OnInit {
 
   getCharacterClass(index: number): string {
     return this.selectedCharacterIndex === index ? 'selected' : '';
-  }
-
-  private registerCommands(): void {
-    // Drop legacy combined group if present from earlier builds
-    this.commandPaletteService.replaceGroup('actions', []);
-    this.commandPaletteService.replaceGroup('create', [
-      {
-        id: 'new-character',
-        label: 'New Character',
-        icon: '➕',
-        keywords: ['create', 'add', 'character', 'new'],
-        group: 'create',
-        action: () => this.createNewCharacter(),
-      },
-    ]);
-    this.commandPaletteService.replaceGroup('view', [
-      {
-        id: 'toggle-view',
-        label: `Toggle View (Currently: ${
-          this.viewMode === 'grid' ? 'Grid' : this.viewMode === 'list' ? 'List' : this.viewMode === 'compact' ? 'Compact' : 'Gallery'
-        })`,
-        icon: this.viewMode === 'grid' ? '📋' : this.viewMode === 'list' ? '📱' : this.viewMode === 'compact' ? '📄' : '🖼️',
-        keywords: ['view', 'grid', 'list', 'compact', 'gallery', 'toggle', 'switch'],
-        group: 'view',
-        action: () => this.toggleViewMode(),
-      },
-    ]);
-  }
-
-  private updateCharacterCommands(characters: Character[]): void {
-    const characterCommands = characters.map((character) => ({
-      id: `character-${character.id}`,
-      label: character.name,
-      thumbnail: this.thumbnailDataUrls.get(character.id) || undefined,
-      metadata: this.metadataHelper.getCategoryName(character.category),
-      keywords: [
-        character.name,
-        this.metadataHelper.getCategoryName(character.category),
-        ...character.tags.map((tagId) => this.metadataHelper.getTagName(tagId)),
-        ...character.books.map((bookId) => this.metadataHelper.getBookName(bookId)),
-      ],
-      group: 'characters',
-      action: () => this.editCharacter(character),
-    }));
-
-    this.commandPaletteService.replaceGroup('characters', characterCommands);
   }
 
   async loadCharacters(): Promise<void> {
@@ -817,7 +754,6 @@ export class CharacterListComponent implements OnInit {
     this.syncCacheFromService();
     await this.loadThumbnailDataUrls(this.allCharacters);
     this.applyFilters();
-    this.updateCharacterCommands(this.allCharacters);
     this.cdr.detectChanges();
   }
 
@@ -877,13 +813,11 @@ getFilterSummary(): string {
       this.viewMode = 'grid';
     }
     this.preferences.setViewMode(this.viewMode);
-    this.registerCommands();
   }
 
   setViewMode(mode: 'grid' | 'list' | 'compact' | 'gallery'): void {
     this.viewMode = mode;
     this.preferences.setViewMode(this.viewMode);
-    this.registerCommands();
   }
 
   setColumns(count: 1 | 2): void {

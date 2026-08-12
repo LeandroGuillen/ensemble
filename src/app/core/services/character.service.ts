@@ -95,6 +95,11 @@ export class CharacterService {
     return this.characters$;
   }
 
+  /** Returns the currently cached characters for consumers that need an immediate snapshot. */
+  getCharactersSnapshot(): Character[] {
+    return this.charactersSubject.value;
+  }
+
   getCharacterById(id: string): Character | undefined {
     return this.charactersSubject.value.find((char) => char.id === id);
   }

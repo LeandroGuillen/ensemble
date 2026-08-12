@@ -1,4 +1,5 @@
 export { CharacterService } from "./character.service";
+export { CharacterCommandService } from "./character-command.service";
 export { CastService } from "./cast.service";
 export { ProjectService } from "./project.service";
 export { PinboardService } from "./pinboard.service";

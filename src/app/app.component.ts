@@ -3,7 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterOutlet, NavigationEnd } from "@angular/router";
 
 import { Title } from "@angular/platform-browser";
-import { ProjectService, ElectronService, ThemeService, LoggingService, ZoomService, AddNameCommandService, AddConceptCommandService } from "./core/services";
+import { ProjectService, ElectronService, ThemeService, LoggingService, ZoomService, AddNameCommandService, AddConceptCommandService, CharacterCommandService, CharacterService } from "./core/services";
 import { filter } from "rxjs/operators";
 import { CommandPaletteComponent } from "./shared/command-palette/command-palette.component";
 import { CommandPaletteService } from "./shared/command-palette/command-palette.service";
@@ -44,7 +44,9 @@ export class AppComponent implements OnInit {
     private modalService: ModalService,
     private zoomService: ZoomService,
     private addNameCommandService: AddNameCommandService,
-    private addConceptCommandService: AddConceptCommandService
+    private addConceptCommandService: AddConceptCommandService,
+    private characterCommandService: CharacterCommandService,
+    private characterService: CharacterService,
   ) {}
 
   async ngOnInit() {
@@ -92,6 +94,7 @@ export class AppComponent implements OnInit {
         // Only redirect to project selector if we're already past initial load
         // and the project becomes null (e.g., user closes project)
         if (!project && this.projectLoadedAndReady) {
+          this.characterCommandService.deactivate();
           this.router.navigate(["/project-selector"]);
         } else if (project) {
           // Initialize theme when project loads
@@ -100,6 +103,12 @@ export class AppComponent implements OnInit {
           this.registerThemeCommands();
           this.addNameCommandService.register();
           this.addConceptCommandService.register();
+          this.characterCommandService.activate();
+          void this.characterService.loadCharacters(project.path).catch((error) => {
+            this.logger.error('Failed to load characters for command palette', error);
+          });
+        } else {
+          this.characterCommandService.deactivate();
         }
       });
 
