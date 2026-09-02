@@ -67,13 +67,15 @@
       <!-- Category Filter -->
       @if (categories.length > 0) {
         <div class="filter-section section-category">
-          <label class="filter-label">Category</label>
-          <app-category-toggle
-            [options]="getCategoryToggleOptions()"
-            [selectedValue]="selectedCategory"
-            [emptyLabel]="'All'"
-            (valueChange)="onCategoryToggle($event)"
-          ></app-category-toggle>
+          <div class="filter-label-row">
+            <label class="filter-label">Categories</label>
+            <span class="filter-hint">Selected categories are shown</span>
+          </div>
+          <app-multi-select-buttons
+            [items]="getCategoriesAsSelectableItems()"
+            [selectedIds]="enabledCategoryIds"
+            (selectionChange)="onCategoriesSelectionChange($event)"
+          ></app-multi-select-buttons>
         </div>
       }
       <!-- Tags Filter -->

@@ -5,8 +5,9 @@
       class="select-button"
       [class.active]="isItemSelected(item.id)"
       [style.background-color]="isItemSelected(item.id) ? item.color : 'transparent'"
-      [style.color]="isItemSelected(item.id) ? 'white' : item.color"
+      [style.color]="isItemSelected(item.id) ? (item.activeTextColor || 'white') : item.color"
       [style.border-color]="item.color"
+      [attr.aria-pressed]="isItemSelected(item.id)"
       (click)="onItemToggle(item.id)"
       >
       {{ item.name }}

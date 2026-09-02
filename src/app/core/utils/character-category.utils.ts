@@ -14,6 +14,24 @@ export function resolveEffectiveCategory(
 }
 
 /**
+ * Whether a character's effective category is enabled in the character list.
+ * Categories missing from project metadata remain visible so stale character
+ * data cannot disappear without a corresponding sidebar control.
+ */
+export function isEffectiveCategoryEnabled(
+  character: { category: string; bookCategories?: Record<string, string> },
+  bookId: string | null | undefined,
+  knownCategoryIds: readonly string[],
+  enabledCategoryIds: readonly string[]
+): boolean {
+  const effectiveCategory = resolveEffectiveCategory(character, bookId);
+  return (
+    !knownCategoryIds.includes(effectiveCategory) ||
+    enabledCategoryIds.includes(effectiveCategory)
+  );
+}
+
+/**
  * Coerces a raw frontmatter `bookCategories` value into a clean map.
  * Optionally prunes entries whose book id is not in `assignedBookIds`.
  * Returns undefined when the result is empty.

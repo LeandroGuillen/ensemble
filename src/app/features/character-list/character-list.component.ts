@@ -10,12 +10,13 @@ import { CharacterEditDialogService, CharacterService, LoggingService, MetadataS
 import { MetadataHelperService } from '../../core/services/metadata-helper.service';
 import { ModalService } from '../../core/services/modal.service';
 import { PreferencesService } from '../../core/services/preferences.service';
-import { resolveEffectiveCategory } from '../../core/utils/character-category.utils';
+import {
+  isEffectiveCategoryEnabled,
+  resolveEffectiveCategory,
+} from '../../core/utils/character-category.utils';
 import { contrastTextColor } from '../../core/utils/color-contrast.utils';
 import { resolveThumbnailForStyle } from '../../core/utils/thumbnail.utils';
-import { ToggleOption } from '../../shared/category-toggle/category-toggle.component';
 import { CharacterFilterComponent } from '../../shared/character-filter/character-filter.component';
-import { SelectableItem } from '../../shared/multi-select-buttons/multi-select-buttons.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import {
     CharacterCompactViewComponent,
@@ -64,7 +65,8 @@ export class CharacterListComponent implements OnInit {
   currentProject: Project | null = null;
 
   searchTerm = '';
-  selectedCategory = '';
+  enabledCategoryIds: string[] = [];
+  private disabledCategoryIds: string[] = [];
   selectedTags: string[] = [];
   selectedCast = '';
   selectedBook = '';
@@ -171,10 +173,21 @@ export class CharacterListComponent implements OnInit {
     if (savedSearchTerm) {
       this.searchTerm = savedSearchTerm;
     }
-    const savedSelectedCategory = localStorage.getItem('characterSelectedCategory');
-    if (savedSelectedCategory) {
-      this.selectedCategory = savedSelectedCategory;
+    const savedDisabledCategories = localStorage.getItem('characterDisabledCategories');
+    if (savedDisabledCategories) {
+      try {
+        const parsed: unknown = JSON.parse(savedDisabledCategories);
+        this.disabledCategoryIds = Array.isArray(parsed)
+          ? parsed.filter((id): id is string => typeof id === 'string')
+          : [];
+      } catch (error) {
+        console.warn('Failed to parse saved disabled categories:', error);
+        this.disabledCategoryIds = [];
+      }
     }
+    // The former category filter was single-select and is not compatible with
+    // category visibility. Start the new inclusive filter with every category on.
+    localStorage.removeItem('characterSelectedCategory');
     const savedSelectedTags = localStorage.getItem('characterSelectedTags');
     if (savedSelectedTags) {
       try {
@@ -205,6 +218,11 @@ export class CharacterListComponent implements OnInit {
     this.projectService.currentProject$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((project) => {
       this.currentProject = project;
       this.categories = this.projectService.getCategories();
+      const categoryIds = new Set(this.categories.map((category) => category.id));
+      this.disabledCategoryIds = this.disabledCategoryIds.filter((id) => categoryIds.has(id));
+      this.enabledCategoryIds = this.categories
+        .filter((category) => !this.disabledCategoryIds.includes(category.id))
+        .map((category) => category.id);
       this.tags = this.projectService.getTags();
       this.casts = this.metadataService.getCasts();
       this.books = this.metadataService.getBooks();
@@ -433,17 +451,19 @@ export class CharacterListComponent implements OnInit {
     this.applyFilters();
   }
 
-  onCategoryChange(): void {
-    // Save selected category to localStorage
-    localStorage.setItem('characterSelectedCategory', this.selectedCategory);
-    this.applyFilters();
-  }
-
-  onCategoryToggle(categoryId: string): void {
-    // Single selection - set the selected category
-    this.selectedCategory = categoryId;
-    // Save selected category to localStorage
-    localStorage.setItem('characterSelectedCategory', this.selectedCategory);
+  onCategoriesSelectionChange(enabledIds: string[]): void {
+    this.enabledCategoryIds = enabledIds;
+    this.disabledCategoryIds = this.categories
+      .filter((category) => !enabledIds.includes(category.id))
+      .map((category) => category.id);
+    if (this.disabledCategoryIds.length > 0) {
+      localStorage.setItem(
+        'characterDisabledCategories',
+        JSON.stringify(this.disabledCategoryIds)
+      );
+    } else {
+      localStorage.removeItem('characterDisabledCategories');
+    }
     this.applyFilters();
   }
 
@@ -510,7 +530,8 @@ export class CharacterListComponent implements OnInit {
 
   clearFilters(): void {
     this.searchTerm = '';
-    this.selectedCategory = '';
+    this.enabledCategoryIds = this.categories.map((category) => category.id);
+    this.disabledCategoryIds = [];
     this.selectedTags = [];
     this.selectedCast = '';
     this.selectedBook = '';
@@ -518,7 +539,7 @@ export class CharacterListComponent implements OnInit {
     this.povOnly = false;
     // Clear saved filter state
     localStorage.removeItem('characterSearchTerm');
-    localStorage.removeItem('characterSelectedCategory');
+    localStorage.removeItem('characterDisabledCategories');
     localStorage.removeItem('characterSelectedTags');
     localStorage.removeItem('characterSelectedCast');
     localStorage.removeItem('characterSelectedBook');
@@ -550,6 +571,7 @@ export class CharacterListComponent implements OnInit {
   }
 
   private filterCharacters(characters: Character[]): Character[] {
+    const knownCategoryIds = this.categories.map((category) => category.id);
     return characters.filter((character) => {
       // Search term filter - search names, categories, tags, and books
       if (this.searchTerm) {
@@ -569,12 +591,15 @@ export class CharacterListComponent implements OnInit {
         if (!matchesSearch) return false;
       }
 
-      // Category filter (uses effective category when a book is selected)
-      if (this.selectedCategory) {
-        const effectiveCategory = resolveEffectiveCategory(character, this.selectedBook);
-        if (effectiveCategory !== this.selectedCategory) {
-          return false;
-        }
+      // Category visibility (uses effective category when a book is selected).
+      // Unknown categories stay visible so stale metadata cannot hide characters.
+      if (!isEffectiveCategoryEnabled(
+        character,
+        this.selectedBook,
+        knownCategoryIds,
+        this.enabledCategoryIds
+      )) {
+        return false;
       }
 
       // Tags filter - character must have ALL selected tags
@@ -648,22 +673,6 @@ export class CharacterListComponent implements OnInit {
     this.povCharacterIdSet = ids;
   }
 
-
-  getCategoryToggleOptions(): ToggleOption[] {
-    return this.categories.map((cat) => ({
-      id: cat.id,
-      name: cat.name,
-      tooltip: cat.description || cat.name,
-    }));
-  }
-
-  getTagsAsSelectableItems(): SelectableItem[] {
-    return this.tags.map((tag) => ({
-      id: tag.id,
-      name: tag.name,
-      color: tag.color,
-    }));
-  }
 
   onTagsSelectionChange(selectedIds: string[]): void {
     this.selectedTags = selectedIds;
@@ -764,9 +773,10 @@ getFilterSummary(): string {
       filters.push(`search: "${this.searchTerm}"`);
     }
 
-    if (this.selectedCategory) {
-      const categoryName = this.metadataHelper.getCategoryName(this.selectedCategory);
-      filters.push(`category: ${categoryName}`);
+    if (this.hasDisabledCategories()) {
+      filters.push(
+        `${this.disabledCategoryIds.length} categor${this.disabledCategoryIds.length === 1 ? 'y' : 'ies'} hidden`
+      );
     }
 
     if (this.selectedTags.length > 0) {
@@ -793,6 +803,10 @@ getFilterSummary(): string {
     }
 
     return filters.length > 0 ? `Filtered by ${filters.join(', ')}` : '';
+  }
+
+  hasDisabledCategories(): boolean {
+    return this.disabledCategoryIds.length > 0;
   }
 
   onImageError(event: Event): void {

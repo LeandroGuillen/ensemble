@@ -3,6 +3,7 @@ import { Component, ElementRef, EventEmitter, HostListener, Input, Output } from
 import { FormsModule } from '@angular/forms';
 import { Book, Cast, Category, Character, Tag } from '../../core/interfaces';
 import { MetadataHelperService } from '../../core/services/metadata-helper.service';
+import { contrastTextColor } from '../../core/utils/color-contrast.utils';
 import { BookSelectorComponent } from '../book-selector/book-selector.component';
 import { CastDropdownComponent } from '../cast-dropdown/cast-dropdown.component';
 import { CategoryToggleComponent, ToggleOption } from '../category-toggle/category-toggle.component';
@@ -10,7 +11,7 @@ import { MultiSelectButtonsComponent, SelectableItem } from '../multi-select-but
 
 export interface FilterState {
   searchTerm: string;
-  selectedCategory: string;
+  enabledCategoryIds: string[];
   selectedTags: string[];
   selectedCast: string;
   selectedBook: string;
@@ -41,7 +42,7 @@ export class CharacterFilterComponent {
   @Input() books: Book[] = [];
   @Input() allCharacters: Character[] = [];
   @Input() searchTerm = '';
-  @Input() selectedCategory = '';
+  @Input() enabledCategoryIds: string[] = [];
   @Input() selectedTags: string[] = [];
   @Input() selectedCast = '';
   @Input() selectedBook = '';
@@ -51,7 +52,7 @@ export class CharacterFilterComponent {
   @Input() sidebar = false;
 
   @Output() searchTermChange = new EventEmitter<string>();
-  @Output() categoryChange = new EventEmitter<string>();
+  @Output() categoriesChange = new EventEmitter<string[]>();
   @Output() tagsChange = new EventEmitter<string[]>();
   @Output() castChange = new EventEmitter<string>();
   @Output() bookChange = new EventEmitter<string>();
@@ -104,8 +105,8 @@ export class CharacterFilterComponent {
     this.searchTermChange.emit(this.searchTerm);
   }
 
-  onCategoryToggle(categoryId: string): void {
-    this.categoryChange.emit(categoryId);
+  onCategoriesSelectionChange(selectedIds: string[]): void {
+    this.categoriesChange.emit(selectedIds);
   }
 
   onTagsSelectionChange(selectedIds: string[]): void {
@@ -133,11 +134,12 @@ export class CharacterFilterComponent {
     this.clearFilters.emit();
   }
 
-  getCategoryToggleOptions(): ToggleOption[] {
+  getCategoriesAsSelectableItems(): SelectableItem[] {
     return this.categories.map((cat) => ({
       id: cat.id,
       name: cat.name,
-      tooltip: cat.description || cat.name,
+      color: cat.color,
+      activeTextColor: contrastTextColor(cat.color),
     }));
   }
 
@@ -179,8 +181,14 @@ export class CharacterFilterComponent {
   getFilterSummary(): string {
     const filters: string[] = [];
 
-    if (this.selectedCategory) {
-      filters.push(this.getCategoryName(this.selectedCategory));
+    const hiddenCategoryCount = this.categories.length - this.enabledCategoryIds.length;
+    if (hiddenCategoryCount === 1) {
+      const hiddenCategory = this.categories.find(
+        (category) => !this.enabledCategoryIds.includes(category.id)
+      );
+      filters.push(`${hiddenCategory?.name || '1 category'} hidden`);
+    } else if (hiddenCategoryCount > 1) {
+      filters.push(`${hiddenCategoryCount} categories hidden`);
     }
 
     if (this.selectedTags.length > 0 && this.tags?.length) {
@@ -216,7 +224,7 @@ export class CharacterFilterComponent {
 
   hasActiveFilters(): boolean {
     return !!(
-      this.selectedCategory ||
+      this.enabledCategoryIds.length < this.categories.length ||
       this.selectedTags.length > 0 ||
       this.selectedCast ||
       this.selectedBook ||

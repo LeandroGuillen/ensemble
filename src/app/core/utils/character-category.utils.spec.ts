@@ -1,4 +1,5 @@
 import {
+  isEffectiveCategoryEnabled,
   normalizeBookCategories,
   resolveEffectiveCategory,
 } from './character-category.utils';
@@ -65,6 +66,37 @@ describe('character-category.utils', () => {
           ['book-1']
         )
       ).toEqual({ 'book-1': 'main-character' });
+    });
+  });
+
+  describe('isEffectiveCategoryEnabled', () => {
+    const character = {
+      category: 'supporting',
+      bookCategories: { 'book-one': 'lead' },
+    };
+    const categories = ['lead', 'supporting'];
+
+    it('shows characters when all categories are enabled', () => {
+      expect(
+        isEffectiveCategoryEnabled(character, '', categories, categories)
+      ).toBeTrue();
+    });
+
+    it('hides characters whose category is disabled', () => {
+      expect(isEffectiveCategoryEnabled(character, '', categories, ['lead'])).toBeFalse();
+    });
+
+    it('uses the book-specific category when a book is selected', () => {
+      expect(
+        isEffectiveCategoryEnabled(character, 'book-one', categories, ['supporting'])
+      ).toBeFalse();
+      expect(
+        isEffectiveCategoryEnabled(character, 'book-one', categories, ['lead'])
+      ).toBeTrue();
+    });
+
+    it('keeps unknown categories visible', () => {
+      expect(isEffectiveCategoryEnabled({ category: 'legacy' }, '', categories, [])).toBeTrue();
     });
   });
 });

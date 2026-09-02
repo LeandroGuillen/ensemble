@@ -5,6 +5,7 @@ export interface SelectableItem {
   id: string;
   name: string;
   color: string;
+  activeTextColor?: string;
 }
 
 @Component({

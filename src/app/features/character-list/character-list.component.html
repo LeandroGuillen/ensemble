@@ -75,14 +75,14 @@
             [books]="books"
             [allCharacters]="allCharacters"
             [searchTerm]="searchTerm"
-            [selectedCategory]="selectedCategory"
+            [enabledCategoryIds]="enabledCategoryIds"
             [selectedTags]="selectedTags"
             [selectedCast]="selectedCast"
             [selectedBook]="selectedBook"
             [selectedPictureFilter]="selectedPictureFilter"
             [povOnly]="povOnly"
             (searchTermChange)="searchTerm = $event; onSearchChange()"
-            (categoryChange)="selectedCategory = $event; onCategoryChange()"
+            (categoriesChange)="onCategoriesSelectionChange($event)"
             (tagsChange)="selectedTags = $event; onTagsSelectionChange($event)"
             (castChange)="selectedCast = $event; onCastChange()"
             (bookChange)="selectedBook = $event; onBookChange()"
@@ -736,7 +736,7 @@
                 </div>
                 @if (
                   searchTerm ||
-                  selectedCategory ||
+                  hasDisabledCategories() ||
                   selectedTags.length > 0 ||
                   selectedCast ||
                   selectedBook ||
@@ -750,7 +750,7 @@
                 }
                 @if (
                   !searchTerm &&
-                  !selectedCategory &&
+                  !hasDisabledCategories() &&
                   selectedTags.length === 0 &&
                   !selectedCast &&
                   !selectedBook &&
@@ -764,7 +764,7 @@
                 }
                 @if (
                   searchTerm ||
-                  selectedCategory ||
+                  hasDisabledCategories() ||
                   selectedTags.length > 0 ||
                   selectedCast ||
                   selectedBook ||
@@ -779,7 +779,7 @@
                 }
                 @if (
                   !searchTerm &&
-                  !selectedCategory &&
+                  !hasDisabledCategories() &&
                   selectedTags.length === 0 &&
                   !selectedCast &&
                   !selectedBook
@@ -792,7 +792,7 @@
                 <div class="empty-state-actions">
                   @if (
                     searchTerm ||
-                    selectedCategory ||
+                    hasDisabledCategories() ||
                     selectedTags.length > 0 ||
                     selectedCast ||
                     selectedBook
@@ -806,7 +806,7 @@
                   }
                   @if (
                     !searchTerm &&
-                    !selectedCategory &&
+                    !hasDisabledCategories() &&
                     selectedTags.length === 0 &&
                     !selectedCast &&
                     !selectedBook
