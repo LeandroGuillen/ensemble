@@ -93,26 +93,28 @@
       @if (casts.length > 0) {
         <div class="filter-section section-cast">
           <label class="filter-label">Cast</label>
-          <app-cast-dropdown
-            [casts]="casts"
-            [characters]="allCharacters"
-            [selectedCastId]="selectedCast"
-            [label]="''"
-            [showCharacterThumbnails]="true"
-            (castChange)="onCastDropdownChange($event)"
-          ></app-cast-dropdown>
+          <div class="single-select-options">
+            <app-category-toggle
+              [options]="getCastToggleOptions()"
+              [selectedValue]="selectedCast"
+              [emptyLabel]="'All'"
+              (valueChange)="onCastDropdownChange($event)"
+            ></app-category-toggle>
+          </div>
         </div>
       }
       <!-- Book Filter -->
       @if (books.length > 0) {
         <div class="filter-section section-book">
           <label class="filter-label">Book</label>
-          <app-book-selector
-            [books]="books"
-            [selectedBook]="selectedBook"
-            [characterCounts]="getBookCharacterCounts()"
-            (bookChange)="selectedBook = $event; onBookChange()"
-          ></app-book-selector>
+          <div class="single-select-options">
+            <app-category-toggle
+              [options]="getBookToggleOptions()"
+              [selectedValue]="selectedBook"
+              [emptyLabel]="'All'"
+              (valueChange)="onBookSelectionChange($event)"
+            ></app-category-toggle>
+          </div>
           <div class="pov-filter-row">
             <app-category-toggle
               [options]="povFilterOptions"

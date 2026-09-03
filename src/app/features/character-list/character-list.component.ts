@@ -15,7 +15,7 @@ import {
   resolveEffectiveCategory,
 } from '../../core/utils/character-category.utils';
 import { contrastTextColor } from '../../core/utils/color-contrast.utils';
-import { resolveThumbnailForStyle } from '../../core/utils/thumbnail.utils';
+import { resolveThumbnailForBookStyle } from '../../core/utils/thumbnail.utils';
 import { CharacterFilterComponent } from '../../shared/character-filter/character-filter.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import {
@@ -495,6 +495,8 @@ export class CharacterListComponent implements OnInit {
     // Save selected book to localStorage
     localStorage.setItem('characterSelectedBook', this.selectedBook);
     this.recomputePovBadgeState();
+    this.syncCacheFromService();
+    void this.loadThumbnailDataUrls(this.allCharacters);
     this.applyFilters();
   }
 
@@ -546,6 +548,8 @@ export class CharacterListComponent implements OnInit {
     localStorage.removeItem('characterPictureFilter');
     localStorage.removeItem('characterPovOnly');
     this.recomputePovBadgeState();
+    this.syncCacheFromService();
+    void this.loadThumbnailDataUrls(this.allCharacters);
     this.applyFilters();
   }
 
@@ -633,8 +637,10 @@ export class CharacterListComponent implements OnInit {
 
       // Picture filter — based on portrait for the active character style
       if (this.selectedPictureFilter) {
-        const hasPicture = !!resolveThumbnailForStyle(
+        const hasPicture = !!resolveThumbnailForBookStyle(
           character.thumbnails,
+          character.bookThumbnails,
+          this.selectedBook,
           this.selectedCharacterStyle
         );
         if (this.selectedPictureFilter === 'with' && !hasPicture) {
@@ -738,10 +744,17 @@ export class CharacterListComponent implements OnInit {
    * Syncs local cache Maps from service cache (for child component Inputs)
    */
   private syncCacheFromService(): void {
-    this.thumbnailDataUrls = this.characterService.getAllCachedThumbnails(this.selectedCharacterStyle);
+    this.thumbnailDataUrls = this.characterService.getAllCachedThumbnails(
+      this.selectedCharacterStyle,
+      this.selectedBook || undefined
+    );
     this.thumbnailModificationTimes.clear();
     this.allCharacters.forEach(char => {
-      const modTime = this.characterService.getCachedThumbnailModTime(char.id, this.selectedCharacterStyle);
+      const modTime = this.characterService.getCachedThumbnailModTime(
+        char.id,
+        this.selectedCharacterStyle,
+        this.selectedBook || undefined
+      );
       if (modTime) {
         this.thumbnailModificationTimes.set(char.id, modTime);
       }
@@ -749,7 +762,11 @@ export class CharacterListComponent implements OnInit {
   }
 
   private async loadThumbnailDataUrls(characters: Character[]): Promise<void> {
-    await this.characterService.loadThumbnailsForCharacters(characters, this.selectedCharacterStyle);
+    await this.characterService.loadThumbnailsForCharacters(
+      characters,
+      this.selectedCharacterStyle,
+      this.selectedBook || undefined
+    );
     this.syncCacheFromService();
     this.cdr.detectChanges();
   }

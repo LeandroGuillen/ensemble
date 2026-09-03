@@ -5,6 +5,7 @@ export interface ToggleOption {
   id: string;
   name: string;
   tooltip?: string;
+  color?: string;
 }
 
 @Component({

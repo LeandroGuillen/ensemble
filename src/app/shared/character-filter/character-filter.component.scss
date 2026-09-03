@@ -265,26 +265,17 @@
       white-space: nowrap;
     }
 
-    app-cast-dropdown,
-    app-book-selector {
-      display: block;
-      position: relative;
-      width: 100%;
+    .single-select-options {
+      max-height: 180px;
+      overflow-y: auto;
+      padding-right: 2px;
+      scrollbar-width: thin;
     }
   }
 
   ::ng-deep {
-    .cast-dropdown-container,
-    .book-selector-container {
-      position: relative;
-    }
-
-    .cast-dropdown-menu,
-    .book-dropdown {
-      position: absolute;
-      z-index: 1000;
-      max-height: 300px;
-      overflow-y: auto;
+    .single-select-options .category-toggle {
+      align-content: flex-start;
     }
   }
 

@@ -15,6 +15,7 @@
       class="toggle-option"
       [class.active]="selectedValue === option.id"
       [class.error]="error"
+      [style.--option-color]="option.color || null"
       (click)="onOptionClick(option.id, $event)"
       [title]="option.tooltip || option.name"
       >

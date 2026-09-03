@@ -6,7 +6,7 @@ import { Category } from '../interfaces/project.interface';
 import { parseMarkdown, generateMarkdown } from '../utils/markdown.utils';
 import { slugify } from '../utils/slug.utils';
 import { pathJoin, pathBasename, pathDirname } from '../utils/path.utils';
-import { parseThumbnailReference, resolveThumbnailPath, resolveThumbnailForStyle, normalizeThumbnailsMap, thumbnailCacheKey } from '../utils/thumbnail.utils';
+import { parseThumbnailReference, resolveThumbnailPath, resolveThumbnailForStyle, resolveThumbnailForBookStyle, normalizeThumbnailsMap, normalizeBookThumbnailsMap, thumbnailCacheKey } from '../utils/thumbnail.utils';
 import { normalizeBookCategories } from '../utils/character-category.utils';
 import { assertIpcSuccess, withIpcError } from '../utils/ipc.utils';
 import { requireProject } from '../utils/project.utils';
@@ -321,6 +321,7 @@ export class CharacterService {
         books,
         bookCategories: normalizeBookCategories(frontmatter.bookCategories, books),
         thumbnails: normalizeThumbnailsMap(frontmatter.thumbnails),
+        bookThumbnails: normalizeBookThumbnailsMap(frontmatter.bookThumbnails, books),
         prompts: normalizePrompts(frontmatter.prompts),
         content: content || '',
         created,
@@ -407,6 +408,7 @@ export class CharacterService {
         books,
         bookCategories,
         thumbnails: normalizeThumbnailsMap(data.thumbnails),
+        bookThumbnails: normalizeBookThumbnailsMap(data.bookThumbnails, books),
         prompts: normalizePrompts(data.prompts),
         content: data.content || '',
         created: now,
@@ -489,6 +491,10 @@ export class CharacterService {
         nextBooks
       );
       await this.validateBookCategoryReferences(nextBookCategories);
+      const nextBookThumbnails = normalizeBookThumbnailsMap(
+        'bookThumbnails' in data ? data.bookThumbnails : existingCharacter.bookThumbnails,
+        nextBooks
+      );
 
       // Create updated character
       const updatedCharacter: Character = {
@@ -502,6 +508,7 @@ export class CharacterService {
         thumbnails: 'thumbnails' in data
           ? normalizeThumbnailsMap(data.thumbnails)
           : existingCharacter.thumbnails,
+        bookThumbnails: nextBookThumbnails,
         prompts: data.prompts !== undefined ? normalizePrompts(data.prompts) : existingCharacter.prompts,
         content: data.content !== undefined ? data.content : existingCharacter.content,
         modified: new Date(),
@@ -512,7 +519,11 @@ export class CharacterService {
       await this.saveCharacterToFile(updatedCharacter);
 
       // Thumbnail path changes must invalidate the persistent data URL cache.
-      if (newId !== id || ('thumbnails' in data && !thumbnailsMapsEqual(data.thumbnails, existingCharacter.thumbnails))) {
+      if (
+        newId !== id ||
+        ('thumbnails' in data && !thumbnailsMapsEqual(data.thumbnails, existingCharacter.thumbnails)) ||
+        ('bookThumbnails' in data && !bookThumbnailsMapsEqual(data.bookThumbnails, existingCharacter.bookThumbnails))
+      ) {
         this.removeCachedThumbnailsForCharacter(id);
         if (newId !== id) {
           this.removeCachedThumbnailsForCharacter(newId);
@@ -630,6 +641,9 @@ export class CharacterService {
         ...(character.thumbnails && Object.keys(character.thumbnails).length > 0
           ? { thumbnails: character.thumbnails }
           : {}),
+        ...(character.bookThumbnails && Object.keys(character.bookThumbnails).length > 0
+          ? { bookThumbnails: character.bookThumbnails }
+          : {}),
         ...(character.prompts && character.prompts.length > 0 ? { prompts: character.prompts } : {}),
         created: character.created.toISOString(),
         modified: character.modified.toISOString(),
@@ -739,9 +753,9 @@ export class CharacterService {
     }
   }
 
-  getCachedThumbnail(characterId: string, styleId?: string): string | null {
+  getCachedThumbnail(characterId: string, styleId?: string, bookId?: string): string | null {
     const style = styleId || this.projectService.getDefaultCharacterStyle();
-    return this.thumbnailDataUrls.get(thumbnailCacheKey(characterId, style)) || null;
+    return this.thumbnailDataUrls.get(thumbnailCacheKey(characterId, style, bookId)) || null;
   }
 
   /**
@@ -749,9 +763,18 @@ export class CharacterService {
    * Resolves Obsidian wiki-link format [[img/path.png]] or plain paths.
    * Returns null when the style has no thumbnail set (caller should show placeholder).
    */
-  async loadThumbnailForCharacter(character: Character, styleId?: string): Promise<string | null> {
+  async loadThumbnailForCharacter(
+    character: Character,
+    styleId?: string,
+    bookId?: string
+  ): Promise<string | null> {
     const style = styleId || this.projectService.getDefaultCharacterStyle();
-    const raw = resolveThumbnailForStyle(character.thumbnails, style);
+    const raw = resolveThumbnailForBookStyle(
+      character.thumbnails,
+      character.bookThumbnails,
+      bookId,
+      style
+    );
     if (!raw) {
       return null;
     }
@@ -768,7 +791,7 @@ export class CharacterService {
       const dataUrl = await this.electronService.getImageAsDataUrl(absolutePath);
       if (dataUrl) {
         const modTime = character.modified?.toISOString() ?? '';
-        this.setCachedThumbnail(character.id, style, dataUrl, modTime);
+        this.setCachedThumbnail(character.id, style, dataUrl, modTime, bookId);
         return dataUrl;
       }
     } catch (error) {
@@ -780,33 +803,38 @@ export class CharacterService {
   /**
    * Batch loads thumbnails for characters for the given style (default style if omitted).
    */
-  async loadThumbnailsForCharacters(characters: Character[], styleId?: string): Promise<void> {
+  async loadThumbnailsForCharacters(
+    characters: Character[],
+    styleId?: string,
+    bookId?: string
+  ): Promise<void> {
     const project = this.projectService.getCurrentProject();
     if (!project?.path) {
       return;
     }
     const style = styleId || this.projectService.getDefaultCharacterStyle();
     const toLoad = characters.filter((c) => {
-      const raw = resolveThumbnailForStyle(c.thumbnails, style);
-      return !!raw && !this.thumbnailDataUrls.has(thumbnailCacheKey(c.id, style));
+      const raw = resolveThumbnailForBookStyle(c.thumbnails, c.bookThumbnails, bookId, style);
+      return !!raw && !this.thumbnailDataUrls.has(thumbnailCacheKey(c.id, style, bookId));
     });
-    await Promise.all(toLoad.map((char) => this.loadThumbnailForCharacter(char, style)));
+    await Promise.all(toLoad.map((char) => this.loadThumbnailForCharacter(char, style, bookId)));
   }
 
   setCachedThumbnail(
     characterId: string,
     styleId: string,
     dataUrl: string,
-    modificationTime: string
+    modificationTime: string,
+    bookId?: string
   ): void {
-    const key = thumbnailCacheKey(characterId, styleId);
+    const key = thumbnailCacheKey(characterId, styleId, bookId);
     this.thumbnailDataUrls.set(key, dataUrl);
     this.thumbnailModificationTimes.set(key, modificationTime);
   }
 
-  getCachedThumbnailModTime(characterId: string, styleId?: string): string | null {
+  getCachedThumbnailModTime(characterId: string, styleId?: string, bookId?: string): string | null {
     const style = styleId || this.projectService.getDefaultCharacterStyle();
-    return this.thumbnailModificationTimes.get(thumbnailCacheKey(characterId, style)) || null;
+    return this.thumbnailModificationTimes.get(thumbnailCacheKey(characterId, style, bookId)) || null;
   }
 
   removeCachedThumbnail(characterId: string, styleId?: string): void {
@@ -876,11 +904,14 @@ export class CharacterService {
    * Gets cached thumbnail data URLs for a style as Map<characterId, dataUrl>
    * (for passing to child components that key by character id only).
    */
-  getAllCachedThumbnails(styleId?: string): Map<string, string> {
+  getAllCachedThumbnails(styleId?: string, bookId?: string): Map<string, string> {
     const style = styleId || this.projectService.getDefaultCharacterStyle();
     const result = new Map<string, string>();
-    const suffix = `:${style}`;
+    const suffix = bookId ? `:${bookId}:${style}` : `:${style}`;
     for (const [key, value] of this.thumbnailDataUrls) {
+      // Book-specific cache entries also end with :style; exclude them from the
+      // main-context map so switching back from a book cannot show the wrong image.
+      if (!bookId && key.split(':').length !== 2) continue;
       if (key.endsWith(suffix)) {
         const characterId = key.slice(0, -suffix.length);
         result.set(characterId, value);
@@ -901,4 +932,12 @@ function thumbnailsMapsEqual(
   const keysB = Object.keys(normB);
   if (keysA.length !== keysB.length) return false;
   return keysA.every((k) => normA[k] === normB[k]);
+}
+
+function bookThumbnailsMapsEqual(
+  a: Record<string, Record<string, string>> | undefined | null,
+  b: Record<string, Record<string, string>> | undefined | null
+): boolean {
+  return JSON.stringify(normalizeBookThumbnailsMap(a) || {}) ===
+    JSON.stringify(normalizeBookThumbnailsMap(b) || {});
 }

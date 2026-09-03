@@ -4,8 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { Book, Cast, Category, Character, Tag } from '../../core/interfaces';
 import { MetadataHelperService } from '../../core/services/metadata-helper.service';
 import { contrastTextColor } from '../../core/utils/color-contrast.utils';
-import { BookSelectorComponent } from '../book-selector/book-selector.component';
-import { CastDropdownComponent } from '../cast-dropdown/cast-dropdown.component';
 import { CategoryToggleComponent, ToggleOption } from '../category-toggle/category-toggle.component';
 import { MultiSelectButtonsComponent, SelectableItem } from '../multi-select-buttons/multi-select-buttons.component';
 
@@ -25,9 +23,7 @@ export interface FilterState {
     imports: [
     FormsModule,
     CategoryToggleComponent,
-    MultiSelectButtonsComponent,
-    CastDropdownComponent,
-    BookSelectorComponent
+    MultiSelectButtonsComponent
 ],
     templateUrl: './character-filter.component.html',
     styleUrls: ['./character-filter.component.scss'],
@@ -121,6 +117,11 @@ export class CharacterFilterComponent {
     this.bookChange.emit(this.selectedBook);
   }
 
+  onBookSelectionChange(bookId: string): void {
+    this.selectedBook = bookId;
+    this.onBookChange();
+  }
+
   onPictureFilterChange(value: string): void {
     const next = value === 'with' || value === 'without' ? value : '';
     this.pictureFilterChange.emit(next);
@@ -167,15 +168,21 @@ export class CharacterFilterComponent {
     return this.metadataHelper.getBookName(bookId);
   }
 
-  getBookCharacterCounts(): Map<string, number> {
-    const counts = new Map<string, number>();
-    for (const book of this.books) {
-      const count = this.allCharacters.filter(
-        (character) => character.books && character.books.includes(book.id)
-      ).length;
-      counts.set(book.id, count);
-    }
-    return counts;
+  getCastToggleOptions(): ToggleOption[] {
+    return this.casts.map((cast) => ({
+      id: cast.id,
+      name: cast.name,
+      tooltip: cast.name,
+    }));
+  }
+
+  getBookToggleOptions(): ToggleOption[] {
+    return this.books.map((book) => ({
+      id: book.id,
+      name: this.getBookName(book.id),
+      tooltip: this.getBookName(book.id),
+      color: book.color,
+    }));
   }
 
   getFilterSummary(): string {

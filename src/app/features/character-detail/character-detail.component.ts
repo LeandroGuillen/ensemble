@@ -51,6 +51,8 @@ import {
   parseThumbnailReference,
   resolveThumbnailPath,
   resolveThumbnailForStyle,
+  resolveThumbnailForBookStyle,
+  normalizeBookThumbnailsMap,
   formatThumbnailWikiLink,
 } from "../../core/utils/thumbnail.utils";
 import { normalizeBookCategories } from "../../core/utils/character-category.utils";
@@ -125,6 +127,8 @@ export class CharacterDetailComponent
   bookPageOriginalContent: Record<string, string> = {};
   /** Per-book category overrides for the form. Key = bookId. */
   bookCategoriesMap: Record<string, string> = {};
+  /** Per-book portrait overrides. Keys are bookId → styleId → image reference. */
+  bookThumbnailsMap: Record<string, Record<string, string>> = {};
 
   // AI features
   isGeneratingName = false;
@@ -136,6 +140,8 @@ export class CharacterDetailComponent
   defaultCharacterStyle = '';
   /** Style id the image picker / generate portrait will assign to */
   pickerTargetStyleId = '';
+  /** Book id the image picker / generate portrait will assign to; null means main portrait. */
+  pickerTargetBookId: string | null = null;
   thumbnailsMap: Record<string, string> = {};
   imageGenerationEnabled = false;
   showGeneratePortraitDialog = false;
@@ -258,6 +264,8 @@ export class CharacterDetailComponent
             content: '',
           });
           this.thumbnailsMap = {};
+          this.bookCategoriesMap = {};
+          this.bookThumbnailsMap = {};
           this.thumbnailPreviewUrls = new Map();
           this.prompts = [];
           this.contentTabs = [{ id: 'main', label: 'Main' }];
@@ -275,7 +283,7 @@ export class CharacterDetailComponent
         }
       });
 
-    // Thumbnail previews are refreshed when thumbnailsMap changes via refreshThumbnailPreviews()
+    // Thumbnail previews are refreshed when portrait maps change via refreshThumbnailPreviews()
 
     // Update cached field errors when form value/status changes (debounced to avoid work on every keystroke)
     merge(
@@ -411,7 +419,7 @@ export class CharacterDetailComponent
 
       // If still not found, character doesn't exist
       if (!character) {
-        this.error = "Character not found";
+        this.notificationService.showError("Character not found");
         this.isLoading = false;
         this.cdr.markForCheck();
         return;
@@ -436,7 +444,8 @@ export class CharacterDetailComponent
         this.thumbnailsMap = { ...(this.character.thumbnails || {}) };
         this.bookCategoriesMap = { ...(this.character.bookCategories || {}) };
         this.pickerTargetStyleId = this.defaultCharacterStyle;
-        await this.refreshThumbnailPreviews();
+        this.bookThumbnailsMap = { ...(this.character.bookThumbnails || {}) };
+        await this.refreshThumbnailPreviews('main');
 
         this.prompts = (this.character.prompts || []).map((p) => ({ ...p }));
 
@@ -444,10 +453,10 @@ export class CharacterDetailComponent
         this.updateContentTabs();
         await this.loadBookPages();
       } else {
-        this.error = "Character not found";
+        this.notificationService.showError("Character not found");
       }
     } catch (error) {
-      this.error = `Failed to load character: ${error}`;
+      this.notificationService.showError(`Failed to load character: ${error}`);
       this.logger.error("Load character error:", error);
     } finally {
       this.isLoading = false;
@@ -525,6 +534,7 @@ export class CharacterDetailComponent
     if (tabId !== 'main') {
       this.ensureBookPageData(tabId);
     }
+    void this.refreshThumbnailPreviews(this.activeBookId);
   }
 
   isBookPageDirty(bookId: string): boolean {
@@ -549,7 +559,7 @@ export class CharacterDetailComponent
       this.notificationService.showSuccess('Book page created');
       this.cdr.markForCheck();
     } catch (err) {
-      this.error = err instanceof Error ? err.message : 'Failed to create book page';
+      this.notificationService.showError(err instanceof Error ? err.message : 'Failed to create book page');
       this.cdr.markForCheck();
     } finally {
       this.savingBookPageId = null;
@@ -559,17 +569,59 @@ export class CharacterDetailComponent
 
   async onSaveBookPage(bookId: string): Promise<void> {
     if (!this.character) return;
+
+    const active = document.activeElement;
+    if (
+      active instanceof HTMLElement &&
+      (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')
+    ) {
+      active.blur();
+    }
+
     this.savingBookPageId = bookId;
     this.error = null;
     try {
+      if (this.characterForm.dirty) {
+        if (this.characterForm.invalid) {
+          this.markFormGroupTouched(this.characterForm);
+          this.scrollToFirstInvalidField();
+          return;
+        }
+        const updatedCharacter = await this.characterService.updateCharacter(
+          this.character.id,
+          {
+            name: this.characterForm.value.name,
+            category: this.characterForm.value.category,
+            tags: this.characterForm.value.tags || [],
+            books: this.characterForm.value.books || [],
+            bookCategories: normalizeBookCategories(
+              this.bookCategoriesMap,
+              this.characterForm.value.books || []
+            ),
+            thumbnails: { ...this.thumbnailsMap },
+            bookThumbnails: normalizeBookThumbnailsMap(
+              this.bookThumbnailsMap,
+              this.characterForm.value.books || []
+            ),
+            prompts: this.prompts.map((p) => ({ ...p })),
+            content: this.characterForm.value.content || '',
+          }
+        );
+        if (!updatedCharacter) throw new Error('Character not found');
+        this.character = updatedCharacter;
+        this.characterForm.markAsPristine();
+      }
+
       const data = this.bookPageData[bookId];
-      const content = data?.content ?? '';
-      await this.characterService.saveBookPage(this.character.id, bookId, content);
-      this.bookPageOriginalContent[bookId] = content;
+      if (data?.exists) {
+        const content = data.content ?? '';
+        await this.characterService.saveBookPage(this.character.id, bookId, content);
+        this.bookPageOriginalContent[bookId] = content;
+      }
       this.notificationService.showSuccess('Character saved successfully');
       this.router.navigate(['/characters']);
     } catch (err) {
-      this.error = err instanceof Error ? err.message : 'Failed to save book page';
+      this.notificationService.showError(err instanceof Error ? err.message : 'Failed to save book page');
       this.cdr.markForCheck();
     } finally {
       this.savingBookPageId = null;
@@ -597,7 +649,7 @@ export class CharacterDetailComponent
     }
 
     if (!this.currentProject) {
-      this.error = "No project loaded";
+      this.notificationService.showError("No project loaded");
       this.cdr.markForCheck();
       return;
     }
@@ -617,6 +669,10 @@ export class CharacterDetailComponent
           this.characterForm.value.books || []
         ),
         thumbnails: { ...this.thumbnailsMap },
+        bookThumbnails: normalizeBookThumbnailsMap(
+          this.bookThumbnailsMap,
+          this.characterForm.value.books || []
+        ),
         prompts: this.prompts.map((p) => ({
           name: p.name,
           positive: p.positive,
@@ -641,7 +697,7 @@ export class CharacterDetailComponent
 
       this.router.navigate(["/characters"]);
     } catch (error) {
-      this.error = `Failed to save character: ${error}`;
+      this.notificationService.showError(`Failed to save character: ${error}`);
       this.logger.error("Save error:", error);
       this.cdr.markForCheck();
     } finally {
@@ -733,18 +789,6 @@ export class CharacterDetailComponent
     this.characterForm.markAsDirty();
   }
 
-  /** Selected books in project metadata order, for the category-by-book UI. */
-  getSelectedBooksForCategoryOverrides(): Book[] {
-    const selectedIds: string[] = this.characterForm.get('books')?.value || [];
-    if (!selectedIds.length) return [];
-    const selected = new Set(selectedIds);
-    return this.books.filter((book) => selected.has(book.id));
-  }
-
-  getBookCategoryOverride(bookId: string): string {
-    return this.bookCategoriesMap[bookId] || '';
-  }
-
   onBookCategoryOverrideChange(bookId: string, categoryId: string): void {
     if (!categoryId) {
       delete this.bookCategoriesMap[bookId];
@@ -765,6 +809,12 @@ export class CharacterDetailComponent
       }
     }
     if (changed) {
+      this.cdr.markForCheck();
+    }
+
+    const normalizedThumbnails = normalizeBookThumbnailsMap(this.bookThumbnailsMap, assignedBookIds) || {};
+    if (JSON.stringify(normalizedThumbnails) !== JSON.stringify(this.bookThumbnailsMap)) {
+      this.bookThumbnailsMap = normalizedThumbnails;
       this.cdr.markForCheck();
     }
   }
@@ -835,21 +885,63 @@ export class CharacterDetailComponent
     return this.thumbnailPreviewUrls.get(styleId) || null;
   }
 
-  private setThumbnailForStyle(styleId: string, wikiLink: string): void {
-    if (!styleId) return;
-    const trimmed = wikiLink.trim();
-    if (trimmed) {
-      this.thumbnailsMap = { ...this.thumbnailsMap, [styleId]: trimmed };
-    } else {
-      const next = { ...this.thumbnailsMap };
-      delete next[styleId];
-      this.thumbnailsMap = next;
-    }
-    this.characterForm.markAsDirty();
-    void this.refreshThumbnailPreviews();
+  get activeBookId(): string | null {
+    return this.activeContentTab === 'main' ? null : this.activeContentTab;
   }
 
-  async refreshThumbnailPreviews(): Promise<void> {
+  getSelectedCategoryForActiveTab(): string {
+    const mainCategory = this.characterForm.get('category')?.value || '';
+    return this.activeBookId ? this.bookCategoriesMap[this.activeBookId] || mainCategory : mainCategory;
+  }
+
+  getCategoryName(categoryId: string): string {
+    return this.categories.find((category) => category.id === categoryId)?.name || 'None';
+  }
+
+  onActiveCategorySelect(categoryId: string): void {
+    if (!this.activeBookId) {
+      this.onCategorySelect(categoryId);
+      return;
+    }
+
+    const mainCategory = this.characterForm.get('category')?.value || '';
+    this.onBookCategoryOverrideChange(
+      this.activeBookId,
+      categoryId === mainCategory ? '' : categoryId
+    );
+  }
+
+  private setThumbnailForStyle(styleId: string, wikiLink: string, bookId = this.activeBookId): void {
+    if (!styleId) return;
+    const trimmed = wikiLink.trim();
+    if (bookId) {
+      const bookMap = { ...(this.bookThumbnailsMap[bookId] || {}) };
+      if (trimmed) {
+        bookMap[styleId] = trimmed;
+      } else {
+        delete bookMap[styleId];
+      }
+      const next = { ...this.bookThumbnailsMap };
+      if (Object.keys(bookMap).length > 0) {
+        next[bookId] = bookMap;
+      } else {
+        delete next[bookId];
+      }
+      this.bookThumbnailsMap = next;
+    } else {
+      if (trimmed) {
+        this.thumbnailsMap = { ...this.thumbnailsMap, [styleId]: trimmed };
+      } else {
+        const next = { ...this.thumbnailsMap };
+        delete next[styleId];
+        this.thumbnailsMap = next;
+      }
+    }
+    this.characterForm.markAsDirty();
+    void this.refreshThumbnailPreviews(this.activeBookId);
+  }
+
+  async refreshThumbnailPreviews(bookId: string | null = this.activeBookId): Promise<void> {
     const next = new Map<string, string>();
     if (!this.currentProject?.path) {
       this.thumbnailPreviewUrls = next;
@@ -858,7 +950,12 @@ export class CharacterDetailComponent
     }
     await Promise.all(
       this.characterStyles.map(async (style) => {
-        const raw = resolveThumbnailForStyle(this.thumbnailsMap, style.id);
+        const raw = resolveThumbnailForBookStyle(
+          this.thumbnailsMap,
+          this.bookThumbnailsMap,
+          bookId,
+          style.id
+        );
         if (!raw) return;
         const parsed = parseThumbnailReference(raw);
         if (!parsed) return;
@@ -999,7 +1096,7 @@ export class CharacterDetailComponent
 
   async generateName(): Promise<void> {
     if (!this.aiEnabled) {
-      this.error = "AI is not enabled. Please configure AI settings first.";
+      this.notificationService.showError("AI is not enabled. Please configure AI settings first.");
       this.cdr.markForCheck();
       return;
     }
@@ -1037,8 +1134,9 @@ export class CharacterDetailComponent
       }
     } catch (error) {
       this.logger.error("Failed to generate name:", error);
-      this.error =
-        error instanceof Error ? error.message : "Failed to generate name";
+      this.notificationService.showError(
+        error instanceof Error ? error.message : "Failed to generate name"
+      );
       this.cdr.markForCheck();
     } finally {
       this.isGeneratingName = false;
@@ -1048,11 +1146,12 @@ export class CharacterDetailComponent
 
   openGeneratePortrait(): void {
     if (!this.imageGenerationEnabled) {
-      this.error = 'Image generation is not enabled. Configure it in AI Settings first.';
+      this.notificationService.showError('Image generation is not enabled. Configure it in AI Settings first.');
       this.cdr.markForCheck();
       return;
     }
     this.pickerTargetStyleId = this.defaultCharacterStyle || this.characterStyles[0]?.id || '';
+    this.pickerTargetBookId = this.activeBookId;
     this.error = null;
     this.showGeneratePortraitDialog = true;
     this.cdr.markForCheck();
@@ -1061,7 +1160,8 @@ export class CharacterDetailComponent
   onPortraitGenerated(relativePath: string): void {
     this.setThumbnailForStyle(
       this.pickerTargetStyleId || this.defaultCharacterStyle,
-      formatThumbnailWikiLink(relativePath)
+      formatThumbnailWikiLink(relativePath),
+      this.pickerTargetBookId
     );
     this.showGeneratePortraitDialog = false;
     this.notificationService.showSuccess(`Portrait saved to ${relativePath}`);
@@ -1070,15 +1170,21 @@ export class CharacterDetailComponent
 
   async openImagePicker(styleId?: string): Promise<void> {
     this.pickerTargetStyleId = styleId || this.defaultCharacterStyle || this.characterStyles[0]?.id || '';
+    this.pickerTargetBookId = this.activeBookId;
     this.showImagePickerDialog = true;
     this.cdr.markForCheck();
     await this.imagePickerService.open({
-      thumbnailHint: resolveThumbnailForStyle(this.thumbnailsMap, this.pickerTargetStyleId) || '',
+      thumbnailHint: resolveThumbnailForBookStyle(
+        this.thumbnailsMap,
+        this.bookThumbnailsMap,
+        this.pickerTargetBookId,
+        this.pickerTargetStyleId
+      ) || '',
       imagesFolder: this.currentProject?.metadata?.settings?.imagesFolder,
     });
     const loadError = this.imagePickerService.snapshot.error;
     if (loadError) {
-      this.error = loadError;
+      this.notificationService.showError(loadError);
       this.cdr.markForCheck();
     }
   }
@@ -1091,13 +1197,17 @@ export class CharacterDetailComponent
 
   onImageSelected(image: ProjectImage): void {
     const styleId = this.pickerTargetStyleId || this.defaultCharacterStyle;
-    this.setThumbnailForStyle(styleId, formatThumbnailWikiLink(image.relativePath));
+    this.setThumbnailForStyle(
+      styleId,
+      formatThumbnailWikiLink(image.relativePath),
+      this.pickerTargetBookId
+    );
     this.showImagePickerDialog = false;
     this.cdr.markForCheck();
   }
 
   onImagePickerExplorerError(message: string): void {
-    this.error = message;
+    this.notificationService.showError(message);
     this.cdr.markForCheck();
   }
 
@@ -1107,12 +1217,27 @@ export class CharacterDetailComponent
 
   removeThumbnail(styleId?: string): void {
     const target = styleId || this.defaultCharacterStyle;
-    if (!resolveThumbnailForStyle(this.thumbnailsMap, target)) return;
-    this.setThumbnailForStyle(target, '');
+    const bookId = this.activeBookId;
+    const hasThumbnail = bookId
+      ? !!resolveThumbnailForStyle(this.bookThumbnailsMap[bookId], target)
+      : !!resolveThumbnailForStyle(this.thumbnailsMap, target);
+    if (!hasThumbnail) return;
+    this.setThumbnailForStyle(target, '', bookId);
   }
 
   hasThumbnailForStyle(styleId: string): boolean {
-    return !!resolveThumbnailForStyle(this.thumbnailsMap, styleId);
+    return !!resolveThumbnailForBookStyle(
+      this.thumbnailsMap,
+      this.bookThumbnailsMap,
+      this.activeBookId,
+      styleId
+    );
+  }
+
+  hasOwnThumbnailForStyle(styleId: string): boolean {
+    return !!(this.activeBookId
+      ? resolveThumbnailForStyle(this.bookThumbnailsMap[this.activeBookId], styleId)
+      : resolveThumbnailForStyle(this.thumbnailsMap, styleId));
   }
 
   get thumbnailOutputDirectory(): string | null {
@@ -1155,7 +1280,7 @@ export class CharacterDetailComponent
       );
       this.notificationService.showSuccess(`Image saved to ${relativePath}`);
     } catch (error) {
-      this.error = error instanceof Error ? error.message : 'Failed to generate image';
+      this.notificationService.showError(error instanceof Error ? error.message : 'Failed to generate image');
     } finally {
       this.generatingPromptIndex = null;
       this.cdr.markForCheck();
@@ -1180,7 +1305,12 @@ export class CharacterDetailComponent
 
   private getThumbnailOutputDirectory(): string | null {
     const styleId = this.pickerTargetStyleId || this.defaultCharacterStyle;
-    const raw = resolveThumbnailForStyle(this.thumbnailsMap, styleId) || '';
+    const raw = resolveThumbnailForBookStyle(
+      this.thumbnailsMap,
+      this.bookThumbnailsMap,
+      this.pickerTargetBookId,
+      styleId
+    ) || '';
     const parsed = parseThumbnailReference(raw);
     if (!parsed) return null;
     const normalized = parsed.replace(/\\/g, '/');
@@ -1212,7 +1342,7 @@ export class CharacterDetailComponent
       this.notificationService.showSuccess(`Character "${this.character.name}" deleted successfully`);
       this.router.navigate(["/characters"]);
     } catch (error) {
-      this.error = `Failed to delete character: ${error}`;
+      this.notificationService.showError(`Failed to delete character: ${error}`);
       this.logger.error("Delete error:", error);
       this.cdr.markForCheck();
     }

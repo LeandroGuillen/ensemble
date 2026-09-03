@@ -39,11 +39,13 @@
             </svg>
           </div>
         }
+      </div>
+      <div class="gallery-name">
+        {{ character.name }}
         @if (isPov(character)) {
-          <span class="pov-star gallery-pov-star" [style.color]="povBadgeColor" title="Point of view character" aria-label="Point of view character">★</span>
+          <span class="pov-star" [style.color]="povBadgeColor" title="Point of view character" aria-label="Point of view character">★</span>
         }
       </div>
-      <div class="gallery-name">{{ character.name }}</div>
     </div>
   }
 </div>

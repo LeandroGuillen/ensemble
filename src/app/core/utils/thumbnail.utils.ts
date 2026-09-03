@@ -53,15 +53,29 @@ export function resolveThumbnailForStyle(
   return trimmed || null;
 }
 
+/** Returns a book-specific thumbnail when present, otherwise the main thumbnail. */
+export function resolveThumbnailForBookStyle(
+  thumbnails: Record<string, string> | undefined | null,
+  bookThumbnails: Record<string, Record<string, string>> | undefined | null,
+  bookId: string | null | undefined,
+  styleId: string
+): string | null {
+  if (bookId && bookThumbnails?.[bookId]) {
+    const bookThumbnail = resolveThumbnailForStyle(bookThumbnails[bookId], styleId);
+    if (bookThumbnail) return bookThumbnail;
+  }
+  return resolveThumbnailForStyle(thumbnails, styleId);
+}
+
 /** Formats a project-relative path as an Obsidian wiki-link. */
 export function formatThumbnailWikiLink(relativePath: string): string {
   const trimmed = (relativePath || '').trim().replace(/^\/+/, '');
   return trimmed ? `[[${trimmed}]]` : '';
 }
 
-/** Cache key for a character thumbnail under a given style. */
-export function thumbnailCacheKey(characterId: string, styleId: string): string {
-  return `${characterId}:${styleId}`;
+/** Cache key for a character thumbnail under a given style and optional book. */
+export function thumbnailCacheKey(characterId: string, styleId: string, bookId?: string): string {
+  return bookId ? `${characterId}:${bookId}:${styleId}` : `${characterId}:${styleId}`;
 }
 
 /** Normalizes a raw frontmatter thumbnails map into a clean Record. */
@@ -78,5 +92,23 @@ export function normalizeThumbnailsMap(raw: unknown): Record<string, string> | u
       result[key.trim()] = trimmed;
     }
   }
+  return Object.keys(result).length > 0 ? result : undefined;
+}
+
+/** Normalizes a raw frontmatter per-book thumbnails map into clean nested records. */
+export function normalizeBookThumbnailsMap(
+  raw: unknown,
+  assignedBookIds?: string[]
+): Record<string, Record<string, string>> | undefined {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined;
+  const assigned = assignedBookIds ? new Set(assignedBookIds) : null;
+  const result: Record<string, Record<string, string>> = {};
+
+  for (const [bookId, styleMap] of Object.entries(raw as Record<string, unknown>)) {
+    if (!bookId.trim() || (assigned && !assigned.has(bookId))) continue;
+    const normalizedStyles = normalizeThumbnailsMap(styleMap);
+    if (normalizedStyles) result[bookId] = normalizedStyles;
+  }
+
   return Object.keys(result).length > 0 ? result : undefined;
 }

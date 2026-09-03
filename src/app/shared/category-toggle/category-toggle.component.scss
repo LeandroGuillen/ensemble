@@ -17,7 +17,7 @@
     background: transparent;
     border: none;
     border-radius: calc(var(--radius-sm) - 1px);
-    color: var(--color-text-secondary);
+    color: var(--option-color, var(--color-text-secondary));
     cursor: pointer;
     transition: all 0.15s ease;
     font-size: 12px;
@@ -31,7 +31,7 @@
 
     &.active {
       background-color: var(--color-accent-primary);
-      color: white;
+      color: var(--option-color, white);
       font-weight: 600;
     }
 

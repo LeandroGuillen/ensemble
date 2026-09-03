@@ -14,6 +14,8 @@ export interface Character {
   bookCategories?: Record<string, string>;
   /** Map of character-style id → opaque wiki-link / path string */
   thumbnails?: Record<string, string>;
+  /** Optional per-book map of character-style id → opaque wiki-link / path string. */
+  bookThumbnails?: Record<string, Record<string, string>>;
   prompts: CharacterPrompt[]; // Image-generation prompts; first is the default
   content: string; // Full markdown body below frontmatter
   created: Date;
@@ -29,6 +31,8 @@ export interface CharacterFormData {
   /** Optional per-book category overrides; missing keys fall back to `category`. */
   bookCategories?: Record<string, string>;
   thumbnails?: Record<string, string>;
+  /** Optional per-book map of character-style id → opaque wiki-link / path string. */
+  bookThumbnails?: Record<string, Record<string, string>>;
   prompts: CharacterPrompt[];
   content: string;
 }
@@ -41,6 +45,8 @@ export interface CharacterFrontmatter {
   /** Optional per-book category overrides; missing keys fall back to `category`. */
   bookCategories?: Record<string, string>;
   thumbnails?: Record<string, string>;
+  /** Optional per-book map of character-style id → opaque wiki-link / path string. */
+  bookThumbnails?: Record<string, Record<string, string>>;
   prompts?: CharacterPrompt[];
   created?: string;
   modified?: string;

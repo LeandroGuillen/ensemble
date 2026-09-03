@@ -48,7 +48,7 @@
       <button
         type="button"
         class="btn btn-primary"
-        [disabled]="savingBookPageId || !bookPageData[activeContentTab]?.exists"
+        [disabled]="savingBookPageId || (!bookPageData[activeContentTab]?.exists && !characterForm.dirty)"
         (click)="onSaveBookPage(activeContentTab)"
         title="Save book page (Ctrl+Enter)"
       >
@@ -82,15 +82,6 @@
 
       @if (currentProject && !isLoading) {
         <form [formGroup]="characterForm" (ngSubmit)="onSubmit()" class="detail-form">
-          <!-- Error -->
-          @if (error) {
-            <div class="error-banner">
-              <span class="error-banner-icon">⚠️</span>
-              <span class="error-banner-text">{{ error }}</span>
-              <button type="button" class="error-banner-close" (click)="error = null" aria-label="Dismiss">×</button>
-            </div>
-          }
-
           <!-- HERO: thumbnail + name + category -->
           <section class="hero-card">
             <div class="hero-thumb-column">
@@ -98,8 +89,8 @@
                 type="button"
                 class="hero-thumb"
                 (click)="openImagePicker(defaultCharacterStyle)"
-                title="Choose an image for the default style"
-                aria-label="Choose default style image"
+                [title]="activeBookId ? 'Choose an image for ' + getBookName(activeBookId) : 'Choose an image for the default style'"
+                [attr.aria-label]="activeBookId ? 'Choose image for ' + getBookName(activeBookId) : 'Choose default style image'"
               >
                 @if (thumbnailPreviewUrl) {
                   <img [src]="thumbnailPreviewUrl" alt="Thumbnail preview" />
@@ -143,6 +134,24 @@
                   title="Add another character style in Settings"
                 >Add another style</a>
               }
+
+              <div class="thumbnail-actions hero-thumbnail-actions">
+                <button type="button" class="btn btn-secondary" (click)="openImagePicker(defaultCharacterStyle)">
+                  {{ activeBookId ? 'Choose book image' : 'Choose main image' }}
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  (click)="openGeneratePortrait()"
+                  [disabled]="!imageGenerationEnabled"
+                >Generate portrait</button>
+                <button
+                  type="button"
+                  class="btn btn-ghost thumbnail-remove-btn"
+                  (click)="removeThumbnail(defaultCharacterStyle)"
+                  [disabled]="!hasOwnThumbnailForStyle(defaultCharacterStyle)"
+                >{{ activeBookId ? 'Use main image' : 'Remove main image' }}</button>
+              </div>
             </div>
 
             <div class="hero-main">
@@ -186,11 +195,14 @@
                   <label class="form-label">Category *</label>
                   <app-category-toggle
                     [options]="categoryToggleOptions"
-                    [selectedValue]="getSelectedCategory()"
+                    [selectedValue]="getSelectedCategoryForActiveTab()"
                     [emptyLabel]="'None'"
                     [error]="!!fieldErrors['category']"
-                    (valueChange)="onCategorySelect($event); onFieldBlur('category')"
+                    (valueChange)="onActiveCategorySelect($event); onFieldBlur('category')"
                   ></app-category-toggle>
+                  @if (activeBookId && !bookCategoriesMap[activeBookId]) {
+                    <span class="hero-field-hint">Using main category: {{ getCategoryName(getSelectedCategoryForActiveTab()) }}</span>
+                  }
                   @if (fieldErrors['category']) {
                     <div class="error-text" id="category-error" role="alert" aria-live="polite">
                       {{ fieldErrors['category'] }}
@@ -284,62 +296,6 @@
                   }
                 </section>
 
-                @if (getSelectedBooksForCategoryOverrides().length > 0) {
-                  <section class="meta-group">
-                    <header class="meta-group-header">
-                      <h4 class="meta-group-title">Category by book</h4>
-                      <span class="meta-group-hint">Optional overrides</span>
-                    </header>
-                    <div class="book-category-overrides">
-                      @for (book of getSelectedBooksForCategoryOverrides(); track book.id) {
-                        <div class="book-category-row">
-                          <label class="book-category-label" [attr.for]="'book-category-' + book.id">
-                            <span class="book-category-swatch" [style.background-color]="book.color"></span>
-                            {{ getBookName(book.id) }}
-                          </label>
-                          <select
-                            class="form-control book-category-select"
-                            [id]="'book-category-' + book.id"
-                            [ngModel]="getBookCategoryOverride(book.id)"
-                            (ngModelChange)="onBookCategoryOverrideChange(book.id, $event)"
-                            [ngModelOptions]="{standalone: true}"
-                          >
-                            <option value="">Same as default</option>
-                            @for (category of categories; track category.id) {
-                              <option [value]="category.id">{{ category.name }}</option>
-                            }
-                          </select>
-                        </div>
-                      }
-                    </div>
-                  </section>
-                }
-
-                <section class="meta-group">
-                  <header class="meta-group-header">
-                    <h4 class="meta-group-title">Portraits</h4>
-                    <span class="meta-group-hint">
-                      {{ characterStyles.length > 1 ? 'Per character style' : 'Character portrait' }}
-                    </span>
-                  </header>
-                  <div class="thumbnail-actions">
-                    <button type="button" class="btn btn-secondary" (click)="openImagePicker(defaultCharacterStyle)">
-                      Choose default image
-                    </button>
-                    <button
-                      type="button"
-                      class="btn btn-secondary"
-                      (click)="openGeneratePortrait()"
-                      [disabled]="!imageGenerationEnabled"
-                    >Generate portrait</button>
-                    <button
-                      type="button"
-                      class="btn btn-ghost thumbnail-remove-btn"
-                      (click)="removeThumbnail(defaultCharacterStyle)"
-                      [disabled]="!hasThumbnailForStyle(defaultCharacterStyle)"
-                    >Remove default</button>
-                  </div>
-                </section>
               </aside>
             </div>
 

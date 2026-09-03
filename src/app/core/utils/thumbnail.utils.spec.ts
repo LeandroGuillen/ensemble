@@ -2,7 +2,9 @@ import {
   parseThumbnailReference,
   resolveThumbnailPath,
   resolveThumbnailForStyle,
+  resolveThumbnailForBookStyle,
   normalizeThumbnailsMap,
+  normalizeBookThumbnailsMap,
 } from './thumbnail.utils';
 
 describe('thumbnail.utils', () => {
@@ -94,6 +96,31 @@ describe('thumbnail.utils', () => {
     it('should return undefined for empty maps', () => {
       expect(normalizeThumbnailsMap({})).toBeUndefined();
       expect(normalizeThumbnailsMap(null)).toBeUndefined();
+    });
+  });
+
+  describe('resolveThumbnailForBookStyle', () => {
+    it('prefers a book override and falls back to the main thumbnail', () => {
+      const main = { default: '[[img/main.png]]' };
+      const books = { 'book-1': { default: '[[img/book.png]]' } };
+
+      expect(resolveThumbnailForBookStyle(main, books, 'book-1', 'default')).toBe('[[img/book.png]]');
+      expect(resolveThumbnailForBookStyle(main, books, 'book-2', 'default')).toBe('[[img/main.png]]');
+    });
+  });
+
+  describe('normalizeBookThumbnailsMap', () => {
+    it('keeps valid assigned books and removes empty or unassigned entries', () => {
+      expect(
+        normalizeBookThumbnailsMap(
+          {
+            'book-1': { default: '[[img/book.png]]' },
+            'book-2': { default: '' },
+            'book-3': { default: '[[img/ignored.png]]' },
+          },
+          ['book-1', 'book-2']
+        )
+      ).toEqual({ 'book-1': { default: '[[img/book.png]]' } });
     });
   });
 });
