@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, OnInit, SimpleChanges, DestroyRef, inject } from '@angular/core';
+import { Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges, DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
@@ -39,13 +39,20 @@ interface TagFormData {
   color: string;
 }
 
+type DeleteTargetKind = 'category' | 'tag' | 'character-style';
+
+interface PendingDelete {
+  kind: DeleteTargetKind;
+  id: string;
+}
+
 @Component({
     selector: 'app-metadata-management',
     imports: [FormsModule, ReactiveFormsModule, SettingsSearchableDirective, DragDropModule],
     templateUrl: './metadata-management.component.html',
     styleUrls: ['./metadata-management.component.scss']
 })
-export class MetadataManagementComponent implements OnInit, OnChanges {
+export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy {
   private readonly destroyRef = inject(DestroyRef);
 
   /** Which settings panel section to render (driven by parent Settings page). */
@@ -88,6 +95,8 @@ export class MetadataManagementComponent implements OnInit, OnChanges {
   
   // Error handling
   error: string | null = null;
+  pendingDelete: PendingDelete | null = null;
+  private pendingDeleteTimeout: ReturnType<typeof setTimeout> | null = null;
 
   // Update checking
   updateStatus: UpdateStatus = { status: 'idle' };
@@ -204,6 +213,10 @@ export class MetadataManagementComponent implements OnInit, OnChanges {
     }
   }
 
+  ngOnDestroy(): void {
+    this.clearPendingDelete();
+  }
+
   private async loadData(): Promise<void> {
     try {
       this.loading = true;
@@ -243,6 +256,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges {
   // Category Management
 
   showAddCategoryForm(): void {
+    this.clearPendingDelete();
     this.showCategoryForm = true;
     this.editingCategory = null;
     const defaultColor = this.colorPresets[0] || DEFAULT_BASE_COLORS[0];
@@ -256,6 +270,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges {
   }
 
   showEditCategoryForm(category: Category): void {
+    this.clearPendingDelete();
     this.showCategoryForm = true;
     this.editingCategory = category;
     this.categoryForm.patchValue({
@@ -268,6 +283,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges {
   }
 
   cancelCategoryForm(): void {
+    this.clearPendingDelete();
     this.showCategoryForm = false;
     this.editingCategory = null;
     this.categoryForm.reset();
@@ -301,7 +317,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges {
   }
 
   async deleteCategory(category: Category): Promise<void> {
-    if (!(await this.modalService.confirm(`Are you sure you want to delete the category "${category.name}"?`))) {
+    if (!this.canDeleteCategory(category) || !this.beginDeleteConfirmation('category', category.id)) {
       return;
     }
 
@@ -321,6 +337,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges {
   // Tag Management
 
   showAddTagForm(): void {
+    this.clearPendingDelete();
     this.showTagForm = true;
     this.editingTag = null;
     const defaultColor = this.colorPresets[2] || DEFAULT_BASE_COLORS[2];
@@ -331,6 +348,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges {
   }
 
   showEditTagForm(tag: Tag): void {
+    this.clearPendingDelete();
     this.showTagForm = true;
     this.editingTag = tag;
     this.tagForm.patchValue({
@@ -340,6 +358,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges {
   }
 
   cancelTagForm(): void {
+    this.clearPendingDelete();
     this.showTagForm = false;
     this.editingTag = null;
     this.tagForm.reset();
@@ -373,7 +392,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges {
   }
 
   async deleteTag(tag: Tag): Promise<void> {
-    if (!(await this.modalService.confirm(`Are you sure you want to delete the tag "${tag.name}"?`))) {
+    if (!this.beginDeleteConfirmation('tag', tag.id)) {
       return;
     }
 
@@ -455,11 +474,13 @@ export class MetadataManagementComponent implements OnInit, OnChanges {
   // Character Styles Management
 
   showAddCharacterStyleForm(): void {
+    this.clearPendingDelete();
     this.showCharacterStyleForm = true;
     this.newCharacterStyleName = '';
   }
 
   cancelCharacterStyleForm(): void {
+    this.clearPendingDelete();
     this.showCharacterStyleForm = false;
     this.newCharacterStyleName = '';
   }
@@ -530,10 +551,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges {
       this.error = 'At least one character style is required';
       return;
     }
-    const confirmed = await this.modalService.confirm(
-      `Remove character style "${style.name}"? Existing character portraits for this style will remain in files but won't be shown until the style is re-added.`
-    );
-    if (!confirmed) return;
+    if (!this.beginDeleteConfirmation('character-style', style.id)) return;
 
     this.characterStyles = this.characterStyles.filter((s) => s.id !== style.id);
     const currentDefault = this.settingsForm.get('defaultCharacterStyle')?.value;
@@ -544,6 +562,32 @@ export class MetadataManagementComponent implements OnInit, OnChanges {
       );
     }
     await this.persistCharacterStyles();
+  }
+
+  isDeletePending(kind: DeleteTargetKind, id: string): boolean {
+    return this.pendingDelete?.kind === kind && this.pendingDelete.id === id;
+  }
+
+  private beginDeleteConfirmation(kind: DeleteTargetKind, id: string): boolean {
+    if (!this.isDeletePending(kind, id)) {
+      this.clearPendingDelete();
+      this.pendingDelete = { kind, id };
+      this.pendingDeleteTimeout = setTimeout(() => {
+        this.clearPendingDelete();
+      }, 3000);
+      return false;
+    }
+
+    this.clearPendingDelete();
+    return true;
+  }
+
+  private clearPendingDelete(): void {
+    this.pendingDelete = null;
+    if (this.pendingDeleteTimeout !== null) {
+      clearTimeout(this.pendingDeleteTimeout);
+      this.pendingDeleteTimeout = null;
+    }
   }
 
   private async persistCharacterStyles(): Promise<void> {

@@ -255,6 +255,17 @@ describe('MetadataService', () => {
       expect(projectService.updateMetadata).toHaveBeenCalled();
     });
 
+    it('should add a tag with accented characters', async () => {
+      const newTag = await service.addTag({
+        name: 'Ceós',
+        color: '#FFFF00'
+      });
+
+      expect(newTag.id).toBe('ceós');
+      expect(newTag.name).toBe('Ceós');
+      expect(projectService.updateMetadata).toHaveBeenCalled();
+    });
+
     it('should throw error when adding duplicate tag', async () => {
       await expectAsync(service.addTag({
         name: 'Magic User',
@@ -441,4 +452,3 @@ describe('MetadataService', () => {
     });
   });
 });
-

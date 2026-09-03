@@ -2,6 +2,7 @@ import { ProjectMetadata, Category, Tag, ProjectSettings, Book, Series, Saga } f
 import { ValidationResult, ValidationError } from '../interfaces/validation.interface';
 
 const KEBAB_CASE_REGEX = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+const UNICODE_KEBAB_CASE_REGEX = /^[\p{L}\p{N}]+(-[\p{L}\p{N}]+)*$/u;
 const HEX_COLOR_REGEX = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
 
 export class ProjectValidator {
@@ -383,7 +384,7 @@ export class ProjectValidator {
       });
     }
 
-    if (tag.id && !KEBAB_CASE_REGEX.test(tag.id)) {
+    if (tag.id && !UNICODE_KEBAB_CASE_REGEX.test(tag.id)) {
       errors.push({
         field: 'id',
         message: 'Tag ID must be in kebab-case format (e.g., magic-user)',

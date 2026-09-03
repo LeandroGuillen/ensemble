@@ -194,12 +194,15 @@
                     @if (!editingCategory || editingCategory.id !== category.id) {
                       <div class="item-actions">
                         <button
-                          class="btn-icon btn-danger"
+                          type="button"
+                          class="delete-action"
+                          [class.confirming]="isDeletePending('category', category.id)"
                           (click)="deleteCategory(category); $event.stopPropagation()"
                           [disabled]="!canDeleteCategory(category) || saving"
-                          [title]="!canDeleteCategory(category) ? 'Cannot delete default category' : 'Delete category'"
+                          [attr.aria-label]="isDeletePending('category', category.id) ? 'Confirm deleting ' + category.name : 'Delete ' + category.name"
+                          [title]="!canDeleteCategory(category) ? 'Cannot delete default category' : (isDeletePending('category', category.id) ? 'Confirm deletion' : 'Delete category')"
                           >
-                          🗑️
+                          {{ isDeletePending('category', category.id) ? 'Are you sure?' : 'Delete' }}
                         </button>
                       </div>
                     }
@@ -449,12 +452,15 @@
                     @if (!editingTag || editingTag.id !== tag.id) {
                       <div class="item-actions">
                         <button
-                          class="btn-icon btn-danger"
+                          type="button"
+                          class="delete-action"
+                          [class.confirming]="isDeletePending('tag', tag.id)"
                           (click)="deleteTag(tag); $event.stopPropagation()"
                           [disabled]="saving"
-                          title="Delete tag"
+                          [attr.aria-label]="isDeletePending('tag', tag.id) ? 'Confirm deleting ' + tag.name : 'Delete ' + tag.name"
+                          [title]="isDeletePending('tag', tag.id) ? 'Confirm deletion' : 'Delete tag'"
                           >
-                          🗑️
+                          {{ isDeletePending('tag', tag.id) ? 'Are you sure?' : 'Delete' }}
                         </button>
                       </div>
                     }
@@ -604,12 +610,14 @@
                     <div class="item-actions">
                       <button
                         type="button"
-                        class="btn-icon btn-danger"
+                        class="delete-action"
+                        [class.confirming]="isDeletePending('character-style', style.id)"
                         (click)="removeCharacterStyle(style)"
                         [disabled]="characterStyles.length <= 1 || saving"
-                        [title]="characterStyles.length <= 1 ? 'At least one style is required' : 'Delete style'"
+                        [attr.aria-label]="isDeletePending('character-style', style.id) ? 'Confirm deleting ' + style.name : 'Delete ' + style.name"
+                        [title]="characterStyles.length <= 1 ? 'At least one style is required' : (isDeletePending('character-style', style.id) ? 'Confirm deletion' : 'Delete style')"
                       >
-                        🗑️
+                        {{ isDeletePending('character-style', style.id) ? 'Are you sure?' : 'Delete' }}
                       </button>
                     </div>
                   </div>

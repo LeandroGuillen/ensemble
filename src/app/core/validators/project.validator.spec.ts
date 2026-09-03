@@ -251,6 +251,13 @@ describe('ProjectValidator', () => {
       expect(result.errors.some(e => e.field === 'id' && e.code === 'INVALID_FORMAT')).toBe(true);
     });
 
+    it('should pass validation when id contains Unicode letters', () => {
+      const tag: Tag = { id: 'ceós', name: 'Ceós', color: '#FF0000' };
+      const result = ProjectValidator.validateTag(tag);
+
+      expect(result.isValid).toBe(true);
+    });
+
     it('should fail validation when color is not hex format', () => {
       const tag: Tag = { id: 'test-tag', name: 'Test Tag', color: 'blue' };
       const result = ProjectValidator.validateTag(tag);
@@ -505,4 +512,3 @@ describe('ProjectValidator', () => {
     });
   });
 });
-
