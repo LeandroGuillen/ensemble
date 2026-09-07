@@ -7,6 +7,8 @@ import { FileWatcherService } from './file-watcher.service';
 import { LoggingService } from './logging.service';
 import { NotificationService } from './notification.service';
 import { MetadataService } from './metadata.service';
+import { PlotBoardService } from './plot-board.service';
+import { CastService } from './cast.service';
 import { Project, ProjectMetadata } from '../interfaces/project.interface';
 import { Character, CharacterFormData } from '../interfaces/character.interface';
 
@@ -18,6 +20,8 @@ describe('CharacterService', () => {
   let loggingService: jasmine.SpyObj<LoggingService>;
   let notificationService: jasmine.SpyObj<NotificationService>;
   let metadataService: jasmine.SpyObj<MetadataService>;
+  let plotBoardService: jasmine.SpyObj<PlotBoardService>;
+  let castService: jasmine.SpyObj<CastService>;
 
   const createValidProject = (): Project => ({
     path: '/test/project',
@@ -71,6 +75,7 @@ describe('CharacterService', () => {
       'getCharactersFolderPath',
       'getDefaultCharacterStyle',
       'getCharacterStyles',
+      'remapCharacterIds',
     ], {
       currentProject$: new BehaviorSubject<Project | null>(null)
     });
@@ -83,6 +88,11 @@ describe('CharacterService', () => {
     const notificationSpy = jasmine.createSpyObj('NotificationService', ['showError']);
     const metadataSpy = jasmine.createSpyObj('MetadataService', ['removeCharacterFromBookPovs']);
     metadataSpy.removeCharacterFromBookPovs.and.returnValue(Promise.resolve());
+    const plotBoardSpy = jasmine.createSpyObj('PlotBoardService', ['remapCharacterIdsAcrossProject']);
+    plotBoardSpy.remapCharacterIdsAcrossProject.and.returnValue(Promise.resolve());
+    const castSpy = jasmine.createSpyObj('CastService', ['forceReloadCasts']);
+    castSpy.forceReloadCasts.and.returnValue(Promise.resolve());
+    projectSpy.remapCharacterIds.and.returnValue(Promise.resolve(false));
 
     TestBed.configureTestingModule({
       providers: [
@@ -92,7 +102,9 @@ describe('CharacterService', () => {
         { provide: FileWatcherService, useValue: fileWatcherSpy },
         { provide: LoggingService, useValue: loggingSpy },
         { provide: NotificationService, useValue: notificationSpy },
-        { provide: MetadataService, useValue: metadataSpy }
+        { provide: MetadataService, useValue: metadataSpy },
+        { provide: PlotBoardService, useValue: plotBoardSpy },
+        { provide: CastService, useValue: castSpy }
       ]
     });
 
@@ -103,6 +115,8 @@ describe('CharacterService', () => {
     loggingService = TestBed.inject(LoggingService) as jasmine.SpyObj<LoggingService>;
     notificationService = TestBed.inject(NotificationService) as jasmine.SpyObj<NotificationService>;
     metadataService = TestBed.inject(MetadataService) as jasmine.SpyObj<MetadataService>;
+    plotBoardService = TestBed.inject(PlotBoardService) as jasmine.SpyObj<PlotBoardService>;
+    castService = TestBed.inject(CastService) as jasmine.SpyObj<CastService>;
 
     electronService.isElectron.and.returnValue(true);
     projectService.getCharactersFolderPath.and.returnValue('/test/project/characters');
@@ -133,6 +147,7 @@ describe('CharacterService', () => {
         content: '',
         created: new Date(),
         modified: new Date(),
+        relativePath: '_char-1.md',
         filePath: '/path/to/char/_char-1.md',
       };
 
@@ -141,6 +156,27 @@ describe('CharacterService', () => {
       const found = service.getCharacterById('_char-1.md');
       expect(found).toBeTruthy();
       expect(found?.name).toBe('Test Character');
+    });
+
+    it('should find a character by leftover path when id is stable', () => {
+      const character: Character = {
+        id: 'stable-id-1',
+        name: 'Test Character',
+        category: 'main-character',
+        tags: [],
+        books: [],
+        prompts: [],
+        content: '',
+        created: new Date(),
+        modified: new Date(),
+        relativePath: '_char-1.md',
+        filePath: '/path/to/char/_char-1.md',
+      };
+
+      (service as any).charactersSubject.next([character]);
+
+      expect(service.getCharacterById('stable-id-1')?.name).toBe('Test Character');
+      expect(service.getCharacterById('_char-1.md')?.id).toBe('stable-id-1');
     });
 
     it('should return undefined for non-existent character', () => {
@@ -165,8 +201,13 @@ describe('CharacterService', () => {
       expect(character).toBeTruthy();
       expect(character.name).toBe('Test Character');
       expect(character.category).toBe('main-character');
+      expect(character.relativePath).toBe('_test-character.md');
+      expect(character.id).toBeTruthy();
+      expect(character.id).not.toBe(character.relativePath);
       expect(electronService.createDirectory).not.toHaveBeenCalled();
       expect(electronService.writeFileAtomic).toHaveBeenCalled();
+      const savedContent = electronService.writeFileAtomic.calls.mostRecent().args[1] as string;
+      expect(savedContent).toContain(`id: ${character.id}`);
     });
 
     it('should throw error when no project is loaded', async () => {
@@ -225,6 +266,7 @@ describe('CharacterService', () => {
         content: '',
         created: new Date(),
         modified: new Date(),
+        relativePath: 'main-character/_original-name.md',
         filePath: '/test/project/characters/main-character/_original-name.md',
       };
 
@@ -273,6 +315,7 @@ describe('CharacterService', () => {
         content: '',
         created: new Date(),
         modified: new Date(),
+        relativePath: 'main-character/_test-character.md',
         filePath: '/test/project/characters/main-character/_test-character.md',
       };
 
@@ -307,6 +350,7 @@ describe('CharacterService', () => {
         content: '',
         created: new Date(),
         modified: new Date(),
+        relativePath: 'main-character/_test-character.md',
         filePath: '/test/project/characters/main-character/_test-character.md',
       };
 
@@ -345,6 +389,7 @@ describe('CharacterService', () => {
         content: '',
         created: new Date(),
         modified: new Date(),
+        relativePath: '_test-character.md',
         filePath: '/test/project/characters/_test-character.md',
       };
 
@@ -381,6 +426,7 @@ describe('CharacterService', () => {
         content: '',
         created: new Date(),
         modified: new Date(),
+        relativePath: '_test-character.md',
         filePath: '/test/project/characters/_test-character.md',
       };
 
@@ -394,6 +440,39 @@ describe('CharacterService', () => {
       expect(updated?.bookCategories).toBeUndefined();
       const savedContent = electronService.writeFileAtomic.calls.mostRecent().args[1] as string;
       expect(savedContent).not.toContain('bookCategories:');
+    });
+
+    it('should keep a stable id when the character is renamed', async () => {
+      const project = createValidProject();
+      projectService.getCurrentProject.and.returnValue(project);
+      (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
+
+      const existingCharacter: Character = {
+        id: 'stable-id-1',
+        name: 'Original Name',
+        category: 'main-character',
+        tags: [],
+        books: [],
+        prompts: [],
+        content: '',
+        created: new Date(),
+        modified: new Date(),
+        relativePath: 'main-character/_original-name.md',
+        filePath: '/test/project/characters/main-character/_original-name.md',
+      };
+
+      (service as any).charactersSubject.next([existingCharacter]);
+      electronService.moveDirectory.and.returnValue(Promise.resolve({ success: true }));
+      electronService.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));
+
+      const updated = await service.updateCharacter('stable-id-1', {
+        name: 'New Name',
+      });
+
+      expect(updated?.id).toBe('stable-id-1');
+      expect(updated?.relativePath).toBe('main-character/_new-name.md');
+      expect(updated?.filePath).toBe('/test/project/characters/main-character/_new-name.md');
+      expect(electronService.moveDirectory).toHaveBeenCalled();
     });
   });
 
@@ -413,6 +492,7 @@ describe('CharacterService', () => {
         content: '',
         created: new Date(),
         modified: new Date(),
+        relativePath: 'main-character/_test-character.md',
         filePath: '/test/project/characters/main-character/_test-character.md',
       };
 
@@ -558,6 +638,90 @@ Body text
       expect(characters[0].category).toBe('antagonist');
       expect(characters[0].books).toEqual(['book-1', 'book-2']);
       expect(characters[0].bookCategories).toEqual({ 'book-2': 'supporting' });
+    });
+
+    it('should assign and persist a stable id when frontmatter has none', async () => {
+      const project = createValidProject();
+      projectService.getCurrentProject.and.returnValue(project);
+      (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
+
+      electronService.fileExists.and.returnValue(Promise.resolve(true));
+      electronService.readDirectoryRecursive.and.returnValue(
+        Promise.resolve({
+          success: true,
+          files: [
+            {
+              relativePath: '_dessir.md',
+              absolutePath: '/test/project/characters/_dessir.md',
+            },
+          ],
+        })
+      );
+      electronService.readFile.and.returnValue(
+        Promise.resolve({
+          success: true,
+          content: `---
+name: Dessir
+category: antagonist
+---
+
+Body text
+`,
+        })
+      );
+      electronService.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));
+
+      await service.forceReloadCharacters();
+
+      const characters = (service as any).charactersSubject.value as Character[];
+      expect(characters.length).toBe(1);
+      expect(characters[0].relativePath).toBe('_dessir.md');
+      expect(characters[0].id).toBeTruthy();
+      expect(characters[0].id).not.toBe('_dessir.md');
+      expect(electronService.writeFileAtomic).toHaveBeenCalled();
+      expect(projectService.remapCharacterIds).toHaveBeenCalled();
+      expect(plotBoardService.remapCharacterIdsAcrossProject).toHaveBeenCalled();
+      const savedContent = electronService.writeFileAtomic.calls.mostRecent().args[1] as string;
+      expect(savedContent).toContain(`id: ${characters[0].id}`);
+    });
+
+    it('should keep an existing frontmatter id and skip persist', async () => {
+      const project = createValidProject();
+      projectService.getCurrentProject.and.returnValue(project);
+      (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
+
+      electronService.fileExists.and.returnValue(Promise.resolve(true));
+      electronService.readDirectoryRecursive.and.returnValue(
+        Promise.resolve({
+          success: true,
+          files: [
+            {
+              relativePath: '_dessir.md',
+              absolutePath: '/test/project/characters/_dessir.md',
+            },
+          ],
+        })
+      );
+      electronService.readFile.and.returnValue(
+        Promise.resolve({
+          success: true,
+          content: `---
+id: existing-stable-id
+name: Dessir
+category: antagonist
+---
+
+Body text
+`,
+        })
+      );
+
+      await service.forceReloadCharacters();
+
+      const characters = (service as any).charactersSubject.value as Character[];
+      expect(characters[0].id).toBe('existing-stable-id');
+      expect(electronService.writeFileAtomic).not.toHaveBeenCalled();
+      expect(projectService.remapCharacterIds).toHaveBeenCalled();
     });
   });
 });

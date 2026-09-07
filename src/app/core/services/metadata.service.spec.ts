@@ -391,6 +391,7 @@ describe('MetadataService', () => {
         content: '',
         created: new Date(),
         modified: new Date(),
+        relativePath: '_char-1.md',
         filePath: '/path/to/char/_char-1.md',
       };
 
@@ -409,6 +410,7 @@ describe('MetadataService', () => {
         content: '',
         created: new Date(),
         modified: new Date(),
+        relativePath: '_char-1.md',
         filePath: '/path/to/char/_char-1.md',
       };
 
@@ -443,6 +445,7 @@ describe('MetadataService', () => {
         content: '',
         created: new Date(),
         modified: new Date(),
+        relativePath: '_char-1.md',
         filePath: '/path/to/char/_char-1.md',
       };
 

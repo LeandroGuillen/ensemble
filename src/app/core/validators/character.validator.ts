@@ -15,7 +15,13 @@ export class CharacterValidator {
       });
     }
 
-    // id is derived from file path at runtime, not validated
+    if (!character.id || character.id.trim().length === 0) {
+      errors.push({
+        field: 'id',
+        message: 'Character id is required',
+        code: 'REQUIRED_FIELD'
+      });
+    }
 
     if (!character.category || character.category.trim().length === 0) {
       errors.push({

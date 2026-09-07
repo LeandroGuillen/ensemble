@@ -126,6 +126,7 @@ Character files match the pattern `_*.md` and can live in any subfolder under `c
 
 ```markdown
 ---
+id: m0k3r5abc123
 name: Dessir Galsea
 category: main-character
 tags:
@@ -144,7 +145,7 @@ modified: "2024-01-20T14:45:00Z"
 (single markdown body, no required section headers)
 ```
 
-Character ID is the relative file path from `characters/` (e.g., `_dessir.md` or `main-character/_dessir.md`).
+Character ID is a stable value stored in frontmatter (`id`). The file path under `characters/` is location only and can change on rename. Existing files without `id` are assigned one on first load, and leftover path-based refs (casts, pinboards, book PoVs, plot threads) are remapped.
 
 **Character styles**: Project settings define `characterStyles` (seeded with a single `Default` style) and `defaultCharacterStyle`. When more than one style exists, the character list shows a Character Style dropdown. With only one style, the list selector is hidden and character detail offers a subtle link to Settings to add another. Missing style portraits show a placeholder. Pinboard/casts use `defaultCharacterStyle`.
 

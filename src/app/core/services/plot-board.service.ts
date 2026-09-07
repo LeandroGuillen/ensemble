@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { PlotBoard, PlotBoardFrontmatter, PlotCellMeta, PlotRow, PlotThread } from '../interfaces/plot-board.interface';
 import { parseMarkdown, generateMarkdown } from '../utils/markdown.utils';
+import { remapPlotBoardCharacterIds } from '../utils/character-id.utils';
 import { pathJoin } from '../utils/path.utils';
 import { nextPlotBoardDuplicateStem, slugify } from '../utils/slug.utils';
 import { ElectronService } from './electron.service';
@@ -82,6 +83,46 @@ export class PlotBoardService {
     }
 
     return [...merged].sort((x, y) => x.localeCompare(y, undefined, { sensitivity: 'base' }));
+  }
+
+  /**
+   * Rewrites leftover path-based character refs in every plot board file.
+   * Updates the in-memory board when the open file changes.
+   */
+  async remapCharacterIdsAcrossProject(idMap: ReadonlyMap<string, string>): Promise<void> {
+    if (idMap.size === 0) {
+      return;
+    }
+
+    const paths = await this.discoverPlotboardFiles();
+    const current = this.getCurrentRelativePath();
+
+    for (const relativePath of paths) {
+      const filePath = this.getAbsolutePath(relativePath);
+      if (!filePath) {
+        continue;
+      }
+
+      const result = await this.electronService.readFile(filePath);
+      if (!result.success || !result.content) {
+        continue;
+      }
+
+      const board = this.parseFile(result.content);
+      if (!remapPlotBoardCharacterIds(board, idMap)) {
+        continue;
+      }
+
+      const writeResult = await this.electronService.writeFileAtomic(filePath, this.generateFile(board));
+      if (!writeResult.success) {
+        this.logger.error(`Failed to remap character ids in ${relativePath}`, writeResult.error);
+        continue;
+      }
+
+      if (current && this.normalizeRelativePath(current) === this.normalizeRelativePath(relativePath)) {
+        this.plotBoardSubject.next(board);
+      }
+    }
   }
 
   async loadPlotBoard(relativePath: string | null): Promise<void> {

@@ -15,6 +15,7 @@ import {
 } from '../interfaces/project.interface';
 import { LegacyProjectMetadataFields } from '../interfaces/legacy.interface';
 import { generateId } from '../utils/id.utils';
+import { remapProjectCharacterIds } from '../utils/character-id.utils';
 import { pathBasename, pathJoin } from '../utils/path.utils';
 import { sanitizeFilename } from '../utils/slug.utils';
 import { assertIpcSuccess } from '../utils/ipc.utils';
@@ -543,6 +544,26 @@ export class ProjectService {
    */
   async updateMetadata(updates: Partial<ProjectMetadata>): Promise<void> {
     await this.mutateMetadata((metadata) => Object.assign(metadata, updates));
+  }
+
+  /**
+   * Rewrites leftover path-based character refs in ensemble.json to stable ids.
+   * No-op (and no write) when nothing matches.
+   */
+  async remapCharacterIds(idMap: ReadonlyMap<string, string>): Promise<boolean> {
+    const project = this.currentProjectSubject.value;
+    if (!project || idMap.size === 0) {
+      return false;
+    }
+
+    const next = structuredClone(project.metadata);
+    if (!remapProjectCharacterIds(next, idMap)) {
+      return false;
+    }
+
+    await this.saveMetadata(project.path, next);
+    this.currentProjectSubject.next({ ...project, metadata: next });
+    return true;
   }
 
   /**

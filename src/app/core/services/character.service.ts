@@ -5,6 +5,11 @@ import { Character, CharacterFormData, CharacterFrontmatter, CharacterPrompt } f
 import { Category } from '../interfaces/project.interface';
 import { parseMarkdown, generateMarkdown } from '../utils/markdown.utils';
 import { slugify } from '../utils/slug.utils';
+import { generateId } from '../utils/id.utils';
+import {
+  buildCharacterIdRemap,
+  normalizeCharacterRelativePath,
+} from '../utils/character-id.utils';
 import { pathJoin, pathBasename, pathDirname } from '../utils/path.utils';
 import { parseThumbnailReference, resolveThumbnailPath, resolveThumbnailForStyle, resolveThumbnailForBookStyle, normalizeThumbnailsMap, normalizeBookThumbnailsMap, thumbnailCacheKey } from '../utils/thumbnail.utils';
 import { normalizeBookCategories } from '../utils/character-category.utils';
@@ -15,6 +20,8 @@ import { FileWatcherService } from './file-watcher.service';
 import { ProjectService } from './project.service';
 import { LoggingService } from './logging.service';
 import { MetadataService } from './metadata.service';
+import { PlotBoardService } from './plot-board.service';
+import { CastService } from './cast.service';
 
 /** Coerces a raw frontmatter `prompts` value into a clean CharacterPrompt[]. */
 function normalizePrompts(raw: unknown): CharacterPrompt[] {
@@ -44,7 +51,9 @@ export class CharacterService {
     private projectService: ProjectService,
     private fileWatcherService: FileWatcherService,
     private logger: LoggingService,
-    private metadataService: MetadataService
+    private metadataService: MetadataService,
+    private plotBoardService: PlotBoardService,
+    private castService: CastService
   ) {
     // Subscribe to file changes to auto-reload characters
     this.fileWatcherService.fileChanges$.pipe(takeUntilDestroyed()).subscribe((event) => {
@@ -101,7 +110,19 @@ export class CharacterService {
   }
 
   getCharacterById(id: string): Character | undefined {
-    return this.charactersSubject.value.find((char) => char.id === id);
+    return this.findCharacter(id);
+  }
+
+  /** Matches stable id, or a leftover path-based id via `relativePath`. */
+  private findCharacter(id: string): Character | undefined {
+    const normalized = normalizeCharacterRelativePath(id);
+    return this.charactersSubject.value.find(
+      (char) =>
+        char.id === id ||
+        char.id === normalized ||
+        char.relativePath === normalized ||
+        char.relativePath === id
+    );
   }
 
   /**
@@ -252,6 +273,7 @@ export class CharacterService {
       const bookIds = new Set((project?.metadata?.books ?? []).map((b) => b.id));
 
       const characters: Character[] = [];
+      const needsIdPersist: Character[] = [];
 
       for (const { relativePath, absolutePath } of scanResult.files) {
         try {
@@ -263,17 +285,23 @@ export class CharacterService {
               continue; // Book page file, skip
             }
           }
-          const character = await this.loadCharacterFromFile(absolutePath, relativePath);
-          if (character) {
-            characters.push(character);
+          const loaded = await this.loadCharacterFromFile(absolutePath, relativePath);
+          if (loaded) {
+            characters.push(loaded.character);
+            if (loaded.assignedId) {
+              needsIdPersist.push(loaded.character);
+            }
           }
         } catch (error) {
           this.logger.error(`Failed to load character from ${relativePath}:`, error);
         }
       }
 
+      this.assignUniqueCharacterIds(characters, needsIdPersist);
+
       // Sort characters by name and update the list
       characters.sort((a, b) => a.name.localeCompare(b.name));
+      await this.persistAssignedIdsAndRemap(characters, needsIdPersist);
       this.charactersSubject.next(characters);
       this.hasLoadedForCurrentProject = true;
     } catch (error) {
@@ -285,7 +313,10 @@ export class CharacterService {
   /**
    * Loads a character from a single _*.md file
    */
-  private async loadCharacterFromFile(absolutePath: string, relativePath: string): Promise<Character | null> {
+  private async loadCharacterFromFile(
+    absolutePath: string,
+    relativePath: string
+  ): Promise<{ character: Character; assignedId: boolean } | null> {
     try {
       const readResult = await this.electronService.readFile(absolutePath);
       if (!readResult.success) {
@@ -313,8 +344,11 @@ export class CharacterService {
         frontmatter.created,
         frontmatter.modified
       );
+      const normalizedRelativePath = normalizeCharacterRelativePath(relativePath);
+      const storedId = typeof frontmatter.id === 'string' ? frontmatter.id.trim() : '';
+      const assignedId = !storedId;
       const character: Character = {
-        id: relativePath,
+        id: storedId || generateId(),
         name: frontmatter.name,
         category: frontmatter.category || 'uncategorized',
         tags: frontmatter.tags || [],
@@ -326,13 +360,66 @@ export class CharacterService {
         content: content || '',
         created,
         modified,
+        relativePath: normalizedRelativePath,
         filePath: absolutePath,
       };
 
-      return character;
+      return { character, assignedId };
     } catch (error) {
       this.logger.error(`Failed to load character from ${absolutePath}`, error);
       return null;
+    }
+  }
+
+  private assignUniqueCharacterIds(characters: Character[], needsIdPersist: Character[]): void {
+    const seen = new Set<string>();
+    for (const character of characters) {
+      if (!character.id || seen.has(character.id)) {
+        character.id = generateId();
+        if (!needsIdPersist.includes(character)) {
+          needsIdPersist.push(character);
+        }
+      }
+      seen.add(character.id);
+    }
+  }
+
+  private async persistAssignedIdsAndRemap(
+    characters: Character[],
+    needsIdPersist: Character[]
+  ): Promise<void> {
+    for (const character of needsIdPersist) {
+      try {
+        await this.saveCharacterToFile(character);
+      } catch (error) {
+        this.logger.error(`Failed to persist stable id for ${character.relativePath}`, error);
+      }
+    }
+
+    const idMap = buildCharacterIdRemap(characters);
+    if (idMap.size === 0) {
+      return;
+    }
+
+    let remappedProject = false;
+    try {
+      remappedProject = await this.projectService.remapCharacterIds(idMap);
+    } catch (error) {
+      this.logger.error('Failed to remap character ids in project metadata', error);
+    }
+
+    try {
+      await this.plotBoardService.remapCharacterIdsAcrossProject(idMap);
+    } catch (error) {
+      this.logger.error('Failed to remap character ids in plot boards', error);
+    }
+
+    if (remappedProject) {
+      try {
+        await this.castService.forceReloadCasts();
+      } catch (error) {
+        this.logger.error('Failed to reload casts after character id remap', error);
+      }
     }
   }
 
@@ -401,7 +488,7 @@ export class CharacterService {
 
       const now = new Date();
       const character: Character = {
-        id: relativePath,
+        id: generateId(),
         name: data.name,
         category: data.category,
         tags: data.tags || [],
@@ -413,6 +500,7 @@ export class CharacterService {
         content: data.content || '',
         created: now,
         modified: now,
+        relativePath,
         filePath,
       };
 
@@ -435,7 +523,7 @@ export class CharacterService {
    * Updates an existing character and saves changes to disk.
    *
    * Moving/renaming the file is only done when the character `name` changes.
-   * Changing `category` only updates frontmatter and keeps `character.id` stable.
+   * Changing `category` or `name` keeps `character.id` stable; only `relativePath` changes on rename.
    */
   async updateCharacter(
     id: string,
@@ -450,15 +538,17 @@ export class CharacterService {
       }
 
       const characters = this.charactersSubject.value;
-      const index = characters.findIndex((char) => char.id === id);
+      const existingCharacter = this.findCharacter(id);
+      const index = existingCharacter
+        ? characters.findIndex((char) => char.id === existingCharacter.id)
+        : -1;
 
-      if (index === -1) {
+      if (!existingCharacter || index === -1) {
         return null;
       }
 
-      const existingCharacter = characters[index];
       let newFilePath = existingCharacter.filePath;
-      let newId = id;
+      let newRelativePath = existingCharacter.relativePath;
 
       // Category changes only update frontmatter; file moves/renames happen only on name changes.
       const nameChanged = data.name && data.name !== existingCharacter.name;
@@ -468,11 +558,10 @@ export class CharacterService {
         const newSlug = slugify(newName);
         const newFilename = `_${newSlug}.md`;
 
-        // Preserve the existing directory (relative to `characters/`), so changing category
-        // doesn't move files and doesn't change the plotboard thread mappings.
-        const lastSlash = existingCharacter.id.lastIndexOf('/');
-        const oldRelDir = lastSlash === -1 ? '' : existingCharacter.id.slice(0, lastSlash);
-        newId = oldRelDir ? pathJoin(oldRelDir, newFilename) : newFilename;
+        // Preserve the existing directory (relative to `characters/`).
+        const lastSlash = existingCharacter.relativePath.lastIndexOf('/');
+        const oldRelDir = lastSlash === -1 ? '' : existingCharacter.relativePath.slice(0, lastSlash);
+        newRelativePath = oldRelDir ? pathJoin(oldRelDir, newFilename) : newFilename;
 
         const oldAbsDir = pathDirname(existingCharacter.filePath);
         const destFilePath = pathJoin(oldAbsDir, newFilename);
@@ -499,7 +588,6 @@ export class CharacterService {
       // Create updated character
       const updatedCharacter: Character = {
         ...existingCharacter,
-        id: newId,
         name: data.name ?? existingCharacter.name,
         category: data.category ?? existingCharacter.category,
         tags: data.tags ?? existingCharacter.tags,
@@ -512,6 +600,7 @@ export class CharacterService {
         prompts: data.prompts !== undefined ? normalizePrompts(data.prompts) : existingCharacter.prompts,
         content: data.content !== undefined ? data.content : existingCharacter.content,
         modified: new Date(),
+        relativePath: newRelativePath,
         filePath: newFilePath,
       };
 
@@ -520,14 +609,10 @@ export class CharacterService {
 
       // Thumbnail path changes must invalidate the persistent data URL cache.
       if (
-        newId !== id ||
         ('thumbnails' in data && !thumbnailsMapsEqual(data.thumbnails, existingCharacter.thumbnails)) ||
         ('bookThumbnails' in data && !bookThumbnailsMapsEqual(data.bookThumbnails, existingCharacter.bookThumbnails))
       ) {
-        this.removeCachedThumbnailsForCharacter(id);
-        if (newId !== id) {
-          this.removeCachedThumbnailsForCharacter(newId);
-        }
+        this.removeCachedThumbnailsForCharacter(existingCharacter.id);
       }
 
       // Update in-memory list
@@ -549,7 +634,7 @@ export class CharacterService {
   async deleteCharacter(id: string): Promise<boolean> {
     try {
       const characters = this.charactersSubject.value;
-      const character = characters.find((char) => char.id === id);
+      const character = this.findCharacter(id);
 
       if (!character) {
         return false;
@@ -560,14 +645,14 @@ export class CharacterService {
         throw new Error(`Failed to delete character: ${deleteResult.error}`);
       }
 
-      this.removeCachedThumbnailsForCharacter(id);
+      this.removeCachedThumbnailsForCharacter(character.id);
 
       // Update in-memory list
-      const filteredCharacters = characters.filter((char) => char.id !== id);
+      const filteredCharacters = characters.filter((char) => char.id !== character.id);
       this.charactersSubject.next(filteredCharacters);
 
       try {
-        await this.metadataService.removeCharacterFromBookPovs(id);
+        await this.metadataService.removeCharacterFromBookPovs(character.id);
       } catch (cleanupError) {
         this.logger.error('Failed to remove deleted character from book PoV lists', cleanupError);
       }
@@ -585,7 +670,7 @@ export class CharacterService {
   async refreshCharacter(id: string): Promise<Character | null> {
     try {
       const characters = this.charactersSubject.value;
-      const existingCharacter = characters.find((char) => char.id === id);
+      const existingCharacter = this.findCharacter(id);
 
       if (!existingCharacter) {
         return null;
@@ -595,22 +680,27 @@ export class CharacterService {
       const fileExists = await this.electronService.fileExists(existingCharacter.filePath);
       if (!fileExists) {
         // File was deleted externally, remove from memory
-        const filteredCharacters = characters.filter((char) => char.id !== id);
+        const filteredCharacters = characters.filter((char) => char.id !== existingCharacter.id);
         this.charactersSubject.next(filteredCharacters);
         return null;
       }
 
       // Reload character from file
-      const refreshedCharacter = await this.loadCharacterFromFile(
+      const loaded = await this.loadCharacterFromFile(
         existingCharacter.filePath,
-        existingCharacter.id
+        existingCharacter.relativePath
       );
-      if (!refreshedCharacter) {
+      if (!loaded) {
         return null;
       }
 
+      const refreshedCharacter = loaded.character;
+      if (loaded.assignedId) {
+        refreshedCharacter.id = existingCharacter.id;
+      }
+
       // Update in-memory list
-      const index = characters.findIndex((char) => char.id === id);
+      const index = characters.findIndex((char) => char.id === existingCharacter.id);
       if (index !== -1) {
         const updatedCharacters = [...characters];
         updatedCharacters[index] = refreshedCharacter;
@@ -631,6 +721,7 @@ export class CharacterService {
   private async saveCharacterToFile(character: Character): Promise<void> {
     try {
       const frontmatter: CharacterFrontmatter = {
+        id: character.id,
         name: character.name,
         category: character.category,
         tags: character.tags,

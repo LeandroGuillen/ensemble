@@ -5,6 +5,7 @@ import { Router, RouterOutlet, NavigationEnd } from "@angular/router";
 import { Title } from "@angular/platform-browser";
 import { ProjectService, ElectronService, ThemeService, LoggingService, ZoomService, AddNameCommandService, AddConceptCommandService, CharacterCommandService, CharacterService } from "./core/services";
 import { filter } from "rxjs/operators";
+import { remapCharacterRoute } from "./core/utils/character-id.utils";
 import { CommandPaletteComponent } from "./shared/command-palette/command-palette.component";
 import { CommandPaletteService } from "./shared/command-palette/command-palette.service";
 import { SidebarComponent } from "./shared/sidebar/sidebar.component";
@@ -122,7 +123,11 @@ export class AppComponent implements OnInit {
         if (this.hasProject && !this.isWelcomeScreen) {
           // Use setTimeout to debounce rapid navigation changes
           setTimeout(() => {
-            this.projectService.saveLastRoute(event.url);
+            const route = remapCharacterRoute(
+              event.url,
+              (id) => this.characterService.getCharacterById(id)?.id
+            );
+            this.projectService.saveLastRoute(route);
           }, 500);
         }
       });

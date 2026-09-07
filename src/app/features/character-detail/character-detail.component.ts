@@ -433,6 +433,10 @@ export class CharacterDetailComponent
       if (refreshedCharacter) {
         this.character = refreshedCharacter;
 
+        if (id !== refreshedCharacter.id) {
+          this.router.navigate(['/character', refreshedCharacter.id], { replaceUrl: true });
+        }
+
         this.characterForm.patchValue({
           name: this.character.name,
           category: this.character.category,

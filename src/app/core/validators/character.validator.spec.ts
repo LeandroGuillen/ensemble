@@ -14,6 +14,7 @@ describe('CharacterValidator', () => {
       content: 'Test content',
       created: new Date('2024-01-01'),
       modified: new Date('2024-01-02'),
+      relativePath: '_test-character.md',
       filePath: '/path/to/character/_test-character.md',
     });
 
@@ -216,6 +217,7 @@ describe('CharacterValidator', () => {
       content: '',
       created: new Date(),
       modified: new Date(),
+      relativePath: '_test-character.md',
       filePath: '/path/to/character/_test-character.md',
     });
 

@@ -5,7 +5,8 @@ export interface CharacterPrompt {
 }
 
 export interface Character {
-  id: string; // Derived at runtime from relative file path (e.g., "_dessir.md" or "subdir/_dessir.md")
+  /** Stable identity stored in frontmatter; survives rename/move. */
+  id: string;
   name: string;
   category: string;
   tags: string[];
@@ -20,6 +21,8 @@ export interface Character {
   content: string; // Full markdown body below frontmatter
   created: Date;
   modified: Date;
+  /** Path relative to the project's characters/ folder (location only). */
+  relativePath: string;
   filePath: string;
 }
 
@@ -38,6 +41,8 @@ export interface CharacterFormData {
 }
 
 export interface CharacterFrontmatter {
+  /** Stable character identity; assigned on first load when missing. */
+  id?: string;
   name: string;
   category: string;
   tags: string[];
