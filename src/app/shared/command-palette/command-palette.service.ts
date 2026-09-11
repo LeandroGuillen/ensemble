@@ -7,6 +7,8 @@ export interface Command {
   icon?: string;
   action: () => void;
   keywords?: string[];
+  /** Alternative names; shown as "a.k.a." when a search hits them instead of the label. */
+  aliases?: string[];
   thumbnail?: string;
   metadata?: string;
   group?: string;

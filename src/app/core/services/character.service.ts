@@ -13,6 +13,7 @@ import {
 import { pathJoin, pathBasename, pathDirname } from '../utils/path.utils';
 import { parseThumbnailReference, resolveThumbnailPath, resolveThumbnailForStyle, resolveThumbnailForBookStyle, normalizeThumbnailsMap, normalizeBookThumbnailsMap, thumbnailCacheKey } from '../utils/thumbnail.utils';
 import { normalizeBookCategories } from '../utils/character-category.utils';
+import { normalizeAliases } from '../utils/character-alias.utils';
 import { assertIpcSuccess, withIpcError } from '../utils/ipc.utils';
 import { requireProject } from '../utils/project.utils';
 import { ElectronService } from './electron.service';
@@ -350,6 +351,7 @@ export class CharacterService {
       const character: Character = {
         id: storedId || generateId(),
         name: frontmatter.name,
+        aliases: normalizeAliases(frontmatter.aliases),
         category: frontmatter.category || 'uncategorized',
         tags: frontmatter.tags || [],
         books,
@@ -490,6 +492,7 @@ export class CharacterService {
       const character: Character = {
         id: generateId(),
         name: data.name,
+        aliases: normalizeAliases(data.aliases),
         category: data.category,
         tags: data.tags || [],
         books,
@@ -589,6 +592,7 @@ export class CharacterService {
       const updatedCharacter: Character = {
         ...existingCharacter,
         name: data.name ?? existingCharacter.name,
+        aliases: 'aliases' in data ? normalizeAliases(data.aliases) : existingCharacter.aliases,
         category: data.category ?? existingCharacter.category,
         tags: data.tags ?? existingCharacter.tags,
         books: nextBooks,
@@ -723,6 +727,9 @@ export class CharacterService {
       const frontmatter: CharacterFrontmatter = {
         id: character.id,
         name: character.name,
+        ...(character.aliases && character.aliases.length > 0
+          ? { aliases: character.aliases }
+          : {}),
         category: character.category,
         tags: character.tags,
         books: character.books,

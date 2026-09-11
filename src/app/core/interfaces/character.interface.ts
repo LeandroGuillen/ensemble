@@ -8,6 +8,8 @@ export interface Character {
   /** Stable identity stored in frontmatter; survives rename/move. */
   id: string;
   name: string;
+  /** Alternative names (a.k.a.'s); matched by character search, subtle in lists. */
+  aliases?: string[];
   category: string;
   tags: string[];
   books: string[];
@@ -28,6 +30,8 @@ export interface Character {
 
 export interface CharacterFormData {
   name: string;
+  /** Alternative names (a.k.a.'s); omitted or empty when none. */
+  aliases?: string[];
   category: string;
   tags: string[];
   books: string[];
@@ -44,6 +48,8 @@ export interface CharacterFrontmatter {
   /** Stable character identity; assigned on first load when missing. */
   id?: string;
   name: string;
+  /** Alternative names (a.k.a.'s); omitted when empty. Accepts a list or a single string. */
+  aliases?: string[] | string;
   category: string;
   tags: string[];
   books: string[];

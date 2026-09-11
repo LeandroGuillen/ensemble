@@ -417,6 +417,77 @@
   }
 }
 
+// Alternative names (a.k.a.) — subtle chips + ghost input below the name
+.alias-editor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-xs);
+
+  .alias-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px var(--spacing-sm);
+    font-size: 0.8rem;
+    line-height: 1.4;
+    color: var(--color-text-secondary);
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-full);
+  }
+
+  .alias-chip-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: 0.625rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: color var(--transition-fast), background-color var(--transition-fast);
+
+    &:hover {
+      color: var(--color-error);
+      background: rgba(248, 113, 113, 0.12);
+    }
+  }
+
+  .alias-input {
+    flex: 1 1 auto;
+    min-width: 80px;
+    max-width: 220px;
+    padding: 2px var(--spacing-sm);
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    background: transparent;
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-full);
+    transition: border-color var(--transition-fast), background-color var(--transition-fast), color var(--transition-fast);
+
+    &::placeholder {
+      color: var(--color-text-muted);
+      opacity: 0.7;
+      font-style: italic;
+    }
+
+    &:focus {
+      outline: none;
+      border-style: solid;
+      border-color: var(--color-accent-primary);
+      background: var(--color-bg-secondary);
+      color: var(--color-text-primary);
+    }
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Content tabs (Main / Book pages)
 // ---------------------------------------------------------------------------

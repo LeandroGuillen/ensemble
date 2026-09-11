@@ -188,6 +188,31 @@
                     {{ fieldErrors['name'] }}
                   </div>
                 }
+                <div class="alias-editor">
+                  @for (alias of aliases; track $index) {
+                    <span class="alias-chip">
+                      {{ alias }}
+                      <button
+                        type="button"
+                        class="alias-chip-remove"
+                        (click)="removeAlias($index)"
+                        [attr.aria-label]="'Remove alternative name ' + alias"
+                        title="Remove"
+                      >✕</button>
+                    </span>
+                  }
+                  <input
+                    type="text"
+                    class="alias-input"
+                    [value]="aliasDraft"
+                    (input)="onAliasInput($event)"
+                    (keydown)="onAliasKeydown($event)"
+                    (blur)="addAlias()"
+                    placeholder="+ a.k.a."
+                    aria-label="Add an alternative name (a.k.a.)"
+                    title="Alternative names — press Enter or comma to add"
+                  />
+                </div>
               </div>
 
               @if (categories.length > 0) {

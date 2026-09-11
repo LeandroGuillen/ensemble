@@ -16,6 +16,7 @@ import {
   MetadataHelperService,
 } from "../../core/services";
 import { pathJoin } from "../../core/utils/path.utils";
+import { aliasesMatchSearch } from "../../core/utils/character-alias.utils";
 import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
 
 @Component({
@@ -226,8 +227,10 @@ export class CastListComponent implements OnInit {
 
       // Search by character names in the cast
       const castCharacters = this.getCastCharacters(cast);
-      return castCharacters.some((char) =>
-        char.name.toLowerCase().includes(searchLower)
+      return castCharacters.some(
+        (char) =>
+          char.name.toLowerCase().includes(searchLower) ||
+          aliasesMatchSearch(char.aliases, searchLower)
       );
     });
   }

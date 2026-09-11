@@ -11,6 +11,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { FormsModule } from '@angular/forms';
 import { CommandPaletteService, Command } from './command-palette.service';
+import { firstMatchingAlias } from '../../core/utils/character-alias.utils';
 
 const PAGE_SIZE = 10;
 
@@ -210,6 +211,15 @@ export class CommandPaletteComponent implements OnInit {
 
   onPaletteClick(event: Event): void {
     event.stopPropagation();
+  }
+
+  /** Matching a.k.a. when the query hits an alias rather than the command label. */
+  matchingAlias(command: Command): string | undefined {
+    const query = this.searchQuery.trim();
+    if (!query || command.label.toLowerCase().includes(query.toLowerCase())) {
+      return undefined;
+    }
+    return firstMatchingAlias(command.aliases, query);
   }
 
   private pageStep(): number {

@@ -38,6 +38,9 @@
               }
               <div class="command-content">
                 <span class="command-label">{{ command.label }}</span>
+                @if (matchingAlias(command); as aka) {
+                  <span class="command-aka">a.k.a. <span class="command-aka-hit">{{ aka }}</span></span>
+                }
                 @if (command.metadata) {
                   <span class="command-metadata">{{ command.metadata }}</span>
                 }

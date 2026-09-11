@@ -15,6 +15,7 @@ import {
   resolveEffectiveCategory,
 } from '../../core/utils/character-category.utils';
 import { contrastTextColor } from '../../core/utils/color-contrast.utils';
+import { aliasesMatchSearch } from '../../core/utils/character-alias.utils';
 import { resolveThumbnailForBookStyle } from '../../core/utils/thumbnail.utils';
 import { CharacterFilterComponent } from '../../shared/character-filter/character-filter.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
@@ -577,7 +578,7 @@ export class CharacterListComponent implements OnInit {
   private filterCharacters(characters: Character[]): Character[] {
     const knownCategoryIds = this.categories.map((category) => category.id);
     return characters.filter((character) => {
-      // Search term filter - search names, categories, tags, and books
+      // Search term filter - search names, a.k.a.'s, categories, tags, and books
       if (this.searchTerm) {
         const searchLower = this.searchTerm.toLowerCase();
         const categoryName = this.metadataHelper
@@ -588,6 +589,7 @@ export class CharacterListComponent implements OnInit {
 
         const matchesSearch =
           character.name.toLowerCase().includes(searchLower) ||
+          aliasesMatchSearch(character.aliases, searchLower) ||
           categoryName.includes(searchLower) ||
           tagNames.some((tagName) => tagName.includes(searchLower)) ||
           bookNames.some((bookName) => bookName.includes(searchLower));

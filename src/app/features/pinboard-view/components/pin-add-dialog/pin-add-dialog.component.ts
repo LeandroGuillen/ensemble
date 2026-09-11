@@ -11,6 +11,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { Character } from '../../../../core/interfaces';
 import { MetadataHelperService } from '../../../../core/services';
+import { aliasesMatchSearch } from '../../../../core/utils/character-alias.utils';
 import { ModalFrameComponent } from '../../../../shared/modal-frame/modal-frame.component';
 
 @Component({
@@ -97,6 +98,7 @@ export class PinAddDialogComponent implements OnChanges {
       availableCharacters = availableCharacters.filter(
         (char) =>
           char.name.toLowerCase().includes(filter) ||
+          aliasesMatchSearch(char.aliases, filter) ||
           char.category.toLowerCase().includes(filter)
       );
     }

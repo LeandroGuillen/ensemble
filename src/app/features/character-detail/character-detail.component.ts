@@ -154,6 +154,11 @@ export class CharacterDetailComponent
   /** Set while a quick-generate from a character prompt is in progress. */
   generatingPromptIndex: number | null = null;
 
+  /** Alternative names (a.k.a.'s) for this character. */
+  aliases: string[] = [];
+  /** Draft text for the next alias being typed. */
+  aliasDraft = "";
+
   /** True while a text input/textarea in this form has focus — CD is detached to avoid wasted work. */
   private textInputFocused = false;
 
@@ -452,6 +457,7 @@ export class CharacterDetailComponent
         await this.refreshThumbnailPreviews('main');
 
         this.prompts = (this.character.prompts || []).map((p) => ({ ...p }));
+        this.aliases = [...(this.character.aliases || [])];
 
         this.activeContentTab = 'main';
         this.updateContentTabs();
@@ -582,6 +588,9 @@ export class CharacterDetailComponent
       active.blur();
     }
 
+    // Commit any pending alias draft so it is included in the save.
+    this.addAlias();
+
     this.savingBookPageId = bookId;
     this.error = null;
     try {
@@ -595,6 +604,7 @@ export class CharacterDetailComponent
           this.character.id,
           {
             name: this.characterForm.value.name,
+            aliases: [...this.aliases],
             category: this.characterForm.value.category,
             tags: this.characterForm.value.tags || [],
             books: this.characterForm.value.books || [],
@@ -663,8 +673,12 @@ export class CharacterDetailComponent
     this.cdr.markForCheck();
 
     try {
+      // Commit any pending alias draft so it is included in the save.
+      this.addAlias();
+
       const formData: CharacterFormData = {
         name: this.characterForm.value.name,
+        aliases: [...this.aliases],
         category: this.characterForm.value.category,
         tags: this.characterForm.value.tags || [],
         books: this.characterForm.value.books || [],
@@ -708,6 +722,41 @@ export class CharacterDetailComponent
       this.isSaving = false;
       this.cdr.markForCheck();
     }
+  }
+
+  // --- Alternative names (a.k.a.) ---
+
+  onAliasInput(event: Event): void {
+    this.aliasDraft = (event.target as HTMLInputElement).value;
+  }
+
+  onAliasKeydown(event: KeyboardEvent): void {
+    if (event.key === "Enter" || event.key === ",") {
+      event.preventDefault();
+      this.addAlias();
+    } else if (event.key === "Backspace" && !this.aliasDraft && this.aliases.length > 0) {
+      this.removeAlias(this.aliases.length - 1);
+    }
+  }
+
+  /** Commits the pending alias draft (if any). Called on Enter and before saving. */
+  addAlias(): void {
+    const value = this.aliasDraft.trim();
+    this.aliasDraft = "";
+    if (!value) return;
+    const valueLower = value.toLowerCase();
+    const nameLower = (this.characterForm.get("name")?.value || "").trim().toLowerCase();
+    const isDuplicate =
+      valueLower === nameLower ||
+      this.aliases.some((alias) => alias.toLowerCase() === valueLower);
+    if (isDuplicate) return;
+    this.aliases = [...this.aliases, value];
+    this.characterForm.markAsDirty();
+  }
+
+  removeAlias(index: number): void {
+    this.aliases = this.aliases.filter((_, i) => i !== index);
+    this.characterForm.markAsDirty();
   }
 
   async onCancel(): Promise<void> {

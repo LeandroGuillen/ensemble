@@ -9,7 +9,7 @@
         [(ngModel)]="searchTerm"
         (input)="onSearchChange()"
         (click)="$event.stopPropagation()"
-        title="Filter characters by name"
+        title="Filter characters by name or a.k.a."
         />
       @if (searchTerm) {
         <button

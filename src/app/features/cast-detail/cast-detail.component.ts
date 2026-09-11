@@ -24,6 +24,7 @@ import {
 } from "../../core/services";
 import { pathJoin } from "../../core/utils/path.utils";
 import { contrastTextColor } from "../../core/utils/color-contrast.utils";
+import { aliasesMatchSearch } from "../../core/utils/character-alias.utils";
 import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
 
 @Component({
@@ -246,10 +247,11 @@ export class CastDetailComponent implements OnInit {
     const filterLower = this.selectedFilter.toLowerCase().trim();
     return selected.filter((character) => {
       const nameMatch = character.name.toLowerCase().includes(filterLower);
+      const aliasMatch = aliasesMatchSearch(character.aliases, filterLower);
       const categoryMatch = this.getCategoryName(character.category)
         .toLowerCase()
         .includes(filterLower);
-      return nameMatch || categoryMatch;
+      return nameMatch || aliasMatch || categoryMatch;
     });
   }
 
@@ -264,10 +266,11 @@ export class CastDetailComponent implements OnInit {
     const filterLower = this.availableFilter.toLowerCase().trim();
     return available.filter((character) => {
       const nameMatch = character.name.toLowerCase().includes(filterLower);
+      const aliasMatch = aliasesMatchSearch(character.aliases, filterLower);
       const categoryMatch = this.getCategoryName(character.category)
         .toLowerCase()
         .includes(filterLower);
-      return nameMatch || categoryMatch;
+      return nameMatch || aliasMatch || categoryMatch;
     });
   }
 

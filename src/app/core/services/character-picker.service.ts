@@ -36,8 +36,10 @@ export class CharacterPickerService {
       label: char.name,
       thumbnail: this.characterService.getCachedThumbnail(char.id, styleId) || undefined,
       metadata: this.metadataHelper.getCategoryName(char.category),
+      aliases: char.aliases,
       keywords: [
         char.name,
+        ...(char.aliases || []),
         this.metadataHelper.getCategoryName(char.category),
         ...char.tags.map((t) => this.metadataHelper.getTagName(t)),
       ],

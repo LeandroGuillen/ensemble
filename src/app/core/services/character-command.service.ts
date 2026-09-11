@@ -55,8 +55,10 @@ export class CharacterCommandService {
         label: character.name,
         thumbnail: this.characterService.getCachedThumbnail(character.id) || undefined,
         metadata: this.metadataHelper.getCategoryName(character.category),
+        aliases: character.aliases,
         keywords: [
           character.name,
+          ...(character.aliases || []),
           this.metadataHelper.getCategoryName(character.category),
           ...character.tags.map((tagId) => this.metadataHelper.getTagName(tagId)),
           ...character.books.map((bookId) => this.metadataHelper.getBookName(bookId)),

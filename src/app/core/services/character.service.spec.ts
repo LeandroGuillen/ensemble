@@ -210,6 +210,30 @@ describe('CharacterService', () => {
       expect(savedContent).toContain(`id: ${character.id}`);
     });
 
+    it('should persist aliases in frontmatter and omit them when empty', async () => {
+      const project = createValidProject();
+      projectService.getCurrentProject.and.returnValue(project);
+      (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
+      electronService.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));
+
+      const withAliases = await service.createCharacter({
+        ...createValidCharacterFormData(),
+        name: 'Dessir Galsea',
+        aliases: ['Dess', 'The Grey Witch', 'dess'],
+      });
+
+      expect(withAliases.aliases).toEqual(['Dess', 'The Grey Witch']);
+      const savedWith = electronService.writeFileAtomic.calls.mostRecent().args[1] as string;
+      expect(savedWith).toContain('aliases:');
+      expect(savedWith).toContain('Dess');
+      expect(savedWith).toContain('The Grey Witch');
+
+      const withoutAliases = await service.createCharacter(createValidCharacterFormData());
+      expect(withoutAliases.aliases).toEqual([]);
+      const savedWithout = electronService.writeFileAtomic.calls.mostRecent().args[1] as string;
+      expect(savedWithout).not.toContain('aliases:');
+    });
+
     it('should throw error when no project is loaded', async () => {
       projectService.getCurrentProject.and.returnValue(null);
       (projectService.currentProject$ as BehaviorSubject<Project | null>).next(null);
@@ -638,6 +662,47 @@ Body text
       expect(characters[0].category).toBe('antagonist');
       expect(characters[0].books).toEqual(['book-1', 'book-2']);
       expect(characters[0].bookCategories).toEqual({ 'book-2': 'supporting' });
+    });
+
+    it('should load aliases from character frontmatter', async () => {
+      const project = createValidProject();
+      projectService.getCurrentProject.and.returnValue(project);
+      (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
+
+      electronService.fileExists.and.returnValue(Promise.resolve(true));
+      electronService.readDirectoryRecursive.and.returnValue(
+        Promise.resolve({
+          success: true,
+          files: [
+            {
+              relativePath: '_dessir.md',
+              absolutePath: '/test/project/characters/_dessir.md',
+            },
+          ],
+        })
+      );
+      electronService.readFile.and.returnValue(
+        Promise.resolve({
+          success: true,
+          content: `---
+id: dessir-1
+name: Dessir Galsea
+aliases:
+  - Dess
+  - The Grey Witch
+category: main-character
+---
+
+Body text
+`,
+        })
+      );
+
+      await service.forceReloadCharacters();
+
+      const characters = (service as any).charactersSubject.value as Character[];
+      expect(characters.length).toBe(1);
+      expect(characters[0].aliases).toEqual(['Dess', 'The Grey Witch']);
     });
 
     it('should assign and persist a stable id when frontmatter has none', async () => {

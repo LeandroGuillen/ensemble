@@ -41,6 +41,7 @@ Located in `src/app/core/utils/`:
 
 - **slug.utils.ts**: Slug generation for folder names, filename-to-field-name conversion, plot-board duplicate stem utilities
 - **markdown.utils.ts**: Markdown parsing and frontmatter handling
+- **character-alias.utils.ts**: Normalize and search character alternative names (a.k.a.'s)
 
 ### Data Flow
 
@@ -128,6 +129,9 @@ Character files match the pattern `_*.md` and can live in any subfolder under `c
 ---
 id: m0k3r5abc123
 name: Dessir Galsea
+aliases:
+  - Dess
+  - The Grey Witch
 category: main-character
 tags:
   - magic-user

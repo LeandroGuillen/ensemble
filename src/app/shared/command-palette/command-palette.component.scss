@@ -183,6 +183,19 @@
   white-space: nowrap;
 }
 
+.command-aka {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-aka-hit {
+  color: var(--color-accent-primary);
+  font-weight: 600;
+}
+
 .command-empty {
   padding: var(--spacing-2xl);
   text-align: center;
