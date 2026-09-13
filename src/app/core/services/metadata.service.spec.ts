@@ -131,6 +131,7 @@ describe('MetadataService', () => {
     });
 
     it('should throw error when no project path is set', async () => {
+      projectService.getCurrentProject.and.returnValue(null);
       (projectService.currentProject$ as BehaviorSubject<Project | null>).next(null);
 
       const metadata = createValidMetadata();

@@ -39,6 +39,13 @@ export const SETTINGS_FIELD_INDEX: SettingsFieldIndex[] = [
     valueKeys: ['charactersFolder'],
   },
   {
+    id: 'locations-folder',
+    section: 'general',
+    label: 'Locations Folder',
+    keywords: ['locations folder', 'places', 'path', 'directory'],
+    valueKeys: ['locationsFolder'],
+  },
+  {
     id: 'casts-folder',
     section: 'general',
     label: 'Casts Folder',

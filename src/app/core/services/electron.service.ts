@@ -237,11 +237,14 @@ export class ElectronService {
   }
 
   // File watching
-  async startFileWatcher(projectPath: string, charactersFolder = 'characters'): Promise<{ success: boolean; error?: string }> {
+  async startFileWatcher(
+    projectPath: string,
+    watchFolders: string[] | string = ['characters']
+  ): Promise<{ success: boolean; error?: string }> {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
-    return await this.ipcRenderer.invoke(IpcChannels.startFileWatcher, projectPath, charactersFolder);
+    return await this.ipcRenderer.invoke(IpcChannels.startFileWatcher, projectPath, watchFolders);
   }
 
   async stopFileWatcher(): Promise<{ success: boolean; error?: string }> {

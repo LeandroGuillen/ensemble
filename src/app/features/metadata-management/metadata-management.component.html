@@ -833,6 +833,23 @@
                   }
                   <small class="form-help">Relative path from project root where character files are stored (default: characters).</small>
                 </div>
+                <div class="form-group" [settingsSearchable]="['Locations Folder', 'places', 'path', settings?.locationsFolder || 'locations']">
+                  <label for="locationsFolder">Locations Folder</label>
+                  <input
+                    type="text"
+                    id="locationsFolder"
+                    formControlName="locationsFolder"
+                    class="form-control"
+                    placeholder="locations"
+                    [class.error]="getFieldError(settingsForm, 'locationsFolder')"
+                    />
+                  @if (getFieldError(settingsForm, 'locationsFolder')) {
+                    <div class="field-error">
+                      {{ getFieldError(settingsForm, 'locationsFolder') }}
+                    </div>
+                  }
+                  <small class="form-help">Relative path from project root where location files are stored (default: locations).</small>
+                </div>
                 <div class="form-group" [settingsSearchable]="['Casts Folder', 'path', settings?.castsFolder || 'characters/casts']">
                   <label for="castsFolder">Casts Folder</label>
                   <input

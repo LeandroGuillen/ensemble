@@ -672,6 +672,28 @@ export class ProjectValidator {
       }
     }
 
+    if (settings.locationsFolder !== undefined && settings.locationsFolder !== null) {
+      if (typeof settings.locationsFolder !== 'string') {
+        errors.push({
+          field: 'locationsFolder',
+          message: 'Locations folder must be a string',
+          code: 'INVALID_TYPE'
+        });
+      } else if (settings.locationsFolder.includes('..')) {
+        errors.push({
+          field: 'locationsFolder',
+          message: 'Locations folder cannot contain parent path (..)',
+          code: 'INVALID_VALUE'
+        });
+      } else if (/[<>:"|?*]/.test(settings.locationsFolder)) {
+        errors.push({
+          field: 'locationsFolder',
+          message: 'Locations folder contains invalid characters',
+          code: 'INVALID_VALUE'
+        });
+      }
+    }
+
     if (settings.castsFolder !== undefined && settings.castsFolder !== null) {
       if (typeof settings.castsFolder !== 'string') {
         errors.push({

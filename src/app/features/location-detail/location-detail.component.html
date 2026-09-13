@@ -1,0 +1,161 @@
+<div class="location-detail">
+  <app-page-header [title]="isNewLocation ? 'New Location' : 'Edit Location'"></app-page-header>
+
+  <div class="location-detail-content">
+    <div class="location-detail-inner">
+      @if (isLoading) {
+        <div class="loading-state">
+          <div class="spinner spinner-lg"></div>
+          <p>Loading location...</p>
+        </div>
+      }
+
+      @if (!isLoading) {
+        <form [formGroup]="locationForm" (ngSubmit)="saveLocation()" class="location-form">
+          <div class="form-actions-top">
+            <div class="form-actions-buttons">
+              <button type="button" class="btn btn-secondary" (click)="cancel()">Cancel</button>
+              <button
+                type="submit"
+                class="btn btn-primary"
+                [disabled]="isSaving || locationForm.invalid"
+              >
+                @if (isSaving) {
+                  <span class="spinner-small"></span>
+                }
+                @if (!isSaving) {
+                  <span>{{ isNewLocation ? 'Create Location' : 'Save Changes' }}</span>
+                }
+              </button>
+            </div>
+          </div>
+
+          @if (error) {
+            <div class="error-banner">
+              <div class="error-content">
+                <span class="error-icon">⚠️</span>
+                <span class="error-message">{{ error }}</span>
+                <button type="button" class="error-close" (click)="error = null">×</button>
+              </div>
+            </div>
+          }
+
+          <div class="form-section hero-section">
+            <div class="hero-layout">
+              <div class="thumbnail-panel">
+                <label class="form-label">Thumbnail</label>
+                <div
+                  class="thumbnail-clickable-area"
+                  (click)="openImagePicker()"
+                  [class.has-thumbnail]="!!thumbnailPreviewUrl"
+                >
+                  @if (thumbnailPreviewUrl) {
+                    <div class="thumbnail-preview">
+                      <img [src]="thumbnailPreviewUrl" alt="Location thumbnail" />
+                      <div class="thumbnail-overlay"><span>Click to change</span></div>
+                    </div>
+                  } @else {
+                    <div class="thumbnail-placeholder">
+                      <span class="placeholder-icon">🗺️</span>
+                      <span class="placeholder-text">Click to add thumbnail</span>
+                    </div>
+                  }
+                </div>
+                @if (thumbnailPreviewUrl) {
+                  <button type="button" class="btn btn-secondary btn-small" (click)="removeThumbnail()">
+                    Remove
+                  </button>
+                }
+              </div>
+
+              <div class="hero-fields">
+                <div class="form-group">
+                  <label for="locationName" class="form-label">Name *</label>
+                  <input
+                    id="locationName"
+                    type="text"
+                    formControlName="name"
+                    class="form-control"
+                    placeholder="e.g., Grey Harbor, The Whispering Woods"
+                    [class.error]="getFieldError('name')"
+                  />
+                  @if (getFieldError('name')) {
+                    <div class="field-error">{{ getFieldError('name') }}</div>
+                  }
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Category *</label>
+                  <app-category-toggle
+                    [options]="categoryToggleOptions"
+                    [selectedValue]="locationForm.get('category')?.value || ''"
+                    [error]="!!getFieldError('category')"
+                    (valueChange)="onCategorySelect($event)"
+                  ></app-category-toggle>
+                  @if (getFieldError('category')) {
+                    <div class="field-error">{{ getFieldError('category') }}</div>
+                  }
+                </div>
+              </div>
+            </div>
+
+            @if (!isNewLocation) {
+              <div class="delete-location-container">
+                <button type="button" class="delete-location-link" (click)="deleteLocation()">
+                  Delete this location
+                </button>
+              </div>
+            }
+          </div>
+
+          <div class="form-section">
+            <h2 class="section-title">Details</h2>
+            <div class="form-group">
+              <label class="form-label">Tags</label>
+              @if (tagSelectItems.length > 0) {
+                <app-multi-select-buttons
+                  [items]="tagSelectItems"
+                  [selectedIds]="locationForm.get('tags')?.value || []"
+                  (selectionChange)="onTagsChange($event)"
+                ></app-multi-select-buttons>
+              } @else {
+                <p class="field-hint">No tags defined yet. Add them in Settings.</p>
+              }
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Books</label>
+              @if (bookSelectItems.length > 0) {
+                <app-multi-select-buttons
+                  [items]="bookSelectItems"
+                  [selectedIds]="locationForm.get('books')?.value || []"
+                  (selectionChange)="onBooksChange($event)"
+                ></app-multi-select-buttons>
+              } @else {
+                <p class="field-hint">No books defined yet. Add them in the Library.</p>
+              }
+            </div>
+
+            <div class="form-group">
+              <label for="locationContent" class="form-label">Description</label>
+              <textarea
+                id="locationContent"
+                formControlName="content"
+                class="form-control textarea-large"
+                rows="12"
+                placeholder="Describe this place… (Markdown supported)"
+              ></textarea>
+            </div>
+          </div>
+        </form>
+      }
+    </div>
+  </div>
+</div>
+
+<app-image-picker-dialog
+  [visible]="showImagePickerDialog"
+  (visibleChange)="showImagePickerDialog = $event"
+  (imageSelected)="onImageSelected($event)"
+  (closed)="closeImagePicker()"
+></app-image-picker-dialog>

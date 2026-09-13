@@ -132,5 +132,29 @@ export const routes: Routes = [
       ),
     canActivate: [projectGuard],
   },
+  {
+    path: "locations",
+    loadComponent: () =>
+      import("./features/location-list/location-list.component").then(
+        (m) => m.LocationListComponent
+      ),
+    canActivate: [projectGuard],
+  },
+  {
+    path: "location/:id",
+    loadComponent: () =>
+      import("./features/location-detail/location-detail.component").then(
+        (m) => m.LocationDetailComponent
+      ),
+    canActivate: [projectGuard],
+  },
+  {
+    path: "location",
+    loadComponent: () =>
+      import("./features/location-detail/location-detail.component").then(
+        (m) => m.LocationDetailComponent
+      ),
+    canActivate: [projectGuard],
+  },
   { path: "**", redirectTo: "/project-selector" },
 ];

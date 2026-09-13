@@ -9,6 +9,7 @@ import { LoggingService } from '../../core/services/logging.service';
 import { ProjectService } from '../../core/services/project.service';
 import { CharacterService } from '../../core/services/character.service';
 import { CastService } from '../../core/services/cast.service';
+import { LocationService } from '../../core/services/location.service';
 import { BackstageService } from '../../core/services/backstage.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { ColorPaletteService } from '../../core/services/color-palette.service';
@@ -112,6 +113,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
     private projectService: ProjectService,
     private characterService: CharacterService,
     private castService: CastService,
+    private locationService: LocationService,
     private backstageService: BackstageService,
     private themeService: ThemeService,
     private colorPaletteService: ColorPaletteService,
@@ -137,6 +139,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
     this.settingsForm = this.fb.group({
       defaultCategory: ['', Validators.required],
       charactersFolder: ['', [Validators.maxLength(200)]],
+      locationsFolder: ['', [Validators.maxLength(200)]],
       castsFolder: ['', [Validators.maxLength(200)]],
       namesFile: ['', [Validators.maxLength(500)]],
       imagesFolder: ['', [Validators.maxLength(200)]],
@@ -239,6 +242,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
         {
           defaultCategory: this.settings.defaultCategory,
           charactersFolder: this.settings.charactersFolder ?? 'characters',
+          locationsFolder: this.settings.locationsFolder ?? 'locations',
           castsFolder: this.settings.castsFolder ?? 'characters/casts',
           namesFile: this.settings.namesFile ?? 'characters/names.md',
           imagesFolder: this.settings.imagesFolder ?? 'img',
@@ -425,6 +429,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
 
         // Normalize empty paths to their defaults.
         const charactersFolder = formData.charactersFolder?.trim() || 'characters';
+        const locationsFolder = formData.locationsFolder?.trim() || 'locations';
         const castsFolder = formData.castsFolder?.trim() || 'characters/casts';
         const namesFile = formData.namesFile?.trim() || 'characters/names.md';
         const imagesFolder = formData.imagesFolder?.trim() || 'img';
@@ -435,6 +440,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
         const settingsUpdate = {
           ...formData,
           charactersFolder,
+          locationsFolder,
           castsFolder,
           namesFile,
           imagesFolder,
@@ -447,12 +453,16 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
         }
 
         const previousCharactersFolder = previousSettings?.charactersFolder?.trim() || 'characters';
+        const previousLocationsFolder = previousSettings?.locationsFolder?.trim() || 'locations';
         const previousCastsFolder = previousSettings?.castsFolder?.trim() || 'characters/casts';
         const previousNamesFile = previousSettings?.namesFile?.trim() || 'characters/names.md';
         await this.metadataService.updateSettings(settingsUpdate);
 
         if (charactersFolder !== previousCharactersFolder) {
           await this.characterService.forceReloadCharacters();
+        }
+        if (locationsFolder !== previousLocationsFolder) {
+          await this.locationService.forceReloadLocations();
         }
         if (castsFolder !== previousCastsFolder) {
           await this.castService.forceReloadCasts();

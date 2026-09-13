@@ -1,4 +1,5 @@
 export * from "./character.interface";
+export * from "./location.interface";
 export * from "./project.interface";
 export * from "./pinboard.interface";
 export * from "./validation.interface";

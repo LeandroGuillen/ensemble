@@ -1,0 +1,190 @@
+<div class="location-list">
+  <app-page-header [title]="'Locations'">
+    <div class="page-actions">
+      <div class="search-box">
+        <input
+          type="text"
+          [(ngModel)]="searchTerm"
+          (ngModelChange)="onSearchChange()"
+          placeholder="Search locations..."
+          class="search-input"
+        />
+        @if (searchTerm) {
+          <button class="search-clear" (click)="clearSearchTerm()" title="Clear search">×</button>
+        }
+      </div>
+
+      <select class="filter-select" [(ngModel)]="selectedCategory" (ngModelChange)="onFilterChange()">
+        <option value="">All categories</option>
+        @for (category of categories; track category.id) {
+          <option [value]="category.id">{{ category.name }}</option>
+        }
+      </select>
+
+      <select class="filter-select" [(ngModel)]="selectedBook" (ngModelChange)="onFilterChange()">
+        <option value="">All books</option>
+        @for (book of books; track book.id) {
+          <option [value]="book.id">{{ book.name }}</option>
+        }
+      </select>
+
+      <select class="filter-select" [(ngModel)]="selectedPictureFilter" (ngModelChange)="onFilterChange()">
+        <option value="">Any picture</option>
+        <option value="with">With picture</option>
+        <option value="without">Without picture</option>
+      </select>
+
+      <div class="view-toggle view-toggle-text">
+        <button
+          class="toggle-option"
+          [class.active]="viewMode === 'grid'"
+          (click)="setViewMode('grid')"
+          title="Grid view"
+        >
+          Grid
+        </button>
+        <button
+          class="toggle-option"
+          [class.active]="viewMode === 'list'"
+          (click)="setViewMode('list')"
+          title="List view"
+        >
+          List
+        </button>
+      </div>
+
+      <button class="btn btn-secondary" (click)="refreshLocations()" title="Refresh">↻</button>
+      <button class="btn btn-primary" (click)="createNewLocation()">
+        <span class="plus-glyph" aria-hidden="true">+</span>
+        New Location
+      </button>
+    </div>
+  </app-page-header>
+
+  <div class="location-content">
+    <div class="location-inner">
+      @if (isLoading) {
+        <div class="loading-state">
+          <div class="spinner spinner-lg"></div>
+          <p>Loading locations...</p>
+        </div>
+      }
+
+      @if (error && !isLoading) {
+        <div class="error-banner">
+          <div class="error-content">
+            <span class="error-icon">⚠️</span>
+            <span class="error-message">{{ error }}</span>
+            <button class="error-close" (click)="error = null">×</button>
+          </div>
+        </div>
+      }
+
+      @if (searchTerm || selectedCategory || selectedBook || selectedPictureFilter) {
+        <div class="results-summary">
+          <span>{{ filteredLocations.length }} location{{ filteredLocations.length !== 1 ? 's' : '' }} found</span>
+        </div>
+      }
+
+      @if (filteredLocations.length === 0 && !isLoading) {
+        <div class="empty-state">
+          <div class="empty-icon">🗺️</div>
+          @if (!searchTerm && !selectedCategory && !selectedBook && !selectedPictureFilter) {
+            <h3>No Locations Yet</h3>
+            <p>Create places and settings for your story world.</p>
+            <div class="empty-state-actions">
+              <button class="btn btn-primary" (click)="createNewLocation()">Create First Location</button>
+            </div>
+          } @else {
+            <h3>No Locations Found</h3>
+            <p>Try adjusting your search or filters.</p>
+            <div class="empty-state-actions">
+              <button class="btn btn-secondary" (click)="clearSearchTerm(); selectedCategory=''; selectedBook=''; selectedPictureFilter=''; onFilterChange()">
+                Clear Filters
+              </button>
+            </div>
+          }
+        </div>
+      }
+
+      @if (viewMode === 'grid' && filteredLocations.length > 0) {
+        <div class="location-grid">
+          @for (location of filteredLocations; track location.id) {
+            <div class="location-card" (click)="editLocation(location)">
+              <div class="location-thumbnail">
+                @if (getLocationThumbnail(location)) {
+                  <img [src]="getLocationThumbnail(location)!" [alt]="location.name + ' thumbnail'" />
+                } @else {
+                  <div class="thumbnail-placeholder">
+                    <span class="placeholder-icon">🗺️</span>
+                  </div>
+                }
+              </div>
+              <div class="location-card-content">
+                <h3 class="location-name">{{ location.name }}</h3>
+                <span
+                  class="category-pill"
+                  [style.background-color]="getCategoryColor(location.category)"
+                  [style.color]="getCategoryTextColor(location.category)"
+                >
+                  {{ getCategoryName(location.category) }}
+                </span>
+              </div>
+              <div class="location-card-actions">
+                <button
+                  class="btn-icon btn-danger"
+                  (click)="deleteLocation(location, $event)"
+                  title="Delete location"
+                >
+                  🗑️
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      @if (viewMode === 'list' && filteredLocations.length > 0) {
+        <div class="location-list-view">
+          @for (location of filteredLocations; track location.id) {
+            <div class="location-list-item" (click)="editLocation(location)">
+              <div class="location-thumbnail-small">
+                @if (getLocationThumbnail(location)) {
+                  <img [src]="getLocationThumbnail(location)!" [alt]="location.name + ' thumbnail'" />
+                } @else {
+                  <div class="thumbnail-placeholder-small">
+                    <span class="placeholder-icon-small">🗺️</span>
+                  </div>
+                }
+              </div>
+              <div class="location-list-item-content">
+                <h3 class="location-name">{{ location.name }}</h3>
+                <div class="location-meta-row">
+                  <span
+                    class="category-pill"
+                    [style.background-color]="getCategoryColor(location.category)"
+                    [style.color]="getCategoryTextColor(location.category)"
+                  >
+                    {{ getCategoryName(location.category) }}
+                  </span>
+                  @for (tag of getLocationTags(location); track tag.id) {
+                    <span class="tag-pill" [style.background-color]="tag.color">{{ tag.name }}</span>
+                  }
+                </div>
+              </div>
+              <div class="location-list-item-actions">
+                <button
+                  class="btn-icon btn-danger"
+                  (click)="deleteLocation(location, $event)"
+                  title="Delete location"
+                >
+                  🗑️
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</div>

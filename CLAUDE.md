@@ -29,6 +29,7 @@ Located in `src/app/core/services/`:
 - **ElectronService**: IPC bridge to Electron main process for all file system operations (including directory operations)
 - **ProjectService**: Manages work folder selection and `ensemble.json` (categories, tags, settings, `lastSession`, pinboards)
 - **CharacterService**: CRUD operations for character files (`_*.md`), recursive scan under `characters/`, flat-file format
+- **LocationService**: CRUD operations for location files (`_*.md`), recursive scan under `locations/`, flat-file format
 - **CastService**: CRUD operations for cast folders under the casts folder
 - **PinboardService**: Manages pinboard data (nodes/edges) across multiple pinboards stored in `ensemble.json`
 - **PlotBoardService**: Discovers and manages `*.plotboard.md` files anywhere under the project
@@ -111,6 +112,8 @@ Each project has this structure:
 project-folder/
 ├── ensemble.json           # Project metadata: categories, tags, settings, lastSession, pinboards
 ├── comfyui-workflows/      # ComfyUI API-format workflow JSON (optional; image generation)
+├── locations/              # Location files (recursively scanned)
+│   └── _<slug>.md          # Location file (e.g., "_grey-harbor.md")
 ├── characters/             # Character files (recursively scanned)
 │   ├── _<slug>.md          # Character file (e.g., "_dessir.md")
 │   ├── <category-slug>/    # Optional subfolders
@@ -152,6 +155,29 @@ modified: "2024-01-20T14:45:00Z"
 Character ID is a stable value stored in frontmatter (`id`). The file path under `characters/` is location only and can change on rename. Existing files without `id` are assigned one on first load, and leftover path-based refs (casts, pinboards, book PoVs, plot threads) are remapped.
 
 **Character styles**: Project settings define `characterStyles` (seeded with a single `Default` style) and `defaultCharacterStyle`. When more than one style exists, the character list shows a Character Style dropdown. With only one style, the list selector is hidden and character detail offers a subtle link to Settings to add another. Missing style portraits show a placeholder. Pinboard/casts use `defaultCharacterStyle`.
+
+### Location File Format
+
+Location files match the pattern `_*.md` under `locations/` (recursively scanned; create writes to the folder root):
+
+```markdown
+---
+id: m0k3r5abc123
+name: Grey Harbor
+category: setting
+tags:
+  - coastal
+books:
+  - n23
+thumbnail: "[[img/locations/grey-harbor.jpg]]"
+created: "2024-01-15T10:30:00Z"
+modified: "2024-01-20T14:45:00Z"
+---
+
+(single markdown body)
+```
+
+Location ID is stable in frontmatter. Locations reuse project categories/tags/books and use a single `thumbnail` (not character styles).
 
 ### Removed Features
 
@@ -201,6 +227,9 @@ All routes defined in `src/app/app.routes.ts`:
 - `/plot-board` - Plot boards (with optional path param)
 - `/casts` - Cast list
 - `/cast/:id` - Cast detail
+- `/locations` - Location list with search/filter
+- `/location/:id` - Edit existing location
+- `/location` - Create new location
 
 ## File Organization
 

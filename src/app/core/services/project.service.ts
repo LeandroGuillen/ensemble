@@ -23,6 +23,7 @@ import {
   ENSEMBLE_JSON_FILE,
   LEGACY_METADATA_JSON_FILE,
   DEFAULT_CHARACTERS_FOLDER,
+  DEFAULT_LOCATIONS_FOLDER,
   DEFAULT_IMAGES_FOLDER,
   DEFAULT_CASTS_FOLDER,
   DEFAULT_NAMES_FILE,
@@ -81,6 +82,17 @@ export class ProjectService {
     const project = requireProject(this.currentProjectSubject.value);
     const folder = project.metadata?.settings?.charactersFolder?.trim() || DEFAULT_CHARACTERS_FOLDER;
     const normalized = normalizeRelativeFolder(folder, DEFAULT_CHARACTERS_FOLDER);
+    return pathJoin(project.path, normalized);
+  }
+
+  /**
+   * Returns the absolute path to the locations folder for the current project.
+   * Uses settings.locationsFolder if set, otherwise defaults to 'locations'.
+   */
+  getLocationsFolderPath(): string {
+    const project = requireProject(this.currentProjectSubject.value);
+    const folder = project.metadata?.settings?.locationsFolder?.trim() || DEFAULT_LOCATIONS_FOLDER;
+    const normalized = normalizeRelativeFolder(folder, DEFAULT_LOCATIONS_FOLDER);
     return pathJoin(project.path, normalized);
   }
 
@@ -204,7 +216,8 @@ export class ProjectService {
 
       // Ensure required directories exist
       const charactersFolder = metadata.settings?.charactersFolder?.trim() || DEFAULT_CHARACTERS_FOLDER;
-      await this.ensureProjectStructure(projectPath, charactersFolder);
+      const locationsFolder = metadata.settings?.locationsFolder?.trim() || DEFAULT_LOCATIONS_FOLDER;
+      await this.ensureProjectStructure(projectPath, charactersFolder, locationsFolder);
 
       this.migrateLastSessionFromLegacy(metadata);
 
@@ -261,8 +274,8 @@ export class ProjectService {
         }
       }
 
-      // Create directory structure (use default 'characters' for new projects)
-      await this.ensureProjectStructure(projectPath, 'characters');
+      // Create directory structure (use defaults for new projects)
+      await this.ensureProjectStructure(projectPath, DEFAULT_CHARACTERS_FOLDER, DEFAULT_LOCATIONS_FOLDER);
 
       // Create default metadata with empty relationships
       const metadata = this.createDefaultMetadata(projectName);
@@ -381,7 +394,11 @@ export class ProjectService {
   /**
    * Ensures the project directory structure exists
    */
-  private async ensureProjectStructure(projectPath: string, charactersFolder = 'characters'): Promise<void> {
+  private async ensureProjectStructure(
+    projectPath: string,
+    charactersFolder = DEFAULT_CHARACTERS_FOLDER,
+    locationsFolder = DEFAULT_LOCATIONS_FOLDER
+  ): Promise<void> {
     try {
       // Create main project directory
       assertIpcSuccess(
@@ -390,15 +407,20 @@ export class ProjectService {
       );
 
       // Create characters subdirectory (configurable path)
-      const normalized = normalizeRelativeFolder(charactersFolder, DEFAULT_CHARACTERS_FOLDER);
-      const charactersPath = pathJoin(projectPath, normalized);
+      const normalizedCharacters = normalizeRelativeFolder(charactersFolder, DEFAULT_CHARACTERS_FOLDER);
+      const charactersPath = pathJoin(projectPath, normalizedCharacters);
       assertIpcSuccess(
         await this.electronService.createDirectory(charactersPath),
         'Create characters directory'
       );
 
-      // Note: Thumbnails are now stored in individual character folders
-      // No need to create a global thumbnails directory
+      // Create locations subdirectory (configurable path)
+      const normalizedLocations = normalizeRelativeFolder(locationsFolder, DEFAULT_LOCATIONS_FOLDER);
+      const locationsPath = pathJoin(projectPath, normalizedLocations);
+      assertIpcSuccess(
+        await this.electronService.createDirectory(locationsPath),
+        'Create locations directory'
+      );
     } catch (error) {
       throw new Error(`Failed to create project structure: ${error}`);
     }
@@ -420,6 +442,7 @@ export class ProjectService {
       settings: {
         defaultCategory: DEFAULT_CATEGORIES[0].id,
         charactersFolder: DEFAULT_CHARACTERS_FOLDER,
+        locationsFolder: DEFAULT_LOCATIONS_FOLDER,
         castsFolder: DEFAULT_CASTS_FOLDER,
         imagesFolder: DEFAULT_IMAGES_FOLDER,
         characterStyles: DEFAULT_CHARACTER_STYLES.map((s) => ({ ...s })),

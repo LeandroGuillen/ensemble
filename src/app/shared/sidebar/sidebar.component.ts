@@ -37,6 +37,7 @@ export class SidebarComponent implements OnInit {
       label: 'Characters',
       items: [
         { icon: 'users', label: 'Characters', route: '/characters', title: 'Characters' },
+        { icon: 'map-pin', label: 'Locations', route: '/locations', title: 'Locations' },
         { icon: 'lightbulb', label: 'Concepts', route: '/concepts', title: 'Concepts' },
         { icon: 'type', label: 'Names', route: '/names', title: 'Names' },
         { icon: 'git-branch', label: 'Pinboard', route: '/pinboard', title: 'Pinboard' },

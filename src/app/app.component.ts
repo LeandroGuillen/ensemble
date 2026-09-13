@@ -3,7 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterOutlet, NavigationEnd } from "@angular/router";
 
 import { Title } from "@angular/platform-browser";
-import { ProjectService, ElectronService, ThemeService, LoggingService, ZoomService, AddNameCommandService, AddConceptCommandService, CharacterCommandService, CharacterService } from "./core/services";
+import { ProjectService, ElectronService, ThemeService, LoggingService, ZoomService, AddNameCommandService, AddConceptCommandService, CharacterCommandService, CharacterService, LocationCommandService, LocationService } from "./core/services";
 import { filter } from "rxjs/operators";
 import { remapCharacterRoute } from "./core/utils/character-id.utils";
 import { CommandPaletteComponent } from "./shared/command-palette/command-palette.component";
@@ -48,6 +48,8 @@ export class AppComponent implements OnInit {
     private addConceptCommandService: AddConceptCommandService,
     private characterCommandService: CharacterCommandService,
     private characterService: CharacterService,
+    private locationCommandService: LocationCommandService,
+    private locationService: LocationService,
   ) {}
 
   async ngOnInit() {
@@ -96,6 +98,7 @@ export class AppComponent implements OnInit {
         // and the project becomes null (e.g., user closes project)
         if (!project && this.projectLoadedAndReady) {
           this.characterCommandService.deactivate();
+          this.locationCommandService.deactivate();
           this.router.navigate(["/project-selector"]);
         } else if (project) {
           // Initialize theme when project loads
@@ -105,11 +108,16 @@ export class AppComponent implements OnInit {
           this.addNameCommandService.register();
           this.addConceptCommandService.register();
           this.characterCommandService.activate();
+          this.locationCommandService.activate();
           void this.characterService.loadCharacters(project.path).catch((error) => {
             this.logger.error('Failed to load characters for command palette', error);
           });
+          void this.locationService.loadLocations(project.path).catch((error) => {
+            this.logger.error('Failed to load locations for command palette', error);
+          });
         } else {
           this.characterCommandService.deactivate();
+          this.locationCommandService.deactivate();
         }
       });
 

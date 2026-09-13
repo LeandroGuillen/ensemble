@@ -270,7 +270,8 @@ describe('ProjectService', () => {
 
       await service.createProject(projectPath, 'New Project');
 
-      expect(electronService.createDirectory).toHaveBeenCalledTimes(2); // project and characters
+      expect(electronService.createDirectory).toHaveBeenCalledTimes(3); // project, characters, locations
+      expect(electronService.createDirectory).toHaveBeenCalledWith('/test/new-project/locations');
     });
   });
 
