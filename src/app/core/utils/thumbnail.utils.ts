@@ -28,10 +28,18 @@ export function parseThumbnailReference(raw: string): string | null {
  *
  * @param projectPath - Absolute path to the project root
  * @param thumbnailRef - Parsed thumbnail path (from parseThumbnailReference)
+ * @param localDirectory - Optional character directory used for bare filenames
  * @returns Absolute path to the image file
  */
-export function resolveThumbnailPath(projectPath: string, thumbnailRef: string): string {
-  return pathJoin(projectPath, thumbnailRef);
+export function resolveThumbnailPath(
+  projectPath: string,
+  thumbnailRef: string,
+  localDirectory?: string
+): string {
+  const normalized = thumbnailRef.replace(/\\/g, '/');
+  return localDirectory && !normalized.includes('/')
+    ? pathJoin(localDirectory, normalized)
+    : pathJoin(projectPath, normalized);
 }
 
 /**

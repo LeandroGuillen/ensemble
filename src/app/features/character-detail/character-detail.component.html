@@ -9,7 +9,7 @@
           title="Open folder in file explorer"
         >
           <span class="file-path-chip-icon">📂</span>
-          <span class="file-path-chip-text">characters/{{ character.id }}</span>
+          <span class="file-path-chip-text">{{ currentProject?.metadata?.settings?.charactersFolder || 'characters' }}/{{ character.relativePath }}</span>
         </button>
       }
     </div>
@@ -424,6 +424,7 @@
     [visible]="showGeneratePortraitDialog"
     (visibleChange)="showGeneratePortraitDialog = $event"
     [characterName]="characterForm.get('name')?.value || ''"
+    [outputDirectory]="thumbnailOutputDirectory"
     [error]="error"
     (errorChange)="error = $event"
     (portraitGenerated)="onPortraitGenerated($event)"

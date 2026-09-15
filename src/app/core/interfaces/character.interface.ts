@@ -7,7 +7,7 @@ export interface CharacterPrompt {
 export interface Character {
   /** Stable identity stored in frontmatter; survives rename/move. */
   id: string;
-  /** Explicit staging state. Missing/false means this is an active character. */
+  /** In-memory staging state, derived from the `@drafts` folder for folder-based records. */
   draft?: boolean;
   name: string;
   /** Alternative names (a.k.a.'s); matched by character search, subtle in lists. */
@@ -51,7 +51,7 @@ export interface CharacterFrontmatter {
   id?: string;
   /** Optional only for drafts. Active character files still require a name. */
   name?: string;
-  /** Drafts are excluded from all normal character consumers until promoted. */
+  /** Legacy flat-file draft marker; folder-based drafts use their `@drafts` location. */
   draft?: boolean;
   /** Alternative names (a.k.a.'s); omitted when empty. Accepts a list or a single string. */
   aliases?: string[] | string;

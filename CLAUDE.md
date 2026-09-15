@@ -28,7 +28,7 @@ Located in `src/app/core/services/`:
 
 - **ElectronService**: IPC bridge to Electron main process for all file system operations (including directory operations)
 - **ProjectService**: Manages work folder selection and `ensemble.json` (categories, tags, settings, `lastSession`, pinboards)
-- **CharacterService**: CRUD operations for character files (`_*.md`), recursive scan under `characters/`, flat-file format
+- **CharacterService**: CRUD operations for convention-based character folders under `characters/`
 - **LocationService**: CRUD operations for location files (`_*.md`), recursive scan under `locations/`, flat-file format
 - **CastService**: CRUD operations for cast folders under the casts folder
 - **PinboardService**: Manages pinboard data (nodes/edges) across multiple pinboards stored in `ensemble.json`
@@ -114,10 +114,12 @@ project-folder/
 ├── comfyui-workflows/      # ComfyUI API-format workflow JSON (optional; image generation)
 ├── locations/              # Location files (recursively scanned)
 │   └── _<slug>.md          # Location file (e.g., "_grey-harbor.md")
-├── characters/             # Character files (recursively scanned)
-│   ├── _<slug>.md          # Character file (e.g., "_dessir.md")
-│   ├── <category-slug>/    # Optional subfolders
-│   │   └── _<slug>.md      # Character in subfolder
+├── characters/             # Configurable character root
+│   ├── <character-slug>/
+│   │   ├── <character-slug>.md
+│   │   ├── <character-slug>.<book-code>.md
+│   │   └── <selected thumbnail images>
+│   ├── @drafts/<draft-slug>/<draft-slug>.md
 │   └── casts/              # Cast folders (one folder per cast)
 └── **/*.plotboard.md   # Plot boards (any subfolder; identity = path from project root)
 ```
@@ -126,7 +128,11 @@ Plot boards are Markdown files matching `*.plotboard.md` anywhere under the proj
 
 ### Character File Format
 
-Character files match the pattern `_*.md` and can live in any subfolder under `characters/`:
+Each active character has a direct child folder under `characters/`. Its main file
+must match the folder name (`roger-rabbit/roger-rabbit.md`). Draft folders live
+under `characters/@drafts/`. Book pages use the book code as a dotted suffix, such
+as `roger-rabbit/roger-rabbit.n26.md`. Managed folder names, main filenames, and
+book-code suffixes are always ASCII-only. Other files are ignored.
 
 ```markdown
 ---
@@ -154,7 +160,7 @@ modified: "2024-01-20T14:45:00Z"
 
 Character ID is a stable value stored in frontmatter (`id`). The file path under `characters/` is location only and can change on rename. Existing files without `id` are assigned one on first load, and leftover path-based refs (casts, pinboards, book PoVs, plot threads) are remapped.
 
-**Character drafts**: A character file with `draft: true` is shown only in the Character Drawer. Draft user fields (including `name` and `category`) may be empty, and book assignments do not promote a draft. `CharacterService` exposes drafts separately from active characters so casts, pinboards, plot boards, PoV pickers, and ordinary character counts do not include them. Promotion is explicit, preserves the stable ID and all content, and requires the normal character fields (`name` and `category`). Drafts created in-app use `_draft-<id>.md`; file location is not the source of draft status.
+**Character drafts**: A character folder below `@drafts` is shown only in the Character Drawer. Draft user fields (including `name` and `category`) may be empty, and book assignments do not promote a draft. `CharacterService` exposes drafts separately from active characters so casts, pinboards, plot boards, PoV pickers, and ordinary character counts do not include them. Promotion is explicit, preserves the stable ID and all content, requires the normal character fields (`name` and `category`), and moves the whole folder out of `@drafts`.
 
 **Character styles**: Project settings define `characterStyles` (seeded with a single `Default` style) and `defaultCharacterStyle`. When more than one style exists, the character list shows a Character Style dropdown. With only one style, the list selector is hidden and character detail offers a subtle link to Settings to add another. Missing style portraits show a placeholder. Pinboard/casts use `defaultCharacterStyle`.
 
@@ -181,7 +187,6 @@ Location ID is stable in frontmatter. Locations use project books and a single `
 ### Removed Features
 
 - Trash system (`_deleted/` folder, restore, empty trash) — including the cast trash folder
-- Folder-based character storage (each character was a folder)
 - Images library (multiple images per character)
 - Additional fields (extra `.md` files in character folders)
 - `mangamaster` field

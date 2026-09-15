@@ -4,7 +4,7 @@ import { PlotBoard, PlotBoardFrontmatter, PlotCellMeta, PlotRow, PlotThread } fr
 import { parseMarkdown, generateMarkdown } from '../utils/markdown.utils';
 import { remapPlotBoardCharacterIds } from '../utils/character-id.utils';
 import { pathJoin } from '../utils/path.utils';
-import { nextPlotBoardDuplicateStem, slugify } from '../utils/slug.utils';
+import { asciiSlugify, nextPlotBoardDuplicateStem, slugify } from '../utils/slug.utils';
 import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
 import { LoggingService } from './logging.service';
@@ -186,7 +186,7 @@ export class PlotBoardService {
       return { success: false, error: 'No project loaded' };
     }
 
-    const base = slugify(nameHint.trim()) || 'plot-board';
+    const base = asciiSlugify(nameHint.trim()) || 'plot-board';
     const dirRel = DEFAULT_NEW_RELATIVE_DIR;
     let stem = base;
     let counter = 1;
@@ -285,7 +285,7 @@ export class PlotBoardService {
       return { success: false, error: 'No project loaded' };
     }
 
-    const newStem = slugify(newDisplayName.trim());
+    const newStem = asciiSlugify(newDisplayName.trim());
     if (!newStem) {
       return { success: false, error: 'Invalid name' };
     }

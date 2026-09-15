@@ -54,6 +54,7 @@ export class ImagePickerService {
   private history: string[] = [];
   private historyIndex = -1;
   private directoryCache = new Map<string, ProjectImageDirectory>();
+  private rootFolder = 'img';
   private lastExternalNavigation: {
     direction: 'back' | 'forward';
     timestamp: number;
@@ -106,6 +107,7 @@ export class ImagePickerService {
   async open(options: ImagePickerOpenOptions = {}): Promise<void> {
     const imagesFolderLabel =
       options.imagesFolder?.trim() || 'img';
+    this.rootFolder = imagesFolderLabel;
     this.history = [];
     this.historyIndex = -1;
     this.directoryCache.clear();
@@ -154,7 +156,10 @@ export class ImagePickerService {
     this.patchState({ isLoading: true, error: null });
     try {
       const listing =
-        await this.imageGenerationService.browseProjectImageDirectory(relativeDirectory);
+        await this.imageGenerationService.browseProjectImageDirectory(
+          relativeDirectory,
+          this.rootFolder
+        );
       this.directoryCache.set(listing.relativeDirectory, listing);
       this.applyDirectory(listing);
       if (addToHistory) {
@@ -230,7 +235,7 @@ export class ImagePickerService {
     const projectPath = this.projectService.getCurrentProject()?.path;
     if (!projectPath || !this.electronService.isElectron()) return null;
 
-    const imagesRoot = this.projectService.getImagesFolderPath();
+    const imagesRoot = pathJoin(projectPath, this.rootFolder);
     const absolutePath = this.snapshot.currentDirectory
       ? pathJoin(
           imagesRoot,

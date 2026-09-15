@@ -19,6 +19,7 @@ import { ImageGenerationService } from '../../../../core/services/image-generati
 export class GeneratePortraitDialogComponent implements OnChanges {
   @Input() visible = false;
   @Input() characterName = '';
+  @Input() outputDirectory: string | null = null;
   @Input() error: string | null = null;
 
   @Output() visibleChange = new EventEmitter<boolean>();
@@ -70,6 +71,7 @@ export class GeneratePortraitDialogComponent implements OnChanges {
         positivePrompt: this.positiveImagePrompt.trim(),
         negativePrompt: this.negativeImagePrompt.trim(),
         characterName: name,
+        ...(this.outputDirectory ? { outputDirectory: this.outputDirectory } : {}),
       });
       this.portraitGenerated.emit(relativePath);
       this.visible = false;

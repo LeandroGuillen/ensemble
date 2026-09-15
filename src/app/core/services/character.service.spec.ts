@@ -119,6 +119,9 @@ describe('CharacterService', () => {
     castService = TestBed.inject(CastService) as jasmine.SpyObj<CastService>;
 
     electronService.isElectron.and.returnValue(true);
+    electronService.createDirectory.and.returnValue(Promise.resolve({ success: true }));
+    electronService.moveDirectory.and.returnValue(Promise.resolve({ success: true }));
+    electronService.deleteDirectoryRecursive.and.returnValue(Promise.resolve({ success: true }));
     projectService.getCharactersFolderPath.and.returnValue('/test/project/characters');
   });
 
@@ -201,10 +204,12 @@ describe('CharacterService', () => {
       expect(character).toBeTruthy();
       expect(character.name).toBe('Test Character');
       expect(character.category).toBe('main-character');
-      expect(character.relativePath).toBe('_test-character.md');
+      expect(character.relativePath).toBe('test-character/test-character.md');
       expect(character.id).toBeTruthy();
       expect(character.id).not.toBe(character.relativePath);
-      expect(electronService.createDirectory).not.toHaveBeenCalled();
+      expect(electronService.createDirectory).toHaveBeenCalledWith(
+        '/test/project/characters/test-character'
+      );
       expect(electronService.writeFileAtomic).toHaveBeenCalled();
       const savedContent = electronService.writeFileAtomic.calls.mostRecent().args[1] as string;
       expect(savedContent).toContain(`id: ${character.id}`);
@@ -253,9 +258,11 @@ describe('CharacterService', () => {
       const formData = createValidCharacterFormData();
       await service.createCharacter(formData);
 
-      // Characters are always stored directly under characters/, regardless of folder mode.
+      // Category folder settings do not affect the character-centric layout.
       expect(electronService.writeFileAtomic).toHaveBeenCalled();
-      expect(electronService.createDirectory).not.toHaveBeenCalled();
+      expect(electronService.createDirectory).toHaveBeenCalledWith(
+        '/test/project/characters/test-character'
+      );
     });
 
     it('should not create category folders even when folder mode is auto', async () => {
@@ -270,7 +277,39 @@ describe('CharacterService', () => {
       await service.createCharacter(formData);
 
       // Category storage location is decoupled from category.
-      expect(electronService.createDirectory).not.toHaveBeenCalled();
+      expect(electronService.createDirectory).toHaveBeenCalledWith(
+        '/test/project/characters/test-character'
+      );
+    });
+
+    it('adds part of the stable id when the name slug collides', async () => {
+      const project = createValidProject();
+      projectService.getCurrentProject.and.returnValue(project);
+      electronService.fileExists.and.callFake((path: string) =>
+        Promise.resolve(path === '/test/project/characters/test-character')
+      );
+      electronService.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));
+
+      const character = await service.createCharacter(createValidCharacterFormData());
+
+      expect(character.relativePath).toMatch(
+        /^test-character-[a-z0-9]+\/test-character-[a-z0-9]+\.md$/
+      );
+      expect(character.relativePath).toContain(character.id.slice(-8));
+    });
+
+    it('uses ASCII-only folder and main-file names', async () => {
+      const project = createValidProject();
+      projectService.getCurrentProject.and.returnValue(project);
+      electronService.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));
+
+      const character = await service.createCharacter({
+        ...createValidCharacterFormData(),
+        name: 'José García',
+      });
+
+      expect(character.relativePath).toBe('jose-garcia/jose-garcia.md');
+      expect([...character.relativePath].every((char) => char.charCodeAt(0) < 128)).toBeTrue();
     });
   });
 
@@ -294,8 +333,9 @@ describe('CharacterService', () => {
       expect(draft.name).toBe('');
       expect(service.getCharacterById(draft.id)).toBeUndefined();
       expect(service.getDraftById(draft.id)?.id).toBe(draft.id);
+      expect(draft.relativePath).toBe('@drafts/unnamed/unnamed.md');
       const savedContent = electronService.writeFileAtomic.calls.mostRecent().args[1] as string;
-      expect(savedContent).toContain('draft: true');
+      expect(savedContent).not.toContain('draft: true');
     });
 
     it('loads drafts separately, including a draft with no name', async () => {
@@ -592,6 +632,39 @@ describe('CharacterService', () => {
       expect(updated?.filePath).toBe('/test/project/characters/main-character/_new-name.md');
       expect(electronService.moveDirectory).toHaveBeenCalled();
     });
+
+    it('renames a folder-based character directory and main file together', async () => {
+      const project = createValidProject();
+      projectService.getCurrentProject.and.returnValue(project);
+      const existingCharacter: Character = {
+        id: 'stable-id-1',
+        name: 'Roger Rabbit',
+        category: 'main-character',
+        tags: [],
+        books: [],
+        prompts: [],
+        content: '',
+        created: new Date(),
+        modified: new Date(),
+        relativePath: 'roger-rabbit/roger-rabbit.md',
+        filePath: '/test/project/characters/roger-rabbit/roger-rabbit.md',
+      };
+      (service as any).charactersSubject.next([existingCharacter]);
+      electronService.fileExists.and.returnValue(Promise.resolve(false));
+      electronService.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));
+
+      const updated = await service.updateCharacter('stable-id-1', { name: 'Jessica Rabbit' });
+
+      expect(updated?.relativePath).toBe('jessica-rabbit/jessica-rabbit.md');
+      expect(electronService.moveDirectory).toHaveBeenCalledWith(
+        '/test/project/characters/roger-rabbit',
+        '/test/project/characters/jessica-rabbit'
+      );
+      expect(electronService.moveDirectory).toHaveBeenCalledWith(
+        '/test/project/characters/jessica-rabbit/roger-rabbit.md',
+        '/test/project/characters/jessica-rabbit/jessica-rabbit.md'
+      );
+    });
   });
 
   describe('deleteCharacter', () => {
@@ -635,6 +708,31 @@ describe('CharacterService', () => {
 
       const result = await service.deleteCharacter('non-existent');
       expect(result).toBe(false);
+    });
+
+    it('deletes the whole folder for a folder-based character', async () => {
+      const project = createValidProject();
+      projectService.getCurrentProject.and.returnValue(project);
+      const character: Character = {
+        id: 'roger-id',
+        name: 'Roger Rabbit',
+        category: 'main-character',
+        tags: [],
+        books: [],
+        prompts: [],
+        content: '',
+        created: new Date(),
+        modified: new Date(),
+        relativePath: 'roger-rabbit/roger-rabbit.md',
+        filePath: '/test/project/characters/roger-rabbit/roger-rabbit.md',
+      };
+      (service as any).charactersSubject.next([character]);
+
+      expect(await service.deleteCharacter(character.id)).toBeTrue();
+      expect(electronService.deleteDirectoryRecursive).toHaveBeenCalledWith(
+        '/test/project/characters/roger-rabbit'
+      );
+      expect(electronService.deleteFile).not.toHaveBeenCalled();
     });
   });
 
@@ -756,6 +854,77 @@ Body text
       expect(characters[0].category).toBe('antagonist');
       expect(characters[0].books).toEqual(['book-1', 'book-2']);
       expect(characters[0].bookCategories).toEqual({ 'book-2': 'supporting' });
+    });
+
+    it('loads only conventionally named main files from character folders', async () => {
+      const project = createValidProject();
+      projectService.getCurrentProject.and.returnValue(project);
+      electronService.fileExists.and.returnValue(Promise.resolve(true));
+      electronService.readDirectoryRecursive.and.returnValue(Promise.resolve({
+        success: true,
+        files: [
+          {
+            relativePath: 'roger-rabbit/roger-rabbit.md',
+            absolutePath: '/test/project/characters/roger-rabbit/roger-rabbit.md',
+          },
+          {
+            relativePath: 'roger-rabbit/roger-rabbit.n26.md',
+            absolutePath: '/test/project/characters/roger-rabbit/roger-rabbit.n26.md',
+          },
+          {
+            relativePath: 'roger-rabbit/notes.md',
+            absolutePath: '/test/project/characters/roger-rabbit/notes.md',
+          },
+          {
+            relativePath: '@drafts/unnamed/unnamed.md',
+            absolutePath: '/test/project/characters/@drafts/unnamed/unnamed.md',
+          },
+        ],
+      }));
+      electronService.readFile.and.callFake((path: string) => Promise.resolve({
+        success: true,
+        content: path.includes('@drafts')
+          ? '---\nid: draft-id\n---\nDraft notes'
+          : '---\nid: roger-id\nname: Roger Rabbit\ncategory: main-character\n---\nMain',
+      }));
+
+      await service.forceReloadCharacters();
+
+      expect(service.getCharactersSnapshot().map((item) => item.id)).toEqual(['roger-id']);
+      expect(service.getDraftsSnapshot().map((item) => item.id)).toEqual(['draft-id']);
+      expect(electronService.readFile).toHaveBeenCalledTimes(2);
+      expect(electronService.readDirectoryRecursive).toHaveBeenCalledWith(
+        '/test/project/characters',
+        '*.md'
+      );
+    });
+
+    it('uses the book code in book-page filenames', () => {
+      const project = createValidProject();
+      project.metadata.books = [{ id: 'book-26', code: 'n26', name: 'Book 26', color: '#111' }];
+      projectService.getCurrentProject.and.returnValue(project);
+      const character = {
+        relativePath: 'roger-rabbit/roger-rabbit.md',
+        filePath: '/test/project/characters/roger-rabbit/roger-rabbit.md',
+      } as Character;
+
+      expect(service.getBookPageFilePath(character, 'book-26')).toBe(
+        '/test/project/characters/roger-rabbit/roger-rabbit.n26.md'
+      );
+    });
+
+    it('transliterates book codes to ASCII in book-page filenames', () => {
+      const project = createValidProject();
+      project.metadata.books = [{ id: 'book-26', code: 'Ñ 26', name: 'Book 26', color: '#111' }];
+      projectService.getCurrentProject.and.returnValue(project);
+      const character = {
+        relativePath: 'jose-garcia/jose-garcia.md',
+        filePath: '/test/project/characters/jose-garcia/jose-garcia.md',
+      } as Character;
+
+      expect(service.getBookPageFilePath(character, 'book-26')).toBe(
+        '/test/project/characters/jose-garcia/jose-garcia.n-26.md'
+      );
     });
 
     it('should load aliases from character frontmatter', async () => {

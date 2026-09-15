@@ -57,6 +57,7 @@ import {
 } from "../../core/utils/thumbnail.utils";
 import { normalizeBookCategories } from "../../core/utils/character-category.utils";
 import { getBookDisplayName } from "../../core/utils/book-display.utils";
+import { pathDirname } from "../../core/utils/path.utils";
 import {
   CategoryToggleComponent,
   ToggleOption,
@@ -1105,7 +1106,11 @@ export class CharacterDetailComponent
         if (!parsed) return;
         try {
           const dataUrl = await this.electronService.getImageAsDataUrl(
-            resolveThumbnailPath(this.currentProject!.path, parsed)
+            resolveThumbnailPath(
+              this.currentProject!.path,
+              parsed,
+              this.character ? pathDirname(this.character.filePath) : undefined
+            )
           );
           if (dataUrl) {
             next.set(style.id, dataUrl);
@@ -1325,7 +1330,9 @@ export class CharacterDetailComponent
         this.pickerTargetBookId,
         this.pickerTargetStyleId
       ) || '',
-      imagesFolder: this.currentProject?.metadata?.settings?.imagesFolder,
+      imagesFolder:
+        this.getCharacterProjectRelativeDirectory() ||
+        this.currentProject?.metadata?.settings?.imagesFolder,
     });
     const loadError = this.imagePickerService.snapshot.error;
     if (loadError) {
@@ -1452,6 +1459,9 @@ export class CharacterDetailComponent
   }
 
   private getThumbnailOutputDirectory(): string | null {
+    const characterDirectory = this.getCharacterProjectRelativeDirectory();
+    if (characterDirectory) return characterDirectory;
+
     const styleId = this.pickerTargetStyleId || this.selectedStyleId || this.defaultCharacterStyle;
     const raw = resolveThumbnailForBookStyle(
       this.thumbnailsMap,
@@ -1464,6 +1474,17 @@ export class CharacterDetailComponent
     const normalized = parsed.replace(/\\/g, '/');
     const lastSlash = normalized.lastIndexOf('/');
     return lastSlash > 0 ? normalized.slice(0, lastSlash) : null;
+  }
+
+  private getCharacterProjectRelativeDirectory(): string | null {
+    const projectPath = this.currentProject?.path?.replace(/\\/g, '/').replace(/\/+$/, '');
+    const characterPath = this.character?.filePath?.replace(/\\/g, '/');
+    if (!projectPath || !characterPath) return null;
+    const prefix = `${projectPath}/`;
+    if (!characterPath.startsWith(prefix)) return null;
+    const relativeFile = characterPath.slice(prefix.length);
+    const directory = pathDirname(relativeFile);
+    return directory === '.' ? null : directory;
   }
 
   /** Open the folder containing the character file in the system file manager. */

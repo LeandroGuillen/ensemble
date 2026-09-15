@@ -3,7 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { Location, LocationFormData, LocationFrontmatter } from '../interfaces/location.interface';
 import { parseMarkdown, generateMarkdown } from '../utils/markdown.utils';
-import { slugify } from '../utils/slug.utils';
+import { asciiSlugify } from '../utils/slug.utils';
 import { generateId } from '../utils/id.utils';
 import { pathJoin, pathDirname } from '../utils/path.utils';
 import { parseThumbnailReference, resolveThumbnailPath } from '../utils/thumbnail.utils';
@@ -133,7 +133,7 @@ export class LocationService {
       const books = data.books || [];
       await this.validateBookReferences(books);
 
-      const slug = slugify(data.name);
+      const slug = asciiSlugify(data.name) || 'location';
       const filename = `_${slug}.md`;
       const locationsPath = this.projectService.getLocationsFolderPath();
       const filePath = pathJoin(locationsPath, filename);
@@ -186,7 +186,7 @@ export class LocationService {
 
       if (nameChanged) {
         const newName = data.name || existing.name;
-        const newFilename = `_${slugify(newName)}.md`;
+        const newFilename = `_${asciiSlugify(newName) || 'location'}.md`;
         const lastSlash = existing.relativePath.lastIndexOf('/');
         const oldRelDir = lastSlash === -1 ? '' : existing.relativePath.slice(0, lastSlash);
         newRelativePath = oldRelDir ? pathJoin(oldRelDir, newFilename) : newFilename;

@@ -58,6 +58,12 @@ describe('thumbnail.utils', () => {
         '/project/img/subfolder/dessir.png'
       );
     });
+
+    it('resolves a bare filename inside its character folder', () => {
+      expect(
+        resolveThumbnailPath('/project', 'portrait.webp', '/project/characters/roger-rabbit')
+      ).toBe('/project/characters/roger-rabbit/portrait.webp');
+    });
   });
 
   describe('resolveThumbnailForStyle', () => {

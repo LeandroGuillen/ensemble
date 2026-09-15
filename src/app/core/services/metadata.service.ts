@@ -20,6 +20,10 @@ import { ProjectService } from './project.service';
 import { CastService } from './cast.service';
 import { LoggingService } from './logging.service';
 import { requireProject } from '../utils/project.utils';
+import {
+  isLegacyCharacterMainFile,
+  parseCharacterMainFileLocation,
+} from '../utils/character-path.utils';
 
 @Injectable({
   providedIn: 'root',
@@ -1344,14 +1348,20 @@ export class MetadataService {
 
     try {
       const charactersPath = this.projectService.getCharactersFolderPath();
-      const scanResult = await this.electronService.readDirectoryRecursive(charactersPath, '_*.md');
+      const scanResult = await this.electronService.readDirectoryRecursive(charactersPath, '*.md');
       
       if (!scanResult.success || !scanResult.files) {
         this.logger.warn('Failed to list character files:', scanResult.error);
         return;
       }
       
-      for (const { absolutePath: filePath } of scanResult.files) {
+      for (const { relativePath, absolutePath: filePath } of scanResult.files) {
+        if (
+          !parseCharacterMainFileLocation(relativePath) &&
+          !isLegacyCharacterMainFile(relativePath)
+        ) {
+          continue;
+        }
         const readResult = await this.electronService.readFile(filePath);
         
         if (!readResult.success || !readResult.content) {

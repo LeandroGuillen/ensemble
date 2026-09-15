@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { Cast } from '../interfaces/project.interface';
-import { slugify } from '../utils/slug.utils';
+import { asciiSlugify } from '../utils/slug.utils';
 import { generateId } from '../utils/id.utils';
 import { pathBasename, pathJoin } from '../utils/path.utils';
 import { assertIpcSuccess } from '../utils/ipc.utils';
@@ -206,7 +206,7 @@ export class CastService {
     try {
       // Generate unique ID and slug
       const id = generateId();
-      const slug = slugify(castData.name);
+      const slug = asciiSlugify(castData.name) || 'cast';
 
       // Create folder structure: charactersFolder/castsFolder/<slug>/
       const castsPath = this.projectService.getCastsFolderPath();
@@ -282,7 +282,7 @@ export class CastService {
       const nameChanged = updates.name && updates.name !== existingCast.name;
 
       if (nameChanged && updates.name) {
-        const newSlug = slugify(updates.name);
+        const newSlug = asciiSlugify(updates.name) || 'cast';
         const castsPath = this.projectService.getCastsFolderPath();
         const newCastFolderPath = pathJoin(castsPath, newSlug);
 

@@ -152,6 +152,19 @@ A foggy port.`,
       expect(electronService.writeFileAtomic).toHaveBeenCalled();
     });
 
+    it('uses an ASCII-only filename for an accented location name', async () => {
+      const project = createValidProject();
+      projectService.getCurrentProject.and.returnValue(project);
+      electronService.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));
+
+      const created = await service.createLocation({
+        ...createFormData(),
+        name: 'Alcázar de Sotero',
+      });
+
+      expect(created.relativePath).toBe('_alcazar-de-sotero.md');
+    });
+
     it('rejects unknown book ids', async () => {
       projectService.getCurrentProject.and.returnValue(createValidProject());
 

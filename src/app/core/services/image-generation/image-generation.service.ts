@@ -234,12 +234,16 @@ export class ImageGenerationService {
   }
 
   async browseProjectImageDirectory(
-    relativeDirectory = ''
+    relativeDirectory = '',
+    rootFolder?: string
   ): Promise<ProjectImageDirectory> {
     const project = requireProject(this.projectService.getCurrentProject());
 
     const normalizedDirectory = normalizeRelativeDirectory(relativeDirectory);
-    const imagesRoot = this.projectService.getImagesFolderPath();
+    const configuredRoot = normalizeRelativeDirectory(
+      rootFolder || project.metadata.settings.imagesFolder?.trim() || 'img'
+    );
+    const imagesRoot = pathJoin(project.path, configuredRoot);
     const absoluteDirectory = normalizedDirectory
       ? pathJoin(imagesRoot, ...normalizedDirectory.split('/'))
       : imagesRoot;
@@ -252,8 +256,7 @@ export class ImageGenerationService {
       throw new Error(listing.error || 'Failed to read image directory');
     }
 
-    const imagesFolder = project.metadata.settings.imagesFolder?.trim() || 'img';
-    const root = imagesFolder.replace(/^\/+|\/+$/g, '') || 'img';
+    const root = configuredRoot || 'img';
     const imageNames = (listing.files || [])
       .filter(isSupportedImageName)
       .sort((a, b) => a.localeCompare(b));

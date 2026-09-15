@@ -4,16 +4,23 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { Character, CharacterFormData, CharacterFrontmatter, CharacterPrompt } from '../interfaces/character.interface';
 import { Category } from '../interfaces/project.interface';
 import { parseMarkdown, generateMarkdown } from '../utils/markdown.utils';
-import { slugify } from '../utils/slug.utils';
+import { asciiSlugify } from '../utils/slug.utils';
 import { generateId } from '../utils/id.utils';
 import {
   buildCharacterIdRemap,
   normalizeCharacterRelativePath,
 } from '../utils/character-id.utils';
 import { pathJoin, pathBasename, pathDirname } from '../utils/path.utils';
+import {
+  CHARACTER_DRAFTS_FOLDER,
+  isFolderBasedCharacterPath,
+  isLegacyCharacterMainFile,
+  parseCharacterMainFileLocation,
+} from '../utils/character-path.utils';
 import { parseThumbnailReference, resolveThumbnailPath, resolveThumbnailForStyle, resolveThumbnailForBookStyle, normalizeThumbnailsMap, normalizeBookThumbnailsMap, thumbnailCacheKey } from '../utils/thumbnail.utils';
 import { normalizeBookCategories } from '../utils/character-category.utils';
 import { normalizeAliases } from '../utils/character-alias.utils';
+import { normalizeBookCode } from '../utils/book-display.utils';
 import { assertIpcSuccess, withIpcError } from '../utils/ipc.utils';
 import { requireProject } from '../utils/project.utils';
 import { ElectronService } from './electron.service';
@@ -73,13 +80,13 @@ export class CharacterService {
     const project = this.projectService.getCurrentProject();
     if (!project?.metadata?.categories) {
       // Fallback to slugified category ID for backward compatibility
-      return slugify(categoryId);
+      return asciiSlugify(categoryId);
     }
 
     const category = project.metadata.categories.find((c) => c.id === categoryId);
     if (!category) {
       // Category not found, use slugified ID
-      return slugify(categoryId);
+      return asciiSlugify(categoryId);
     }
 
     const folderMode = category.folderMode || 'auto'; // Default to 'auto' for backward compatibility
@@ -88,10 +95,10 @@ export class CharacterService {
       case 'flat':
         return null; // No subfolder, characters go directly in characters/
       case 'specify':
-        return category.folderPath || slugify(categoryId); // Use custom path or fallback to slug
+        return category.folderPath || asciiSlugify(categoryId); // Use custom path or fallback to slug
       case 'auto':
       default:
-        return slugify(categoryId); // Use category slug as folder name
+        return asciiSlugify(categoryId); // Use category slug as folder name
     }
   }
 
@@ -150,14 +157,20 @@ export class CharacterService {
     );
   }
 
-  /**
-   * Returns the absolute file path for a character's book page (_<base>-<bookId>.md).
-   */
+  /** Returns the absolute file path for `<character-slug>.<book-code>.md`. */
   getBookPageFilePath(character: Character, bookId: string): string {
     const normalizedPath = character.filePath.replace(/\\/g, '/');
     const dir = pathDirname(normalizedPath);
     const base = pathBasename(normalizedPath, '.md');
-    return pathJoin(dir, `${base}-${bookId}.md`);
+    if (!isFolderBasedCharacterPath(character.relativePath)) {
+      return pathJoin(dir, `${base}-${bookId}.md`);
+    }
+    const book = this.projectService
+      .getCurrentProject()
+      ?.metadata.books?.find((candidate) => candidate.id === bookId);
+    const code =
+      asciiSlugify(normalizeBookCode(book?.code) || bookId) || asciiSlugify(bookId);
+    return pathJoin(dir, `${base}.${code}.md`);
   }
 
   /**
@@ -252,9 +265,8 @@ export class CharacterService {
 
   /**
    * Loads all characters from the current project's characters directory
-   * Supports mixed folder structures based on category folder modes:
-   * - Flat mode: characters/<character-slug>/ (folder contains .md file directly)
-   * - Auto/Specify mode: characters/<category-folder>/<character-slug>/
+   * Loads one conventionally named main file per character folder. Drafts live
+   * below `@drafts`; unrelated markdown and book pages are ignored.
    */
   async loadCharacters(projectPath: string): Promise<void> {
     // If this is the same project and we've already loaded, don't reload
@@ -288,31 +300,26 @@ export class CharacterService {
         return;
       }
 
-      // Recursively scan for _*.md files
-      const scanResult = await this.electronService.readDirectoryRecursive(charactersPath, '_*.md');
+      const scanResult = await this.electronService.readDirectoryRecursive(charactersPath, '*.md');
       if (!scanResult.success || !scanResult.files) {
         this.hasLoadedForCurrentProject = true;
         return;
       }
-
-      // Exclude book-page files (_<base>-<bookId>.md) so they are not treated as characters
-      const project = this.projectService.getCurrentProject();
-      const bookIds = new Set((project?.metadata?.books ?? []).map((b) => b.id));
 
       const records: Character[] = [];
       const needsIdPersist: Character[] = [];
 
       for (const { relativePath, absolutePath } of scanResult.files) {
         try {
-          const base = pathBasename(relativePath, '.md');
-          const lastDash = base.lastIndexOf('-');
-          if (lastDash !== -1) {
-            const suffix = base.slice(lastDash + 1);
-            if (bookIds.has(suffix)) {
-              continue; // Book page file, skip
-            }
-          }
-          const loaded = await this.loadCharacterFromFile(absolutePath, relativePath);
+          const location = parseCharacterMainFileLocation(relativePath);
+          const isLegacy = isLegacyCharacterMainFile(relativePath);
+          if (!location && !isLegacy) continue;
+
+          const loaded = await this.loadCharacterFromFile(
+            absolutePath,
+            relativePath,
+            location?.draft
+          );
           if (loaded) {
             records.push(loaded.character);
             if (loaded.assignedId) {
@@ -343,11 +350,12 @@ export class CharacterService {
   }
 
   /**
-   * Loads a character from a single _*.md file
+   * Loads a character from its main markdown file.
    */
   private async loadCharacterFromFile(
     absolutePath: string,
-    relativePath: string
+    relativePath: string,
+    draftFromPath?: boolean
   ): Promise<{ character: Character; assignedId: boolean } | null> {
     try {
       const readResult = await this.electronService.readFile(absolutePath);
@@ -364,7 +372,9 @@ export class CharacterService {
 
       const { frontmatter, content } = parseResult.data!;
 
-      const isDraft = frontmatter.draft === true;
+      // Folder-based records derive lifecycle state from their location. The
+      // frontmatter flag remains readable only for the legacy flat-file format.
+      const isDraft = draftFromPath ?? frontmatter.draft === true;
       // Active character files retain their existing integrity requirement.
       if (!isDraft && !frontmatter.name) {
         this.logger.error(`Character file missing required name field: ${absolutePath}`);
@@ -498,13 +508,52 @@ export class CharacterService {
     };
   }
 
+  private async findAvailableFolderName(
+    parentPath: string,
+    name: string,
+    id: string,
+    currentFolderPath?: string
+  ): Promise<string> {
+    const base = asciiSlugify(name) || 'unnamed';
+    const normalizedCurrent = currentFolderPath?.replace(/\\/g, '/');
+    const isAvailable = async (folderName: string): Promise<boolean> => {
+      const candidate = pathJoin(parentPath, folderName);
+      return candidate === normalizedCurrent || !(await this.electronService.fileExists(candidate));
+    };
+
+    if (await isAvailable(base)) return base;
+
+    const idPart = asciiSlugify(id).slice(-8) || 'character';
+    const withId = `${base}-${idPart}`;
+    if (await isAvailable(withId)) return withId;
+
+    let suffix = 2;
+    while (!(await isAvailable(`${withId}-${suffix}`))) suffix += 1;
+    return `${withId}-${suffix}`;
+  }
+
+  private characterPaths(
+    charactersPath: string,
+    folderName: string,
+    draft: boolean
+  ): { folderPath: string; filePath: string; relativePath: string } {
+    const relativeFolder = draft
+      ? pathJoin(CHARACTER_DRAFTS_FOLDER, folderName)
+      : folderName;
+    const relativePath = pathJoin(relativeFolder, `${folderName}.md`);
+    const folderPath = pathJoin(charactersPath, relativeFolder);
+    return {
+      folderPath,
+      filePath: pathJoin(charactersPath, relativePath),
+      relativePath,
+    };
+  }
+
   /**
-   * Creates a new character and saves it to disk as _<slug>.md
-   *
-   * Character storage location is intentionally decoupled from `category`.
-   * This always writes directly under the project's `characters/` folder.
+   * Creates `<characters>/<slug>/<slug>.md`.
    */
   async createCharacter(data: CharacterFormData): Promise<Character> {
+    let createdFolderPath: string | null = null;
     try {
       const books = data.books || [];
       // Validate book references
@@ -512,18 +561,23 @@ export class CharacterService {
       const bookCategories = normalizeBookCategories(data.bookCategories, books);
       await this.validateBookCategoryReferences(bookCategories);
 
-      const slug = slugify(data.name);
-      const filename = `_${slug}.md`;
-
-      let filePath: string;
-      let relativePath: string;
+      const id = generateId();
       const charactersPath = this.projectService.getCharactersFolderPath();
-      filePath = pathJoin(charactersPath, filename);
-      relativePath = filename;
+      const folderName = await this.findAvailableFolderName(charactersPath, data.name, id);
+      const { folderPath, filePath, relativePath } = this.characterPaths(
+        charactersPath,
+        folderName,
+        false
+      );
+      assertIpcSuccess(
+        await this.electronService.createDirectory(folderPath),
+        'Create character directory'
+      );
+      createdFolderPath = folderPath;
 
       const now = new Date();
       const character: Character = {
-        id: generateId(),
+        id,
         name: data.name,
         aliases: normalizeAliases(data.aliases),
         category: data.category,
@@ -550,6 +604,9 @@ export class CharacterService {
 
       return character;
     } catch (error) {
+      if (createdFolderPath) {
+        await this.electronService.deleteDirectoryRecursive(createdFolderPath);
+      }
       this.logger.error('Failed to create character', error);
       throw new Error(`Failed to create character: ${error}`);
     }
@@ -557,6 +614,7 @@ export class CharacterService {
 
   /** Creates a draft. User-authored fields may all be empty. */
   async createDraft(data: CharacterFormData): Promise<Character> {
+    let createdFolderPath: string | null = null;
     try {
       const books = data.books || [];
       await this.validateBookReferences(books);
@@ -564,9 +622,19 @@ export class CharacterService {
       await this.validateBookCategoryReferences(bookCategories);
 
       const id = generateId();
-      const filename = `_draft-${id}.md`;
       const charactersPath = this.projectService.getCharactersFolderPath();
-      const filePath = pathJoin(charactersPath, filename);
+      const draftsPath = pathJoin(charactersPath, CHARACTER_DRAFTS_FOLDER);
+      const folderName = await this.findAvailableFolderName(draftsPath, data.name, id);
+      const { folderPath, filePath, relativePath } = this.characterPaths(
+        charactersPath,
+        folderName,
+        true
+      );
+      assertIpcSuccess(
+        await this.electronService.createDirectory(folderPath),
+        'Create character draft directory'
+      );
+      createdFolderPath = folderPath;
       const now = new Date();
       const draft: Character = {
         id,
@@ -583,7 +651,7 @@ export class CharacterService {
         content: data.content || '',
         created: now,
         modified: now,
-        relativePath: filename,
+        relativePath,
         filePath,
       };
 
@@ -591,9 +659,128 @@ export class CharacterService {
       this.draftsSubject.next([draft, ...this.draftsSubject.value]);
       return draft;
     } catch (error) {
+      if (createdFolderPath) {
+        await this.electronService.deleteDirectoryRecursive(createdFolderPath);
+      }
       this.logger.error('Failed to create character draft', error);
       throw new Error(`Failed to create character draft: ${error}`);
     }
+  }
+
+  private rewriteMovedThumbnailReferences(
+    character: Character,
+    oldFolderPath: string,
+    newFolderPath: string
+  ): Pick<Character, 'thumbnails' | 'bookThumbnails'> {
+    const projectPath = this.projectService.getCurrentProject()?.path?.replace(/\\/g, '/');
+    if (!projectPath) {
+      return { thumbnails: character.thumbnails, bookThumbnails: character.bookThumbnails };
+    }
+
+    const toRelative = (absolutePath: string): string =>
+      absolutePath.replace(/\\/g, '/').replace(`${projectPath.replace(/\/+$/, '')}/`, '');
+    const oldPrefix = `${toRelative(oldFolderPath).replace(/\/+$/, '')}/`;
+    const newPrefix = `${toRelative(newFolderPath).replace(/\/+$/, '')}/`;
+    const rewrite = (raw: string): string => {
+      const parsed = parseThumbnailReference(raw);
+      if (!parsed || !parsed.replace(/\\/g, '/').startsWith(oldPrefix)) return raw;
+      return raw.replace(parsed, `${newPrefix}${parsed.replace(/\\/g, '/').slice(oldPrefix.length)}`);
+    };
+    const rewriteMap = (map?: Record<string, string>): Record<string, string> | undefined =>
+      map
+        ? Object.fromEntries(Object.entries(map).map(([style, raw]) => [style, rewrite(raw)]))
+        : undefined;
+
+    return {
+      thumbnails: rewriteMap(character.thumbnails),
+      bookThumbnails: character.bookThumbnails
+        ? Object.fromEntries(
+            Object.entries(character.bookThumbnails).map(([bookId, map]) => [
+              bookId,
+              rewriteMap(map) || {},
+            ])
+          )
+        : undefined,
+    };
+  }
+
+  /** Moves a folder-based record and keeps its main/book filenames aligned with the folder. */
+  private async relocateFolderCharacter(
+    character: Character,
+    name: string,
+    draft: boolean
+  ): Promise<Character> {
+    const charactersPath = this.projectService.getCharactersFolderPath();
+    const oldFolderPath = pathDirname(character.filePath);
+    const targetParent = draft
+      ? pathJoin(charactersPath, CHARACTER_DRAFTS_FOLDER)
+      : charactersPath;
+    const folderName = await this.findAvailableFolderName(
+      targetParent,
+      name,
+      character.id,
+      oldFolderPath
+    );
+    const destination = this.characterPaths(charactersPath, folderName, draft);
+    const oldMainName = pathBasename(character.filePath);
+    const stagedMainPath = pathJoin(destination.folderPath, oldMainName);
+
+    if (oldFolderPath !== destination.folderPath) {
+      const folderMove = await this.electronService.moveDirectory(
+        oldFolderPath,
+        destination.folderPath
+      );
+      if (!folderMove.success) {
+        throw new Error(`Failed to move character directory: ${folderMove.error}`);
+      }
+    }
+
+    const movedSidecars: Array<{ from: string; to: string }> = [];
+    try {
+      if (oldMainName !== pathBasename(destination.filePath)) {
+        const stagedRecord = { ...character, filePath: stagedMainPath };
+        const destinationRecord = { ...character, filePath: destination.filePath };
+        for (const bookId of character.books || []) {
+          const from = this.getBookPageFilePath(stagedRecord, bookId);
+          if (!(await this.electronService.fileExists(from))) continue;
+          const to = this.getBookPageFilePath(destinationRecord, bookId);
+          const sidecarMove = await this.electronService.moveDirectory(from, to);
+          if (!sidecarMove.success) {
+            throw new Error(`Failed to rename book page: ${sidecarMove.error}`);
+          }
+          movedSidecars.push({ from, to });
+        }
+
+        const mainMove = await this.electronService.moveDirectory(
+          stagedMainPath,
+          destination.filePath
+        );
+        if (!mainMove.success) {
+          throw new Error(`Failed to rename character file: ${mainMove.error}`);
+        }
+      }
+    } catch (error) {
+      for (const moved of movedSidecars.reverse()) {
+        await this.electronService.moveDirectory(moved.to, moved.from);
+      }
+      if (oldFolderPath !== destination.folderPath) {
+        await this.electronService.moveDirectory(destination.folderPath, oldFolderPath);
+      }
+      throw error;
+    }
+
+    return {
+      ...character,
+      ...this.rewriteMovedThumbnailReferences(
+        character,
+        oldFolderPath,
+        destination.folderPath
+      ),
+      draft: draft || undefined,
+      name,
+      relativePath: destination.relativePath,
+      filePath: destination.filePath,
+    };
   }
 
   /** Promotes an explicitly saved draft into the active character collection. */
@@ -609,12 +796,18 @@ export class CharacterService {
       throw new Error('A category is required before promoting this draft');
     }
 
-    const promoted: Character = {
-      ...draft,
-      draft: undefined,
-      modified: new Date(),
-    };
-    await this.saveCharacterToFile(promoted);
+    const relocated = isFolderBasedCharacterPath(draft.relativePath)
+      ? await this.relocateFolderCharacter(draft, draft.name, false)
+      : draft;
+    const promoted: Character = { ...relocated, draft: undefined, modified: new Date() };
+    try {
+      await this.saveCharacterToFile(promoted);
+    } catch (error) {
+      if (relocated.filePath !== draft.filePath) {
+        await this.relocateFolderCharacter(relocated, draft.name, true);
+      }
+      throw error;
+    }
 
     this.draftsSubject.next(this.draftsSubject.value.filter((item) => item.id !== id));
     this.charactersSubject.next(
@@ -633,7 +826,7 @@ export class CharacterService {
     id: string,
     data: Partial<CharacterFormData>
   ): Promise<Character | null> {
-    const project = requireProject(this.projectService.getCurrentProject());
+    requireProject(this.projectService.getCurrentProject());
 
     try {
       // Validate book references if books are being updated
@@ -655,55 +848,38 @@ export class CharacterService {
 
       let newFilePath = existingCharacter.filePath;
       let newRelativePath = existingCharacter.relativePath;
+      let relocatedCharacter = existingCharacter;
 
       // Category changes only update frontmatter; file moves/renames happen only on name changes.
       const nameChanged = data.name && data.name !== existingCharacter.name;
 
       if (nameChanged) {
         const newName = data.name || existingCharacter.name;
-        const newSlug = slugify(newName);
-        const newFilename = `_${newSlug}.md`;
-
-        // Preserve the existing directory (relative to `characters/`).
-        const lastSlash = existingCharacter.relativePath.lastIndexOf('/');
-        const oldRelDir = lastSlash === -1 ? '' : existingCharacter.relativePath.slice(0, lastSlash);
-        newRelativePath = oldRelDir ? pathJoin(oldRelDir, newFilename) : newFilename;
-
-        const oldAbsDir = pathDirname(existingCharacter.filePath);
-        const destFilePath = pathJoin(oldAbsDir, newFilename);
-
-        // Book pages are filename sidecars. Move them with the main file so a
-        // draft can be named (or any character renamed) without losing access
-        // to work already written for a book.
-        const movedSidecars: Array<{ from: string; to: string }> = [];
-        const destinationRecord = { ...existingCharacter, filePath: destFilePath };
-        try {
-          for (const bookId of existingCharacter.books || []) {
-            const oldBookPagePath = this.getBookPageFilePath(existingCharacter, bookId);
-            if (!(await this.electronService.fileExists(oldBookPagePath))) continue;
-            const newBookPagePath = this.getBookPageFilePath(destinationRecord, bookId);
-            const sidecarMove = await this.electronService.moveDirectory(
-              oldBookPagePath,
-              newBookPagePath
-            );
-            if (!sidecarMove.success) {
-              throw new Error(`Failed to move book page: ${sidecarMove.error}`);
-            }
-            movedSidecars.push({ from: oldBookPagePath, to: newBookPagePath });
-          }
-
-          const moveResult = await this.electronService.moveDirectory(existingCharacter.filePath, destFilePath);
+        if (isFolderBasedCharacterPath(existingCharacter.relativePath)) {
+          relocatedCharacter = await this.relocateFolderCharacter(
+            existingCharacter,
+            newName,
+            isDraft
+          );
+          newFilePath = relocatedCharacter.filePath;
+          newRelativePath = relocatedCharacter.relativePath;
+        } else {
+          // Transitional behavior for the former `_name.md` layout.
+          const newFilename = `_${asciiSlugify(newName) || 'unnamed'}.md`;
+          const oldRelDir = pathDirname(existingCharacter.relativePath);
+          newRelativePath = oldRelDir === '.'
+            ? newFilename
+            : pathJoin(oldRelDir, newFilename);
+          const destFilePath = pathJoin(pathDirname(existingCharacter.filePath), newFilename);
+          const moveResult = await this.electronService.moveDirectory(
+            existingCharacter.filePath,
+            destFilePath
+          );
           if (!moveResult.success) {
             throw new Error(`Failed to move character file: ${moveResult.error}`);
           }
-        } catch (moveError) {
-          for (const moved of movedSidecars.reverse()) {
-            await this.electronService.moveDirectory(moved.to, moved.from);
-          }
-          throw moveError;
+          newFilePath = destFilePath;
         }
-
-        newFilePath = destFilePath;
       }
 
       const nextBooks = data.books ?? existingCharacter.books;
@@ -713,13 +889,13 @@ export class CharacterService {
       );
       await this.validateBookCategoryReferences(nextBookCategories);
       const nextBookThumbnails = normalizeBookThumbnailsMap(
-        'bookThumbnails' in data ? data.bookThumbnails : existingCharacter.bookThumbnails,
+        'bookThumbnails' in data ? data.bookThumbnails : relocatedCharacter.bookThumbnails,
         nextBooks
       );
 
       // Create updated character
       const updatedCharacter: Character = {
-        ...existingCharacter,
+        ...relocatedCharacter,
         name: data.name ?? existingCharacter.name,
         aliases: 'aliases' in data ? normalizeAliases(data.aliases) : existingCharacter.aliases,
         category: data.category ?? existingCharacter.category,
@@ -728,7 +904,7 @@ export class CharacterService {
         bookCategories: nextBookCategories,
         thumbnails: 'thumbnails' in data
           ? normalizeThumbnailsMap(data.thumbnails)
-          : existingCharacter.thumbnails,
+          : relocatedCharacter.thumbnails,
         bookThumbnails: nextBookThumbnails,
         prompts: data.prompts !== undefined ? normalizePrompts(data.prompts) : existingCharacter.prompts,
         content: data.content !== undefined ? data.content : existingCharacter.content,
@@ -779,7 +955,9 @@ export class CharacterService {
         return false;
       }
 
-      const deleteResult = await this.electronService.deleteFile(character.filePath);
+      const deleteResult = isFolderBasedCharacterPath(character.relativePath)
+        ? await this.electronService.deleteDirectoryRecursive(pathDirname(character.filePath))
+        : await this.electronService.deleteFile(character.filePath);
       if (!deleteResult.success) {
         throw new Error(`Failed to delete character: ${deleteResult.error}`);
       }
@@ -831,7 +1009,8 @@ export class CharacterService {
       // Reload character from file
       const loaded = await this.loadCharacterFromFile(
         existingCharacter.filePath,
-        existingCharacter.relativePath
+        existingCharacter.relativePath,
+        parseCharacterMainFileLocation(existingCharacter.relativePath)?.draft
       );
       if (!loaded) {
         return null;
@@ -877,7 +1056,10 @@ export class CharacterService {
     try {
       const frontmatter: CharacterFrontmatter = {
         id: character.id,
-        ...(character.draft ? { draft: true } : {}),
+        // Folder-based drafts are identified by `@drafts`, not duplicated in metadata.
+        ...(character.draft && !isFolderBasedCharacterPath(character.relativePath)
+          ? { draft: true }
+          : {}),
         name: character.name,
         ...(character.aliases && character.aliases.length > 0
           ? { aliases: character.aliases }
@@ -970,7 +1152,7 @@ export class CharacterService {
       return;
     }
 
-    if (!event.filename.endsWith('.md') || !event.filename.startsWith('_')) {
+    if (!event.filename.toLowerCase().endsWith('.md')) {
       return;
     }
 
@@ -985,6 +1167,13 @@ export class CharacterService {
       const character = [...activeCharacters, ...drafts].find(
         (char) => char.filePath === event.path
       );
+      const normalizedRoot = charactersPath.replace(/\\/g, '/').replace(/\/+$/, '');
+      const relativePath = event.path
+        .replace(/\\/g, '/')
+        .slice(normalizedRoot.length)
+        .replace(/^\/+/, '');
+      const isPotentialMainFile =
+        !!parseCharacterMainFileLocation(relativePath) || isLegacyCharacterMainFile(relativePath);
 
       if (event.type === 'unlink') {
         if (character) {
@@ -1001,7 +1190,7 @@ export class CharacterService {
         if (character) {
           await this.refreshCharacter(character.id);
           this.logger.log(`Character reloaded: ${character.name}`);
-        } else {
+        } else if (isPotentialMainFile) {
           await this.forceReloadCharacters();
           this.logger.log('Characters reloaded due to new file');
         }
@@ -1044,7 +1233,13 @@ export class CharacterService {
     if (!parsed) {
       return null;
     }
-    const absolutePath = resolveThumbnailPath(project.path, parsed);
+    const absolutePath = resolveThumbnailPath(
+      project.path,
+      parsed,
+      isFolderBasedCharacterPath(character.relativePath)
+        ? pathDirname(character.filePath)
+        : undefined
+    );
     try {
       const dataUrl = await this.electronService.getImageAsDataUrl(absolutePath);
       if (dataUrl) {

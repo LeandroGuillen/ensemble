@@ -45,24 +45,21 @@ npm run build-electron
 ```
 project-folder/
 ├── ensemble.json           # Project metadata: categories, tags, settings, lastSession, relationships
-└── characters/             # Character folders organized by category
-    ├── <category-slug>/    # Category folder (e.g., "main-characters")
-    │   └── <character-slug>/  # Character folder (e.g., "john-doe")
-    │       ├── <character-slug>.md    # Main character file
-    │       ├── thumbnail.png          # Character thumbnail (any image format)
-    │       └── additional-field.md    # Additional markdown files become fields
-    └── _deleted/           # Trash folder for deleted characters
+└── characters/             # Configurable character root
+    ├── roger-rabbit/
+    │   ├── roger-rabbit.md       # Main file (frontmatter + description)
+    │   ├── roger-rabbit.n26.md   # Book page, keyed by book code
+    │   ├── portrait.webp          # Selected style thumbnail
+    │   └── reference.psd          # Unrecognized files are ignored
+    └── @drafts/                   # Draft character folders
+        └── unnamed-a1b2c3/
+            └── unnamed-a1b2c3.md
 ```
 
-### Migrating from Old Structure
-
-If you have an existing project with a global `thumbnails/` directory, use the migration script:
-
-```bash
-node scripts/migrate-to-folder-structure.js /path/to/your/project
-```
-
-See [THUMBNAILS_MIGRATION.md](THUMBNAILS_MIGRATION.md) for detailed migration instructions.
+Folder names are derived from an ASCII-only transliteration of the character name
+(`José García` becomes `jose-garcia`). If that slug is already in use, Ensemble
+appends part of the stable character ID. The former `_name.md` layout is still
+readable for compatibility, but newly created characters use this structure.
 
 ## Technology Stack
 
