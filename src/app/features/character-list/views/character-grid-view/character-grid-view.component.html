@@ -18,14 +18,14 @@
       (keydown.space)="onCharacterClick(character); $event.preventDefault()"
       >
       <div class="drag-preview-chip" *cdkDragPreview>
-        {{ character.name }}
+        {{ getCharacterDisplayName(character) }}
       </div>
       <div class="drag-placeholder" *cdkDragPlaceholder></div>
       <div class="character-thumbnail">
         @if (getCharacterThumbnailDataUrl(character)) {
           <img
             [src]="getCharacterThumbnailDataUrl(character)"
-            [alt]="character.name"
+            [alt]="getCharacterDisplayName(character)"
             draggable="false"
             (error)="onImageError($event)"
             />
@@ -44,7 +44,10 @@
       </div>
       <div class="character-info">
         <h3 class="character-name">
-          {{ character.name }}
+          {{ getCharacterDisplayName(character) }}
+          @if (character.draft) {
+            <span class="draft-badge">Draft</span>
+          }
           @if (isPov(character)) {
             <span class="pov-star" [style.color]="povBadgeColor" title="Point of view character" aria-label="Point of view character">★</span>
           }

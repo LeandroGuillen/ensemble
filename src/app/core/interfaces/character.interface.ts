@@ -7,6 +7,8 @@ export interface CharacterPrompt {
 export interface Character {
   /** Stable identity stored in frontmatter; survives rename/move. */
   id: string;
+  /** Explicit staging state. Missing/false means this is an active character. */
+  draft?: boolean;
   name: string;
   /** Alternative names (a.k.a.'s); matched by character search, subtle in lists. */
   aliases?: string[];
@@ -47,12 +49,15 @@ export interface CharacterFormData {
 export interface CharacterFrontmatter {
   /** Stable character identity; assigned on first load when missing. */
   id?: string;
-  name: string;
+  /** Optional only for drafts. Active character files still require a name. */
+  name?: string;
+  /** Drafts are excluded from all normal character consumers until promoted. */
+  draft?: boolean;
   /** Alternative names (a.k.a.'s); omitted when empty. Accepts a list or a single string. */
   aliases?: string[] | string;
-  category: string;
-  tags: string[];
-  books: string[];
+  category?: string;
+  tags?: string[];
+  books?: string[];
   /** Optional per-book category overrides; missing keys fall back to `category`. */
   bookCategories?: Record<string, string>;
   thumbnails?: Record<string, string>;

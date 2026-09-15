@@ -588,6 +588,10 @@ export class BackstageComponent implements OnInit {
     this.characterEditDialog.openCreate(name);
   }
 
+  startDraftFromConcept(concept: CharacterConcept): void {
+    this.characterEditDialog.openCreateDraft(concept.title || '', concept.notes || '');
+  }
+
   async addNameList(): Promise<void> {
     try {
       await this.backstageService.addNameList({
@@ -633,6 +637,10 @@ export class BackstageComponent implements OnInit {
 
   async takeTheStageWithName(name: string): Promise<void> {
     this.characterEditDialog.openCreate(name);
+  }
+
+  startDraftWithName(name: string): void {
+    this.characterEditDialog.openCreateDraft(name);
   }
 
   async reload(): Promise<void> {

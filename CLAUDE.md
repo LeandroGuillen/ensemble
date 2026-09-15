@@ -154,6 +154,8 @@ modified: "2024-01-20T14:45:00Z"
 
 Character ID is a stable value stored in frontmatter (`id`). The file path under `characters/` is location only and can change on rename. Existing files without `id` are assigned one on first load, and leftover path-based refs (casts, pinboards, book PoVs, plot threads) are remapped.
 
+**Character drafts**: A character file with `draft: true` is shown only in the Character Drawer. Draft user fields (including `name` and `category`) may be empty, and book assignments do not promote a draft. `CharacterService` exposes drafts separately from active characters so casts, pinboards, plot boards, PoV pickers, and ordinary character counts do not include them. Promotion is explicit, preserves the stable ID and all content, and requires the normal character fields (`name` and `category`). Drafts created in-app use `_draft-<id>.md`; file location is not the source of draft status.
+
 **Character styles**: Project settings define `characterStyles` (seeded with a single `Default` style) and `defaultCharacterStyle`. When more than one style exists, the character list shows a Character Style dropdown. With only one style, the list selector is hidden and character detail offers a subtle link to Settings to add another. Missing style portraits show a placeholder. Pinboard/casts use `defaultCharacterStyle`.
 
 ### Location File Format
@@ -301,4 +303,3 @@ This project was built using **Kiro** (see `.kiro/specs/ensemble/`):
 - `tasks.md` - Implementation task breakdown
 
 Reference these files for understanding original requirements and design rationale.
-

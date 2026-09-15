@@ -1,5 +1,5 @@
 <div class="character-detail">
-  <app-page-header [title]="isEditing ? 'Edit Character' : 'New Character'">
+  <app-page-header [title]="isDraftMode ? (isEditing ? 'Edit Character Draft' : 'New Character Draft') : (isEditing ? 'Edit Character' : 'New Character')">
     <div pageHeaderSuffix class="header-meta">
       @if (isEditing && character) {
         <button
@@ -28,6 +28,15 @@
       <kbd class="shortcut-hint">ESC</kbd>
     </button>
     @if (activeContentTab === 'main') {
+      @if (isDraftMode) {
+        <button
+          type="button"
+          class="btn btn-secondary"
+          [disabled]="isSaving"
+          (click)="promoteDraft()"
+          title="Promote to a real character"
+        >★ Take the Stage</button>
+      }
       <button
         type="button"
         class="btn btn-primary"
@@ -38,7 +47,7 @@
         @if (isSaving) {
           <span class="spinner spinner-sm"></span>
         }
-        {{ isSaving ? 'Saving…' : isEditing ? 'Save Changes' : 'Create Character' }}
+        {{ isSaving ? 'Saving…' : isDraftMode ? (isEditing ? 'Save Draft' : 'Create Draft') : (isEditing ? 'Save Changes' : 'Create Character') }}
         @if (!isSaving) {
           <kbd class="shortcut-hint">⌃↵</kbd>
         }
@@ -166,7 +175,7 @@
 
             <div class="hero-main">
               <div class="hero-field">
-                <label class="form-label" for="name">Name *</label>
+                <label class="form-label" for="name">Name{{ isDraftMode ? '' : ' *' }}</label>
                 <div class="name-input-group">
                   <input
                     #nameInput
@@ -227,7 +236,7 @@
 
               @if (categories.length > 0) {
                 <div class="hero-field form-group-category" [class.field-highlight]="characterForm.get('category')?.invalid && characterForm.get('category')?.touched">
-                  <label class="form-label">Category *</label>
+                  <label class="form-label">Category{{ isDraftMode ? '' : ' *' }}</label>
                   <app-category-toggle
                     [options]="categoryToggleOptions"
                     [selectedValue]="getSelectedCategoryForActiveTab()"
@@ -353,7 +362,7 @@
                   [disabled]="isSaving"
                   title="Delete character"
                 >
-                  Delete character
+                  Delete {{ isDraftMode ? 'draft' : 'character' }}
                 </button>
               </div>
             }

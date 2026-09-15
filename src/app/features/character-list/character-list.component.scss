@@ -295,22 +295,17 @@
   opacity: 0.85;
 }
 
-.title-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 28px;
-  height: 24px;
-  padding: 0 8px;
-  background: var(--color-bg-tertiary);
-  border: 1px solid var(--color-border-subtle);
+.character-scope-toggle {
+  margin-left: var(--spacing-sm);
+}
+
+.scope-count {
+  min-width: 1.25rem;
+  margin-left: 0.35rem;
+  padding: 0.1rem 0.35rem;
   border-radius: 999px;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: var(--color-text-muted);
+  background: color-mix(in srgb, currentColor 12%, transparent);
   font-variant-numeric: tabular-nums;
-  line-height: 1;
-  white-space: nowrap;
 }
 
 // View Toggle Switch

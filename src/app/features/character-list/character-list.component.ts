@@ -4,6 +4,7 @@ import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { ChangeDetectorRef, Component, DestroyRef, ElementRef, HostListener, inject, OnInit, ViewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Observable } from 'rxjs';
 import { Book, Cast, Category, Character, CharacterStyle, Project, Tag } from '../../core/interfaces';
 import { CharacterEditDialogService, CharacterService, LoggingService, MetadataService, NotificationService, ProjectService } from '../../core/services';
@@ -16,6 +17,7 @@ import {
 } from '../../core/utils/character-category.utils';
 import { contrastTextColor } from '../../core/utils/color-contrast.utils';
 import { aliasesMatchSearch } from '../../core/utils/character-alias.utils';
+import { getCharacterDisplayName } from '../../core/utils/character-display.utils';
 import { resolveThumbnailForBookStyle } from '../../core/utils/thumbnail.utils';
 import { CharacterFilterComponent } from '../../shared/character-filter/character-filter.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
@@ -59,6 +61,7 @@ export class CharacterListComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   characters$: Observable<Character[]>;
+  drafts$: Observable<Character[]>;
   categories: Category[] = [];
   tags: Tag[] = [];
   casts: Cast[] = [];
@@ -82,7 +85,10 @@ export class CharacterListComponent implements OnInit {
   newCastName = '';
 
   allCharacters: Character[] = [];
+  activeCharacters: Character[] = [];
+  draftCharacters: Character[] = [];
   filteredCharacters: Character[] = [];
+  drawerMode = false;
   // Use service cache - sync from service on init and after loading
   thumbnailDataUrls: Map<string, string> = new Map();
   thumbnailModificationTimes: Map<string, string> = new Map();
@@ -110,6 +116,8 @@ export class CharacterListComponent implements OnInit {
 
   constructor(
     private characterService: CharacterService,
+    private route: ActivatedRoute,
+    private router: Router,
     private projectService: ProjectService,
     private metadataService: MetadataService,
     public metadataHelper: MetadataHelperService,
@@ -121,9 +129,17 @@ export class CharacterListComponent implements OnInit {
     private notificationService: NotificationService
   ) {
     this.characters$ = this.characterService.getCharacters();
+    this.drafts$ = this.characterService.getDrafts();
   }
 
   ngOnInit(): void {
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((params) => {
+        this.drawerMode = params.get('drawer') === 'true';
+        this.updateDisplayedCollection();
+      });
+
     const savedSidebarState = localStorage.getItem('characterFiltersSidebarOpen');
     if (savedSidebarState !== null) {
       this.filtersSidebarOpen = savedSidebarState === 'true';
@@ -247,13 +263,33 @@ export class CharacterListComponent implements OnInit {
 
     // Subscribe to character changes and apply filters
     this.characters$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((characters) => {
-      this.allCharacters = characters;
-      this.filteredCharacters = this.filterAndSortCharacters(characters);
-      this.recomputeGroups();
-      this.updateCategoryDropListIds();
-      // Sync cache from service first (to restore cached images)
-      this.syncCacheFromService();
-      void this.loadThumbnailDataUrls(characters);
+      this.activeCharacters = characters;
+      this.updateDisplayedCollection();
+    });
+
+    this.drafts$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((drafts) => {
+      this.draftCharacters = drafts;
+      this.updateDisplayedCollection();
+    });
+  }
+
+  private updateDisplayedCollection(): void {
+    this.allCharacters = this.drawerMode ? this.draftCharacters : this.activeCharacters;
+    this.filteredCharacters = this.filterAndSortCharacters(this.allCharacters);
+    this.selectedCharacterIds = [];
+    this.recomputeGroups();
+    this.updateCategoryDropListIds();
+    this.syncCacheFromService();
+    void this.loadThumbnailDataUrls(this.allCharacters);
+  }
+
+  setDrawerMode(drawerMode: boolean): void {
+    if (this.drawerMode === drawerMode) return;
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { drawer: drawerMode ? 'true' : null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
     });
   }
 
@@ -430,7 +466,11 @@ export class CharacterListComponent implements OnInit {
   }
 
   createNewCharacter(): void {
-    this.characterEditDialog.openCreate();
+    if (this.drawerMode) {
+      this.characterEditDialog.openCreateDraft();
+    } else {
+      this.characterEditDialog.openCreate();
+    }
   }
 
   editCharacter(character: Character): void {
@@ -438,16 +478,21 @@ export class CharacterListComponent implements OnInit {
       this.logger.error('Character or character.id is missing:', character);
       return;
     }
-    this.characterEditDialog.openEdit(character.id);
+    if (character.draft) {
+      this.characterEditDialog.openEditDraft(character.id);
+    } else {
+      this.characterEditDialog.openEdit(character.id);
+    }
   }
 
   async deleteCharacter(character: Character, event: Event): Promise<void> {
     event.stopPropagation();
 
-    if (await this.modalService.confirm(`Are you sure you want to delete "${character.name}"?\n\nThis action cannot be undone.`)) {
+    const displayName = this.getCharacterDisplayName(character);
+    if (await this.modalService.confirm(`Are you sure you want to delete "${displayName}"?\n\nThis action cannot be undone.`)) {
       try {
         await this.characterService.deleteCharacter(character.id);
-        this.notificationService.showSuccess(`Character "${character.name}" deleted successfully`);
+        this.notificationService.showSuccess(`${character.draft ? 'Draft' : 'Character'} "${displayName}" deleted successfully`);
       } catch (error) {
         this.logger.error("Failed to delete character:", error);
       }
@@ -640,7 +685,7 @@ export class CharacterListComponent implements OnInit {
       }
 
       // PoV-only filter
-      if (this.povOnly) {
+      if (this.povOnly && !this.drawerMode) {
         if (!this.isCharacterPov(character.id)) {
           return false;
         }
@@ -968,7 +1013,7 @@ getFilterSummary(): string {
 
     if (this.sortBy === 'name') {
       sorted.sort((a, b) => {
-        const comparison = a.name.localeCompare(b.name);
+        const comparison = this.getCharacterDisplayName(a).localeCompare(this.getCharacterDisplayName(b));
         return this.sortDirection === 'asc' ? comparison : -comparison;
       });
     } else if (this.sortBy === 'category') {
@@ -993,11 +1038,15 @@ getFilterSummary(): string {
         }
 
         // Secondary sort by name within same category
-        return a.name.localeCompare(b.name);
+        return this.getCharacterDisplayName(a).localeCompare(this.getCharacterDisplayName(b));
       });
     }
 
     return sorted;
+  }
+
+  getCharacterDisplayName(character: Character): string {
+    return getCharacterDisplayName(character);
   }
 
   // Methods for view components

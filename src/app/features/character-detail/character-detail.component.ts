@@ -112,6 +112,7 @@ export class CharacterDetailComponent
   fieldErrors: Record<string, string | null> = {};
 
   isEditing = false;
+  isDraftMode = false;
   isLoading = false;
   activeTab: 'basic' = 'basic';
   /** 'main' or bookId; which content tab is active */
@@ -183,6 +184,7 @@ export class CharacterDetailComponent
     private metadataHelper: MetadataHelperService,
     private ngZone: NgZone
   ) {
+    this.isDraftMode = this.route.snapshot.data['draft'] === true;
     this.characterForm = this.createForm();
   }
 
@@ -226,7 +228,7 @@ export class CharacterDetailComponent
         }));
 
         // Set default category only when form has no valid selection (don't overwrite user's choice)
-        if (this.categories.length > 0 && !this.isEditing) {
+        if (this.categories.length > 0 && !this.isEditing && !this.isDraftMode) {
           const currentValue = this.characterForm.get('category')?.value;
           const hasValidSelection =
             currentValue && this.categories.some((c) => c.id === currentValue);
@@ -261,17 +263,18 @@ export class CharacterDetailComponent
         } else {
           this.isEditing = false;
           this.character = null;
-          const defaultCategory =
-            this.categories.find(
-              (category) =>
-                category.id === this.currentProject?.metadata.settings.defaultCategory
-            ) || this.categories[0];
+          const defaultCategory = this.isDraftMode
+            ? undefined
+            : this.categories.find(
+                (category) =>
+                  category.id === this.currentProject?.metadata.settings.defaultCategory
+              ) || this.categories[0];
           this.characterForm.reset({
             name: '',
             category: defaultCategory?.id || '',
             tags: [],
             books: [],
-            content: '',
+            content: this.isDraftMode ? history.state?.initialContent || '' : '',
           });
           this.thumbnailsMap = {};
           this.bookCategoriesMap = {};
@@ -382,22 +385,22 @@ export class CharacterDetailComponent
   }
 
   private createForm(): FormGroup {
+    const nameValidators = this.isDraftMode
+      ? [Validators.maxLength(100)]
+      : [Validators.required, Validators.minLength(1), Validators.maxLength(100)];
+    const categoryValidators = this.isDraftMode ? [] : [Validators.required];
     return this.fb.group({
       name: [
         "",
         {
-          validators: [
-            Validators.required,
-            Validators.minLength(1),
-            Validators.maxLength(100),
-          ],
+          validators: nameValidators,
           updateOn: 'blur' // Validate on blur for better UX
         }
       ],
       category: [
         "",
         {
-          validators: [Validators.required],
+          validators: categoryValidators,
           updateOn: 'change' // Validate immediately on change
         }
       ],
@@ -419,12 +422,16 @@ export class CharacterDetailComponent
 
     try {
       // First check if character exists in memory
-      let character = this.characterService.getCharacterById(id);
+      let character = this.isDraftMode
+        ? this.characterService.getDraftById(id)
+        : this.characterService.getCharacterById(id);
 
       // If not found, ensure characters are loaded first
       if (!character && this.currentProject) {
         await this.characterService.loadCharacters(this.currentProject.path);
-        character = this.characterService.getCharacterById(id);
+        character = this.isDraftMode
+          ? this.characterService.getDraftById(id)
+          : this.characterService.getCharacterById(id);
       }
 
       // If still not found, character doesn't exist
@@ -444,7 +451,10 @@ export class CharacterDetailComponent
         this.character = refreshedCharacter;
 
         if (id !== refreshedCharacter.id) {
-          this.router.navigate(['/character', refreshedCharacter.id], { replaceUrl: true });
+          this.router.navigate(
+            [this.isDraftMode ? '/character-draft' : '/character', refreshedCharacter.id],
+            { replaceUrl: true }
+          );
         }
 
         this.characterForm.patchValue({
@@ -638,8 +648,10 @@ export class CharacterDetailComponent
         await this.characterService.saveBookPage(this.character.id, bookId, content);
         this.bookPageOriginalContent[bookId] = content;
       }
-      this.notificationService.showSuccess('Character saved successfully');
-      this.router.navigate(['/characters']);
+      this.notificationService.showSuccess(this.isDraftMode ? 'Draft saved successfully' : 'Character saved successfully');
+      this.router.navigate(['/characters'], {
+        queryParams: this.isDraftMode ? { drawer: 'true' } : undefined,
+      });
     } catch (err) {
       this.notificationService.showError(err instanceof Error ? err.message : 'Failed to save book page');
       this.cdr.markForCheck();
@@ -682,28 +694,7 @@ export class CharacterDetailComponent
       // Commit any pending alias draft so it is included in the save.
       this.addAlias();
 
-      const formData: CharacterFormData = {
-        name: this.characterForm.value.name,
-        aliases: [...this.aliases],
-        category: this.characterForm.value.category,
-        tags: this.characterForm.value.tags || [],
-        books: this.characterForm.value.books || [],
-        bookCategories: normalizeBookCategories(
-          this.bookCategoriesMap,
-          this.characterForm.value.books || []
-        ),
-        thumbnails: { ...this.thumbnailsMap },
-        bookThumbnails: normalizeBookThumbnailsMap(
-          this.bookThumbnailsMap,
-          this.characterForm.value.books || []
-        ),
-        prompts: this.prompts.map((p) => ({
-          name: p.name,
-          positive: p.positive,
-          negative: p.negative,
-        })),
-        content: this.characterForm.value.content || '',
-      };
+      const formData = this.buildFormData();
 
       if (this.isEditing && this.character) {
         const updatedCharacter = await this.characterService.updateCharacter(
@@ -713,17 +704,89 @@ export class CharacterDetailComponent
         if (!updatedCharacter) {
           throw new Error("Character not found");
         }
-        this.notificationService.showSuccess("Character saved successfully");
+        this.notificationService.showSuccess(
+          this.isDraftMode ? "Draft saved successfully" : "Character saved successfully"
+        );
       } else {
-        await this.characterService.createCharacter(formData);
-        this.notificationService.showSuccess("Character created successfully");
+        if (this.isDraftMode) {
+          await this.characterService.createDraft(formData);
+          this.notificationService.showSuccess("Draft created successfully");
+        } else {
+          await this.characterService.createCharacter(formData);
+          this.notificationService.showSuccess("Character created successfully");
+        }
       }
 
-      this.router.navigate(["/characters"]);
+      this.router.navigate(["/characters"], {
+        queryParams: this.isDraftMode ? { drawer: 'true' } : undefined,
+      });
     } catch (error) {
-      this.notificationService.showError(`Failed to save character: ${error}`);
+      this.notificationService.showError(
+        `Failed to save ${this.isDraftMode ? 'draft' : 'character'}: ${error}`
+      );
       this.logger.error("Save error:", error);
       this.cdr.markForCheck();
+    } finally {
+      this.isSaving = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  private buildFormData(): CharacterFormData {
+    const books = this.characterForm.value.books || [];
+    return {
+      name: this.characterForm.value.name || '',
+      aliases: [...this.aliases],
+      category: this.characterForm.value.category || '',
+      tags: this.characterForm.value.tags || [],
+      books,
+      bookCategories: normalizeBookCategories(this.bookCategoriesMap, books),
+      thumbnails: { ...this.thumbnailsMap },
+      bookThumbnails: normalizeBookThumbnailsMap(this.bookThumbnailsMap, books),
+      prompts: this.prompts.map((prompt) => ({ ...prompt })),
+      content: this.characterForm.value.content || '',
+    };
+  }
+
+  async promoteDraft(): Promise<void> {
+    if (!this.isDraftMode || this.isSaving) return;
+
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+      active.blur();
+    }
+    this.addAlias();
+
+    const data = this.buildFormData();
+    if (!data.name.trim()) {
+      this.notificationService.showError('Add a name before promoting this draft.');
+      this.nameInput?.nativeElement.focus();
+      return;
+    }
+    if (!data.category.trim()) {
+      this.notificationService.showError('Choose a category before promoting this draft.');
+      document.querySelector('.form-group-category')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    this.isSaving = true;
+    this.cdr.markForCheck();
+    try {
+      let draft = this.character;
+      if (this.isEditing && draft) {
+        draft = await this.characterService.updateCharacter(draft.id, data);
+      } else {
+        draft = await this.characterService.createDraft(data);
+      }
+      if (!draft) throw new Error('Character draft not found');
+      const promoted = await this.characterService.promoteDraft(draft.id);
+      this.notificationService.showSuccess(`“${promoted.name}” is now a character.`);
+      await this.router.navigate(['/character', promoted.id]);
+    } catch (error) {
+      this.notificationService.showError(
+        error instanceof Error ? error.message : 'Failed to promote character draft'
+      );
+      this.logger.error('Promote draft error:', error);
     } finally {
       this.isSaving = false;
       this.cdr.markForCheck();
@@ -800,7 +863,9 @@ export class CharacterDetailComponent
     if (isFromApp && window.history.length > 1) {
       this.location.back();
     } else {
-      this.router.navigate(["/characters"]);
+      this.router.navigate(["/characters"], {
+        queryParams: this.isDraftMode ? { drawer: 'true' } : undefined,
+      });
     }
   }
 
@@ -1413,7 +1478,7 @@ export class CharacterDetailComponent
     }
 
     const confirmed = await this.modalService.confirm(
-      `Are you sure you want to delete "${this.character.name}"?\n\nThis action cannot be undone.`
+      `Are you sure you want to delete "${this.character.name || 'Unnamed draft'}"?\n\nThis action cannot be undone.`
     );
 
     if (!confirmed) {
@@ -1422,8 +1487,12 @@ export class CharacterDetailComponent
 
     try {
       await this.characterService.deleteCharacter(this.character.id);
-      this.notificationService.showSuccess(`Character "${this.character.name}" deleted successfully`);
-      this.router.navigate(["/characters"]);
+      this.notificationService.showSuccess(
+        `${this.isDraftMode ? 'Draft' : 'Character'} "${this.character.name || 'Unnamed draft'}" deleted successfully`
+      );
+      this.router.navigate(["/characters"], {
+        queryParams: this.isDraftMode ? { drawer: 'true' } : undefined,
+      });
     } catch (error) {
       this.notificationService.showError(`Failed to delete character: ${error}`);
       this.logger.error("Delete error:", error);

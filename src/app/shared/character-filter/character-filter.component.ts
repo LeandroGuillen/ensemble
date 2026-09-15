@@ -44,6 +44,7 @@ export class CharacterFilterComponent {
   @Input() selectedBook = '';
   @Input() selectedPictureFilter: '' | 'with' | 'without' = '';
   @Input() povOnly = false;
+  @Input() allowPov = true;
   @Input() isExpanded = false;
   @Input() sidebar = false;
 

@@ -39,6 +39,26 @@ export const routes: Routes = [
     canDeactivate: [characterPickerGuard],
   },
   {
+    path: "character-draft/:id",
+    loadComponent: () =>
+      import("./features/character-detail/character-detail.component").then(
+        (m) => m.CharacterDetailComponent
+      ),
+    canActivate: [projectGuard],
+    canDeactivate: [characterPickerGuard],
+    data: { draft: true },
+  },
+  {
+    path: "character-draft",
+    loadComponent: () =>
+      import("./features/character-detail/character-detail.component").then(
+        (m) => m.CharacterDetailComponent
+      ),
+    canActivate: [projectGuard],
+    canDeactivate: [characterPickerGuard],
+    data: { draft: true },
+  },
+  {
     path: "pinboard",
     loadComponent: () =>
       import("./features/pinboard-view/pinboard-view.component").then(

@@ -40,6 +40,8 @@ function normalizePrompts(raw: unknown): CharacterPrompt[] {
 export class CharacterService {
   private charactersSubject = new BehaviorSubject<Character[]>([]);
   public characters$ = this.charactersSubject.asObservable();
+  private draftsSubject = new BehaviorSubject<Character[]>([]);
+  public drafts$ = this.draftsSubject.asObservable();
   private hasLoadedForCurrentProject = false;
   private currentProjectPath: string | null = null;
   
@@ -105,6 +107,15 @@ export class CharacterService {
     return this.characters$;
   }
 
+  /** Drafts are deliberately isolated from all normal character consumers. */
+  getDrafts(): Observable<Character[]> {
+    return this.drafts$;
+  }
+
+  getDraftsSnapshot(): Character[] {
+    return this.draftsSubject.value;
+  }
+
   /** Returns the currently cached characters for consumers that need an immediate snapshot. */
   getCharactersSnapshot(): Character[] {
     return this.charactersSubject.value;
@@ -114,10 +125,23 @@ export class CharacterService {
     return this.findCharacter(id);
   }
 
+  getDraftById(id: string): Character | undefined {
+    return this.findInCollection(this.draftsSubject.value, id);
+  }
+
   /** Matches stable id, or a leftover path-based id via `relativePath`. */
   private findCharacter(id: string): Character | undefined {
+    return this.findInCollection(this.charactersSubject.value, id);
+  }
+
+  /** Internal lookup for operations shared by active characters and drafts. */
+  private findRecord(id: string): Character | undefined {
+    return this.findCharacter(id) || this.getDraftById(id);
+  }
+
+  private findInCollection(characters: Character[], id: string): Character | undefined {
     const normalized = normalizeCharacterRelativePath(id);
-    return this.charactersSubject.value.find(
+    return characters.find(
       (char) =>
         char.id === id ||
         char.id === normalized ||
@@ -140,7 +164,7 @@ export class CharacterService {
    * Checks if a book page file exists for the given character and book.
    */
   async bookPageExists(characterId: string, bookId: string): Promise<boolean> {
-    const character = this.getCharacterById(characterId);
+    const character = this.findRecord(characterId);
     if (!character) return false;
     const filePath = this.getBookPageFilePath(character, bookId);
     const result = await this.electronService.fileExists(filePath);
@@ -152,7 +176,7 @@ export class CharacterService {
    * Book pages are plain markdown (no frontmatter).
    */
   async getBookPageContent(characterId: string, bookId: string): Promise<string | null> {
-    const character = this.getCharacterById(characterId);
+    const character = this.findRecord(characterId);
     if (!character) return null;
     const filePath = this.getBookPageFilePath(character, bookId);
     const exists = await this.electronService.fileExists(filePath);
@@ -166,7 +190,7 @@ export class CharacterService {
    * Saves content to a character's book page file. Creates the file if it does not exist.
    */
   async saveBookPage(characterId: string, bookId: string, content: string): Promise<void> {
-    const character = this.getCharacterById(characterId);
+    const character = this.findRecord(characterId);
     if (!character) {
       throw new Error(`Character not found: ${characterId}`);
     }
@@ -201,6 +225,7 @@ export class CharacterService {
     if (projectPath) {
       // Clear current characters before reloading
       this.charactersSubject.next([]);
+      this.draftsSubject.next([]);
       await this.loadCharacters(projectPath);
     }
   }
@@ -242,6 +267,7 @@ export class CharacterService {
       this.currentProjectPath = projectPath;
       this.hasLoadedForCurrentProject = false;
       this.charactersSubject.next([]);
+      this.draftsSubject.next([]);
       // Clear thumbnail cache when switching projects
       this.thumbnailDataUrls.clear();
       this.thumbnailModificationTimes.clear();
@@ -273,7 +299,7 @@ export class CharacterService {
       const project = this.projectService.getCurrentProject();
       const bookIds = new Set((project?.metadata?.books ?? []).map((b) => b.id));
 
-      const characters: Character[] = [];
+      const records: Character[] = [];
       const needsIdPersist: Character[] = [];
 
       for (const { relativePath, absolutePath } of scanResult.files) {
@@ -288,7 +314,7 @@ export class CharacterService {
           }
           const loaded = await this.loadCharacterFromFile(absolutePath, relativePath);
           if (loaded) {
-            characters.push(loaded.character);
+            records.push(loaded.character);
             if (loaded.assignedId) {
               needsIdPersist.push(loaded.character);
             }
@@ -298,12 +324,17 @@ export class CharacterService {
         }
       }
 
-      this.assignUniqueCharacterIds(characters, needsIdPersist);
+      this.assignUniqueCharacterIds(records, needsIdPersist);
 
-      // Sort characters by name and update the list
-      characters.sort((a, b) => a.name.localeCompare(b.name));
-      await this.persistAssignedIdsAndRemap(characters, needsIdPersist);
+      const characters = records
+        .filter((record) => !record.draft)
+        .sort((a, b) => a.name.localeCompare(b.name));
+      const drafts = records
+        .filter((record) => record.draft)
+        .sort((a, b) => b.modified.getTime() - a.modified.getTime());
+      await this.persistAssignedIdsAndRemap(records, needsIdPersist);
       this.charactersSubject.next(characters);
+      this.draftsSubject.next(drafts);
       this.hasLoadedForCurrentProject = true;
     } catch (error) {
       this.logger.error('Failed to load characters', error);
@@ -333,8 +364,9 @@ export class CharacterService {
 
       const { frontmatter, content } = parseResult.data!;
 
-      // Validate required fields
-      if (!frontmatter.name) {
+      const isDraft = frontmatter.draft === true;
+      // Active character files retain their existing integrity requirement.
+      if (!isDraft && !frontmatter.name) {
         this.logger.error(`Character file missing required name field: ${absolutePath}`);
         return null;
       }
@@ -350,7 +382,8 @@ export class CharacterService {
       const assignedId = !storedId;
       const character: Character = {
         id: storedId || generateId(),
-        name: frontmatter.name,
+        draft: isDraft || undefined,
+        name: typeof frontmatter.name === 'string' ? frontmatter.name : '',
         aliases: normalizeAliases(frontmatter.aliases),
         category: frontmatter.category || 'uncategorized',
         tags: frontmatter.tags || [],
@@ -522,6 +555,74 @@ export class CharacterService {
     }
   }
 
+  /** Creates a draft. User-authored fields may all be empty. */
+  async createDraft(data: CharacterFormData): Promise<Character> {
+    try {
+      const books = data.books || [];
+      await this.validateBookReferences(books);
+      const bookCategories = normalizeBookCategories(data.bookCategories, books);
+      await this.validateBookCategoryReferences(bookCategories);
+
+      const id = generateId();
+      const filename = `_draft-${id}.md`;
+      const charactersPath = this.projectService.getCharactersFolderPath();
+      const filePath = pathJoin(charactersPath, filename);
+      const now = new Date();
+      const draft: Character = {
+        id,
+        draft: true,
+        name: data.name || '',
+        aliases: normalizeAliases(data.aliases),
+        category: data.category || '',
+        tags: data.tags || [],
+        books,
+        bookCategories,
+        thumbnails: normalizeThumbnailsMap(data.thumbnails),
+        bookThumbnails: normalizeBookThumbnailsMap(data.bookThumbnails, books),
+        prompts: normalizePrompts(data.prompts),
+        content: data.content || '',
+        created: now,
+        modified: now,
+        relativePath: filename,
+        filePath,
+      };
+
+      await this.saveCharacterToFile(draft);
+      this.draftsSubject.next([draft, ...this.draftsSubject.value]);
+      return draft;
+    } catch (error) {
+      this.logger.error('Failed to create character draft', error);
+      throw new Error(`Failed to create character draft: ${error}`);
+    }
+  }
+
+  /** Promotes an explicitly saved draft into the active character collection. */
+  async promoteDraft(id: string): Promise<Character> {
+    const draft = this.getDraftById(id);
+    if (!draft) {
+      throw new Error('Character draft not found');
+    }
+    if (!draft.name.trim()) {
+      throw new Error('A name is required before promoting this draft');
+    }
+    if (!draft.category.trim()) {
+      throw new Error('A category is required before promoting this draft');
+    }
+
+    const promoted: Character = {
+      ...draft,
+      draft: undefined,
+      modified: new Date(),
+    };
+    await this.saveCharacterToFile(promoted);
+
+    this.draftsSubject.next(this.draftsSubject.value.filter((item) => item.id !== id));
+    this.charactersSubject.next(
+      [...this.charactersSubject.value, promoted].sort((a, b) => a.name.localeCompare(b.name))
+    );
+    return promoted;
+  }
+
   /**
    * Updates an existing character and saves changes to disk.
    *
@@ -540,8 +641,10 @@ export class CharacterService {
         await this.validateBookReferences(data.books);
       }
 
-      const characters = this.charactersSubject.value;
-      const existingCharacter = this.findCharacter(id);
+      const isDraft = !!this.getDraftById(id);
+      const sourceSubject = isDraft ? this.draftsSubject : this.charactersSubject;
+      const characters = sourceSubject.value;
+      const existingCharacter = this.findRecord(id);
       const index = existingCharacter
         ? characters.findIndex((char) => char.id === existingCharacter.id)
         : -1;
@@ -569,9 +672,35 @@ export class CharacterService {
         const oldAbsDir = pathDirname(existingCharacter.filePath);
         const destFilePath = pathJoin(oldAbsDir, newFilename);
 
-        const moveResult = await this.electronService.moveDirectory(existingCharacter.filePath, destFilePath);
-        if (!moveResult.success) {
-          throw new Error(`Failed to move character file: ${moveResult.error}`);
+        // Book pages are filename sidecars. Move them with the main file so a
+        // draft can be named (or any character renamed) without losing access
+        // to work already written for a book.
+        const movedSidecars: Array<{ from: string; to: string }> = [];
+        const destinationRecord = { ...existingCharacter, filePath: destFilePath };
+        try {
+          for (const bookId of existingCharacter.books || []) {
+            const oldBookPagePath = this.getBookPageFilePath(existingCharacter, bookId);
+            if (!(await this.electronService.fileExists(oldBookPagePath))) continue;
+            const newBookPagePath = this.getBookPageFilePath(destinationRecord, bookId);
+            const sidecarMove = await this.electronService.moveDirectory(
+              oldBookPagePath,
+              newBookPagePath
+            );
+            if (!sidecarMove.success) {
+              throw new Error(`Failed to move book page: ${sidecarMove.error}`);
+            }
+            movedSidecars.push({ from: oldBookPagePath, to: newBookPagePath });
+          }
+
+          const moveResult = await this.electronService.moveDirectory(existingCharacter.filePath, destFilePath);
+          if (!moveResult.success) {
+            throw new Error(`Failed to move character file: ${moveResult.error}`);
+          }
+        } catch (moveError) {
+          for (const moved of movedSidecars.reverse()) {
+            await this.electronService.moveDirectory(moved.to, moved.from);
+          }
+          throw moveError;
         }
 
         newFilePath = destFilePath;
@@ -622,8 +751,12 @@ export class CharacterService {
       // Update in-memory list
       const updatedCharacters = [...characters];
       updatedCharacters[index] = updatedCharacter;
-      const sortedCharacters = updatedCharacters.sort((a, b) => a.name.localeCompare(b.name));
-      this.charactersSubject.next(sortedCharacters);
+      const sortedCharacters = updatedCharacters.sort((a, b) =>
+        isDraft
+          ? b.modified.getTime() - a.modified.getTime()
+          : a.name.localeCompare(b.name)
+      );
+      sourceSubject.next(sortedCharacters);
 
       return updatedCharacter;
     } catch (error) {
@@ -637,8 +770,10 @@ export class CharacterService {
    */
   async deleteCharacter(id: string): Promise<boolean> {
     try {
-      const characters = this.charactersSubject.value;
-      const character = this.findCharacter(id);
+      const isDraft = !!this.getDraftById(id);
+      const sourceSubject = isDraft ? this.draftsSubject : this.charactersSubject;
+      const characters = sourceSubject.value;
+      const character = this.findRecord(id);
 
       if (!character) {
         return false;
@@ -653,12 +788,14 @@ export class CharacterService {
 
       // Update in-memory list
       const filteredCharacters = characters.filter((char) => char.id !== character.id);
-      this.charactersSubject.next(filteredCharacters);
+      sourceSubject.next(filteredCharacters);
 
-      try {
-        await this.metadataService.removeCharacterFromBookPovs(character.id);
-      } catch (cleanupError) {
-        this.logger.error('Failed to remove deleted character from book PoV lists', cleanupError);
+      if (!isDraft) {
+        try {
+          await this.metadataService.removeCharacterFromBookPovs(character.id);
+        } catch (cleanupError) {
+          this.logger.error('Failed to remove deleted character from book PoV lists', cleanupError);
+        }
       }
 
       return true;
@@ -673,8 +810,10 @@ export class CharacterService {
    */
   async refreshCharacter(id: string): Promise<Character | null> {
     try {
-      const characters = this.charactersSubject.value;
-      const existingCharacter = this.findCharacter(id);
+      const isDraft = !!this.getDraftById(id);
+      const sourceSubject = isDraft ? this.draftsSubject : this.charactersSubject;
+      const characters = sourceSubject.value;
+      const existingCharacter = this.findRecord(id);
 
       if (!existingCharacter) {
         return null;
@@ -685,7 +824,7 @@ export class CharacterService {
       if (!fileExists) {
         // File was deleted externally, remove from memory
         const filteredCharacters = characters.filter((char) => char.id !== existingCharacter.id);
-        this.charactersSubject.next(filteredCharacters);
+        sourceSubject.next(filteredCharacters);
         return null;
       }
 
@@ -703,13 +842,25 @@ export class CharacterService {
         refreshedCharacter.id = existingCharacter.id;
       }
 
+      // An external edit may explicitly promote/demote a record by changing
+      // `draft`. Repartition both public collections instead of leaving the
+      // record in the collection it occupied before the edit.
+      if (!!refreshedCharacter.draft !== isDraft) {
+        await this.forceReloadCharacters();
+        return this.findRecord(refreshedCharacter.id) || null;
+      }
+
       // Update in-memory list
       const index = characters.findIndex((char) => char.id === existingCharacter.id);
       if (index !== -1) {
         const updatedCharacters = [...characters];
         updatedCharacters[index] = refreshedCharacter;
-        const sortedCharacters = updatedCharacters.sort((a, b) => a.name.localeCompare(b.name));
-        this.charactersSubject.next(sortedCharacters);
+        const sortedCharacters = updatedCharacters.sort((a, b) =>
+          isDraft
+            ? b.modified.getTime() - a.modified.getTime()
+            : a.name.localeCompare(b.name)
+        );
+        sourceSubject.next(sortedCharacters);
       }
 
       return refreshedCharacter;
@@ -726,6 +877,7 @@ export class CharacterService {
     try {
       const frontmatter: CharacterFrontmatter = {
         id: character.id,
+        ...(character.draft ? { draft: true } : {}),
         name: character.name,
         ...(character.aliases && character.aliases.length > 0
           ? { aliases: character.aliases }
@@ -828,13 +980,21 @@ export class CharacterService {
         return;
       }
 
-      const characters = this.charactersSubject.value;
-      const character = characters.find((char) => char.filePath === event.path);
+      const activeCharacters = this.charactersSubject.value;
+      const drafts = this.draftsSubject.value;
+      const character = [...activeCharacters, ...drafts].find(
+        (char) => char.filePath === event.path
+      );
 
       if (event.type === 'unlink') {
         if (character) {
-          const filteredCharacters = characters.filter((char) => char.filePath !== event.path);
-          this.charactersSubject.next(filteredCharacters);
+          if (character.draft) {
+            this.draftsSubject.next(drafts.filter((char) => char.filePath !== event.path));
+          } else {
+            this.charactersSubject.next(
+              activeCharacters.filter((char) => char.filePath !== event.path)
+            );
+          }
           this.logger.log(`Character removed: ${character.name}`);
         }
       } else if (event.type === 'change' || event.type === 'add') {

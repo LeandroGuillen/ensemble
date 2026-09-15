@@ -20,4 +20,16 @@ export class CharacterEditDialogService {
     const extras = initialName ? { queryParams: { name: initialName } } : undefined;
     this.router.navigate(['/character'], extras);
   }
+
+  openEditDraft(characterId: string): void {
+    this.router.navigate(['/character-draft', characterId]);
+  }
+
+  openCreateDraft(initialName?: string, initialContent?: string): void {
+    const queryParams = initialName ? { name: initialName } : undefined;
+    this.router.navigate(['/character-draft'], {
+      ...(queryParams ? { queryParams } : {}),
+      ...(initialContent ? { state: { initialContent } } : {}),
+    });
+  }
 }

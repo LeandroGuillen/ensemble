@@ -1,16 +1,16 @@
 <div class="character-list-container">
   <app-page-header [title]="'Characters'">
     @if (currentProject) {
-      <span
-        pageHeaderSuffix
-        class="title-count"
-        role="status"
-        aria-live="polite"
-        [title]="filteredCharacters.length + ' character' + (filteredCharacters.length !== 1 ? 's' : '')"
-        >
-        {{ filteredCharacters.length }}
-      </span>
-      <div pageHeaderSuffix class="header-display-controls" aria-label="Character display controls">
+      <ng-container pageHeaderSuffix>
+      <div class="character-scope-toggle view-toggle view-toggle-text" aria-label="Character collection">
+        <button type="button" class="toggle-option" [class.active]="!drawerMode" (click)="setDrawerMode(false)">
+          Characters <span class="scope-count">{{ activeCharacters.length }}</span>
+        </button>
+        <button type="button" class="toggle-option" [class.active]="drawerMode" (click)="setDrawerMode(true)">
+          Drawer <span class="scope-count">{{ draftCharacters.length }}</span>
+        </button>
+      </div>
+      <div class="header-display-controls" aria-label="Character display controls">
         <div class="toolbar-control">
           <span class="toolbar-label">Sort</span>
           <div class="view-toggle view-toggle-text" aria-label="Sort characters">
@@ -70,6 +70,7 @@
           </select>
         }
       </div>
+      </ng-container>
     }
     <div class="page-actions">
       @if (currentProject) {
@@ -92,10 +93,10 @@
         class="btn btn-primary new-character-btn"
         (click)="createNewCharacter()"
         [disabled]="!currentProject"
-        title="New Character (N)"
+        [title]="drawerMode ? 'New Draft (N)' : 'New Character (N)'"
         >
         <span class="plus-glyph" aria-hidden="true">+</span>
-        New Character
+        {{ drawerMode ? 'New Draft' : 'New Character' }}
         <kbd class="shortcut-hint">N</kbd>
       </button>
     </div>
@@ -140,7 +141,8 @@
             [selectedCast]="selectedCast"
             [selectedBook]="selectedBook"
             [selectedPictureFilter]="selectedPictureFilter"
-            [povOnly]="povOnly"
+            [povOnly]="drawerMode ? false : povOnly"
+            [allowPov]="!drawerMode"
             (searchTermChange)="searchTerm = $event; onSearchChange()"
             (categoriesChange)="onCategoriesSelectionChange($event)"
             (tagsChange)="selectedTags = $event; onTagsSelectionChange($event)"
@@ -721,60 +723,30 @@
                 <div class="empty-icon">
                   <i class="icon-users"></i>
                 </div>
-                @if (
+                @if (drawerMode && !(
                   searchTerm ||
                   hasDisabledCategories() ||
                   selectedTags.length > 0 ||
                   selectedCast ||
                   selectedBook ||
-                  povOnly ||
                   selectedPictureFilter
-                  ) {
-                  <h3
-                    >
-                    No characters match your filters
-                  </h3>
-                }
-                @if (
-                  !searchTerm &&
-                  !hasDisabledCategories() &&
-                  selectedTags.length === 0 &&
-                  !selectedCast &&
-                  !selectedBook &&
-                  !povOnly &&
-                  !selectedPictureFilter
-                  ) {
-                  <h3
-                    >
-                    No characters yet
-                  </h3>
-                }
-                @if (
+                )) {
+                  <h3>Your character drawer is empty</h3>
+                  <p>Start with a name, an image, a note—or nothing at all.</p>
+                } @else if (
                   searchTerm ||
                   hasDisabledCategories() ||
                   selectedTags.length > 0 ||
                   selectedCast ||
                   selectedBook ||
-                  povOnly ||
+                  (povOnly && !drawerMode) ||
                   selectedPictureFilter
-                  ) {
-                  <p
-                    >
-                    Try adjusting your search criteria or clearing the filters to see more
-                    characters.
-                  </p>
-                }
-                @if (
-                  !searchTerm &&
-                  !hasDisabledCategories() &&
-                  selectedTags.length === 0 &&
-                  !selectedCast &&
-                  !selectedBook
-                  ) {
-                  <p
-                    >
-                    Create your first character to get started with your project!
-                  </p>
+                ) {
+                  <h3>No {{ drawerMode ? 'drafts' : 'characters' }} match your filters</h3>
+                  <p>Try adjusting your search criteria or clearing the filters to see more.</p>
+                } @else {
+                  <h3>No characters yet</h3>
+                  <p>Create your first character to get started with your project!</p>
                 }
                 <div class="empty-state-actions">
                   @if (
@@ -782,27 +754,23 @@
                     hasDisabledCategories() ||
                     selectedTags.length > 0 ||
                     selectedCast ||
-                    selectedBook
-                    ) {
-                    <button
-                      class="btn btn-secondary"
-                      (click)="clearFilters()"
-                      >
-                      Clear Filters
-                    </button>
+                    selectedBook ||
+                    (povOnly && !drawerMode) ||
+                    selectedPictureFilter
+                  ) {
+                    <button class="btn btn-secondary" (click)="clearFilters()">Clear Filters</button>
                   }
                   @if (
                     !searchTerm &&
                     !hasDisabledCategories() &&
                     selectedTags.length === 0 &&
                     !selectedCast &&
-                    !selectedBook
-                    ) {
-                    <button
-                      class="btn btn-primary"
-                      (click)="createNewCharacter()"
-                      >
-                      Create Your First Character
+                    !selectedBook &&
+                    (!povOnly || drawerMode) &&
+                    !selectedPictureFilter
+                  ) {
+                    <button class="btn btn-primary" (click)="createNewCharacter()">
+                      {{ drawerMode ? 'Create a Draft' : 'Create Your First Character' }}
                     </button>
                   }
                 </div>

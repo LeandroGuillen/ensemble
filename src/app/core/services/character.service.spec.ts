@@ -274,6 +274,100 @@ describe('CharacterService', () => {
     });
   });
 
+  describe('character drafts', () => {
+    it('creates a completely empty draft without exposing it as an active character', async () => {
+      const project = createValidProject();
+      projectService.getCurrentProject.and.returnValue(project);
+      (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
+      electronService.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));
+
+      const draft = await service.createDraft({
+        name: '',
+        category: '',
+        tags: [],
+        books: [],
+        prompts: [],
+        content: '',
+      });
+
+      expect(draft.draft).toBeTrue();
+      expect(draft.name).toBe('');
+      expect(service.getCharacterById(draft.id)).toBeUndefined();
+      expect(service.getDraftById(draft.id)?.id).toBe(draft.id);
+      const savedContent = electronService.writeFileAtomic.calls.mostRecent().args[1] as string;
+      expect(savedContent).toContain('draft: true');
+    });
+
+    it('loads drafts separately, including a draft with no name', async () => {
+      const project = createValidProject();
+      projectService.getCurrentProject.and.returnValue(project);
+      (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
+      electronService.fileExists.and.returnValue(Promise.resolve(true));
+      electronService.readDirectoryRecursive.and.returnValue(Promise.resolve({
+        success: true,
+        files: [
+          { relativePath: '_active.md', absolutePath: '/test/project/characters/_active.md' },
+          { relativePath: '_draft-one.md', absolutePath: '/test/project/characters/_draft-one.md' },
+        ],
+      }));
+      electronService.readFile.and.callFake((path: string) => Promise.resolve({
+        success: true,
+        content: path.endsWith('_active.md')
+          ? '---\nid: active-1\nname: Active\ncategory: main-character\n---\n'
+          : '---\nid: draft-1\ndraft: true\n---\nDraft notes',
+      }));
+
+      await service.forceReloadCharacters();
+
+      expect(service.getCharactersSnapshot().map((item) => item.id)).toEqual(['active-1']);
+      expect(service.getDraftsSnapshot().map((item) => item.id)).toEqual(['draft-1']);
+      expect(service.getDraftById('draft-1')?.name).toBe('');
+    });
+
+    it('promotes only an explicitly requested complete draft', async () => {
+      const project = createValidProject();
+      project.metadata.books = [{ id: 'book-1', name: 'Book 1', color: '#334455' }];
+      projectService.getCurrentProject.and.returnValue(project);
+      (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
+      electronService.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));
+
+      const draft = await service.createDraft({
+        ...createValidCharacterFormData(),
+        books: ['book-1'],
+      });
+      expect(service.getCharacterById(draft.id)).toBeUndefined();
+      expect(service.getDraftById(draft.id)?.books).toEqual(['book-1']);
+      const promoted = await service.promoteDraft(draft.id);
+
+      expect(promoted.draft).toBeUndefined();
+      expect(service.getDraftById(draft.id)).toBeUndefined();
+      expect(service.getCharacterById(draft.id)?.name).toBe('Test Character');
+      expect(promoted.books).toEqual(['book-1']);
+      const savedContent = electronService.writeFileAtomic.calls.mostRecent().args[1] as string;
+      expect(savedContent).not.toContain('draft: true');
+    });
+
+    it('refuses to promote a draft without a name or category', async () => {
+      const project = createValidProject();
+      projectService.getCurrentProject.and.returnValue(project);
+      (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
+      electronService.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));
+      const draft = await service.createDraft({
+        name: '',
+        category: '',
+        tags: [],
+        books: [],
+        prompts: [],
+        content: '',
+      });
+
+      await expectAsync(service.promoteDraft(draft.id)).toBeRejectedWithError(
+        'A name is required before promoting this draft'
+      );
+      expect(service.getDraftById(draft.id)).toBeDefined();
+    });
+  });
+
   describe('updateCharacter', () => {
     it('should update an existing character', async () => {
       const project = createValidProject();
@@ -790,4 +884,3 @@ Body text
     });
   });
 });
-

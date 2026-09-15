@@ -3,6 +3,22 @@
 @use 'styles/forms';
 @use 'styles/modals';
 
+.draft-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.4rem;
+  padding: 0.12rem 0.4rem;
+  border: 1px solid color-mix(in srgb, var(--color-accent-primary) 45%, transparent);
+  border-radius: 999px;
+  color: var(--color-accent-primary);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
 /* Import Google Fonts - Outfit for sans, Playfair Display for editorial serif headings */
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 

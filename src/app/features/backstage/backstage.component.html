@@ -188,6 +188,13 @@
                 <div class="detail-actions">
                   <button
                     class="btn btn-secondary btn-sm"
+                    (click)="startDraftFromConcept(getSelectedConcept()!)"
+                    title="Copy this concept into a character draft"
+                    >
+                    Send to Drawer
+                  </button>
+                  <button
+                    class="btn btn-secondary btn-sm"
                     (click)="takeTheStage(getSelectedConcept()!)"
                     title="Take the Stage - Create character from this concept"
                     >
@@ -363,6 +370,13 @@
                         }
                       </div>
                       <div class="name-item-actions" (click)="$event.stopPropagation()">
+                        <button
+                          class="btn-icon-xs"
+                          (click)="startDraftWithName(nameItem.name)"
+                          title="Start a character draft"
+                          >
+                          ◫
+                        </button>
                         <button
                           class="btn-icon-xs"
                           (click)="takeTheStageWithName(nameItem.name)"

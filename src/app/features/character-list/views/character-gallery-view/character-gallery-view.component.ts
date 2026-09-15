@@ -2,6 +2,7 @@ import { Component, Input, Output, EventEmitter } from "@angular/core";
 
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { Character, Tag } from "../../../../core/interfaces";
+import { getCharacterDisplayName } from "../../../../core/utils/character-display.utils";
 
 @Component({
     selector: "app-character-gallery-view",
@@ -10,6 +11,7 @@ import { Character, Tag } from "../../../../core/interfaces";
     styleUrls: ["./character-gallery-view.component.scss"]
 })
 export class CharacterGalleryViewComponent {
+  readonly getCharacterDisplayName = getCharacterDisplayName;
   @Input() characters: Character[] = [];
   @Input() tags: Tag[] = [];
   @Input() thumbnailDataUrls: Map<string, string> = new Map();

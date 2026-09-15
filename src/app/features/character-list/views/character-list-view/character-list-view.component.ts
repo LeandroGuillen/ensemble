@@ -4,6 +4,7 @@ import { DragDropModule } from '@angular/cdk/drag-drop';
 import { Character, Tag, Category } from '../../../../core/interfaces';
 import { MetadataHelperService } from '../../../../core/services/metadata-helper.service';
 import { resolveEffectiveCategory } from '../../../../core/utils/character-category.utils';
+import { getCharacterDisplayName } from '../../../../core/utils/character-display.utils';
 import { FadeOverflowDirective } from '../../../../shared/fade-overflow.directive';
 
 @Component({
@@ -13,6 +14,7 @@ import { FadeOverflowDirective } from '../../../../shared/fade-overflow.directiv
     styleUrls: ['./character-list-view.component.scss']
 })
 export class CharacterListViewComponent {
+  readonly getCharacterDisplayName = getCharacterDisplayName;
   @Input() characters: Character[] = [];
   @Input() categories: Category[] = [];
   @Input() tags: Tag[] = [];
@@ -49,7 +51,7 @@ export class CharacterListViewComponent {
   }
 
   getCategoryName(categoryId: string): string {
-    return this.metadataHelper.getCategoryName(categoryId);
+    return categoryId ? this.metadataHelper.getCategoryName(categoryId) : 'No category';
   }
 
   getCategoryColor(categoryId: string): string {

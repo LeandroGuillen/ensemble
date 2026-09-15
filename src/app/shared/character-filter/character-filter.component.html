@@ -115,6 +115,7 @@
               (valueChange)="onBookSelectionChange($event)"
             ></app-category-toggle>
           </div>
+          @if (allowPov) {
           <div class="pov-filter-row">
             <app-category-toggle
               [options]="povFilterOptions"
@@ -123,6 +124,7 @@
               (valueChange)="onPovFilterChange($event)"
             ></app-category-toggle>
           </div>
+          }
         </div>
       }
       <!-- Picture Filter -->
