@@ -3,6 +3,7 @@ import { Character } from '../interfaces/character.interface';
 import { getBookDisplayName } from '../utils/book-display.utils';
 import { resolveEffectiveCategory } from '../utils/character-category.utils';
 import { ProjectService } from './project.service';
+import { CastService } from './cast.service';
 
 /**
  * Helper service for common metadata lookup operations
@@ -14,7 +15,10 @@ import { ProjectService } from './project.service';
   providedIn: 'root'
 })
 export class MetadataHelperService {
-  constructor(private projectService: ProjectService) {}
+  constructor(
+    private projectService: ProjectService,
+    private castService: CastService
+  ) {}
 
   // Category helpers
   getCategoryName(categoryId: string): string {
@@ -74,10 +78,7 @@ export class MetadataHelperService {
   // Cast helpers
   getCastName(castId: string): string {
     if (castId === 'no-cast') return 'No cast';
-    const project = this.projectService.getCurrentProject();
-    if (!project) return castId;
-    const cast = project.metadata.casts?.find(c => c.id === castId);
-    return cast?.name || castId;
+    return this.castService.getCastById(castId)?.name || castId;
   }
 
   getCastColor(castId: string): string {

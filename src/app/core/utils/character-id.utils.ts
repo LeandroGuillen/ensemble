@@ -138,6 +138,7 @@ export function buildCharacterIdRemap(
 ): Map<string, string> {
   const idMap = new Map<string, string>();
   const byBasename = new Map<string, Array<{ id: string; relativePath: string }>>();
+  const byFolderSlug = new Map<string, Array<{ id: string; relativePath: string }>>();
 
   for (const character of characters) {
     const relativePath = normalizeCharacterRelativePath(character.relativePath);
@@ -149,11 +150,30 @@ export function buildCharacterIdRemap(
     const list = byBasename.get(basename) || [];
     list.push(character);
     byBasename.set(basename, list);
+
+    const segments = relativePath.split('/');
+    const folderSlug = segments.length > 1 ? segments[segments.length - 2] : '';
+    const fileSlug = basename.replace(/\.md$/i, '');
+    // Folder-based characters are stored as <slug>/<slug>.md. Older projects
+    // used that slug itself as the character reference, so retain a unique
+    // alias for it during migration. Do not treat category folders or other
+    // nested markdown files as character aliases.
+    if (folderSlug && folderSlug === fileSlug) {
+      const folderList = byFolderSlug.get(folderSlug) || [];
+      folderList.push(character);
+      byFolderSlug.set(folderSlug, folderList);
+    }
   }
 
   for (const [basename, list] of byBasename) {
     if (list.length === 1 && basename && basename !== list[0].id && !idMap.has(basename)) {
       idMap.set(basename, list[0].id);
+    }
+  }
+
+  for (const [folderSlug, list] of byFolderSlug) {
+    if (list.length === 1 && folderSlug !== list[0].id && !idMap.has(folderSlug)) {
+      idMap.set(folderSlug, list[0].id);
     }
   }
 

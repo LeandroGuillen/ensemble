@@ -25,15 +25,17 @@ describe('character-id.utils', () => {
   });
 
   describe('buildCharacterIdRemap', () => {
-    it('maps relative paths and unique basenames onto stable ids', () => {
+    it('maps relative paths, unique basenames, and folder slugs onto stable ids', () => {
       const idMap = buildCharacterIdRemap([
         { id: 'id-a', relativePath: 'main-character/_alice.md' },
         { id: 'id-b', relativePath: '_bob.md' },
+        { id: 'id-c', relativePath: 'dessir-galsea/dessir-galsea.md' },
       ]);
 
       expect(idMap.get('main-character/_alice.md')).toBe('id-a');
       expect(idMap.get('_alice.md')).toBe('id-a');
       expect(idMap.get('_bob.md')).toBe('id-b');
+      expect(idMap.get('dessir-galsea')).toBe('id-c');
     });
 
     it('does not map an ambiguous basename', () => {
@@ -81,7 +83,7 @@ describe('character-id.utils', () => {
       const idMap = new Map([['_alice.md', 'id-a']]);
 
       expect(remapProjectCharacterIds(metadata, idMap)).toBe(true);
-      expect(metadata.casts[0].characterIds).toEqual(['id-a', 'keep']);
+      expect(metadata.casts![0].characterIds).toEqual(['id-a', 'keep']);
       expect(metadata.books[0].povCharacterIds).toEqual(['id-a']);
       expect(metadata.pinboards?.[0].nodes[0].id).toBe('id-a');
       expect(metadata.pinboards?.[0].edges[0].source).toBe('id-a');

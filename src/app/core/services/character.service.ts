@@ -459,12 +459,11 @@ export class CharacterService {
       this.logger.error('Failed to remap character ids in plot boards', error);
     }
 
-    if (remappedProject) {
-      try {
-        await this.castService.forceReloadCasts();
-      } catch (error) {
-        this.logger.error('Failed to reload casts after character id remap', error);
-      }
+    // Cast references live in casts.json (CastService handles the rewrite)
+    try {
+      await this.castService.remapCharacterIds(idMap);
+    } catch (error) {
+      this.logger.error('Failed to remap character ids in casts.json', error);
     }
   }
 

@@ -10,6 +10,18 @@ import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
 import { LoggingService } from './logging.service';
 
+/** Entry for a cast in casts.json (name/characterIds live there; folder holds description + thumbnails). */
+export interface CastIndexEntry {
+  id: string;
+  name: string;
+  characterIds?: string[];
+}
+
+interface CastsFile {
+  version: number;
+  casts: CastIndexEntry[];
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -31,6 +43,87 @@ export class CastService {
 
   getCastById(id: string): Cast | undefined {
     return this.castsSubject.value.find((cast) => cast.id === id);
+  }
+
+  /** Synchronous snapshot of the currently loaded casts. */
+  getCastsSnapshot(): Cast[] {
+    return this.castsSubject.value;
+  }
+
+  /** Absolute path of the casts.json index file inside the casts folder. */
+  private getCastsJsonPath(): string {
+    return pathJoin(this.projectService.getCastsFolderPath(), 'casts.json');
+  }
+
+  /** Reads and parses casts.json; returns null when missing or unreadable. */
+  private async readCastsFile(): Promise<CastsFile | null> {
+    try {
+      const exists = await this.electronService.fileExists(this.getCastsJsonPath());
+      if (!exists) {
+        return null;
+      }
+      const readResult = await this.electronService.readFile(this.getCastsJsonPath());
+      if (!readResult.success || !readResult.content) {
+        return null;
+      }
+      const parsed = JSON.parse(readResult.content) as Partial<CastsFile>;
+      if (!parsed || !Array.isArray(parsed.casts)) {
+        return null;
+      }
+      return {
+        version: typeof parsed.version === 'number' ? parsed.version : 1,
+        casts: parsed.casts
+          .filter((entry) => entry && typeof entry.id === 'string' && typeof entry.name === 'string')
+          .map((entry) => ({
+            id: entry.id,
+            name: entry.name,
+            characterIds: Array.isArray(entry.characterIds) ? entry.characterIds : [],
+          })),
+      };
+    } catch (error) {
+      this.logger.warn('Failed to read casts.json:', error);
+      return null;
+    }
+  }
+
+  /** Atomically writes the casts.json index file. */
+  private async writeCastsFile(entries: CastIndexEntry[]): Promise<void> {
+    const data: CastsFile = { version: 1, casts: entries };
+    const result = await this.electronService.writeFileAtomic(
+      this.getCastsJsonPath(),
+      JSON.stringify(data, null, 2)
+    );
+    if (!result.success) {
+      throw new Error(`Failed to write casts.json: ${result.error}`);
+    }
+  }
+
+  private async upsertCastsFileEntry(cast: { id: string; name: string; characterIds: string[] }): Promise<void> {
+    const current = await this.readCastsFile();
+    const entries = current?.casts || [];
+    const index = entries.findIndex((entry) => entry.id === cast.id);
+    const entry: CastIndexEntry = {
+      id: cast.id,
+      name: cast.name,
+      characterIds: cast.characterIds,
+    };
+    if (index !== -1) {
+      entries[index] = entry;
+    } else {
+      entries.push(entry);
+    }
+    await this.writeCastsFile(entries);
+  }
+
+  private async removeCastsFileEntry(id: string): Promise<void> {
+    const current = await this.readCastsFile();
+    if (!current) {
+      return;
+    }
+    const filtered = current.casts.filter((entry) => entry.id !== id);
+    if (filtered.length !== current.casts.length) {
+      await this.writeCastsFile(filtered);
+    }
   }
 
   /**
@@ -116,75 +209,104 @@ export class CastService {
   }
 
   /**
-   * Merges folder-detected casts with metadata from ensemble.json
+   * Merges folder-detected casts with metadata from casts.json.
+   * Folders are the source of truth for existence; casts.json supplies
+   * name and characterIds. When casts.json is missing, legacy ensemble.json
+   * metadata is used to migrate the index into casts.json.
    */
   private async mergeCastsWithMetadata(folderCasts: Cast[], _projectPath: string): Promise<Cast[]> {
     try {
-      const metadataCasts = this.projectService.getCurrentProject()?.metadata.casts || [];
+      let castsFile = await this.readCastsFile();
+      const legacyCasts = this.projectService.getCurrentProject()?.metadata.casts || [];
+      let pendingMigrationNameMap: Map<string, string> | null = null;
 
-      // Create a map of metadata casts by ID for quick lookup
-      const metadataMap = new Map<string, Cast>();
-      metadataCasts.forEach((cast) => {
-        metadataMap.set(cast.id, cast);
-      });
+      // Migration: bootstrap casts.json from legacy ensemble.json metadata
+      if (!castsFile && legacyCasts.length > 0) {
+        castsFile = {
+          version: 1,
+          casts: legacyCasts.map((cast) => ({
+            id: cast.id,
+            name: cast.name,
+            characterIds: cast.characterIds || [],
+          })),
+        };
+        // Legacy projects referenced casts by ensemble.json ids; keep a
+        // name-based map so folders without .castid files can adopt them.
+        pendingMigrationNameMap = new Map(
+          legacyCasts.map((cast) => [cast.name, cast.id])
+        );
+        try {
+          await this.writeCastsFile(castsFile.casts);
+        } catch (error) {
+          this.logger.warn('Failed to bootstrap casts.json from ensemble.json:', error);
+        }
+      }
 
-      // Merge folder casts with metadata
+      const indexMap = new Map<string, CastIndexEntry>();
+      castsFile?.casts.forEach((entry) => indexMap.set(entry.id, entry));
+
       const mergedCasts: Cast[] = [];
+      const matchedIndexIds = new Set<string>();
 
       for (const folderCast of folderCasts) {
-        const metadataCast = metadataMap.get(folderCast.id);
-
-        if (metadataCast) {
-          // Merge: use metadata for name and characterIds, folder data for description, thumbnail, folderPath
+        const entry = indexMap.get(folderCast.id);
+        if (entry) {
+          matchedIndexIds.add(entry.id);
           mergedCasts.push({
             ...folderCast,
-            name: metadataCast.name,
-            characterIds: metadataCast.characterIds || [],
+            name: entry.name,
+            characterIds: entry.characterIds || [],
           });
-          // Remove from metadata map so we don't process it again
-          metadataMap.delete(folderCast.id);
         } else {
-          // Check if this folder cast matches any metadata cast by name (for migration)
-          const matchingMetadataCast = Array.from(metadataMap.values()).find((mc) => mc.name === folderCast.name);
-
-          if (matchingMetadataCast) {
-            // Found a match by name - this is likely a cast created before .castid files
-            // Create .castid file for future consistency
+          // Folder without an index slot: adopt a legacy id during migration
+          // (matched by name) so existing references keep working.
+          const legacyId = pendingMigrationNameMap?.get(folderCast.name);
+          if (legacyId && indexMap.has(legacyId)) {
             if (folderCast.folderPath) {
               try {
-                const castIdPath = pathJoin(folderCast.folderPath, '.castid');
-                await this.electronService.writeFileAtomic(castIdPath, matchingMetadataCast.id);
+                await this.electronService.writeFileAtomic(pathJoin(folderCast.folderPath, '.castid'), legacyId);
               } catch (error) {
                 this.logger.warn(`Failed to create .castid file for cast ${folderCast.name}:`, error);
               }
             }
-
-            // Use the metadata cast ID and merge data
+            const migratedEntry = indexMap.get(legacyId)!;
+            matchedIndexIds.add(legacyId);
             mergedCasts.push({
               ...folderCast,
-              id: matchingMetadataCast.id,
-              name: matchingMetadataCast.name,
-              characterIds: matchingMetadataCast.characterIds || [],
+              id: legacyId,
+              name: migratedEntry.name,
+              characterIds: migratedEntry.characterIds || [],
             });
-            // Remove from metadata map
-            metadataMap.delete(matchingMetadataCast.id);
           } else {
-            // Folder cast without metadata - use folder data as-is
-            mergedCasts.push(folderCast);
+            // New folder (external creation) without an index entry yet
+            mergedCasts.push({
+              ...folderCast,
+              characterIds: [],
+            });
+            try {
+              await this.upsertCastsFileEntry({
+                id: folderCast.id,
+                name: folderCast.name,
+                characterIds: [],
+              });
+            } catch (error) {
+              this.logger.warn(`Failed to add cast ${folderCast.name} to casts.json:`, error);
+            }
           }
         }
       }
 
-      // Add any metadata-only casts (casts in ensemble.json but no folder)
-      // These might be casts that were created but their folders were deleted
-      for (const [id, metadataCast] of metadataMap) {
-        this.logger.warn(`Cast "${metadataCast.name}" exists in metadata but has no folder`);
-        // Add it anyway but without folder data
+      // Index entries without a folder: keep them listed (folder may be
+      // externally deleted) but without folder data, as before.
+      for (const entry of indexMap.values()) {
+        if (matchedIndexIds.has(entry.id)) {
+          continue;
+        }
+        this.logger.warn(`Cast "${entry.name}" exists in casts.json but has no folder`);
         mergedCasts.push({
-          ...metadataCast,
-          description: undefined,
-          thumbnail: undefined,
-          folderPath: undefined,
+          id: entry.id,
+          name: entry.name,
+          characterIds: entry.characterIds || [],
         });
       }
 
@@ -248,6 +370,13 @@ export class CastService {
         thumbnail: thumbnail || undefined,
         folderPath: castFolderPath,
       };
+
+      // Register the cast in the casts.json index
+      await this.upsertCastsFileEntry({
+        id,
+        name: cast.name,
+        characterIds: cast.characterIds,
+      });
 
       // Update in-memory list
       const currentCasts = this.castsSubject.value;
@@ -323,6 +452,13 @@ export class CastService {
         folderPath: newFolderPath,
       };
 
+      // Persist name/characterIds changes to the casts.json index
+      await this.upsertCastsFileEntry({
+        id: updatedCast.id,
+        name: updatedCast.name,
+        characterIds: updatedCast.characterIds || [],
+      });
+
       // Update in-memory list
       const updatedCasts = [...casts];
       updatedCasts[index] = updatedCast;
@@ -360,6 +496,9 @@ export class CastService {
       } else {
         this.logger.warn(`Cast '${cast.name}' has no folder to delete - removing from memory only`);
       }
+
+      // Remove the cast from the casts.json index
+      await this.removeCastsFileEntry(id);
 
       // Update in-memory list (remove cast regardless of whether it had a folder)
       const filteredCasts = casts.filter((c) => c.id !== id);
@@ -552,6 +691,49 @@ export class CastService {
     return slug.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
   }
 
+
+  /**
+   * Rewrites leftover path-based character refs in casts.json to stable ids.
+   * No-op (and no write) when nothing matches.
+   */
+  async remapCharacterIds(idMap: ReadonlyMap<string, string>): Promise<void> {
+    if (idMap.size === 0) {
+      return;
+    }
+
+    try {
+      const current = await this.readCastsFile();
+      if (!current) {
+        return;
+      }
+
+      let changed = false;
+      const entries = current.casts.map((entry) => {
+        const ids = entry.characterIds || [];
+        const nextIds = ids.map((id) => {
+          const next = idMap.get(id) ?? idMap.get(id.replace(/\\/g, '/')) ?? id;
+          if (next !== id) {
+            changed = true;
+          }
+          return next;
+        });
+        return { ...entry, characterIds: nextIds };
+      });
+
+      if (changed) {
+        await this.writeCastsFile(entries);
+      }
+    } catch (error) {
+      this.logger.error('Failed to remap character ids in casts.json', error);
+    }
+
+    // Keep the in-memory state consistent with the rewritten index
+    try {
+      await this.forceReloadCasts();
+    } catch (error) {
+      this.logger.error('Failed to reload casts after character id remap', error);
+    }
+  }
 
   /**
    * Resets the service state

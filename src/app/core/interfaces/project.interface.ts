@@ -32,7 +32,8 @@ export interface ProjectMetadata {
   version: string;
   categories: Category[];
   tags: Tag[];
-  casts: Cast[];
+  /** Legacy: casts metadata now lives in casts.json inside the casts folder (CastService). */
+  casts?: Cast[];
   books: Book[];
   /** Ordered series shelves; optional for backward compatibility. */
   series?: Series[];

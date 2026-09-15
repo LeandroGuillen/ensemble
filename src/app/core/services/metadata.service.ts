@@ -344,130 +344,51 @@ export class MetadataService {
   }
 
   // Cast Management
+  // Cast metadata lives in casts.json inside the casts folder, owned by
+  // CastService. These methods are thin wrappers kept for callers.
 
   /**
-   * Gets all casts from current metadata
+   * Gets all casts from the CastService index
    */
   getCasts(): Cast[] {
-    const metadata = this.metadataSubject.value;
-    return metadata?.casts || [];
+    return this.castService.getCastsSnapshot();
   }
 
   /**
    * Gets a cast by ID
    */
   getCastById(id: string): Cast | undefined {
-    const casts = this.getCasts();
-    return casts.find((cast) => cast.id === id);
+    return this.castService.getCastById(id);
   }
 
   /**
    * Adds a new cast
-   * Creates folder structure via CastService and saves metadata
+   * Creates folder structure and casts.json entry via CastService
    */
   async addCast(castData: Omit<Cast, 'id'>): Promise<Cast> {
-    const metadata = this.metadataSubject.value;
-    if (!metadata) {
-      throw new Error('No metadata loaded');
-    }
-
-    // Initialize casts array if it doesn't exist (for backward compatibility)
-    const casts = metadata.casts || [];
-
-    // Create cast folder structure via CastService
-    const newCast = await this.castService.createCast({
+    return await this.castService.createCast({
       name: castData.name,
       characterIds: castData.characterIds,
       description: castData.description,
     });
-
-    // Save minimal cast metadata to ensemble.json (id, name, characterIds only)
-    const castMetadata: Cast = {
-      id: newCast.id,
-      name: newCast.name,
-      characterIds: newCast.characterIds,
-    };
-
-    const updatedMetadata = {
-      ...metadata,
-      casts: [...casts, castMetadata],
-    };
-
-    await this.saveMetadata(updatedMetadata);
-    return newCast; // Return full cast with folder info
   }
 
   /**
-   * Updates an existing cast
-   * Updates folder via CastService and ensemble.json metadata
+   * Updates an existing cast via CastService
    */
   async updateCast(id: string, updates: Partial<Omit<Cast, 'id'>>): Promise<Cast> {
-    const metadata = this.metadataSubject.value;
-    if (!metadata) {
-      throw new Error('No metadata loaded');
-    }
-
-    // Initialize casts array if it doesn't exist (for backward compatibility)
-    const casts = metadata.casts || [];
-
-    const castIndex = casts.findIndex((cast) => cast.id === id);
-    if (castIndex === -1) {
-      throw new Error(`Cast with ID '${id}' not found`);
-    }
-
-    // Update cast folder via CastService
     const updatedCast = await this.castService.updateCast(id, updates);
     if (!updatedCast) {
-      throw new Error('Failed to update cast folder');
+      throw new Error('Failed to update cast');
     }
-
-    // Update ensemble.json with minimal metadata (id, name, characterIds only)
-    const castMetadata: Cast = {
-      id: updatedCast.id,
-      name: updatedCast.name,
-      characterIds: updatedCast.characterIds,
-    };
-
-    const updatedCasts = [...casts];
-    updatedCasts[castIndex] = castMetadata;
-
-    const updatedMetadata = {
-      ...metadata,
-      casts: updatedCasts,
-    };
-
-    await this.saveMetadata(updatedMetadata);
-    return updatedCast; // Return full cast with folder info
+    return updatedCast;
   }
 
   /**
-   * Removes a cast
-   * Deletes the cast folder via CastService and updates ensemble.json
+   * Removes a cast (folder + casts.json entry) via CastService
    */
   async removeCast(id: string): Promise<void> {
-    const metadata = this.metadataSubject.value;
-    if (!metadata) {
-      throw new Error('No metadata loaded');
-    }
-
-    // Initialize casts array if it doesn't exist (for backward compatibility)
-    const casts = metadata.casts || [];
-
-    const castExists = casts.some((cast) => cast.id === id);
-    if (!castExists) {
-      throw new Error(`Cast with ID '${id}' not found`);
-    }
-
-    // Delete cast folder via CastService
     await this.castService.deleteCast(id);
-
-    // Remove cast from ensemble.json
-    const updatedMetadata = {
-      ...metadata,
-      casts: casts.filter((cast) => cast.id !== id),
-    };
-
-    await this.saveMetadata(updatedMetadata);
   }
 
   // Book Management
