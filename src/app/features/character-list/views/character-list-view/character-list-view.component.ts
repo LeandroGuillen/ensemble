@@ -4,10 +4,11 @@ import { DragDropModule } from '@angular/cdk/drag-drop';
 import { Character, Tag, Category } from '../../../../core/interfaces';
 import { MetadataHelperService } from '../../../../core/services/metadata-helper.service';
 import { resolveEffectiveCategory } from '../../../../core/utils/character-category.utils';
+import { FadeOverflowDirective } from '../../../../shared/fade-overflow.directive';
 
 @Component({
     selector: 'app-character-list-view',
-    imports: [DragDropModule],
+    imports: [DragDropModule, FadeOverflowDirective],
     templateUrl: './character-list-view.component.html',
     styleUrls: ['./character-list-view.component.scss']
 })
@@ -28,7 +29,6 @@ export class CharacterListViewComponent {
   @Input() povBadgeColor = 'var(--color-accent-primary)';
 
   @Output() characterClick = new EventEmitter<Character>();
-  @Output() characterDelete = new EventEmitter<{ character: Character; event: Event }>();
   @Output() characterSelectionToggle = new EventEmitter<string>();
   @Output() dragStarted = new EventEmitter<void>();
   @Output() dragEnded = new EventEmitter<void>();
@@ -73,18 +73,6 @@ export class CharacterListViewComponent {
       return;
     }
     this.characterClick.emit(character);
-  }
-
-  onCharacterClickWithStop(character: Character, event: Event): void {
-    event.stopPropagation();
-    if (this.dragInProgress) {
-      return;
-    }
-    this.characterClick.emit(character);
-  }
-
-  onCharacterDelete(character: Character, event: Event): void {
-    this.characterDelete.emit({ character, event });
   }
 
   onCharacterSelectionToggle(characterId: string): void {

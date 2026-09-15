@@ -348,6 +348,15 @@ export class CharacterListComponent implements OnInit {
     return this.selectedCharacterIndex === index ? 'selected' : '';
   }
 
+  /** True when the secondary toolbar has view-dependent size controls to show. */
+  get showResultsToolbar(): boolean {
+    return (
+      this.viewMode === 'list' ||
+      this.viewMode === 'compact' ||
+      this.viewMode === 'gallery'
+    );
+  }
+
   async loadCharacters(): Promise<void> {
     if (!this.currentProject) return;
 

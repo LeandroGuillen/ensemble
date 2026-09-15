@@ -10,6 +10,66 @@
         >
         {{ filteredCharacters.length }}
       </span>
+      <div pageHeaderSuffix class="header-display-controls" aria-label="Character display controls">
+        <div class="toolbar-control">
+          <span class="toolbar-label">Sort</span>
+          <div class="view-toggle view-toggle-text" aria-label="Sort characters">
+            <button class="toggle-option" [class.active]="sortBy === 'name'" (click)="setSortBy('name')" title="Sort by name">
+              Name
+              @if (sortBy === 'name') {
+                <span class="sort-indicator">{{ sortDirection === "asc" ? "↑" : "↓" }}</span>
+              }
+            </button>
+            <button class="toggle-option" [class.active]="sortBy === 'category'" (click)="setSortBy('category')" title="Sort by category">
+              Category
+              @if (sortBy === 'category') {
+                <span class="sort-indicator">{{ sortDirection === "asc" ? "↑" : "↓" }}</span>
+              }
+            </button>
+          </div>
+        </div>
+
+        <div class="toolbar-control">
+          <span class="toolbar-label">Group</span>
+          <div class="view-toggle view-toggle-text" aria-label="Group characters">
+            <button class="toggle-option" [class.active]="groupBy === 'none'" (click)="setGroupBy('none')" title="No grouping">Flat</button>
+            <button class="toggle-option" [class.active]="groupBy === 'category'" (click)="setGroupBy('category')" title="Group by category">Category</button>
+            <button class="toggle-option" [class.active]="groupBy === 'tag'" (click)="setGroupBy('tag')" title="Group by tag">Tag</button>
+            <button class="toggle-option" [class.active]="groupBy === 'cast'" (click)="setGroupBy('cast')" title="Group by cast">Cast</button>
+            <button class="toggle-option" [class.active]="groupBy === 'book'" (click)="setGroupBy('book')" title="Group by book">Book</button>
+          </div>
+        </div>
+
+        <div class="view-toggle view-toggle-icons" aria-label="View mode">
+          <button class="toggle-option" [class.active]="viewMode === 'gallery'" (click)="setViewMode('gallery')" title="Gallery view" aria-label="Gallery view">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+          </button>
+          <button class="toggle-option" [class.active]="viewMode === 'grid'" (click)="setViewMode('grid')" title="Grid view" aria-label="Grid view">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="6" height="5" rx="1"/><rect x="9" y="2" width="6" height="5" rx="1"/><rect x="1" y="9" width="6" height="5" rx="1"/><rect x="9" y="9" width="6" height="5" rx="1"/></svg>
+          </button>
+          <button class="toggle-option" [class.active]="viewMode === 'list'" (click)="setViewMode('list')" title="List view" aria-label="List view">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="4" height="4" rx="1"/><rect x="7" y="2" width="8" height="2" rx="1"/><rect x="7" y="5" width="6" height="1" rx=".5"/><rect x="1" y="10" width="4" height="4" rx="1"/><rect x="7" y="10" width="8" height="2" rx="1"/><rect x="7" y="13" width="6" height="1" rx=".5"/></svg>
+          </button>
+          <button class="toggle-option" [class.active]="viewMode === 'compact'" (click)="setViewMode('compact')" title="Compact view" aria-label="Compact view">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg>
+          </button>
+        </div>
+
+        @if (characterStyles.length > 1) {
+          <select
+            id="character-style-select"
+            class="filter-select"
+            [ngModel]="selectedCharacterStyle"
+            (ngModelChange)="setCharacterStyle($event)"
+            aria-label="Character style"
+            title="Character style"
+          >
+            @for (style of characterStyles; track style.id) {
+              <option [value]="style.id">{{ style.name }}</option>
+            }
+          </select>
+        }
+      </div>
     }
     <div class="page-actions">
       @if (currentProject) {
@@ -111,56 +171,8 @@
         </button>
       }
 
-      @if (currentProject && !isLoading && !error) {
-        <div class="results-toolbar" aria-label="Character display controls">
-          <div class="toolbar-control">
-            <span class="toolbar-label">Sort</span>
-            <div class="view-toggle view-toggle-text" aria-label="Sort characters">
-              <button class="toggle-option" [class.active]="sortBy === 'name'" (click)="setSortBy('name')" title="Sort by name">
-                Name
-                @if (sortBy === 'name') {
-                  <span class="sort-indicator">{{ sortDirection === "asc" ? "↑" : "↓" }}</span>
-                }
-              </button>
-              <button class="toggle-option" [class.active]="sortBy === 'category'" (click)="setSortBy('category')" title="Sort by category">
-                Category
-                @if (sortBy === 'category') {
-                  <span class="sort-indicator">{{ sortDirection === "asc" ? "↑" : "↓" }}</span>
-                }
-              </button>
-            </div>
-          </div>
-
-          <div class="toolbar-control">
-            <span class="toolbar-label">Group</span>
-            <div class="view-toggle view-toggle-text" aria-label="Group characters">
-              <button class="toggle-option" [class.active]="groupBy === 'none'" (click)="setGroupBy('none')" title="No grouping">Flat</button>
-              <button class="toggle-option" [class.active]="groupBy === 'category'" (click)="setGroupBy('category')" title="Group by category">Category</button>
-              <button class="toggle-option" [class.active]="groupBy === 'tag'" (click)="setGroupBy('tag')" title="Group by tag">Tag</button>
-              <button class="toggle-option" [class.active]="groupBy === 'cast'" (click)="setGroupBy('cast')" title="Group by cast">Cast</button>
-              <button class="toggle-option" [class.active]="groupBy === 'book'" (click)="setGroupBy('book')" title="Group by book">Book</button>
-            </div>
-          </div>
-
-          <span class="toolbar-spacer"></span>
-
-          @if (characterStyles.length > 1) {
-            <div class="toolbar-control">
-              <label class="toolbar-label" for="character-style-select">Character Style</label>
-              <select
-                id="character-style-select"
-                class="character-style-select"
-                [ngModel]="selectedCharacterStyle"
-                (ngModelChange)="setCharacterStyle($event)"
-                aria-label="Character style"
-              >
-                @for (style of characterStyles; track style.id) {
-                  <option [value]="style.id">{{ style.name }}</option>
-                }
-              </select>
-            </div>
-          }
-
+      @if (currentProject && !isLoading && !error && showResultsToolbar) {
+        <div class="results-toolbar" aria-label="Character view options">
           @if (viewMode === 'list' || viewMode === 'compact') {
             <div class="column-toggle" aria-label="Column count">
               <button class="toggle-option" [class.active]="columns === 1" (click)="setColumns(1)" title="Single column" aria-label="Single column">
@@ -185,21 +197,6 @@
               </button>
             </div>
           }
-
-          <div class="view-toggle view-toggle-icons" aria-label="View mode">
-            <button class="toggle-option" [class.active]="viewMode === 'gallery'" (click)="setViewMode('gallery')" title="Gallery view" aria-label="Gallery view">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
-            </button>
-            <button class="toggle-option" [class.active]="viewMode === 'grid'" (click)="setViewMode('grid')" title="Grid view" aria-label="Grid view">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="6" height="5" rx="1"/><rect x="9" y="2" width="6" height="5" rx="1"/><rect x="1" y="9" width="6" height="5" rx="1"/><rect x="9" y="9" width="6" height="5" rx="1"/></svg>
-            </button>
-            <button class="toggle-option" [class.active]="viewMode === 'list'" (click)="setViewMode('list')" title="List view" aria-label="List view">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="4" height="4" rx="1"/><rect x="7" y="2" width="8" height="2" rx="1"/><rect x="7" y="5" width="6" height="1" rx=".5"/><rect x="1" y="10" width="4" height="4" rx="1"/><rect x="7" y="10" width="8" height="2" rx="1"/><rect x="7" y="13" width="6" height="1" rx=".5"/></svg>
-            </button>
-            <button class="toggle-option" [class.active]="viewMode === 'compact'" (click)="setViewMode('compact')" title="Compact view" aria-label="Compact view">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg>
-            </button>
-          </div>
         </div>
       }
 
@@ -372,7 +369,6 @@
                           [povCharacterIds]="povCharacterIdSet"
                           [povBadgeColor]="povBadgeColor"
                           (characterClick)="onViewCharacterClick($event)"
-                          (characterDelete)="onViewCharacterDelete($event)"
               (characterSelectionToggle)="
                 onViewCharacterSelectionToggle($event)
               "
@@ -394,7 +390,6 @@
                           [povCharacterIds]="povCharacterIdSet"
                           [povBadgeColor]="povBadgeColor"
                           (characterClick)="onViewCharacterClick($event)"
-                          (characterDelete)="onViewCharacterDelete($event)"
               (characterSelectionToggle)="
                 onViewCharacterSelectionToggle($event)
               "
@@ -467,7 +462,6 @@
                           [povCharacterIds]="povCharacterIdSet"
                           [povBadgeColor]="povBadgeColor"
                           (characterClick)="onViewCharacterClick($event)"
-                          (characterDelete)="onViewCharacterDelete($event)"
               (characterSelectionToggle)="
                 onViewCharacterSelectionToggle($event)
               "
@@ -486,7 +480,6 @@
                           [povCharacterIds]="povCharacterIdSet"
                           [povBadgeColor]="povBadgeColor"
                           (characterClick)="onViewCharacterClick($event)"
-                          (characterDelete)="onViewCharacterDelete($event)"
               (characterSelectionToggle)="
                 onViewCharacterSelectionToggle($event)
               "
@@ -550,7 +543,6 @@
                           [povCharacterIds]="povCharacterIdSet"
                           [povBadgeColor]="povBadgeColor"
                           (characterClick)="onViewCharacterClick($event)"
-                          (characterDelete)="onViewCharacterDelete($event)"
                           (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
                         ></app-character-list-view>
                       }
@@ -566,7 +558,6 @@
                           [povCharacterIds]="povCharacterIdSet"
                           [povBadgeColor]="povBadgeColor"
                           (characterClick)="onViewCharacterClick($event)"
-                          (characterDelete)="onViewCharacterDelete($event)"
                           (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
                         ></app-character-compact-view>
                       }
@@ -627,7 +618,6 @@
                           [povCharacterIds]="povCharacterIdSet"
                           [povBadgeColor]="povBadgeColor"
                           (characterClick)="onViewCharacterClick($event)"
-                          (characterDelete)="onViewCharacterDelete($event)"
                           (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
                         ></app-character-list-view>
                       }
@@ -643,7 +633,6 @@
                           [povCharacterIds]="povCharacterIdSet"
                           [povBadgeColor]="povBadgeColor"
                           (characterClick)="onViewCharacterClick($event)"
-                          (characterDelete)="onViewCharacterDelete($event)"
                           (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
                         ></app-character-compact-view>
                       }
@@ -694,7 +683,6 @@
                     [povCharacterIds]="povCharacterIdSet"
                     [povBadgeColor]="povBadgeColor"
                     (characterClick)="onViewCharacterClick($event)"
-                    (characterDelete)="onViewCharacterDelete($event)"
                     (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
                   ></app-character-list-view>
                 }
@@ -711,7 +699,6 @@
                     [povCharacterIds]="povCharacterIdSet"
                     [povBadgeColor]="povBadgeColor"
                     (characterClick)="onViewCharacterClick($event)"
-                    (characterDelete)="onViewCharacterDelete($event)"
                     (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
                   ></app-character-compact-view>
                 }

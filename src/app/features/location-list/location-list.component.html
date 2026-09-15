@@ -14,17 +14,10 @@
         }
       </div>
 
-      <select class="filter-select" [(ngModel)]="selectedCategory" (ngModelChange)="onFilterChange()">
-        <option value="">All categories</option>
-        @for (category of categories; track category.id) {
-          <option [value]="category.id">{{ category.name }}</option>
-        }
-      </select>
-
       <select class="filter-select" [(ngModel)]="selectedBook" (ngModelChange)="onFilterChange()">
         <option value="">All books</option>
         @for (book of books; track book.id) {
-          <option [value]="book.id">{{ book.name }}</option>
+          <option [value]="book.id">{{ getBookLabel(book) }}</option>
         }
       </select>
 
@@ -33,6 +26,45 @@
         <option value="with">With picture</option>
         <option value="without">Without picture</option>
       </select>
+
+      <div class="toolbar-control">
+        <span class="toolbar-label">Sort</span>
+        <div class="view-toggle view-toggle-text" aria-label="Sort locations">
+          <button
+            class="toggle-option"
+            [class.active]="sortBy === 'name'"
+            (click)="setSortBy('name')"
+            title="Sort by name"
+          >
+            Name
+            @if (sortBy === 'name') {
+              <span class="sort-indicator">{{ sortDirection === 'asc' ? '↑' : '↓' }}</span>
+            }
+          </button>
+          <button
+            class="toggle-option"
+            [class.active]="sortBy === 'book'"
+            (click)="setSortBy('book')"
+            title="Sort by book"
+          >
+            Book
+            @if (sortBy === 'book') {
+              <span class="sort-indicator">{{ sortDirection === 'asc' ? '↑' : '↓' }}</span>
+            }
+          </button>
+          <button
+            class="toggle-option"
+            [class.active]="sortBy === 'modified'"
+            (click)="setSortBy('modified')"
+            title="Sort by last modified"
+          >
+            Modified
+            @if (sortBy === 'modified') {
+              <span class="sort-indicator">{{ sortDirection === 'asc' ? '↑' : '↓' }}</span>
+            }
+          </button>
+        </div>
+      </div>
 
       <div class="view-toggle view-toggle-text">
         <button
@@ -54,9 +86,14 @@
       </div>
 
       <button class="btn btn-secondary" (click)="refreshLocations()" title="Refresh">↻</button>
-      <button class="btn btn-primary" (click)="createNewLocation()">
+      <button
+        class="btn btn-primary"
+        (click)="createNewLocation()"
+        title="New Location (N)"
+      >
         <span class="plus-glyph" aria-hidden="true">+</span>
         New Location
+        <kbd class="shortcut-hint">N</kbd>
       </button>
     </div>
   </app-page-header>
@@ -80,7 +117,7 @@
         </div>
       }
 
-      @if (searchTerm || selectedCategory || selectedBook || selectedPictureFilter) {
+      @if (hasActiveFilters) {
         <div class="results-summary">
           <span>{{ filteredLocations.length }} location{{ filteredLocations.length !== 1 ? 's' : '' }} found</span>
         </div>
@@ -89,7 +126,7 @@
       @if (filteredLocations.length === 0 && !isLoading) {
         <div class="empty-state">
           <div class="empty-icon">🗺️</div>
-          @if (!searchTerm && !selectedCategory && !selectedBook && !selectedPictureFilter) {
+          @if (!hasActiveFilters) {
             <h3>No Locations Yet</h3>
             <p>Create places and settings for your story world.</p>
             <div class="empty-state-actions">
@@ -99,7 +136,7 @@
             <h3>No Locations Found</h3>
             <p>Try adjusting your search or filters.</p>
             <div class="empty-state-actions">
-              <button class="btn btn-secondary" (click)="clearSearchTerm(); selectedCategory=''; selectedBook=''; selectedPictureFilter=''; onFilterChange()">
+              <button class="btn btn-secondary" (click)="clearFilters()">
                 Clear Filters
               </button>
             </div>
@@ -109,8 +146,13 @@
 
       @if (viewMode === 'grid' && filteredLocations.length > 0) {
         <div class="location-grid">
-          @for (location of filteredLocations; track location.id) {
-            <div class="location-card" (click)="editLocation(location)">
+          @for (location of filteredLocations; track location.id; let i = $index) {
+            <div
+              class="location-card location-item"
+              [attr.data-index]="i"
+              [class.selected]="selectedLocationIndex === i"
+              (click)="editLocation(location)"
+            >
               <div class="location-thumbnail">
                 @if (getLocationThumbnail(location)) {
                   <img [src]="getLocationThumbnail(location)!" [alt]="location.name + ' thumbnail'" />
@@ -122,22 +164,17 @@
               </div>
               <div class="location-card-content">
                 <h3 class="location-name">{{ location.name }}</h3>
-                <span
-                  class="category-pill"
-                  [style.background-color]="getCategoryColor(location.category)"
-                  [style.color]="getCategoryTextColor(location.category)"
-                >
-                  {{ getCategoryName(location.category) }}
-                </span>
-              </div>
-              <div class="location-card-actions">
-                <button
-                  class="btn-icon btn-danger"
-                  (click)="deleteLocation(location, $event)"
-                  title="Delete location"
-                >
-                  🗑️
-                </button>
+                <div class="location-meta-row">
+                  @for (book of getLocationBooks(location); track book.id) {
+                    <span
+                      class="book-pill"
+                      [style.background-color]="book.color"
+                      [style.color]="getBookTextColor(book.color)"
+                    >
+                      {{ getBookLabel(book) }}
+                    </span>
+                  }
+                </div>
               </div>
             </div>
           }
@@ -146,8 +183,13 @@
 
       @if (viewMode === 'list' && filteredLocations.length > 0) {
         <div class="location-list-view">
-          @for (location of filteredLocations; track location.id) {
-            <div class="location-list-item" (click)="editLocation(location)">
+          @for (location of filteredLocations; track location.id; let i = $index) {
+            <div
+              class="location-list-item location-item"
+              [attr.data-index]="i"
+              [class.selected]="selectedLocationIndex === i"
+              (click)="editLocation(location)"
+            >
               <div class="location-thumbnail-small">
                 @if (getLocationThumbnail(location)) {
                   <img [src]="getLocationThumbnail(location)!" [alt]="location.name + ' thumbnail'" />
@@ -159,27 +201,17 @@
               </div>
               <div class="location-list-item-content">
                 <h3 class="location-name">{{ location.name }}</h3>
-                <div class="location-meta-row">
-                  <span
-                    class="category-pill"
-                    [style.background-color]="getCategoryColor(location.category)"
-                    [style.color]="getCategoryTextColor(location.category)"
-                  >
-                    {{ getCategoryName(location.category) }}
-                  </span>
-                  @for (tag of getLocationTags(location); track tag.id) {
-                    <span class="tag-pill" [style.background-color]="tag.color">{{ tag.name }}</span>
+                <div class="location-meta-row location-meta-row--end">
+                  @for (book of getLocationBooks(location); track book.id) {
+                    <span
+                      class="book-pill"
+                      [style.background-color]="book.color"
+                      [style.color]="getBookTextColor(book.color)"
+                    >
+                      {{ getBookLabel(book) }}
+                    </span>
                   }
                 </div>
-              </div>
-              <div class="location-list-item-actions">
-                <button
-                  class="btn-icon btn-danger"
-                  (click)="deleteLocation(location, $event)"
-                  title="Delete location"
-                >
-                  🗑️
-                </button>
               </div>
             </div>
           }

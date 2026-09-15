@@ -86,6 +86,40 @@ export class KeyboardShortcutsService {
         category: 'Character Detail'
       },
 
+      // Location List
+      {
+        keys: ['N'],
+        description: 'Create new location',
+        category: 'Location List'
+      },
+      {
+        keys: ['L'],
+        description: 'Toggle list/grid view',
+        category: 'Location List'
+      },
+      {
+        keys: ['Enter'],
+        description: 'Open selected location',
+        category: 'Location List'
+      },
+      {
+        keys: ['↑', '↓'],
+        description: 'Navigate locations',
+        category: 'Location List'
+      },
+
+      // Location Detail
+      {
+        keys: ['Ctrl', 'Enter'],
+        description: 'Save location',
+        category: 'Location Detail'
+      },
+      {
+        keys: ['Esc'],
+        description: 'Cancel editing',
+        category: 'Location Detail'
+      },
+
       // Concepts
       {
         keys: ['Ctrl', 'N'],

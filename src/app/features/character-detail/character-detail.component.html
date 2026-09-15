@@ -85,36 +85,55 @@
           <!-- HERO: thumbnail + name + category -->
           <section class="hero-card">
             <div class="hero-thumb-column">
-              <button
-                type="button"
+              <div
                 class="hero-thumb"
-                (click)="openImagePicker(defaultCharacterStyle)"
-                [title]="activeBookId ? 'Choose an image for ' + getBookName(activeBookId) : 'Choose an image for the default style'"
-                [attr.aria-label]="activeBookId ? 'Choose image for ' + getBookName(activeBookId) : 'Choose default style image'"
+                role="button"
+                tabindex="0"
+                (click)="openImagePicker()"
+                (keydown.enter)="openImagePicker()"
+                (keydown.space)="$event.preventDefault(); openImagePicker()"
+                [title]="activeBookId
+                  ? 'Choose a ' + selectedStyleName + ' image for ' + getBookName(activeBookId)
+                  : 'Choose an image for ' + selectedStyleName"
+                [attr.aria-label]="activeBookId
+                  ? 'Choose ' + selectedStyleName + ' image for ' + getBookName(activeBookId)
+                  : 'Choose ' + selectedStyleName + ' image'"
               >
                 @if (thumbnailPreviewUrl) {
-                  <img [src]="thumbnailPreviewUrl" alt="Thumbnail preview" />
-                }
-                @if (!thumbnailPreviewUrl) {
+                  <img [src]="thumbnailPreviewUrl" [alt]="selectedStyleName + ' thumbnail'" />
+                  <div class="hero-thumb-overlay"><span>Click to change</span></div>
+                  @if (hasOwnThumbnailForStyle(selectedStyleId || defaultCharacterStyle)) {
+                    <button
+                      type="button"
+                      class="hero-thumb-remove-btn"
+                      [title]="activeBookId ? 'Use main image' : 'Remove thumbnail'"
+                      [attr.aria-label]="activeBookId ? 'Use main image' : 'Remove thumbnail'"
+                      (click)="removeThumbnail(); $event.stopPropagation()"
+                    >
+                      ×
+                    </button>
+                  }
+                } @else {
                   <div class="hero-thumb-placeholder">
                     <span class="hero-thumb-icon">👤</span>
-                    <span class="hero-thumb-hint">No portrait</span>
+                    <span class="hero-thumb-hint">Click to add</span>
                   </div>
                 }
-              </button>
+              </div>
 
               @if (characterStyles.length > 1) {
-                <div class="style-strip" role="list" aria-label="Character styles">
+                <div class="style-strip" role="listbox" aria-label="Character styles">
                   @for (style of characterStyles; track style.id) {
                     <button
                       type="button"
                       class="style-strip-item"
-                      role="listitem"
-                      [class.is-default]="style.id === defaultCharacterStyle"
+                      role="option"
+                      [attr.aria-selected]="style.id === selectedStyleId"
+                      [class.is-selected]="style.id === selectedStyleId"
                       [class.has-image]="hasThumbnailForStyle(style.id)"
-                      (click)="openImagePicker(style.id)"
-                      [title]="'Set ' + style.name + ' image'"
-                      [attr.aria-label]="'Set ' + style.name + ' image'"
+                      (click)="selectStyle(style.id)"
+                      [title]="'Show ' + style.name"
+                      [attr.aria-label]="'Show ' + style.name + ' style'"
                     >
                       @if (getStylePreviewUrl(style.id); as preview) {
                         <img [src]="preview" [alt]="style.name" />
@@ -136,21 +155,12 @@
               }
 
               <div class="thumbnail-actions hero-thumbnail-actions">
-                <button type="button" class="btn btn-secondary" (click)="openImagePicker(defaultCharacterStyle)">
-                  {{ activeBookId ? 'Choose book image' : 'Choose main image' }}
-                </button>
                 <button
                   type="button"
                   class="btn btn-secondary"
                   (click)="openGeneratePortrait()"
                   [disabled]="!imageGenerationEnabled"
                 >Generate portrait</button>
-                <button
-                  type="button"
-                  class="btn btn-ghost thumbnail-remove-btn"
-                  (click)="removeThumbnail(defaultCharacterStyle)"
-                  [disabled]="!hasOwnThumbnailForStyle(defaultCharacterStyle)"
-                >{{ activeBookId ? 'Use main image' : 'Remove main image' }}</button>
               </div>
             </div>
 

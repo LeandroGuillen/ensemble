@@ -39,10 +39,6 @@
   &:hover {
     border-color: var(--color-accent-primary);
     background-color: var(--color-bg-tertiary);
-
-    .list-item-actions {
-      opacity: 1;
-    }
   }
 
   &.selected {
@@ -91,9 +87,19 @@
 
 .list-item-header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--spacing-md);
   margin-bottom: var(--spacing-xs);
+  min-width: 0;
+}
+
+.list-item-identity {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
 }
 
 .list-item-name {
@@ -101,13 +107,15 @@
   font-weight: 700;
   margin: 0;
   color: var(--color-text-primary);
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
   letter-spacing: -0.01em;
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  flex: 0 1 auto;
 }
 
 .pov-star {
@@ -123,14 +131,35 @@
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  flex-shrink: 0;
+  flex: 0 10 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+
+  &.is-faded {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      #000 0%,
+      #000 calc(100% - 18px),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to right,
+      #000 0%,
+      #000 calc(100% - 18px),
+      transparent 100%
+    );
+  }
 }
 
 .list-item-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  margin-bottom: var(--spacing-xs);
+  margin: 0 0 0 auto;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  max-width: 50%;
 
   .tag-sm {
     font-size: 0.6875rem;
@@ -146,30 +175,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.list-item-actions {
-  display: flex;
-  gap: var(--spacing-xs);
-  opacity: 0;
-  transition: opacity var(--transition-base);
-  flex-shrink: 0;
-  margin-left: auto;
-
-  .icon-btn {
-    background-color: var(--color-bg-elevated);
-    border: 1px solid var(--color-border);
-
-    &:hover {
-      background-color: var(--color-bg-tertiary);
-      border-color: var(--color-accent-primary);
-    }
-
-    &.delete-btn:hover {
-      background-color: rgba(239, 68, 68, 0.1);
-      border-color: var(--color-error);
-    }
-  }
 }
 
 // Character Checkbox
@@ -210,10 +215,6 @@
 @media (max-width: 768px) {
   .character-list-view {
     gap: var(--spacing-sm);
-  }
-
-  .list-item-actions {
-    opacity: 1; // Always show on mobile
   }
 
   .character-list-item {

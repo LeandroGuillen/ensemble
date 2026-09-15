@@ -143,8 +143,6 @@ export class LocationService {
       const location: Location = {
         id: generateId(),
         name: data.name,
-        category: data.category,
-        tags: data.tags || [],
         books,
         thumbnail: data.thumbnail?.trim() || undefined,
         content: data.content || '',
@@ -209,8 +207,6 @@ export class LocationService {
       const updatedLocation: Location = {
         ...existing,
         name: data.name ?? existing.name,
-        category: data.category ?? existing.category,
-        tags: data.tags ?? existing.tags,
         books: data.books ?? existing.books,
         thumbnail: nextThumbnail,
         content: data.content !== undefined ? data.content : existing.content,
@@ -361,8 +357,6 @@ export class LocationService {
       const location: Location = {
         id: storedId || generateId(),
         name: frontmatter.name,
-        category: frontmatter.category || 'uncategorized',
-        tags: frontmatter.tags || [],
         books: frontmatter.books || [],
         thumbnail: thumbnail || undefined,
         content: content || '',
@@ -433,8 +427,6 @@ export class LocationService {
       const frontmatter: LocationFrontmatter = {
         id: location.id,
         name: location.name,
-        category: location.category,
-        tags: location.tags,
         books: location.books,
         ...(location.thumbnail ? { thumbnail: location.thumbnail } : {}),
         created: location.created.toISOString(),

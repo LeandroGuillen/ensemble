@@ -138,6 +138,8 @@ export class CharacterDetailComponent
   thumbnailPreviewUrls: Map<string, string> = new Map();
   characterStyles: CharacterStyle[] = [];
   defaultCharacterStyle = '';
+  /** Style currently shown in the hero thumbnail (change/remove/generate target). */
+  selectedStyleId = '';
   /** Style id the image picker / generate portrait will assign to */
   pickerTargetStyleId = '';
   /** Book id the image picker / generate portrait will assign to; null means main portrait. */
@@ -195,8 +197,11 @@ export class CharacterDetailComponent
         this.books = this.metadataService.getBooks();
         this.characterStyles = this.projectService.getCharacterStyles();
         this.defaultCharacterStyle = this.projectService.getDefaultCharacterStyle();
+        if (!this.selectedStyleId || !this.characterStyles.some((s) => s.id === this.selectedStyleId)) {
+          this.selectedStyleId = this.resolveInitialSelectedStyle();
+        }
         if (!this.pickerTargetStyleId) {
-          this.pickerTargetStyleId = this.defaultCharacterStyle;
+          this.pickerTargetStyleId = this.selectedStyleId;
         }
         this.imageGenerationEnabled =
           project?.metadata.settings.imageGeneration?.enabled || false;
@@ -452,7 +457,8 @@ export class CharacterDetailComponent
 
         this.thumbnailsMap = { ...(this.character.thumbnails || {}) };
         this.bookCategoriesMap = { ...(this.character.bookCategories || {}) };
-        this.pickerTargetStyleId = this.defaultCharacterStyle;
+        this.selectedStyleId = this.resolveInitialSelectedStyle();
+        this.pickerTargetStyleId = this.selectedStyleId;
         this.bookThumbnailsMap = { ...(this.character.bookThumbnails || {}) };
         await this.refreshThumbnailPreviews('main');
 
@@ -931,11 +937,31 @@ export class CharacterDetailComponent
   }
 
   get thumbnailPreviewUrl(): string | null {
-    return this.getStylePreviewUrl(this.defaultCharacterStyle);
+    return this.getStylePreviewUrl(this.selectedStyleId || this.defaultCharacterStyle);
+  }
+
+  get selectedStyleName(): string {
+    const id = this.selectedStyleId || this.defaultCharacterStyle;
+    return this.characterStyles.find((s) => s.id === id)?.name || 'default';
   }
 
   getStylePreviewUrl(styleId: string): string | null {
     return this.thumbnailPreviewUrls.get(styleId) || null;
+  }
+
+  selectStyle(styleId: string): void {
+    if (!styleId || styleId === this.selectedStyleId) return;
+    this.selectedStyleId = styleId;
+    this.cdr.markForCheck();
+  }
+
+  /** Prefer the character-list style preference, then project default. */
+  private resolveInitialSelectedStyle(): string {
+    const listStyle = this.projectService.getLastCharacterListStyle();
+    if (listStyle && this.characterStyles.some((s) => s.id === listStyle)) {
+      return listStyle;
+    }
+    return this.defaultCharacterStyle || this.characterStyles[0]?.id || '';
   }
 
   get activeBookId(): string | null {
@@ -1203,7 +1229,7 @@ export class CharacterDetailComponent
       this.cdr.markForCheck();
       return;
     }
-    this.pickerTargetStyleId = this.defaultCharacterStyle || this.characterStyles[0]?.id || '';
+    this.pickerTargetStyleId = this.selectedStyleId || this.defaultCharacterStyle || this.characterStyles[0]?.id || '';
     this.pickerTargetBookId = this.activeBookId;
     this.error = null;
     this.showGeneratePortraitDialog = true;
@@ -1222,7 +1248,8 @@ export class CharacterDetailComponent
   }
 
   async openImagePicker(styleId?: string): Promise<void> {
-    this.pickerTargetStyleId = styleId || this.defaultCharacterStyle || this.characterStyles[0]?.id || '';
+    this.pickerTargetStyleId =
+      styleId || this.selectedStyleId || this.defaultCharacterStyle || this.characterStyles[0]?.id || '';
     this.pickerTargetBookId = this.activeBookId;
     this.showImagePickerDialog = true;
     this.cdr.markForCheck();
@@ -1269,7 +1296,7 @@ export class CharacterDetailComponent
   }
 
   removeThumbnail(styleId?: string): void {
-    const target = styleId || this.defaultCharacterStyle;
+    const target = styleId || this.selectedStyleId || this.defaultCharacterStyle;
     const bookId = this.activeBookId;
     const hasThumbnail = bookId
       ? !!resolveThumbnailForStyle(this.bookThumbnailsMap[bookId], target)
@@ -1310,6 +1337,8 @@ export class CharacterDetailComponent
     if (!this.imageGenerationEnabled || !prompt.positive.trim()) return;
     if (this.generatingPromptIndex !== null) return;
     this.generatingPromptIndex = this.prompts.indexOf(prompt);
+    this.pickerTargetStyleId = this.selectedStyleId || this.defaultCharacterStyle || this.characterStyles[0]?.id || '';
+    this.pickerTargetBookId = this.activeBookId;
     this.error = null;
     this.cdr.markForCheck();
     try {
@@ -1328,8 +1357,9 @@ export class CharacterDetailComponent
         ...(outputDirectory ? { outputDirectory } : {}),
       });
       this.setThumbnailForStyle(
-        this.defaultCharacterStyle,
-        formatThumbnailWikiLink(relativePath)
+        this.pickerTargetStyleId || this.selectedStyleId || this.defaultCharacterStyle,
+        formatThumbnailWikiLink(relativePath),
+        this.pickerTargetBookId
       );
       this.notificationService.showSuccess(`Image saved to ${relativePath}`);
     } catch (error) {
@@ -1357,11 +1387,11 @@ export class CharacterDetailComponent
   }
 
   private getThumbnailOutputDirectory(): string | null {
-    const styleId = this.pickerTargetStyleId || this.defaultCharacterStyle;
+    const styleId = this.pickerTargetStyleId || this.selectedStyleId || this.defaultCharacterStyle;
     const raw = resolveThumbnailForBookStyle(
       this.thumbnailsMap,
       this.bookThumbnailsMap,
-      this.pickerTargetBookId,
+      this.pickerTargetBookId ?? this.activeBookId,
       styleId
     ) || '';
     const parsed = parseThumbnailReference(raw);

@@ -41,52 +41,35 @@
         }
       </div>
       <div class="compact-item-content">
-        <div class="compact-item-main">
+        <div class="compact-item-identity">
           <h3 class="compact-item-name">
             {{ character.name }}
             @if (isPov(character)) {
               <span class="pov-star" [style.color]="povBadgeColor" title="Point of view character" aria-label="Point of view character">★</span>
             }
           </h3>
-          <span class="compact-item-category" [style.color]="getCategoryColor(getDisplayCategoryId(character))">
+          <span
+            class="compact-item-category"
+            appFadeOverflow
+            [style.color]="getCategoryColor(getDisplayCategoryId(character))"
+          >
             {{ getCategoryName(getDisplayCategoryId(character)) }}
           </span>
         </div>
         @if (character.tags.length > 0) {
-          <div class="compact-item-tags">
-            @for (tag of getCharacterTagsInOrder(character); track tag; let i = $index) {
+          <div class="compact-item-tags" appCompactOverflowTags>
+            @for (tag of getCharacterTagsInOrder(character); track tag.id) {
               <span
                 class="tag tag-xs"
                 [style.background-color]="tag.color"
                 [style.color]="'white'"
-                [style.display]="i < 3 ? 'inline-block' : 'none'"
                 >
                 {{ tag.name }}
               </span>
             }
-            @if (character.tags.length > 3) {
-              <span class="tag-overflow">+{{ character.tags.length - 3 }}</span>
-            }
+            <span class="tag-overflow" hidden aria-hidden="true"></span>
           </div>
         }
-      </div>
-      <div class="compact-item-actions">
-        <button
-          class="icon-btn icon-btn-sm"
-          (click)="onCharacterClickWithStop(character, $event)"
-          title="Edit character"
-          aria-label="Edit character"
-          >
-          ✏️
-        </button>
-        <button
-          class="icon-btn icon-btn-sm delete-btn"
-          (click)="onCharacterDelete(character, $event)"
-          title="Delete character"
-          aria-label="Delete character"
-          >
-          🗑️
-        </button>
       </div>
     </div>
   }

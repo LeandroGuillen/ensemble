@@ -30,8 +30,6 @@ describe('LocationService', () => {
 
   const createFormData = (): LocationFormData => ({
     name: 'Grey Harbor',
-    category: 'setting',
-    tags: ['coastal'],
     books: [],
     content: 'A foggy port city.',
   });
@@ -121,9 +119,6 @@ describe('LocationService', () => {
           success: true,
           content: `---
 name: Grey Harbor
-category: setting
-tags:
-  - coastal
 books: []
 ---
 

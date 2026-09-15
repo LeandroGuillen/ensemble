@@ -164,9 +164,6 @@ Location files match the pattern `_*.md` under `locations/` (recursively scanned
 ---
 id: m0k3r5abc123
 name: Grey Harbor
-category: setting
-tags:
-  - coastal
 books:
   - n23
 thumbnail: "[[img/locations/grey-harbor.jpg]]"
@@ -177,7 +174,7 @@ modified: "2024-01-20T14:45:00Z"
 (single markdown body)
 ```
 
-Location ID is stable in frontmatter. Locations reuse project categories/tags/books and use a single `thumbnail` (not character styles).
+Location ID is stable in frontmatter. Locations use project books and a single `thumbnail` (not character styles). They do not use categories or tags.
 
 ### Removed Features
 

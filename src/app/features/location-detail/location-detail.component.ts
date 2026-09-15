@@ -1,5 +1,17 @@
-import { DestroyRef, inject, Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import {
+  DestroyRef,
+  inject,
+  Component,
+  OnInit,
+  AfterViewInit,
+  OnDestroy,
+  ChangeDetectorRef,
+  ElementRef,
+  ViewChild,
+  NgZone,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Location as AngularLocation } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   FormsModule,
@@ -8,7 +20,7 @@ import {
   FormGroup,
   Validators,
 } from '@angular/forms';
-import { Book, Category, Tag } from '../../core/interfaces/project.interface';
+import { Book } from '../../core/interfaces/project.interface';
 import { Location } from '../../core/interfaces/location.interface';
 import { ProjectImage } from '../../core/interfaces';
 import {
@@ -18,16 +30,14 @@ import {
   LoggingService,
   NotificationService,
   ModalService,
-  MetadataHelperService,
   ImagePickerService,
   ElectronService,
 } from '../../core/services';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
-import { CategoryToggleComponent, ToggleOption } from '../../shared/category-toggle/category-toggle.component';
 import { MultiSelectButtonsComponent, SelectableItem } from '../../shared/multi-select-buttons/multi-select-buttons.component';
 import { ImagePickerDialogComponent } from '../../shared/image-picker-dialog/image-picker-dialog.component';
 import { formatThumbnailWikiLink, parseThumbnailReference, resolveThumbnailPath } from '../../core/utils/thumbnail.utils';
-import { contrastTextColor } from '../../core/utils/color-contrast.utils';
+import { getBookDisplayName } from '../../core/utils/book-display.utils';
 
 @Component({
   selector: 'app-location-detail',
@@ -35,26 +45,23 @@ import { contrastTextColor } from '../../core/utils/color-contrast.utils';
     FormsModule,
     ReactiveFormsModule,
     PageHeaderComponent,
-    CategoryToggleComponent,
     MultiSelectButtonsComponent,
     ImagePickerDialogComponent,
   ],
   templateUrl: './location-detail.component.html',
   styleUrls: ['./location-detail.component.scss'],
 })
-export class LocationDetailComponent implements OnInit {
+export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly destroyRef = inject(DestroyRef);
+
+  @ViewChild('nameInput') nameInput?: ElementRef<HTMLInputElement>;
 
   locationId: string | null = null;
   isNewLocation = false;
   location: Location | null = null;
 
   locationForm: FormGroup;
-  categories: Category[] = [];
-  tags: Tag[] = [];
   books: Book[] = [];
-  categoryToggleOptions: ToggleOption[] = [];
-  tagSelectItems: SelectableItem[] = [];
   bookSelectItems: SelectableItem[] = [];
 
   thumbnailPreviewUrl: string | null = null;
@@ -67,6 +74,7 @@ export class LocationDetailComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
+    private angularLocation: AngularLocation,
     private fb: FormBuilder,
     private metadataService: MetadataService,
     private locationService: LocationService,
@@ -74,15 +82,13 @@ export class LocationDetailComponent implements OnInit {
     private logger: LoggingService,
     private notificationService: NotificationService,
     private modalService: ModalService,
-    private metadataHelper: MetadataHelperService,
     private imagePickerService: ImagePickerService,
     private electronService: ElectronService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private ngZone: NgZone
   ) {
     this.locationForm = this.fb.group({
       name: ['', [Validators.required, Validators.maxLength(100)]],
-      category: ['', Validators.required],
-      tags: [[] as string[]],
       books: [[] as string[]],
       thumbnail: [''],
       content: [''],
@@ -105,36 +111,50 @@ export class LocationDetailComponent implements OnInit {
         if (!metadata) {
           return;
         }
-        this.categories = metadata.categories || [];
-        this.tags = metadata.tags || [];
         this.books = metadata.books || [];
-        this.categoryToggleOptions = this.categories.map((c) => ({
-          id: c.id,
-          name: c.name,
-          color: c.color,
-          tooltip: c.description,
+        this.bookSelectItems = this.books.map((book) => ({
+          id: book.id,
+          name: getBookDisplayName(book),
+          color: book.color,
         }));
-        this.tagSelectItems = this.tags.map((t) => ({
-          id: t.id,
-          name: t.name,
-          color: t.color,
-          activeTextColor: contrastTextColor(t.color),
-        }));
-        this.bookSelectItems = this.books.map((b) => ({
-          id: b.id,
-          name: b.name,
-          color: b.color,
-          activeTextColor: contrastTextColor(b.color),
-        }));
-
-        if (this.isNewLocation && !this.locationForm.get('category')?.value) {
-          const defaultCategory =
-            metadata.settings?.defaultCategory || this.categories[0]?.id || '';
-          this.locationForm.patchValue({ category: defaultCategory });
-        }
         this.cdr.markForCheck();
       });
   }
+
+  ngAfterViewInit(): void {
+    setTimeout(() => {
+      this.nameInput?.nativeElement.focus();
+    }, 0);
+
+    this.ngZone.runOutsideAngular(() => {
+      document.addEventListener('keydown', this.keydownListener);
+    });
+  }
+
+  ngOnDestroy(): void {
+    document.removeEventListener('keydown', this.keydownListener);
+    this.imagePickerService.close();
+  }
+
+  private keydownListener = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.ngZone.run(() => {
+        if (this.showImagePickerDialog || this.imagePickerService.isOpen) {
+          this.closeImagePicker();
+          return;
+        }
+        void this.cancel();
+      });
+      return;
+    }
+    if (event.ctrlKey && event.key === 'Enter') {
+      event.preventDefault();
+      this.ngZone.run(() => {
+        void this.saveLocation();
+      });
+    }
+  };
 
   private async ensureLocationsLoaded(): Promise<void> {
     const project = this.projectService.getCurrentProject();
@@ -151,14 +171,8 @@ export class LocationDetailComponent implements OnInit {
   private async loadLocation(): Promise<void> {
     if (this.isNewLocation) {
       this.location = null;
-      const defaultCategory =
-        this.projectService.getCurrentProject()?.metadata?.settings?.defaultCategory ||
-        this.categories[0]?.id ||
-        '';
       this.locationForm.reset({
         name: '',
-        category: defaultCategory,
-        tags: [],
         books: [],
         thumbnail: '',
         content: '',
@@ -183,8 +197,6 @@ export class LocationDetailComponent implements OnInit {
       this.location = location;
       this.locationForm.patchValue({
         name: location.name,
-        category: location.category,
-        tags: location.tags || [],
         books: location.books || [],
         thumbnail: location.thumbnail || '',
         content: location.content || '',
@@ -198,16 +210,6 @@ export class LocationDetailComponent implements OnInit {
       this.isLoading = false;
       this.cdr.markForCheck();
     }
-  }
-
-  onCategorySelect(categoryId: string): void {
-    this.locationForm.patchValue({ category: categoryId });
-    this.locationForm.markAsDirty();
-  }
-
-  onTagsChange(tagIds: string[]): void {
-    this.locationForm.patchValue({ tags: tagIds });
-    this.locationForm.markAsDirty();
   }
 
   onBooksChange(bookIds: string[]): void {
@@ -285,6 +287,14 @@ export class LocationDetailComponent implements OnInit {
     }
   }
 
+  private async navigateBackAfterSave(): Promise<void> {
+    if (window.history.length > 1) {
+      this.angularLocation.back();
+      return;
+    }
+    await this.router.navigate(['/locations']);
+  }
+
   async saveLocation(): Promise<void> {
     if (this.locationForm.invalid) {
       this.locationForm.markAllAsTouched();
@@ -297,8 +307,6 @@ export class LocationDetailComponent implements OnInit {
       const formData = this.locationForm.getRawValue();
       const payload = {
         name: formData.name.trim(),
-        category: formData.category,
-        tags: formData.tags || [],
         books: formData.books || [],
         thumbnail: formData.thumbnail?.trim() || undefined,
         content: formData.content || '',
@@ -307,7 +315,8 @@ export class LocationDetailComponent implements OnInit {
       if (this.isNewLocation) {
         const created = await this.locationService.createLocation(payload);
         this.notificationService.showSuccess(`Created ${created.name}`);
-        await this.router.navigate(['/location', created.id], { replaceUrl: true });
+        this.locationForm.markAsPristine();
+        await this.navigateBackAfterSave();
       } else if (this.locationId) {
         const updated = await this.locationService.updateLocation(this.locationId, payload);
         if (!updated) {
@@ -317,9 +326,7 @@ export class LocationDetailComponent implements OnInit {
         this.locationId = updated.id;
         this.locationForm.markAsPristine();
         this.notificationService.showSuccess(`Saved ${updated.name}`);
-        if (updated.id !== this.route.snapshot.paramMap.get('id')) {
-          await this.router.navigate(['/location', updated.id], { replaceUrl: true });
-        }
+        await this.navigateBackAfterSave();
       }
     } catch (error) {
       this.error = `Failed to save location: ${error}`;

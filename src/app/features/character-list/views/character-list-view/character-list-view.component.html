@@ -42,29 +42,35 @@
       </div>
       <div class="list-item-content">
         <div class="list-item-header">
-          <h3 class="list-item-name">
-            {{ character.name }}
-            @if (isPov(character)) {
-              <span class="pov-star" [style.color]="povBadgeColor" title="Point of view character" aria-label="Point of view character">★</span>
-            }
-          </h3>
-          <span class="list-item-category" [style.color]="getCategoryColor(getDisplayCategoryId(character))">
-            {{ getCategoryName(getDisplayCategoryId(character)) }}
-          </span>
-        </div>
-        @if (character.tags.length > 0) {
-          <div class="list-item-tags">
-            @for (tag of getCharacterTagsInOrder(character); track tag) {
-              <span
-                class="tag tag-sm"
-                [style.background-color]="tag.color"
-                [style.color]="'white'"
-                >
-                {{ tag.name }}
-              </span>
-            }
+          <div class="list-item-identity">
+            <h3 class="list-item-name">
+              {{ character.name }}
+              @if (isPov(character)) {
+                <span class="pov-star" [style.color]="povBadgeColor" title="Point of view character" aria-label="Point of view character">★</span>
+              }
+            </h3>
+            <span
+              class="list-item-category"
+              appFadeOverflow
+              [style.color]="getCategoryColor(getDisplayCategoryId(character))"
+            >
+              {{ getCategoryName(getDisplayCategoryId(character)) }}
+            </span>
           </div>
-        }
+          @if (character.tags.length > 0) {
+            <div class="list-item-tags">
+              @for (tag of getCharacterTagsInOrder(character); track tag) {
+                <span
+                  class="tag tag-sm"
+                  [style.background-color]="tag.color"
+                  [style.color]="'white'"
+                  >
+                  {{ tag.name }}
+                </span>
+              }
+            </div>
+          }
+        </div>
         @if (character.content) {
           <p class="list-item-description">
             {{
@@ -74,14 +80,6 @@
             }}
           </p>
         }
-      </div>
-      <div class="list-item-actions">
-        <button class="icon-btn" (click)="onCharacterClickWithStop(character, $event)" title="Edit character" aria-label="Edit character">
-          ✏️
-        </button>
-        <button class="icon-btn delete-btn" (click)="onCharacterDelete(character, $event)" title="Delete character" aria-label="Delete character">
-          🗑️
-        </button>
       </div>
     </div>
   }

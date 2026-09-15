@@ -54,11 +54,8 @@ export class LocationCommandService {
         id: `location-${location.id}`,
         label: location.name,
         thumbnail: this.locationService.getCachedThumbnail(location.id) || undefined,
-        metadata: this.metadataHelper.getCategoryName(location.category),
         keywords: [
           location.name,
-          this.metadataHelper.getCategoryName(location.category),
-          ...location.tags.map((tagId) => this.metadataHelper.getTagName(tagId)),
           ...location.books.map((bookId) => this.metadataHelper.getBookName(bookId)),
         ],
         group: 'locations',
