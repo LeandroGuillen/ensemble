@@ -17,7 +17,7 @@ import {
   isLegacyCharacterMainFile,
   parseCharacterMainFileLocation,
 } from '../utils/character-path.utils';
-import { parseThumbnailReference, resolveThumbnailPath, resolveThumbnailForStyle, resolveThumbnailForBookStyle, normalizeThumbnailsMap, normalizeBookThumbnailsMap, thumbnailCacheKey } from '../utils/thumbnail.utils';
+import { parseThumbnailReference, resolveThumbnailPath, resolveThumbnailForStyle, resolveThumbnailForBookStyle, normalizeThumbnailsMap, normalizeBookThumbnailsMap, thumbnailCacheKey, formatThumbnailWikiLink } from '../utils/thumbnail.utils';
 import { normalizeBookCategories } from '../utils/character-category.utils';
 import { normalizeAliases } from '../utils/character-alias.utils';
 import { normalizeBookCode } from '../utils/book-display.utils';
@@ -654,9 +654,11 @@ export class CharacterService {
         filePath,
       };
 
-      await this.saveCharacterToFile(draft);
-      this.draftsSubject.next([draft, ...this.draftsSubject.value]);
-      return draft;
+      const localizedDraft = await this.localizeDraftImages(draft);
+
+      await this.saveCharacterToFile(localizedDraft);
+      this.draftsSubject.next([localizedDraft, ...this.draftsSubject.value]);
+      return localizedDraft;
     } catch (error) {
       if (createdFolderPath) {
         await this.electronService.deleteDirectoryRecursive(createdFolderPath);
@@ -664,6 +666,108 @@ export class CharacterService {
       this.logger.error('Failed to create character draft', error);
       throw new Error(`Failed to create character draft: ${error}`);
     }
+  }
+
+  /**
+   * Copies draft thumbnails stored in the shared images folder into the draft's
+   * own `img/` folder and rewrites their references, so drafts are self-contained.
+   * References already inside the character folder are left untouched.
+   */
+  private async localizeDraftImages(character: Character): Promise<Character> {
+    if (!character.draft || !isFolderBasedCharacterPath(character.relativePath)) {
+      return character;
+    }
+    const projectPath = this.projectService.getCurrentProject()?.path;
+    if (!projectPath) {
+      return character;
+    }
+
+    const imagesRoot = (
+      this.projectService.getCurrentProject()?.metadata?.settings?.imagesFolder?.trim() || 'img'
+    ).replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+    if (!imagesRoot) {
+      return character;
+    }
+
+    const copyOne = async (raw: string): Promise<string> => {
+      const parsed = parseThumbnailReference(raw || '');
+      if (!parsed) return raw;
+      const normalized = parsed.replace(/\\/g, '/').replace(/^\.?\/+/, '');
+      const prefix = `${imagesRoot}/`;
+      if (!normalized.startsWith(prefix) || normalized === prefix.slice(0, -1)) {
+        return raw;
+      }
+
+      const sourceAbsolute = resolveThumbnailPath(projectPath, normalized);
+      const draftFolder = pathDirname(character.filePath);
+      const targetDirectory = pathJoin(draftFolder, 'img');
+      try {
+        if (!(await this.electronService.fileExists(sourceAbsolute))) {
+          return raw;
+        }
+        if (!(await this.electronService.isDirectory(targetDirectory))) {
+          assertIpcSuccess(
+            await this.electronService.createDirectory(targetDirectory),
+            'Create draft image directory'
+          );
+        }
+
+        const name = normalized.split('/').pop() || 'image';
+        const dotIndex = name.lastIndexOf('.');
+        const stem = dotIndex > 0 ? name.slice(0, dotIndex) : name;
+        const extension = dotIndex > 0 ? name.slice(dotIndex) : '';
+        let availableName = name;
+        for (
+          let attempt = 1;
+          await this.electronService.fileExists(pathJoin(targetDirectory, availableName));
+          attempt++
+        ) {
+          availableName = `${stem}-${attempt}${extension}`;
+        }
+
+        assertIpcSuccess(
+          await this.electronService.copyFile(
+            sourceAbsolute,
+            pathJoin(targetDirectory, availableName)
+          ),
+          'Copy image into draft folder'
+        );
+        const draftDirectory = pathDirname(character.relativePath);
+        return formatThumbnailWikiLink(
+          `${draftDirectory}${pathJoin('/img', availableName)}`.replace(/\\/g, '/')
+        );
+      } catch (error) {
+        this.logger.error('Failed to copy image into draft folder', error);
+        return raw;
+      }
+    };
+
+    let changed = false;
+    const nextThumbnails: Record<string, string> = {};
+    for (const [style, raw] of Object.entries(character.thumbnails || {})) {
+      const rewritten = await copyOne(raw);
+      if (rewritten !== raw) changed = true;
+      nextThumbnails[style] = rewritten;
+    }
+    const nextBookThumbnails: Record<string, Record<string, string>> = {};
+    for (const [bookId, bookMap] of Object.entries(character.bookThumbnails || {})) {
+      const inner: Record<string, string> = {};
+      for (const [style, raw] of Object.entries(bookMap || {})) {
+        const rewritten = await copyOne(raw);
+        if (rewritten !== raw) changed = true;
+        inner[style] = rewritten;
+      }
+      nextBookThumbnails[bookId] = inner;
+    }
+
+    if (!changed) {
+      return character;
+    }
+    return {
+      ...character,
+      thumbnails: nextThumbnails,
+      bookThumbnails: nextBookThumbnails,
+    };
   }
 
   private rewriteMovedThumbnailReferences(
@@ -795,9 +899,11 @@ export class CharacterService {
       throw new Error('A category is required before promoting this draft');
     }
 
-    const relocated = isFolderBasedCharacterPath(draft.relativePath)
-      ? await this.relocateFolderCharacter(draft, draft.name, false)
-      : draft;
+    const localizedDraft = await this.localizeDraftImages(draft);
+
+    const relocated = isFolderBasedCharacterPath(localizedDraft.relativePath)
+      ? await this.relocateFolderCharacter(localizedDraft, localizedDraft.name, false)
+      : localizedDraft;
     const promoted: Character = { ...relocated, draft: undefined, modified: new Date() };
     try {
       await this.saveCharacterToFile(promoted);
@@ -938,8 +1044,13 @@ export class CharacterService {
         filePath: newFilePath,
       };
 
+      // Drafts whose thumbnails still reference the shared images folder become self-contained.
+      const finalCharacter = isDraft
+        ? await this.localizeDraftImages(updatedCharacter)
+        : updatedCharacter;
+
       // Save updated character to file
-      await this.saveCharacterToFile(updatedCharacter);
+      await this.saveCharacterToFile(finalCharacter);
 
       // Thumbnail path changes must invalidate the persistent data URL cache.
       if (
@@ -959,7 +1070,7 @@ export class CharacterService {
       );
       sourceSubject.next(sortedCharacters);
 
-      return updatedCharacter;
+      return finalCharacter;
     } catch (error) {
       this.logger.error('Failed to update character', error);
       throw new Error(`Failed to update character: ${error}`);
