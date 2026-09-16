@@ -778,6 +778,7 @@
 .danger-zone {
   display: flex;
   justify-content: center;
+  gap: var(--spacing-sm);
   padding: var(--spacing-lg) 0 0;
 }
 

@@ -355,6 +355,17 @@
 
             @if (isEditing) {
               <div class="danger-zone">
+                @if (!isDraftMode) {
+                  <button
+                    type="button"
+                    class="danger-link"
+                    (click)="moveCharacterToDraft()"
+                    [disabled]="isSaving"
+                    title="Move character back to drafts"
+                  >
+                    Move to draft
+                  </button>
+                }
                 <button
                   type="button"
                   class="danger-link"

@@ -6,7 +6,9 @@
         <button type="button" class="toggle-option" [class.active]="!drawerMode" (click)="setDrawerMode(false)">
           Characters <span class="scope-count">{{ activeCharacters.length }}</span>
         </button>
-        <button type="button" class="toggle-option" [class.active]="drawerMode" (click)="setDrawerMode(true)">
+        <button type="button" #drawerToggle class="toggle-option drawer-drop-target" [class.active]="drawerMode" [class.drag-over]="drawerDropHighlighted" [class.pulsing]="isDraggingCharacter"
+          (click)="setDrawerMode(true)"
+          title="Drop a character here to move it to the Drawer">
           Drawer <span class="scope-count">{{ draftCharacters.length }}</span>
         </button>
       </div>
@@ -656,11 +658,18 @@
             }
             <!-- Non-Grouped View (Original) -->
             @if (groupBy === 'none') {
-              <div>
+              <div
+                cdkDropList
+                [id]="getCharacterPaneDropListId()"
+                [cdkDropListConnectedTo]="getConnectedCategoryDropListIds()"
+                [cdkDropListSortingDisabled]="true"
+                (cdkDropListDropped)="onPaneDrop($event)"
+                >
                 <!-- Grid View (Cards) -->
                 @if (filteredCharacters.length > 0 && viewMode === 'grid') {
                   <app-character-grid-view
                     [characters]="filteredCharacters"
+                    [dndEnabled]="!drawerMode"
                     [categories]="categories"
                     [categoryContextBookId]="selectedBook"
                     [tags]="tags"
@@ -670,12 +679,15 @@
                     [povBadgeColor]="povBadgeColor"
                     (characterClick)="onViewCharacterClick($event)"
                     (characterDelete)="onViewCharacterDelete($event)"
+                    (dragStarted)="onAnyCharacterDragStarted()"
+                    (dragEnded)="onAnyCharacterDragEnded()"
                   ></app-character-grid-view>
                 }
                 <!-- List View -->
                 @if (filteredCharacters.length > 0 && viewMode === 'list') {
                   <app-character-list-view
                     [characters]="filteredCharacters"
+                    [dndEnabled]="!drawerMode"
                     [categories]="categories"
                     [categoryContextBookId]="selectedBook"
                     [tags]="tags"
@@ -684,6 +696,8 @@
                     [thumbnailDataUrls]="thumbnailDataUrls"
                     [povCharacterIds]="povCharacterIdSet"
                     [povBadgeColor]="povBadgeColor"
+                    (dragStarted)="onAnyCharacterDragStarted()"
+                    (dragEnded)="onAnyCharacterDragEnded()"
                     (characterClick)="onViewCharacterClick($event)"
                     (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
                   ></app-character-list-view>
@@ -692,6 +706,7 @@
                 @if (filteredCharacters.length > 0 && viewMode === 'compact') {
                   <app-character-compact-view
                     [characters]="filteredCharacters"
+                    [dndEnabled]="!drawerMode"
                     [categories]="categories"
                     [categoryContextBookId]="selectedBook"
                     [tags]="tags"
@@ -700,6 +715,8 @@
                     [thumbnailDataUrls]="thumbnailDataUrls"
                     [povCharacterIds]="povCharacterIdSet"
                     [povBadgeColor]="povBadgeColor"
+                    (dragStarted)="onAnyCharacterDragStarted()"
+                    (dragEnded)="onAnyCharacterDragEnded()"
                     (characterClick)="onViewCharacterClick($event)"
                     (characterSelectionToggle)="onViewCharacterSelectionToggle($event)"
                   ></app-character-compact-view>
@@ -708,11 +725,14 @@
                 @if (filteredCharacters.length > 0 && viewMode === 'gallery') {
                   <app-character-gallery-view
                     [characters]="filteredCharacters"
+                    [dndEnabled]="!drawerMode"
                     [tags]="tags"
                     [thumbnailDataUrls]="thumbnailDataUrls"
                     [povCharacterIds]="povCharacterIdSet"
                     [povBadgeColor]="povBadgeColor"
                     [thumbnailSize]="galleryThumbnailSize"
+                    (dragStarted)="onAnyCharacterDragStarted()"
+                    (dragEnded)="onAnyCharacterDragEnded()"
                     (characterClick)="onViewCharacterClick($event)"
                   ></app-character-gallery-view>
                 }

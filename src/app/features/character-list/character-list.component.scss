@@ -297,6 +297,37 @@
 
 .character-scope-toggle {
   margin-left: var(--spacing-sm);
+
+  .drawer-drop-target.drag-over {
+    outline: 2px dashed var(--color-accent-primary);
+    outline-offset: -2px;
+    color: var(--color-accent-primary);
+  }
+
+  .drawer-drop-target.drag-over.active {
+    color: var(--color-text-inverse);
+    outline-color: var(--color-text-inverse);
+  }
+
+  .drawer-drop-target.pulsing {
+    --drop-glow: color-mix(in srgb, var(--color-accent-primary) 45%, transparent);
+    animation: drawer-drop-pulse 1.4s ease-in-out infinite;
+  }
+
+  @keyframes drawer-drop-pulse {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 var(--drop-glow, rgba(229, 168, 85, 0.45));
+    }
+
+    50% {
+      box-shadow: 0 0 10px 2px var(--drop-glow, rgba(229, 168, 85, 0.45));
+    }
+  }
+
+  .drawer-drop-target.pulsing.active {
+    --drop-glow: color-mix(in srgb, var(--color-text-inverse) 35%, transparent);
+  }
 }
 
 .scope-count {

@@ -815,6 +815,32 @@ export class CharacterService {
     return promoted;
   }
 
+  /** Demotes an active folder-based character back into the drafts collection. */
+  async moveToDraft(id: string): Promise<Character> {
+    const character = this.getCharacterById(id);
+    if (!character) {
+      throw new Error('Character not found');
+    }
+    if (!isFolderBasedCharacterPath(character.relativePath)) {
+      throw new Error('Only characters stored in folders can be moved to drafts');
+    }
+
+    const relocated = await this.relocateFolderCharacter(character, character.name, true);
+    const draft: Character = { ...relocated, draft: true, modified: new Date() };
+    try {
+      await this.saveCharacterToFile(draft);
+    } catch (error) {
+      if (relocated.filePath !== character.filePath) {
+        await this.relocateFolderCharacter(relocated, character.name, false);
+      }
+      throw error;
+    }
+
+    this.charactersSubject.next(this.charactersSubject.value.filter((item) => item.id !== id));
+    this.draftsSubject.next([...this.draftsSubject.value, draft]);
+    return draft;
+  }
+
   /**
    * Updates an existing character and saves changes to disk.
    *

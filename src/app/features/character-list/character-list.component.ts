@@ -1122,8 +1122,75 @@ getFilterSummary(): string {
     );
   }
 
+  // --- Drag to Drawer ---
+
+  drawerDropHighlighted = false;
+
+  @ViewChild('drawerToggle')
+  private drawerToggle?: ElementRef<HTMLElement>;
+
+  /** Live hover highlight on the Drawer toggle while a character is being dragged. */
+  @HostListener('document:mousemove', ['$event'])
+  onDocumentMouseMoveWhileDragging(event: MouseEvent): void {
+    if (!this.isDraggingCharacter) return;
+    const over = this.isPointerOverDrawer(event.clientX, event.clientY);
+    if (over !== this.drawerDropHighlighted) {
+      this.drawerDropHighlighted = over;
+      this.cdr.markForCheck();
+    }
+  }
+
+  getCharacterPaneDropListId(): string {
+    return 'character-pane-drop-list';
+  }
+
+  private isPointerOverDrawer(clientX: number, clientY: number): boolean {
+    const el = this.drawerToggle?.nativeElement;
+    if (!el) return false;
+    const rect = el.getBoundingClientRect();
+    return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+  }
+
+  private isOverDrawerDropPoint(event: CdkDragDrop<Character[]>): boolean {
+    const point = event.dropPoint;
+    return !!point && this.isPointerOverDrawer(point.x, point.y) && !this.drawerMode;
+  }
+
+  onPaneDrop(event: CdkDragDrop<Character[]>): void {
+    this.drawerDropHighlighted = false;
+    this.cdr.markForCheck();
+    if (this.isOverDrawerDropPoint(event)) {
+      this.moveDraggedCharacterToDrawer(event);
+    }
+  }
+
+  private async moveDraggedCharacterToDrawer(event: CdkDragDrop<Character[]>): Promise<void> {
+    const draggedCharacter = event.item.data as Character | undefined;
+    if (!draggedCharacter || this.drawerMode) {
+      return;
+    }
+
+    const displayName = this.getCharacterDisplayName(draggedCharacter);
+    try {
+      await this.characterService.moveToDraft(draggedCharacter.id);
+      this.notificationService.showSuccess(`"${displayName || 'Unnamed draft'}" moved to the Drawer.`);
+    } catch (error) {
+      this.notificationService.showError(
+        error instanceof Error ? error.message : `Failed to move character to the Drawer: ${error}`
+      );
+      this.logger.error('Move to draft error:', error);
+      this.cdr.markForCheck();
+    }
+  }
+
+
   async onCategoryDrop(event: CdkDragDrop<Character[]>, targetCategoryId: string): Promise<void> {
     this.activeDropCategoryId = null;
+    this.drawerDropHighlighted = false;
+    if (this.isOverDrawerDropPoint(event)) {
+      await this.moveDraggedCharacterToDrawer(event);
+      return;
+    }
     if (!this.isCategoryDragDropEnabled()) {
       return;
     }
@@ -1315,7 +1382,9 @@ getFilterSummary(): string {
   onAnyCharacterDragEnded(): void {
     setTimeout(() => {
       this.isDraggingCharacter = false;
+      this.drawerDropHighlighted = false;
       this.activeDropCategoryId = null;
+      this.cdr.markForCheck();
     }, 0);
   }
 

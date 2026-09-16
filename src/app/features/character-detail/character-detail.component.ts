@@ -1493,6 +1493,38 @@ export class CharacterDetailComponent
     await this.electronService.showItemInFolder(this.character.filePath);
   }
 
+  async moveCharacterToDraft(): Promise<void> {
+    if (!this.character || !this.isEditing || this.isDraftMode || this.isSaving) {
+      return;
+    }
+
+    const confirmed = await this.modalService.confirm(
+      `Move "${this.character.name || 'Unnamed character'}" back to drafts?\n\nIt will no longer appear in casts, pinboards, or book PoV lists.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    this.isSaving = true;
+    this.cdr.markForCheck();
+    try {
+      const data = this.buildFormData();
+      await this.characterService.updateCharacter(this.character.id, data);
+      const draft = await this.characterService.moveToDraft(this.character.id);
+      this.notificationService.showSuccess(`"${draft.name || 'Unnamed draft'}" moved back to drafts`);
+      this.router.navigate(['/characters'], { queryParams: { drawer: 'true' } });
+    } catch (error) {
+      this.notificationService.showError(
+        error instanceof Error ? error.message : `Failed to move character to drafts: ${error}`
+      );
+      this.logger.error('Move to draft error:', error);
+    } finally {
+      this.isSaving = false;
+      this.cdr.markForCheck();
+    }
+  }
+
   async deleteCharacter(): Promise<void> {
     if (!this.character || !this.isEditing) {
       return;
