@@ -7,7 +7,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Observable } from 'rxjs';
 import { Book, Cast, Category, Character, CharacterStyle, Project, Tag } from '../../core/interfaces';
-import { CharacterEditDialogService, CharacterService, LoggingService, MetadataService, NotificationService, ProjectService } from '../../core/services';
+import { CastService, CharacterEditDialogService, CharacterService, LoggingService, MetadataService, NotificationService, ProjectService } from '../../core/services';
 import { MetadataHelperService } from '../../core/services/metadata-helper.service';
 import { ModalService } from '../../core/services/modal.service';
 import { PreferencesService } from '../../core/services/preferences.service';
@@ -120,6 +120,7 @@ export class CharacterListComponent implements OnInit {
     private router: Router,
     private projectService: ProjectService,
     private metadataService: MetadataService,
+    private castService: CastService,
     public metadataHelper: MetadataHelperService,
     private modalService: ModalService,
     private preferences: PreferencesService,
@@ -248,6 +249,10 @@ export class CharacterListComponent implements OnInit {
       this.updateCategoryDropListIds();
 
       if (project) {
+        // The cast index (casts.json) loads asynchronously per project; make sure
+        // it is loaded and stay in sync so cast grouping shows without visiting Casts first.
+        this.castService.loadCasts(project.path);
+
         // Load filter expanded state from project settings
         this.filterExpanded = project.metadata.lastSession?.lastCharacterListFilterExpanded ?? false;
         this.characterStyles = this.projectService.getCharacterStyles();
@@ -258,8 +263,18 @@ export class CharacterListComponent implements OnInit {
             ? savedStyle
             : defaultStyle) || this.characterStyles[0]?.id || '';
         this.loadCharacters();
+
       }
     });
+
+    // Reactive cast index (casts.json also changes on external edits / Cast list edits)
+    this.castService.casts$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((casts) => {
+        this.casts = casts;
+        this.recomputeGroups();
+        this.cdr.markForCheck();
+      });
 
     // Subscribe to character changes and apply filters
     this.characters$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((characters) => {
