@@ -1210,6 +1210,38 @@ export class MetadataService {
       }
     }
 
+    // Validate book tag overrides
+    if (formData.bookTags && typeof formData.bookTags === 'object') {
+      const bookIds = new Set((metadata.books || []).map((book) => book.id));
+      const tagIds = new Set(metadata.tags.map((tag) => tag.id));
+      const assignedBooks = new Set(formData.books || []);
+
+      for (const [bookId, tags] of Object.entries(formData.bookTags)) {
+        if (!bookIds.has(bookId)) {
+          errors.push({
+            field: 'bookTags',
+            message: `Book '${bookId}' does not exist in project metadata`,
+            code: 'INVALID_REFERENCE',
+          });
+        } else if (!assignedBooks.has(bookId)) {
+          errors.push({
+            field: 'bookTags',
+            message: `Book tag override for '${bookId}' is not in the character's books list`,
+            code: 'INVALID_REFERENCE',
+          });
+        }
+        for (const tagId of tags) {
+          if (!tagIds.has(tagId)) {
+            errors.push({
+              field: 'bookTags',
+              message: `Tag '${tagId}' for book '${bookId}' does not exist in project metadata`,
+              code: 'INVALID_REFERENCE',
+            });
+          }
+        }
+      }
+    }
+
     return {
       isValid: errors.length === 0,
       errors,

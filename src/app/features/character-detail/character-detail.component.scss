@@ -2,6 +2,62 @@
 // Character Detail — full-page editor
 // ===========================================================================
 
+.writing-workspace {
+  display: contents;
+}
+
+.layout-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-muted);
+  font: 500 0.75rem var(--font-sans);
+  white-space: nowrap;
+  cursor: pointer;
+
+  .selected {
+    color: var(--color-text-primary);
+  }
+
+  &:hover {
+    border-color: var(--color-accent-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-accent-primary);
+    outline-offset: 3px;
+  }
+}
+
+.layout-switch-track {
+  width: 30px;
+  height: 18px;
+  padding: 3px;
+  border-radius: var(--radius-full);
+  background: var(--color-text-muted);
+
+  span {
+    display: block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--color-bg-primary);
+    transition: transform 0.15s ease;
+  }
+
+  [aria-checked="true"] & {
+    background: var(--color-accent-primary);
+
+    span {
+      transform: translateX(12px);
+    }
+  }
+}
+
 .character-detail {
   display: flex;
   flex-direction: column;
@@ -81,6 +137,9 @@
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  /* Reserve the scrollbar gutter even when content is short, so the
+     centered layout doesn't shift when switching tabs. */
+  scrollbar-gutter: stable;
 }
 
 .detail-shell {
@@ -250,6 +309,14 @@
   gap: 8px;
 }
 
+.thumb-strip-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md) var(--spacing-xl);
+}
+
 .style-strip-item {
   appearance: none;
   display: flex;
@@ -332,7 +399,7 @@
 .hero-main {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-lg);
+  gap: var(--spacing-sm);
   min-width: 0;
   justify-content: center;
 }
@@ -341,6 +408,10 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xs);
+
+  > .form-label {
+    margin-bottom: 0;
+  }
 
   &.field-highlight {
     padding: var(--spacing-md);
@@ -356,6 +427,10 @@
   color: var(--color-text-muted);
   font-size: 0.75rem;
   font-style: italic;
+
+  &.is-hidden {
+    display: none;
+  }
 }
 
 // Big hero name input — editorial serif
@@ -708,27 +783,6 @@
   font-style: italic;
 }
 
-.thumbnail-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-xs);
-
-  .btn {
-    flex: 1;
-    min-width: 110px;
-    font-size: 0.75rem;
-  }
-}
-
-.hero-thumbnail-actions {
-  flex-direction: column;
-
-  .btn {
-    flex: none;
-    width: 100%;
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Book page CTA
 // ---------------------------------------------------------------------------
@@ -775,11 +829,16 @@
 // Danger zone
 // ---------------------------------------------------------------------------
 
-.danger-zone {
+.secondary-actions {
   display: flex;
-  justify-content: center;
+  flex-wrap: wrap;
+  align-items: center;
   gap: var(--spacing-sm);
-  padding: var(--spacing-lg) 0 0;
+}
+
+.danger-link.portrait-link:hover:not(:disabled) {
+  color: var(--color-accent-primary);
+  text-decoration-color: var(--color-accent-primary);
 }
 
 .danger-link {
@@ -804,6 +863,112 @@
     opacity: 0.5;
     cursor: not-allowed;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Studio layout — modern alternative, toggled from the header switch
+// ---------------------------------------------------------------------------
+
+.studio-layout {
+  .detail-shell {
+    max-width: 1080px;
+  }
+
+  .hero-card {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: var(--spacing-xl);
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+
+    &::before {
+      display: none;
+    }
+
+    .hero-thumb {
+      width: 100%;
+      max-width: 240px;
+      height: auto;
+      aspect-ratio: 1;
+      border-radius: var(--radius-lg);
+    }
+  }
+
+  .hero-main {
+    justify-content: center;
+    gap: var(--spacing-md);
+  }
+
+  .form-control-hero {
+    font-size: 1.625rem;
+    background: transparent;
+    border-color: transparent;
+    padding-left: var(--spacing-sm);
+    padding-right: var(--spacing-sm);
+
+    &:hover:not(:focus) {
+      border-color: var(--color-border);
+    }
+  }
+
+  .generate-name-btn {
+    width: 48px;
+    border-color: transparent;
+    background: transparent;
+
+    &:hover:not(:disabled) {
+      background: var(--color-accent-subtle);
+      border-color: var(--color-accent-primary);
+    }
+  }
+
+  .studio-portrait-icon {
+    width: 48px;
+    height: 48px;
+    color: var(--color-text-muted);
+    opacity: 0.55;
+  }
+
+  .content-editor {
+    min-height: 460px;
+    font-family: var(--font-serif);
+    font-size: 1.0625rem;
+    line-height: 1.75;
+  }
+
+  .panel {
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .content-tabs {
+    border-radius: var(--radius-lg);
+    box-shadow: none;
+  }
+
+  .detail-grid {
+    grid-template-columns: minmax(0, 1fr) 300px;
+  }
+
+  .meta-panel {
+    top: var(--spacing-md);
+  }
+
+  .panel-footer {
+    margin-top: 0;
+  }
+
+  .char-count {
+    font-size: 0.625rem;
+  }
+
+
 }
 
 // ---------------------------------------------------------------------------
@@ -860,5 +1025,14 @@
 
   .file-path-chip .file-path-chip-text {
     max-width: 180px;
+  }
+}
+
+@media (max-width: 768px) {
+  .studio-layout {
+    .hero-card {
+      grid-template-columns: 1fr;
+    }
+
   }
 }

@@ -58,3 +58,46 @@ export function normalizeBookCategories(
 
   return Object.keys(result).length > 0 ? result : undefined;
 }
+
+/**
+ * Resolves the effective tag list for a character in an optional book context.
+ * When `bookId` is set and an override exists, that override wins; otherwise the
+ * character's default `tags` are used.
+ */
+export function resolveEffectiveTags(
+  character: { tags: string[]; bookTags?: Record<string, string[]> },
+  bookId?: string | null
+): string[] {
+  if (bookId && character.bookTags?.[bookId]) {
+    return character.bookTags[bookId];
+  }
+  return character.tags;
+}
+
+/**
+ * Coerces a raw frontmatter `bookTags` value into a clean map of string arrays.
+ * Optionally prunes entries whose book id is not in `assignedBookIds`.
+ * Returns undefined when the result is empty.
+ */
+export function normalizeBookTags(
+  raw: unknown,
+  assignedBookIds?: string[]
+): Record<string, string[]> | undefined {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return undefined;
+  }
+
+  const assigned =
+    assignedBookIds === undefined ? null : new Set(assignedBookIds);
+  const result: Record<string, string[]> = {};
+
+  for (const [bookId, tags] of Object.entries(raw as Record<string, unknown>)) {
+    if (!bookId || !Array.isArray(tags)) continue;
+    const cleaned = tags.filter((tag): tag is string => typeof tag === 'string' && tag.trim().length > 0);
+    if (cleaned.length === 0) continue;
+    if (assigned && !assigned.has(bookId)) continue;
+    result[bookId] = cleaned;
+  }
+
+  return Object.keys(result).length > 0 ? result : undefined;
+}

@@ -18,7 +18,7 @@ import {
   parseCharacterMainFileLocation,
 } from '../utils/character-path.utils';
 import { parseThumbnailReference, resolveThumbnailPath, resolveThumbnailForStyle, resolveThumbnailForBookStyle, normalizeThumbnailsMap, normalizeBookThumbnailsMap, thumbnailCacheKey, formatThumbnailWikiLink } from '../utils/thumbnail.utils';
-import { normalizeBookCategories } from '../utils/character-category.utils';
+import { normalizeBookCategories, normalizeBookTags } from '../utils/character-category.utils';
 import { normalizeAliases } from '../utils/character-alias.utils';
 import { normalizeBookCode } from '../utils/book-display.utils';
 import { assertIpcSuccess, withIpcError } from '../utils/ipc.utils';
@@ -399,6 +399,7 @@ export class CharacterService {
         tags: frontmatter.tags || [],
         books,
         bookCategories: normalizeBookCategories(frontmatter.bookCategories, books),
+        bookTags: normalizeBookTags(frontmatter.bookTags, books),
         thumbnails: normalizeThumbnailsMap(frontmatter.thumbnails),
         bookThumbnails: normalizeBookThumbnailsMap(frontmatter.bookThumbnails, books),
         prompts: normalizePrompts(frontmatter.prompts),
@@ -559,6 +560,8 @@ export class CharacterService {
       await this.validateBookReferences(books);
       const bookCategories = normalizeBookCategories(data.bookCategories, books);
       await this.validateBookCategoryReferences(bookCategories);
+      const bookTags = normalizeBookTags(data.bookTags, books);
+      await this.validateBookTagReferences(bookTags);
 
       const id = generateId();
       const charactersPath = this.projectService.getCharactersFolderPath();
@@ -583,6 +586,7 @@ export class CharacterService {
         tags: data.tags || [],
         books,
         bookCategories,
+        bookTags,
         thumbnails: normalizeThumbnailsMap(data.thumbnails),
         bookThumbnails: normalizeBookThumbnailsMap(data.bookThumbnails, books),
         prompts: normalizePrompts(data.prompts),
@@ -619,6 +623,8 @@ export class CharacterService {
       await this.validateBookReferences(books);
       const bookCategories = normalizeBookCategories(data.bookCategories, books);
       await this.validateBookCategoryReferences(bookCategories);
+      const bookTags = normalizeBookTags(data.bookTags, books);
+      await this.validateBookTagReferences(bookTags);
 
       const id = generateId();
       const charactersPath = this.projectService.getCharactersFolderPath();
@@ -644,6 +650,7 @@ export class CharacterService {
         tags: data.tags || [],
         books,
         bookCategories,
+        bookTags,
         thumbnails: normalizeThumbnailsMap(data.thumbnails),
         bookThumbnails: normalizeBookThumbnailsMap(data.bookThumbnails, books),
         prompts: normalizePrompts(data.prompts),
@@ -1019,6 +1026,11 @@ export class CharacterService {
         nextBooks
       );
       await this.validateBookCategoryReferences(nextBookCategories);
+      const nextBookTags = normalizeBookTags(
+        'bookTags' in data ? data.bookTags : existingCharacter.bookTags,
+        nextBooks
+      );
+      await this.validateBookTagReferences(nextBookTags);
       const nextBookThumbnails = normalizeBookThumbnailsMap(
         'bookThumbnails' in data ? data.bookThumbnails : relocatedCharacter.bookThumbnails,
         nextBooks
@@ -1033,6 +1045,7 @@ export class CharacterService {
         tags: data.tags ?? existingCharacter.tags,
         books: nextBooks,
         bookCategories: nextBookCategories,
+        bookTags: nextBookTags,
         thumbnails: 'thumbnails' in data
           ? normalizeThumbnailsMap(data.thumbnails)
           : relocatedCharacter.thumbnails,
@@ -1206,6 +1219,9 @@ export class CharacterService {
         ...(character.bookCategories && Object.keys(character.bookCategories).length > 0
           ? { bookCategories: character.bookCategories }
           : {}),
+        ...(character.bookTags && Object.keys(character.bookTags).length > 0
+          ? { bookTags: character.bookTags }
+          : {}),
         ...(character.thumbnails && Object.keys(character.thumbnails).length > 0
           ? { thumbnails: character.thumbnails }
           : {}),
@@ -1274,6 +1290,37 @@ export class CharacterService {
         throw new Error(
           `Book category override '${categoryId}' for book '${bookId}' does not exist in project metadata`
         );
+      }
+    }
+  }
+
+  /**
+   * Validates that bookTags keys are known books and values are known tags.
+   */
+  private async validateBookTagReferences(
+    bookTags?: Record<string, string[]>
+  ): Promise<void> {
+    if (!bookTags || Object.keys(bookTags).length === 0) {
+      return;
+    }
+
+    const project = requireProject(this.projectService.getCurrentProject());
+
+    const availableBookIds = new Set((project.metadata.books || []).map((book) => book.id));
+    const availableTagIds = new Set(
+      (project.metadata.tags || []).map((tag) => tag.id)
+    );
+
+    for (const [bookId, tags] of Object.entries(bookTags)) {
+      if (!availableBookIds.has(bookId)) {
+        throw new Error(`Referenced book '${bookId}' does not exist in project metadata`);
+      }
+      for (const tagId of tags) {
+        if (!availableTagIds.has(tagId)) {
+          throw new Error(
+            `Book tag override '${tagId}' for book '${bookId}' does not exist in project metadata`
+          );
+        }
       }
     }
   }

@@ -30,4 +30,14 @@
       font-weight: 500;
     }
   }
+
+  &.compact {
+    gap: 2px;
+    padding: 2px 4px;
+
+    .select-button {
+      padding: 2px 8px;
+      font-size: 0.75rem;
+    }
+  }
 }

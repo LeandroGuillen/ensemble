@@ -1,4 +1,4 @@
-<div class="character-detail">
+<div class="character-detail" [class.studio-layout]="studioLayout">
   <app-page-header [title]="isDraftMode ? (isEditing ? 'Edit Character Draft' : 'New Character Draft') : (isEditing ? 'Edit Character' : 'New Character')">
     <div pageHeaderSuffix class="header-meta">
       @if (isEditing && character) {
@@ -14,9 +14,22 @@
       }
     </div>
 
-    @if ((activeContentTab === 'main' && characterForm.dirty) || (activeContentTab !== 'main' && activeContentTab && isBookPageDirty(activeContentTab))) {
+    @if (characterForm.dirty || hasAnyBookPageDirty()) {
       <span class="dirty-pill" title="You have unsaved changes">● Unsaved</span>
     }
+    <button
+      type="button"
+      class="layout-switch"
+      role="switch"
+      [attr.aria-checked]="studioLayout"
+      aria-label="Studio layout"
+      [title]="studioLayout ? 'Switch to Classic — your edits stay here' : 'Try Studio — your edits stay here'"
+      (click)="toggleEditorLayout()"
+    >
+      <span [class.selected]="!studioLayout">Classic</span>
+      <span class="layout-switch-track" aria-hidden="true"><span></span></span>
+      <span [class.selected]="studioLayout">Studio</span>
+    </button>
     <button
       type="button"
       class="btn btn-ghost"
@@ -59,12 +72,12 @@
         class="btn btn-primary"
         [disabled]="savingBookPageId || (!bookPageData[activeContentTab]?.exists && !characterForm.dirty)"
         (click)="onSaveBookPage(activeContentTab)"
-        title="Save book page (Ctrl+Enter)"
+        title="Save changes (Ctrl+Enter)"
       >
         @if (savingBookPageId) {
           <span class="spinner spinner-sm"></span>
         }
-        {{ savingBookPageId ? 'Saving…' : 'Save Book Page' }}
+        {{ savingBookPageId ? 'Saving…' : 'Save Changes' }}
         @if (!savingBookPageId) {
           <kbd class="shortcut-hint">⌃↵</kbd>
         }
@@ -124,58 +137,22 @@
                   }
                 } @else {
                   <div class="hero-thumb-placeholder">
-                    <span class="hero-thumb-icon">👤</span>
+                    @if (studioLayout) {
+                      <svg class="studio-portrait-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                        <circle cx="32" cy="23" r="10" />
+                        <path d="M13 54c0-12 8-19 19-19s19 7 19 19" />
+                      </svg>
+                    } @else {
+                      <span class="hero-thumb-icon">👤</span>
+                    }
                     <span class="hero-thumb-hint">Click to add</span>
                   </div>
                 }
-              </div>
-
-              @if (characterStyles.length > 1) {
-                <div class="style-strip" role="listbox" aria-label="Character styles">
-                  @for (style of characterStyles; track style.id) {
-                    <button
-                      type="button"
-                      class="style-strip-item"
-                      role="option"
-                      [attr.aria-selected]="style.id === selectedStyleId"
-                      [class.is-selected]="style.id === selectedStyleId"
-                      [class.has-image]="hasThumbnailForStyle(style.id)"
-                      (click)="selectStyle(style.id)"
-                      [title]="'Show ' + style.name"
-                      [attr.aria-label]="'Show ' + style.name + ' style'"
-                    >
-                      @if (getStylePreviewUrl(style.id); as preview) {
-                        <img [src]="preview" [alt]="style.name" />
-                      } @else {
-                        <span class="style-strip-placeholder">?</span>
-                      }
-                      <span class="style-strip-label">{{ style.name }}</span>
-                    </button>
-                  }
-                </div>
-              } @else {
-                <a
-                  class="add-style-link"
-                  routerLink="/settings"
-                  [queryParams]="{ section: 'character-styles' }"
-                  fragment="character-styles"
-                  title="Add another character style in Settings"
-                >Add another style</a>
-              }
-
-              <div class="thumbnail-actions hero-thumbnail-actions">
-                <button
-                  type="button"
-                  class="btn btn-secondary"
-                  (click)="openGeneratePortrait()"
-                  [disabled]="!imageGenerationEnabled"
-                >Generate portrait</button>
               </div>
             </div>
 
             <div class="hero-main">
               <div class="hero-field">
-                <label class="form-label" for="name">Name{{ isDraftMode ? '' : ' *' }}</label>
                 <div class="name-input-group">
                   <input
                     #nameInput
@@ -183,24 +160,27 @@
                     id="name"
                     class="form-control form-control-hero"
                     formControlName="name"
-                    placeholder="Give them a name"
+                    placeholder="{{ isDraftMode ? 'Name (optional)' : 'Name * — required' }}"
                     [class.error]="fieldErrors['name']"
                     (focus)="onTextInputFocus($event)"
                     (blur)="onTextInputBlur('name')"
                     aria-describedby="name-error"
                     [attr.aria-invalid]="fieldErrors['name'] ? 'true' : 'false'"
+                    [attr.aria-label]="'Name' + (isDraftMode ? '' : ' (required)')"
                   />
-                  <button
-                    type="button"
-                    class="generate-name-btn"
-                    (click)="generateName()"
-                    [disabled]="!aiEnabled || isGeneratingName"
-                    [title]="aiEnabled ? 'Generate name with AI' : 'Enable AI in settings to generate names'"
-                    [attr.aria-label]="aiEnabled ? 'Generate name with AI' : 'Enable AI in settings to generate names'"
-                  >
-                    @if (!isGeneratingName) { <span>🎲</span> }
-                    @if (isGeneratingName) { <span class="spinner spinner-sm"></span> }
-                  </button>
+                  @if (isDraftMode) {
+                    <button
+                      type="button"
+                      class="generate-name-btn"
+                      (click)="generateName()"
+                      [disabled]="!aiEnabled || isGeneratingName"
+                      [title]="aiEnabled ? 'Generate name with AI' : 'Enable AI in settings to generate names'"
+                      [attr.aria-label]="aiEnabled ? 'Generate name with AI' : 'Enable AI in settings to generate names'"
+                    >
+                      @if (!isGeneratingName) { <span>🎲</span> }
+                      @if (isGeneratingName) { <span class="spinner spinner-sm"></span> }
+                    </button>
+                  }
                 </div>
                 @if (fieldErrors['name']) {
                   <div class="error-text" id="name-error" role="alert" aria-live="polite">
@@ -244,9 +224,11 @@
                     [error]="!!fieldErrors['category']"
                     (valueChange)="onActiveCategorySelect($event); onFieldBlur('category')"
                   ></app-category-toggle>
-                  @if (activeBookId && !bookCategoriesMap[activeBookId]) {
-                    <span class="hero-field-hint">Using main category: {{ getCategoryName(getSelectedCategoryForActiveTab()) }}</span>
-                  }
+                  <span
+                    class="hero-field-hint"
+                    [class.is-hidden]="!activeBookId || !!bookCategoriesMap[activeBookId]"
+                    [attr.aria-hidden]="!activeBookId || !!bookCategoriesMap[activeBookId]"
+                  >Using main category: {{ getCategoryName(getSelectedCategory()) }}</span>
                   @if (fieldErrors['category']) {
                     <div class="error-text" id="category-error" role="alert" aria-live="polite">
                       {{ fieldErrors['category'] }}
@@ -254,9 +236,90 @@
                   }
                 </div>
               }
+
+              @if (tags.length > 0) {
+                <div class="hero-field form-group-book-tags">
+                  <label class="form-label">Tags</label>
+                  <app-multi-select-buttons
+                    class="tags-select"
+                    [compact]="true"
+                    [items]="getTagsAsSelectableItems()"
+                    [selectedIds]="getTagsForActiveBook()"
+                    (selectionChange)="activeBookId ? onBookTagsChange(activeBookId, $event) : onTagsSelectionChange($event)"
+                  ></app-multi-select-buttons>
+                  <span
+                    class="hero-field-hint"
+                    [class.is-hidden]="!activeBookId || !hasBookTagsOverride(activeBookId)"
+                    [attr.aria-hidden]="!activeBookId || !hasBookTagsOverride(activeBookId)"
+                  >Different from main tags</span>
+                </div>
+              }
             </div>
           </section>
 
+          <div class="thumb-strip-row">
+            @if (characterStyles.length > 1) {
+              <div class="style-strip" role="listbox" aria-label="Character styles">
+                @for (style of characterStyles; track style.id) {
+                  <button
+                    type="button"
+                    class="style-strip-item"
+                    role="option"
+                    [attr.aria-selected]="style.id === selectedStyleId"
+                    [class.is-selected]="style.id === selectedStyleId"
+                    [class.has-image]="hasThumbnailForStyle(style.id)"
+                    (click)="selectStyle(style.id)"
+                    [title]="'Show ' + style.name"
+                    [attr.aria-label]="'Show ' + style.name + ' style'"
+                  >
+                    @if (getStylePreviewUrl(style.id); as preview) {
+                      <img [src]="preview" [alt]="style.name" />
+                    } @else {
+                      <span class="style-strip-placeholder">?</span>
+                    }
+                    <span class="style-strip-label">{{ style.name }}</span>
+                  </button>
+                }
+              </div>
+            } @else {
+              <a
+                class="add-style-link"
+                routerLink="/settings"
+                [queryParams]="{ section: 'character-styles' }"
+                fragment="character-styles"
+                title="Add another character style in Settings"
+              >Add another style</a>
+            }
+
+            <div class="secondary-actions" role="group" aria-label="Character actions">
+              <button
+                type="button"
+                class="danger-link portrait-link"
+                (click)="openGeneratePortrait()"
+                [disabled]="!imageGenerationEnabled || isSaving || savingBookPageId"
+              >Generate portrait</button>
+              @if (!isDraftMode && isEditing) {
+                <button
+                  type="button"
+                  class="danger-link"
+                  (click)="moveCharacterToDraft()"
+                  [disabled]="isSaving || savingBookPageId"
+                  title="Move character back to drafts"
+                >Move to draft</button>
+              }
+              @if (isEditing) {
+                <button
+                  type="button"
+                  class="danger-link"
+                  (click)="deleteCharacter()"
+                  [disabled]="isSaving || savingBookPageId"
+                  title="Delete character"
+                >Delete {{ isDraftMode ? 'draft' : 'character' }}</button>
+              }
+            </div>
+          </div>
+
+          <div class="writing-workspace">
           <!-- Content tabs -->
           @if (isEditing && contentTabs.length > 1) {
             <nav class="content-tabs" aria-label="Content sections">
@@ -280,16 +343,12 @@
             <div class="detail-grid">
               <!-- LEFT: Content editor -->
               <section class="panel content-panel">
-                <header class="panel-header">
-                  <h3 class="panel-title">Story</h3>
-                  <span class="panel-subtitle">Markdown body — backstory, notes, anything</span>
-                </header>
                 <textarea
                   id="content"
                   class="form-control content-editor"
                   formControlName="content"
                   rows="20"
-                  placeholder="Describe them. Their voice, their wounds, the way they hold a teacup…"
+                  placeholder="Character notes…"
                   [class.error]="fieldErrors['content']"
                   (focus)="onTextInputFocus($event)"
                   (blur)="onTextInputBlur('content')"
@@ -308,22 +367,6 @@
 
               <!-- RIGHT: Metadata sidebar -->
               <aside class="panel meta-panel">
-                <section class="meta-group">
-                  <header class="meta-group-header">
-                    <h4 class="meta-group-title">Tags</h4>
-                    @if (tags.length === 0) {
-                      <span class="meta-group-hint">None defined</span>
-                    }
-                  </header>
-                  @if (tags.length > 0) {
-                    <app-multi-select-buttons
-                      [items]="getTagsAsSelectableItems()"
-                      [selectedIds]="characterForm.get('tags')?.value || []"
-                      (selectionChange)="onTagsSelectionChange($event)"
-                    ></app-multi-select-buttons>
-                  }
-                </section>
-
                 <section class="meta-group">
                   <header class="meta-group-header">
                     <h4 class="meta-group-title">Books</h4>
@@ -353,30 +396,6 @@
               (generateRequest)="generateFromPrompt($event)"
             ></app-character-prompts-editor>
 
-            @if (isEditing) {
-              <div class="danger-zone">
-                @if (!isDraftMode) {
-                  <button
-                    type="button"
-                    class="danger-link"
-                    (click)="moveCharacterToDraft()"
-                    [disabled]="isSaving"
-                    title="Move character back to drafts"
-                  >
-                    Move to draft
-                  </button>
-                }
-                <button
-                  type="button"
-                  class="danger-link"
-                  (click)="deleteCharacter()"
-                  [disabled]="isSaving"
-                  title="Delete character"
-                >
-                  Delete {{ isDraftMode ? 'draft' : 'character' }}
-                </button>
-              </div>
-            }
           }
 
           <!-- Book page tab -->
@@ -405,15 +424,11 @@
                 </div>
               }
               @if (bookPageData[activeContentTab]?.exists) {
-                <header class="panel-header">
-                  <h3 class="panel-title">{{ getBookName(activeContentTab) }}</h3>
-                  <span class="panel-subtitle">Book-specific plot, developments, journey</span>
-                </header>
                 <textarea
                   [id]="'book-content-' + activeContentTab"
                   class="form-control content-editor"
                   rows="20"
-                  placeholder="What happens to them in this book?"
+                  placeholder="Book notes…"
                   [ngModel]="getBookPageContent(activeContentTab)"
                   (ngModelChange)="setBookPageContent(activeContentTab, $event)"
                   [ngModelOptions]="{standalone: true}"
@@ -426,6 +441,7 @@
               }
             </section>
           }
+          </div>
         </form>
       }
     </div>

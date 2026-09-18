@@ -55,7 +55,7 @@ import {
   normalizeBookThumbnailsMap,
   formatThumbnailWikiLink,
 } from "../../core/utils/thumbnail.utils";
-import { normalizeBookCategories } from "../../core/utils/character-category.utils";
+import { normalizeBookCategories, normalizeBookTags } from "../../core/utils/character-category.utils";
 import { getBookDisplayName } from "../../core/utils/book-display.utils";
 import { pathDirname } from "../../core/utils/path.utils";
 import {
@@ -112,6 +112,34 @@ export class CharacterDetailComponent
   /** Cached field errors — updated on form changes (debounced) and on blur. */
   fieldErrors: Record<string, string | null> = {};
 
+  private static readonly EDITOR_LAYOUT_KEY = 'ensemble.characterDetail.layout';
+  studioLayout = this.readStudioLayout();
+
+  private readStudioLayout(): boolean {
+    try {
+      return localStorage.getItem(CharacterDetailComponent.EDITOR_LAYOUT_KEY) !== 'classic';
+    } catch {
+      return true;
+    }
+  }
+
+  toggleEditorLayout(): void {
+    const active = document.activeElement;
+    if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) {
+      active.blur();
+    }
+    this.reattachIfDetached();
+    this.studioLayout = !this.studioLayout;
+    try {
+      localStorage.setItem(
+        CharacterDetailComponent.EDITOR_LAYOUT_KEY,
+        this.studioLayout ? 'studio' : 'classic'
+      );
+    } catch {
+      this.cdr.markForCheck();
+    }
+  }
+
   isEditing = false;
   isDraftMode = false;
   isLoading = false;
@@ -129,6 +157,8 @@ export class CharacterDetailComponent
   bookPageOriginalContent: Record<string, string> = {};
   /** Per-book category overrides for the form. Key = bookId. */
   bookCategoriesMap: Record<string, string> = {};
+  /** Per-book tag overrides. Keys are bookId → selected tag ids. */
+  bookTagsMap: Record<string, string[]> = {};
   /** Per-book portrait overrides. Keys are bookId → styleId → image reference. */
   bookThumbnailsMap: Record<string, Record<string, string>> = {};
 
@@ -279,10 +309,11 @@ export class CharacterDetailComponent
           });
           this.thumbnailsMap = {};
           this.bookCategoriesMap = {};
+          this.bookTagsMap = {};
           this.bookThumbnailsMap = {};
           this.thumbnailPreviewUrls = new Map();
           this.prompts = [];
-          this.contentTabs = [{ id: 'main', label: 'Main' }];
+          this.contentTabs = [{ id: 'main', label: 'General' }];
           this.cdr.markForCheck();
         }
       });
@@ -468,6 +499,9 @@ export class CharacterDetailComponent
 
         this.thumbnailsMap = { ...(this.character.thumbnails || {}) };
         this.bookCategoriesMap = { ...(this.character.bookCategories || {}) };
+        this.bookTagsMap = Object.fromEntries(
+          Object.entries(this.character.bookTags || {}).map(([k, v]) => [k, [...v]])
+        );
         this.selectedStyleId = this.resolveInitialSelectedStyle();
         this.pickerTargetStyleId = this.selectedStyleId;
         this.bookThumbnailsMap = { ...(this.character.bookThumbnails || {}) };
@@ -526,7 +560,7 @@ export class CharacterDetailComponent
 
   /** Updates cached contentTabs (call when character or books form value changes). */
   private updateContentTabs(): void {
-    const tabs: { id: string; label: string }[] = [{ id: 'main', label: 'Main' }];
+    const tabs: { id: string; label: string }[] = [{ id: 'main', label: 'General' }];
     if (this.character) {
       const bookIds = this.characterForm.get('books')?.value ?? this.character.books ?? [];
       for (const bookId of bookIds) {
@@ -627,6 +661,10 @@ export class CharacterDetailComponent
             books: this.characterForm.value.books || [],
             bookCategories: normalizeBookCategories(
               this.bookCategoriesMap,
+              this.characterForm.value.books || []
+            ),
+            bookTags: normalizeBookTags(
+              this.bookTagsMap,
               this.characterForm.value.books || []
             ),
             thumbnails: { ...this.thumbnailsMap },
@@ -742,6 +780,7 @@ export class CharacterDetailComponent
       tags: this.characterForm.value.tags || [],
       books,
       bookCategories: normalizeBookCategories(this.bookCategoriesMap, books),
+      bookTags: normalizeBookTags(this.bookTagsMap, books),
       thumbnails: { ...this.thumbnailsMap },
       bookThumbnails: normalizeBookThumbnailsMap(this.bookThumbnailsMap, books),
       prompts: this.prompts.map((prompt) => ({ ...prompt })),
@@ -924,12 +963,43 @@ export class CharacterDetailComponent
     this.cdr.markForCheck();
   }
 
+  onBookTagsChange(bookId: string, tagIds: string[]): void {
+    const mainTags = this.characterForm.get('tags')?.value || [];
+    const isMainSelection =
+      tagIds.length === mainTags.length && tagIds.every((id) => mainTags.includes(id));
+    if (isMainSelection) {
+      delete this.bookTagsMap[bookId];
+    } else {
+      this.bookTagsMap[bookId] = [...tagIds];
+    }
+    this.characterForm.markAsDirty();
+    this.cdr.markForCheck();
+  }
+
+  getTagsForActiveBook(): string[] {
+    const bookId = this.activeBookId;
+    if (bookId && this.bookTagsMap[bookId]) {
+      return this.bookTagsMap[bookId];
+    }
+    return this.characterForm.get('tags')?.value || [];
+  }
+
+  hasBookTagsOverride(bookId: string): boolean {
+    return !!this.bookTagsMap[bookId];
+  }
+
   private pruneBookCategories(assignedBookIds: string[]): void {
     const assigned = new Set(assignedBookIds);
     let changed = false;
     for (const bookId of Object.keys(this.bookCategoriesMap)) {
       if (!assigned.has(bookId)) {
         delete this.bookCategoriesMap[bookId];
+        changed = true;
+      }
+    }
+    for (const bookId of Object.keys(this.bookTagsMap)) {
+      if (!assigned.has(bookId)) {
+        delete this.bookTagsMap[bookId];
         changed = true;
       }
     }

@@ -17,6 +17,8 @@ export interface Character {
   books: string[];
   /** Optional per-book category overrides; missing keys fall back to `category`. */
   bookCategories?: Record<string, string>;
+  /** Optional per-book tag overrides; missing keys fall back to `tags`. */
+  bookTags?: Record<string, string[]>;
   /** Map of character-style id → opaque wiki-link / path string */
   thumbnails?: Record<string, string>;
   /** Optional per-book map of character-style id → opaque wiki-link / path string. */
@@ -39,6 +41,8 @@ export interface CharacterFormData {
   books: string[];
   /** Optional per-book category overrides; missing keys fall back to `category`. */
   bookCategories?: Record<string, string>;
+  /** Optional per-book tag overrides; missing keys fall back to `tags`. */
+  bookTags?: Record<string, string[]>;
   thumbnails?: Record<string, string>;
   /** Optional per-book map of character-style id → opaque wiki-link / path string. */
   bookThumbnails?: Record<string, Record<string, string>>;
@@ -60,6 +64,8 @@ export interface CharacterFrontmatter {
   books?: string[];
   /** Optional per-book category overrides; missing keys fall back to `category`. */
   bookCategories?: Record<string, string>;
+  /** Optional per-book tag overrides; missing keys fall back to `tags`. */
+  bookTags?: Record<string, string[]>;
   thumbnails?: Record<string, string>;
   /** Optional per-book map of character-style id → opaque wiki-link / path string. */
   bookThumbnails?: Record<string, Record<string, string>>;

@@ -19,6 +19,7 @@ export class MultiSelectButtonsComponent {
   @Input() items: SelectableItem[] = [];
   @Input() selectedIds: string[] = [];
   @Input() label: string = '';
+  @Input() compact = false;
 
   @Output() selectionChange = new EventEmitter<string[]>();
 
