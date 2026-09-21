@@ -35,6 +35,14 @@
       font-weight: 600;
     }
 
+    &.outlined {
+      box-shadow: inset 0 0 0 2px var(--color-accent-primary);
+
+      &.active {
+        box-shadow: inset 0 0 0 2px var(--color-text-inverse);
+      }
+    }
+
     &.error {
       border-color: var(--color-error);
     }

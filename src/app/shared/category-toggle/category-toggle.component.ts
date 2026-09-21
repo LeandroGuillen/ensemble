@@ -19,6 +19,9 @@ export class CategoryToggleComponent {
   @Input() selectedValue: string = '';
   @Input() emptyLabel: string = 'All'; // "All" or "None" depending on context
   @Input() error: boolean = false;
+  /** Optional value to mark with an outline independently of the active selection. */
+  @Input() outlinedValue: string | null = null;
+  @Input() outlinedTooltip: string = '';
 
   @Output() valueChange = new EventEmitter<string>();
 
@@ -28,5 +31,11 @@ export class CategoryToggleComponent {
       event.stopPropagation();
     }
     this.valueChange.emit(value);
+  }
+
+  getOptionTitle(option: ToggleOption): string {
+    return this.outlinedValue === option.id && this.outlinedTooltip
+      ? this.outlinedTooltip
+      : option.tooltip || option.name;
   }
 }

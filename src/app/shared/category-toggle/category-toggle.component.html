@@ -3,9 +3,10 @@
     type="button"
     class="toggle-option"
     [class.active]="selectedValue === ''"
+    [class.outlined]="outlinedValue === ''"
     [class.error]="error"
     (click)="onOptionClick('', $event)"
-    [title]="emptyLabel === 'All' ? 'Show all categories' : 'No category'"
+    [title]="outlinedValue === '' && outlinedTooltip ? outlinedTooltip : (emptyLabel === 'All' ? 'Show all categories' : 'No category')"
     >
     {{ emptyLabel }}
   </button>
@@ -14,10 +15,11 @@
       type="button"
       class="toggle-option"
       [class.active]="selectedValue === option.id"
+      [class.outlined]="outlinedValue === option.id"
       [class.error]="error"
       [style.--option-color]="option.color || null"
       (click)="onOptionClick(option.id, $event)"
-      [title]="option.tooltip || option.name"
+      [title]="getOptionTitle(option)"
       >
       {{ option.name }}
     </button>

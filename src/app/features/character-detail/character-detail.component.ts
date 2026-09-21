@@ -109,6 +109,8 @@ export class CharacterDetailComponent
   contentTabs: { id: string; label: string }[] = [];
   /** Cached category options for the toggle — updated when categories change. */
   categoryToggleOptions: ToggleOption[] = [];
+  readonly mainCategoryOutlineTooltip =
+    "The outline marks this character's Main category. Select another category to use it for this book only.";
   /** Cached field errors — updated on form changes (debounced) and on blur. */
   fieldErrors: Record<string, string | null> = {};
 
@@ -155,6 +157,8 @@ export class CharacterDetailComponent
   bookPageData: Record<string, { exists: boolean; content: string }> = {};
   /** Last saved content per book (for dirty check). Key = bookId. */
   bookPageOriginalContent: Record<string, string> = {};
+  /** Description tabs currently unlocked for editing. New characters start unlocked. */
+  descriptionEditingTabs = new Set<string>(['main']);
   /** Per-book category overrides for the form. Key = bookId. */
   bookCategoriesMap: Record<string, string> = {};
   /** Per-book tag overrides. Keys are bookId → selected tag ids. */
@@ -290,9 +294,11 @@ export class CharacterDetailComponent
         const characterId = params.get("id");
         if (characterId && characterId !== "new") {
           this.isEditing = true;
+          this.descriptionEditingTabs.clear();
           this.loadCharacter(decodeURIComponent(characterId));
         } else {
           this.isEditing = false;
+          this.descriptionEditingTabs = new Set<string>(['main']);
           this.character = null;
           const defaultCategory = this.isDraftMode
             ? undefined
@@ -590,6 +596,18 @@ export class CharacterDetailComponent
     }
   }
 
+  isDescriptionEditing(tabId: string): boolean {
+    return this.descriptionEditingTabs.has(tabId);
+  }
+
+  enableDescriptionEditing(tabId: string): void {
+    this.descriptionEditingTabs.add(tabId);
+    this.cdr.detectChanges();
+
+    const elementId = tabId === 'main' ? 'content' : `book-content-${tabId}`;
+    document.getElementById(elementId)?.focus();
+  }
+
   setActiveContentTab(tabId: string): void {
     this.activeContentTab = tabId;
     if (tabId !== 'main') {
@@ -616,6 +634,7 @@ export class CharacterDetailComponent
       await this.characterService.createBookPage(this.character.id, bookId);
       this.bookPageData[bookId] = { exists: true, content: '' };
       this.bookPageOriginalContent[bookId] = '';
+      this.descriptionEditingTabs.add(bookId);
       this.activeContentTab = bookId;
       this.notificationService.showSuccess('Book page created');
       this.cdr.markForCheck();
@@ -1107,10 +1126,6 @@ export class CharacterDetailComponent
   getSelectedCategoryForActiveTab(): string {
     const mainCategory = this.characterForm.get('category')?.value || '';
     return this.activeBookId ? this.bookCategoriesMap[this.activeBookId] || mainCategory : mainCategory;
-  }
-
-  getCategoryName(categoryId: string): string {
-    return this.categories.find((category) => category.id === categoryId)?.name || 'None';
   }
 
   onActiveCategorySelect(categoryId: string): void {

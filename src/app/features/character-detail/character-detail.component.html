@@ -222,13 +222,10 @@
                     [selectedValue]="getSelectedCategoryForActiveTab()"
                     [emptyLabel]="'None'"
                     [error]="!!fieldErrors['category']"
+                    [outlinedValue]="activeBookId ? getSelectedCategory() : null"
+                    [outlinedTooltip]="mainCategoryOutlineTooltip"
                     (valueChange)="onActiveCategorySelect($event); onFieldBlur('category')"
                   ></app-category-toggle>
-                  <span
-                    class="hero-field-hint"
-                    [class.is-hidden]="!activeBookId || !!bookCategoriesMap[activeBookId]"
-                    [attr.aria-hidden]="!activeBookId || !!bookCategoriesMap[activeBookId]"
-                  >Using main category: {{ getCategoryName(getSelectedCategory()) }}</span>
                   @if (fieldErrors['category']) {
                     <div class="error-text" id="category-error" role="alert" aria-live="polite">
                       {{ fieldErrors['category'] }}
@@ -343,12 +340,23 @@
             <div class="detail-grid">
               <!-- LEFT: Content editor -->
               <section class="panel content-panel">
+                <header class="description-header">
+                  <h3 class="description-title">Description</h3>
+                  @if (!isDescriptionEditing('main')) {
+                    <button
+                      type="button"
+                      class="description-edit-link"
+                      (click)="enableDescriptionEditing('main')"
+                    >Edit</button>
+                  }
+                </header>
                 <textarea
                   id="content"
                   class="form-control content-editor"
                   formControlName="content"
                   rows="20"
                   placeholder="Character notes…"
+                  [readOnly]="!isDescriptionEditing('main')"
                   [class.error]="fieldErrors['content']"
                   (focus)="onTextInputFocus($event)"
                   (blur)="onTextInputBlur('content')"
@@ -424,11 +432,22 @@
                 </div>
               }
               @if (bookPageData[activeContentTab]?.exists) {
+                <header class="description-header">
+                  <h3 class="description-title">Description</h3>
+                  @if (!isDescriptionEditing(activeContentTab)) {
+                    <button
+                      type="button"
+                      class="description-edit-link"
+                      (click)="enableDescriptionEditing(activeContentTab)"
+                    >Edit</button>
+                  }
+                </header>
                 <textarea
                   [id]="'book-content-' + activeContentTab"
                   class="form-control content-editor"
                   rows="20"
                   placeholder="Book notes…"
+                  [readOnly]="!isDescriptionEditing(activeContentTab)"
                   [ngModel]="getBookPageContent(activeContentTab)"
                   (ngModelChange)="setBookPageContent(activeContentTab, $event)"
                   [ngModelOptions]="{standalone: true}"

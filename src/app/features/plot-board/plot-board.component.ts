@@ -643,8 +643,9 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
     return this.board.cells[String(rowIndex)]?.[threadId] ?? '';
   }
 
-  getCellMeta(rowIndex: number, threadId: string) {
-    return this.board.cellMeta[String(rowIndex)]?.[threadId] ?? null;
+  getCellMeta(rowIndex: number, threadId: string): PlotCellMeta | null {
+    const row = this.board.cellMeta[String(rowIndex)];
+    return row ? row[threadId] ?? null : null;
   }
 
   hasCellContent(rowIndex: number, threadId: string): boolean {
