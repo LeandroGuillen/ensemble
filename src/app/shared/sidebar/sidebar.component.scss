@@ -21,17 +21,41 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
   }
 }
 
+// Top Row: Collapse Toggle + Brand
+.sidebar-top {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-xs);
+  margin: var(--spacing-sm);
+  min-height: 32px;
+}
+
+// Collapsed: toggle centered above the Ensemble icon
+.sidebar.collapsed .sidebar-top {
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.sidebar.collapsed .sidebar-brand {
+  padding: var(--spacing-sm) var(--spacing-xs);
+
+  .brand-icon {
+    width: 20px;
+    height: 20px;
+  }
+}
+
 // Brand / Project Selector
 .sidebar-brand {
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
-  padding: var(--spacing-lg) var(--spacing-md);
-  margin: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
   border-radius: var(--radius-lg);
   cursor: pointer;
   transition: all var(--transition-base);
-  min-height: 52px;
+  min-height: 40px;
   overflow: hidden;
   background: transparent;
 
@@ -63,7 +87,7 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
     opacity: 1;
     transition: opacity $transition-duration $transition-timing;
     letter-spacing: -0.01em;
-    
+
     .collapsed & {
       opacity: 0;
       width: 0;
@@ -71,15 +95,23 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
   }
 }
 
+// Search / Command Palette Row
+.sidebar-search-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin: 0 var(--spacing-sm) var(--spacing-sm);
+  padding: 0 var(--spacing-xs);
+}
+
 // Search / Command Palette Button
 .sidebar-search {
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
-  margin: 0 var(--spacing-sm) var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-md);
-  background: var(--color-bg-tertiary);
-  border: 1px solid var(--color-border);
+  padding: var(--spacing-sm) var(--spacing-xs);
+  background: transparent;
+  border: none;
   border-radius: var(--radius-md);
   color: var(--color-text-muted);
   cursor: pointer;
@@ -87,6 +119,8 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
   min-height: 36px;
   text-align: left;
   font-size: 0.8125rem;
+  flex: 1;
+  min-width: 0;
 
   .search-icon {
     width: 16px;
@@ -106,22 +140,22 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
   .search-shortcut {
     margin-left: auto;
     padding: 2px 6px;
-    background: var(--color-bg-secondary);
-    border: 1px solid var(--color-border-subtle);
+    background: transparent;
+    border: none;
     border-radius: var(--radius-sm);
     font-size: 0.6875rem;
     font-family: var(--font-mono, monospace);
     color: var(--color-text-muted);
     white-space: nowrap;
+    opacity: 0.7;
   }
 
   &:hover {
-    border-color: var(--color-accent-primary);
-    box-shadow: 0 0 0 3px rgba(229, 168, 85, 0.08);
+    background: var(--color-bg-tertiary);
 
     .search-icon {
       opacity: 1;
-      color: var(--color-accent-primary);
+      color: var(--color-text-secondary);
     }
 
     .search-label {
@@ -136,7 +170,57 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
   &.collapsed {
     justify-content: center;
     padding: var(--spacing-sm);
-    margin: 0 var(--spacing-sm) var(--spacing-sm);
+    flex: 1;
+  }
+}
+
+// New Character icon button (search row)
+.sidebar-new-character {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-sm);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  &:hover {
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+// Collapsed: stack search above New Character, then Shortcuts above Settings
+.sidebar.collapsed .sidebar-search-row {
+  flex-direction: column;
+  padding: 0;
+
+  .sidebar-search {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+.sidebar.collapsed .sidebar-footer {
+  flex-direction: column-reverse;
+  padding: var(--spacing-xs) var(--spacing-sm);
+
+  .footer-btn {
+    width: 100%;
+    justify-content: center;
   }
 }
 
@@ -269,15 +353,69 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
   }
 }
 
-// Collapse Toggle Button
-.collapse-toggle {
+// Bottom Bar: Settings / Shortcuts / Collapse
+.sidebar-footer {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-top: 1px solid var(--color-border-subtle);
+  flex-shrink: 0;
+
+  .footer-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-sm);
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-md);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    flex-shrink: 1;
+    min-width: 0;
+
+    svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+
+    .footer-label {
+      font-size: 0.8125rem;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    &:hover {
+      background: var(--color-bg-tertiary);
+      color: var(--color-text-primary);
+    }
+
+    &:active {
+      transform: scale(0.95);
+    }
+  }
+
+  .footer-spacer {
+    flex: 1;
+  }
+}
+
+// Collapse Toggle Button (top row, next to brand)
+.sidebar .collapse-toggle {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 32px;
+  height: 32px;
   padding: var(--spacing-sm);
-  margin: var(--spacing-sm);
+  margin: 0;
   background: transparent;
-  border: 1px solid var(--color-border);
+  border: none;
   border-radius: var(--radius-md);
   color: var(--color-text-muted);
   cursor: pointer;
@@ -287,7 +425,6 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
   &:hover {
     background: var(--color-bg-tertiary);
     color: var(--color-text-primary);
-    border-color: var(--color-border-light);
   }
 
   &:active {

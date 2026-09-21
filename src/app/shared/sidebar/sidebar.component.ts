@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router, NavigationEnd } from '@angular/router';
 
 import { ProjectService } from '../../core/services';
+import { CharacterEditDialogService } from '../../core/services/character-edit-dialog.service';
 import { CommandPaletteService } from '../command-palette/command-palette.service';
 import { KeyboardShortcutsService } from '../keyboard-shortcuts-dialog/keyboard-shortcuts.service';
 import { filter } from 'rxjs/operators';
@@ -37,7 +38,6 @@ export class SidebarComponent implements OnInit {
       label: 'Characters',
       items: [
         { icon: 'users', label: 'Characters', route: '/characters', title: 'Characters' },
-        { icon: 'map-pin', label: 'Locations', route: '/locations', title: 'Locations' },
         { icon: 'lightbulb', label: 'Concepts', route: '/concepts', title: 'Concepts' },
         { icon: 'type', label: 'Names', route: '/names', title: 'Names' },
         { icon: 'git-branch', label: 'Pinboard', route: '/pinboard', title: 'Pinboard' },
@@ -49,15 +49,8 @@ export class SidebarComponent implements OnInit {
       label: 'References',
       items: [
         { icon: 'book', label: 'Books', route: '/library', title: 'Books' },
+        { icon: 'map-pin', label: 'Locations', route: '/locations', title: 'Locations' },
         { icon: 'plot-board', label: 'Plot Board', route: '/plot-board', title: 'Plot Board' }
-      ]
-    },
-    {
-      id: 'utility',
-      label: '',
-      items: [
-        { icon: 'settings', label: 'Settings', route: '/settings', title: 'Settings' },
-        { icon: 'keyboard', label: 'Shortcuts', title: 'Keyboard Shortcuts', action: () => this.openShortcuts() }
       ]
     }
   ];
@@ -66,7 +59,8 @@ export class SidebarComponent implements OnInit {
     private projectService: ProjectService,
     private router: Router,
     private shortcutsService: KeyboardShortcutsService,
-    private commandPaletteService: CommandPaletteService
+    private commandPaletteService: CommandPaletteService,
+    private characterEditDialog: CharacterEditDialogService
   ) {}
 
   ngOnInit(): void {
@@ -119,5 +113,9 @@ export class SidebarComponent implements OnInit {
 
   openSearch(): void {
     this.commandPaletteService.open();
+  }
+
+  openNewDraft(): void {
+    this.characterEditDialog.openCreateDraft();
   }
 }
