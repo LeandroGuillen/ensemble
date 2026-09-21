@@ -6,6 +6,7 @@ import {
   ChangeDetectorRef,
   Component,
   ElementRef,
+  HostListener,
   NgZone,
   OnDestroy,
   OnInit,
@@ -56,7 +57,6 @@ import {
   formatThumbnailWikiLink,
 } from "../../core/utils/thumbnail.utils";
 import { normalizeBookCategories, normalizeBookTags } from "../../core/utils/character-category.utils";
-import { getBookDisplayName } from "../../core/utils/book-display.utils";
 import { pathDirname } from "../../core/utils/path.utils";
 import {
   CategoryToggleComponent,
@@ -91,6 +91,7 @@ export class CharacterDetailComponent
   implements OnInit, OnDestroy, AfterViewInit
 {
   @ViewChild("nameInput") nameInput?: ElementRef<HTMLInputElement>;
+  @ViewChild("addBookMenu") addBookMenu?: ElementRef<HTMLDetailsElement>;
 
   private readonly destroyRef = inject(DestroyRef);
 
@@ -103,10 +104,10 @@ export class CharacterDetailComponent
 
   // Cache selectable items to avoid recreating arrays on every change detection
   private tagsSelectableItems: SelectableItem[] = [];
-  private booksSelectableItems: SelectableItem[] = [];
-
   /** Cached content tabs (Main + book pages) — updated when character or books change. */
   contentTabs: { id: string; label: string }[] = [];
+  /** Books not currently assigned to the character, shown in the Add book menu. */
+  availableBooks: Book[] = [];
   /** Cached category options for the toggle — updated when categories change. */
   categoryToggleOptions: ToggleOption[] = [];
   readonly mainCategoryOutlineTooltip =
@@ -256,11 +257,7 @@ export class CharacterDetailComponent
           name: tag.name,
           color: tag.color,
         }));
-        this.booksSelectableItems = this.books.map((book) => ({
-          id: book.id,
-          name: this.formatBookLabel(book),
-          color: book.color,
-        }));
+        this.updateContentTabs();
 
         // Set default category only when form has no valid selection (don't overwrite user's choice)
         if (this.categories.length > 0 && !this.isEditing && !this.isDraftMode) {
@@ -375,6 +372,10 @@ export class CharacterDetailComponent
       event.preventDefault();
       this.ngZone.run(() => {
         this.reattachIfDetached();
+        if (this.addBookMenu?.nativeElement.open) {
+          this.addBookMenu.nativeElement.open = false;
+          return;
+        }
         if (this.showImagePickerDialog || this.imagePickerService.isOpen) {
           this.closeImagePicker();
           return;
@@ -401,6 +402,15 @@ export class CharacterDetailComponent
     }
     // All other keys: do nothing and DON'T enter zone — avoids CD on every keystroke
   };
+
+  @HostListener('document:click', ['$event'])
+  closeAddBookMenuOnOutsideClick(event: MouseEvent): void {
+    const menu = this.addBookMenu?.nativeElement;
+    const target = event.target;
+    if (menu?.open && target instanceof Node && !menu.contains(target)) {
+      menu.open = false;
+    }
+  }
 
   ngAfterViewInit(): void {
     // Focus the name input after view is initialized
@@ -567,21 +577,21 @@ export class CharacterDetailComponent
   /** Updates cached contentTabs (call when character or books form value changes). */
   private updateContentTabs(): void {
     const tabs: { id: string; label: string }[] = [{ id: 'main', label: 'General' }];
-    if (this.character) {
-      const bookIds = this.characterForm.get('books')?.value ?? this.character.books ?? [];
-      for (const bookId of bookIds) {
-        tabs.push({ id: bookId, label: this.getBookName(bookId) });
-      }
+    const bookIds: string[] = this.characterForm.get('books')?.value ?? this.character?.books ?? [];
+    for (const bookId of bookIds) {
+      tabs.push({ id: bookId, label: this.getBookName(bookId) });
     }
     this.contentTabs = tabs;
+    const assigned = new Set(bookIds);
+    this.availableBooks = this.books.filter((book) => !assigned.has(book.id));
   }
 
   getBookName(bookId: string): string {
     return this.metadataHelper.getBookName(bookId);
   }
 
-  private formatBookLabel(book: Book): string {
-    return getBookDisplayName(book);
+  getBookColor(bookId: string): string {
+    return this.books.find((book) => book.id === bookId)?.color || 'var(--color-text-muted)';
   }
 
   getBookPageContent(bookId: string): string {
@@ -609,11 +619,55 @@ export class CharacterDetailComponent
   }
 
   setActiveContentTab(tabId: string): void {
+    if (!this.isEditing && tabId !== 'main') return;
     this.activeContentTab = tabId;
     if (tabId !== 'main') {
       this.ensureBookPageData(tabId);
     }
     void this.refreshThumbnailPreviews(this.activeBookId);
+  }
+
+  addBook(bookId: string): void {
+    const currentBooks: string[] = this.characterForm.get('books')?.value || [];
+    if (currentBooks.includes(bookId)) return;
+
+    this.characterForm.patchValue({ books: [...currentBooks, bookId] });
+    this.characterForm.markAsDirty();
+
+    if (this.isEditing) {
+      this.setActiveContentTab(bookId);
+    }
+  }
+
+  async removeBook(bookId: string): Promise<void> {
+    if (this.isBookPageDirty(bookId)) {
+      const confirmed = await this.modalService.confirm(
+        'This book page has unsaved changes. Remove the character from the book and discard those changes?',
+        'Remove Book',
+        {
+          confirmText: 'Remove',
+          cancelText: 'Keep Editing',
+          danger: false,
+        }
+      );
+      if (!confirmed) return;
+
+      const data = this.bookPageData[bookId];
+      if (data) data.content = this.bookPageOriginalContent[bookId] ?? '';
+    }
+
+    const currentBooks: string[] = this.characterForm.get('books')?.value || [];
+    this.characterForm.patchValue({
+      books: currentBooks.filter((id) => id !== bookId),
+    });
+    this.characterForm.markAsDirty();
+    this.descriptionEditingTabs.delete(bookId);
+
+    if (this.activeContentTab === bookId) {
+      this.activeContentTab = 'main';
+      await this.refreshThumbnailPreviews(null);
+    }
+    this.cdr.markForCheck();
   }
 
   isBookPageDirty(bookId: string): boolean {
@@ -1035,10 +1089,6 @@ export class CharacterDetailComponent
 
   getTagsAsSelectableItems(): SelectableItem[] {
     return this.tagsSelectableItems;
-  }
-
-  getBooksAsSelectableItems(): SelectableItem[] {
-    return this.booksSelectableItems;
   }
 
   onTagsSelectionChange(selectedIds: string[]): void {

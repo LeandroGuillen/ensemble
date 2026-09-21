@@ -318,27 +318,69 @@
 
           <div class="writing-workspace">
           <!-- Content tabs -->
-          @if (isEditing && contentTabs.length > 1) {
+          @if (books.length > 0 || contentTabs.length > 1) {
             <nav class="content-tabs" aria-label="Content sections">
-              @for (tab of contentTabs; track tab.id) {
-                <button
-                  type="button"
-                  class="content-tab"
-                  [class.active]="activeContentTab === tab.id"
-                  (click)="setActiveContentTab(tab.id)"
-                >
-                  {{ tab.label }}
-                  @if (tab.id !== 'main' && bookPageData[tab.id]?.exists === false) {
-                    <span class="content-tab-badge" title="No page yet">+</span>
+              <div class="content-tab-list">
+                @for (tab of contentTabs; track tab.id) {
+                  @if (tab.id === 'main') {
+                    <button
+                      type="button"
+                      class="content-tab"
+                      [class.active]="activeContentTab === tab.id"
+                      (click)="setActiveContentTab(tab.id)"
+                    >{{ tab.label }}</button>
+                  } @else {
+                    <span class="content-tab-group" [class.active]="activeContentTab === tab.id">
+                      <button
+                        type="button"
+                        class="content-tab content-tab-book"
+                        [class.active]="activeContentTab === tab.id"
+                        [disabled]="!isEditing"
+                        [title]="isEditing ? 'Open ' + tab.label + ' page' : 'Book pages are available after creating the character'"
+                        (click)="setActiveContentTab(tab.id)"
+                      >
+                        <span class="content-tab-color" [style.background-color]="getBookColor(tab.id)" aria-hidden="true"></span>
+                        {{ tab.label }}
+                        @if (isEditing && bookPageData[tab.id]?.exists === false) {
+                          <span class="content-tab-badge" title="No page yet">+</span>
+                        }
+                      </button>
+                      <button
+                        type="button"
+                        class="content-tab-remove"
+                        (click)="removeBook(tab.id)"
+                        [attr.aria-label]="'Remove ' + tab.label + ' from character'"
+                        [title]="'Remove from ' + tab.label"
+                      >×</button>
+                    </span>
                   }
-                </button>
-              }
+                }
+              </div>
+
+              <details class="add-book-menu" #addBookMenu>
+                <summary class="content-tab add-book-summary">+ Add book</summary>
+                <div class="add-book-popover">
+                  <div class="add-book-popover-title">Add character to a book</div>
+                  @for (book of availableBooks; track book.id) {
+                    <button
+                      type="button"
+                      class="add-book-option"
+                      (click)="addBook(book.id); addBookMenu.open = false"
+                    >
+                      <span class="content-tab-color" [style.background-color]="book.color" aria-hidden="true"></span>
+                      <span>{{ getBookName(book.id) }}</span>
+                      <span class="add-book-option-action">+ Add</span>
+                    </button>
+                  } @empty {
+                    <p class="add-book-empty">This character is in every book.</p>
+                  }
+                </div>
+              </details>
             </nav>
           }
 
           @if (activeContentTab === 'main') {
-            <div class="detail-grid">
-              <!-- LEFT: Content editor -->
+            <div class="detail-grid detail-grid-single">
               <section class="panel content-panel">
                 <header class="description-header">
                   <h3 class="description-title">Description</h3>
@@ -373,25 +415,6 @@
                 }
               </section>
 
-              <!-- RIGHT: Metadata sidebar -->
-              <aside class="panel meta-panel">
-                <section class="meta-group">
-                  <header class="meta-group-header">
-                    <h4 class="meta-group-title">Books</h4>
-                    @if (books.length === 0) {
-                      <span class="meta-group-hint">None defined</span>
-                    }
-                  </header>
-                  @if (books.length > 0) {
-                    <app-multi-select-buttons
-                      [items]="getBooksAsSelectableItems()"
-                      [selectedIds]="characterForm.get('books')?.value || []"
-                      (selectionChange)="onBooksSelectionChange($event)"
-                    ></app-multi-select-buttons>
-                  }
-                </section>
-
-              </aside>
             </div>
 
             <app-character-prompts-editor

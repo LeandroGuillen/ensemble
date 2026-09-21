@@ -1,0 +1,658 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ensemble · Edit Character book navigation concepts</title>
+  <style>
+    :root {
+      --bg: #17130f;
+      --surface: #211b16;
+      --surface-2: #2b241e;
+      --surface-3: #342c24;
+      --line: #57493a;
+      --line-soft: #40362c;
+      --text: #f2eee8;
+      --muted: #a89b89;
+      --faint: #7e7264;
+      --gold: #d2af62;
+      --gold-bright: #e6c575;
+      --gold-ink: #17130f;
+      --green: #6d9639;
+      --orange: #f59d08;
+      --blue: #617a88;
+      --teal: #16a68d;
+      --danger: #df7f72;
+      --radius: 10px;
+      --shadow: 0 18px 60px rgba(0, 0, 0, .28);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { color-scheme: dark; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 50% -20%, rgba(210, 175, 98, .09), transparent 42rem),
+        var(--bg);
+      color: var(--text);
+      font: 15px/1.45 "Avenir Next", Avenir, "Segoe UI", sans-serif;
+    }
+
+    button { font: inherit; }
+
+    button:focus-visible,
+    textarea:focus-visible {
+      outline: 2px solid var(--gold-bright);
+      outline-offset: 3px;
+    }
+
+    .prototype-bar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      gap: 22px;
+      padding: 14px clamp(18px, 4vw, 56px);
+      background: rgba(23, 19, 15, .94);
+      border-bottom: 1px solid var(--line-soft);
+      backdrop-filter: blur(18px);
+    }
+
+    .prototype-title { min-width: max-content; }
+    .prototype-title strong { display: block; color: var(--gold-bright); letter-spacing: .02em; }
+    .prototype-title span { color: var(--faint); font-size: 12px; }
+
+    .concept-picker {
+      display: flex;
+      gap: 5px;
+      padding: 4px;
+      border: 1px solid var(--line-soft);
+      border-radius: 9px;
+      background: var(--surface);
+      overflow-x: auto;
+    }
+
+    .concept-picker button {
+      padding: 8px 13px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .concept-picker button:hover { color: var(--text); background: var(--surface-2); }
+    .concept-picker button[aria-selected="true"] { color: var(--gold-ink); background: var(--gold); font-weight: 700; }
+
+    .shell { width: min(1360px, calc(100% - 40px)); margin: 30px auto 70px; }
+
+    .concept-intro {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: end;
+      gap: 20px;
+      margin-bottom: 22px;
+    }
+
+    .eyebrow {
+      margin: 0 0 6px;
+      color: var(--gold);
+      font-size: 11px;
+      font-weight: 750;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    h1 { margin: 0 0 7px; font: 600 clamp(24px, 3vw, 34px)/1.14 Georgia, serif; }
+    .concept-intro p:last-child { max-width: 800px; margin: 0; color: var(--muted); }
+
+    .verdict {
+      padding: 7px 11px;
+      border: 1px solid rgba(210, 175, 98, .32);
+      border-radius: 999px;
+      color: var(--gold-bright);
+      background: rgba(210, 175, 98, .08);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .mock-app {
+      min-height: 650px;
+      padding: 26px;
+      border: 1px solid var(--line-soft);
+      border-radius: 16px;
+      background: rgba(25, 21, 17, .72);
+      box-shadow: var(--shadow);
+    }
+
+    .app-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .app-title { display: flex; align-items: baseline; gap: 12px; }
+    .app-title h2 { margin: 0; font: 600 21px Georgia, serif; }
+    .app-title span { color: var(--faint); font: 12px ui-monospace, monospace; }
+    .header-actions { display: flex; gap: 8px; }
+
+    .ghost, .primary, .icon-button, .compact-action {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .ghost, .primary { padding: 8px 13px; }
+    .ghost:hover, .icon-button:hover, .compact-action:hover { color: var(--text); border-color: var(--gold); }
+    .primary { border-color: var(--gold); background: var(--gold); color: var(--gold-ink); font-weight: 700; }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 90px 1fr;
+      gap: 18px;
+      align-items: center;
+      margin-bottom: 26px;
+      padding: 18px;
+      border: 1px solid var(--line-soft);
+      border-radius: 13px;
+      background: linear-gradient(115deg, var(--surface), #271f18);
+    }
+
+    .portrait {
+      display: grid;
+      place-items: center;
+      width: 90px;
+      height: 90px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: #120f0c;
+      color: var(--gold);
+      font: 36px Georgia, serif;
+    }
+
+    .hero label, .field-label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .name-field { color: var(--text); font: 600 27px Georgia, serif; }
+    .aliases { margin-top: 7px; color: var(--faint); font-size: 13px; }
+
+    .workspace { min-width: 0; }
+    .workspace-top { position: relative; margin-bottom: 20px; }
+
+    .tabs {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      width: max-content;
+      max-width: 100%;
+      padding: 5px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface-2);
+    }
+
+    .tab, .add-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 38px;
+      padding: 7px 12px;
+      border: 0;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .tab:hover, .add-tab:hover { background: rgba(255,255,255,.05); color: var(--text); }
+    .tab.active { background: var(--gold); color: var(--gold-ink); font-weight: 700; }
+    .tab .remove { opacity: .6; font-size: 17px; line-height: 1; }
+    .tab .remove:hover { opacity: 1; color: #5e2c25; }
+    .page-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; opacity: .45; }
+    .add-tab { border-left: 1px solid var(--line); border-radius: 0 6px 6px 0; color: var(--gold); }
+
+    .popover {
+      position: absolute;
+      z-index: 10;
+      top: calc(100% + 8px);
+      left: 0;
+      width: 315px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: #2d251e;
+      box-shadow: 0 18px 45px rgba(0,0,0,.45);
+    }
+    .popover[hidden] { display: none; }
+    .popover-title { padding: 4px 7px 9px; color: var(--muted); font-size: 12px; }
+    .book-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 10px;
+      border: 0;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+    }
+    .book-option:hover { background: rgba(255,255,255,.06); }
+    .swatch { width: 10px; height: 10px; border-radius: 3px; flex: 0 0 auto; }
+    .book-option small { margin-left: auto; color: var(--faint); }
+    .empty-option { padding: 16px 10px; color: var(--faint); text-align: center; }
+
+    .editor-grid { display: grid; grid-template-columns: minmax(0, 1fr) 285px; gap: 22px; }
+    .editor-grid.no-sidebar { grid-template-columns: minmax(0, 1fr); }
+    .editor-card, .meta-card {
+      padding: 19px;
+      border: 1px solid var(--line-soft);
+      border-radius: 12px;
+      background: var(--surface);
+    }
+    .editor-heading { display: flex; justify-content: space-between; margin-bottom: 12px; }
+    .editor-heading h3 { margin: 0; color: var(--muted); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
+    .edit-link { border: 0; background: none; color: var(--gold); cursor: pointer; }
+    textarea {
+      width: 100%;
+      min-height: 260px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      resize: vertical;
+      background: #17130f;
+      color: var(--text);
+      font: 18px/1.7 Georgia, serif;
+    }
+    .count { margin-top: 8px; color: var(--faint); font: 11px ui-monospace, monospace; text-align: right; }
+
+    .meta-card h3 { margin: 0 0 12px; color: var(--muted); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
+    .muted-copy { margin: 0; color: var(--faint); font-size: 13px; }
+    .summary-row { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 13px; }
+    .summary-pill { padding: 5px 8px; border-radius: 6px; background: var(--surface-3); color: var(--muted); font-size: 12px; }
+
+    /* Concept B */
+    .rail-layout { display: grid; grid-template-columns: 295px minmax(0, 1fr); gap: 22px; }
+    .book-rail {
+      padding: 14px;
+      border: 1px solid var(--line-soft);
+      border-radius: 12px;
+      background: var(--surface);
+    }
+    .rail-title { display: flex; justify-content: space-between; align-items: baseline; padding: 3px 5px 11px; }
+    .rail-title h3 { margin: 0; color: var(--muted); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
+    .rail-title span { color: var(--faint); font-size: 11px; }
+    .rail-item {
+      display: grid;
+      grid-template-columns: 22px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 9px;
+      width: 100%;
+      margin: 2px 0;
+      padding: 10px 9px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+      text-align: left;
+      cursor: pointer;
+    }
+    .rail-item:hover { background: var(--surface-2); color: var(--text); }
+    .rail-item.active { border-color: rgba(210,175,98,.35); background: rgba(210,175,98,.09); color: var(--text); }
+    .rail-item.general { grid-template-columns: 22px 1fr; margin-bottom: 8px; border-bottom-color: var(--line-soft); border-radius: 7px 7px 2px 2px; }
+    .doc-icon { color: var(--gold); font-size: 15px; }
+    .rail-check {
+      display: grid;
+      place-items: center;
+      width: 18px;
+      height: 18px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      color: transparent;
+      background: #18130f;
+      font-size: 12px;
+    }
+    .rail-check.checked { border-color: var(--gold); background: var(--gold); color: var(--gold-ink); }
+    .rail-book-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rail-status { color: var(--faint); font-size: 10px; text-transform: uppercase; }
+    .rail-help { margin: 12px 5px 2px; padding-top: 11px; border-top: 1px solid var(--line-soft); color: var(--faint); font-size: 11px; line-height: 1.4; }
+
+    /* Concept C */
+    .context-bar {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 13px 15px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: var(--surface-2);
+    }
+    .context-copy { min-width: 0; }
+    .context-copy small { display: block; margin-bottom: 2px; color: var(--faint); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; }
+    .context-copy strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .context-actions { display: flex; gap: 8px; }
+    .compact-action { padding: 7px 10px; }
+    .context-menu { right: 0; left: auto; width: 390px; }
+    .menu-section { padding: 4px 7px 7px; color: var(--faint); font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+    .menu-row {
+      display: grid;
+      grid-template-columns: 20px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 9px;
+      border-radius: 7px;
+    }
+    .menu-row:hover { background: rgba(255,255,255,.045); }
+    .menu-row.current { background: rgba(210,175,98,.08); }
+    .menu-book { min-width: 0; }
+    .menu-book strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+    .menu-book small { color: var(--faint); font-size: 10px; }
+    .open-link { padding: 5px 7px; border: 0; border-radius: 5px; background: transparent; color: var(--gold); cursor: pointer; }
+    .open-link:hover { background: rgba(210,175,98,.1); }
+    .menu-rule { height: 1px; margin: 7px 0; background: var(--line-soft); }
+
+    .why {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 18px;
+    }
+    .why div { padding: 13px 15px; border: 1px solid var(--line-soft); border-radius: 9px; background: rgba(33,27,22,.55); }
+    .why strong { display: block; margin-bottom: 3px; color: var(--gold-bright); font-size: 12px; }
+    .why span { color: var(--faint); font-size: 12px; }
+
+    [data-concept-panel][hidden] { display: none; }
+
+    @media (max-width: 820px) {
+      .prototype-bar { align-items: flex-start; flex-direction: column; gap: 10px; }
+      .concept-picker { width: 100%; }
+      .shell { width: min(100% - 24px, 1360px); margin-top: 18px; }
+      .concept-intro { grid-template-columns: 1fr; align-items: start; }
+      .verdict { justify-self: start; }
+      .mock-app { padding: 16px; }
+      .app-title span, .header-actions .ghost { display: none; }
+      .hero { grid-template-columns: 65px 1fr; }
+      .portrait { width: 65px; height: 65px; }
+      .editor-grid, .rail-layout { grid-template-columns: 1fr; }
+      .meta-card { display: none; }
+      .why { grid-template-columns: 1fr; }
+      .book-rail { order: 0; }
+      .rail-layout .editor-card { order: 1; }
+      .context-menu { left: 0; right: auto; width: min(390px, calc(100vw - 58px)); }
+    }
+  </style>
+</head>
+<body>
+  <header class="prototype-bar">
+    <div class="prototype-title">
+      <strong>Books × Edit Character</strong>
+      <span>Three single-source navigation ideas</span>
+    </div>
+    <nav class="concept-picker" aria-label="Choose a UX concept">
+      <button type="button" aria-selected="true" data-show="a">A · Editable tabs</button>
+      <button type="button" aria-selected="false" data-show="b">B · Book rail</button>
+      <button type="button" aria-selected="false" data-show="c">C · Context menu</button>
+    </nav>
+  </header>
+
+  <main class="shell">
+    <section data-concept-panel="a">
+      <div class="concept-intro">
+        <div>
+          <p class="eyebrow">Possibility A · Lowest disruption</p>
+          <h1>Make the tabs themselves editable</h1>
+          <p>A book tab means both “this character belongs to this book” and “this book has a page.” Remove from the tab; add from the + menu. The sidebar can disappear.</p>
+        </div>
+        <span class="verdict">My recommendation</span>
+      </div>
+      <div class="mock-app">
+        <div class="app-header">
+          <div class="app-title"><h2>Edit Character</h2><span>characters/Casimir.md</span></div>
+          <div class="header-actions"><button class="ghost">Cancel</button><button class="primary">Save changes</button></div>
+        </div>
+        <div class="hero"><div class="portrait">C</div><div><label>Character name</label><div class="name-field">Casimir</div><div class="aliases">Also known as: Caz · The Archivist</div></div></div>
+        <div class="workspace">
+          <div class="workspace-top">
+            <div class="tabs" id="tabs-a"></div>
+            <div class="popover" id="add-popover-a" hidden></div>
+          </div>
+          <div class="editor-grid no-sidebar">
+            <div class="editor-card">
+              <div class="editor-heading"><h3>Description</h3><button class="edit-link">Edit</button></div>
+              <textarea id="text-a" aria-label="Character description">Segundo nombre: Casimir.
+
+Quietly observant, with a habit of collecting details other people overlook. His loyalties shift as the story develops.</textarea>
+              <div class="count">156 / 100,000</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="why"><div><strong>One visible book list</strong><span>Membership is expressed directly by which tabs exist.</span></div><div><strong>Familiar interaction</strong><span>Almost no relearning from the current design.</span></div><div><strong>Best when</strong><span>Most characters belong to only a few books.</span></div></div>
+    </section>
+
+    <section data-concept-panel="b" hidden>
+      <div class="concept-intro">
+        <div>
+          <p class="eyebrow">Possibility B · Most explicit</p>
+          <h1>Use one persistent book rail</h1>
+          <p>Each row has two clear targets: click the title to open that page; click the checkbox to include or exclude the character. This scales better when a series has many books.</p>
+        </div>
+        <span class="verdict">Best for long series</span>
+      </div>
+      <div class="mock-app">
+        <div class="app-header">
+          <div class="app-title"><h2>Edit Character</h2><span>characters/Casimir.md</span></div>
+          <div class="header-actions"><button class="ghost">Cancel</button><button class="primary">Save changes</button></div>
+        </div>
+        <div class="hero"><div class="portrait">C</div><div><label>Character name</label><div class="name-field">Casimir</div><div class="aliases">Also known as: Caz · The Archivist</div></div></div>
+        <div class="rail-layout">
+          <aside class="book-rail">
+            <div class="rail-title"><h3>Pages & books</h3><span id="rail-count"></span></div>
+            <div id="rail-b"></div>
+            <p class="rail-help">Click a title to open its page. Use the checkbox to include or exclude Casimir.</p>
+          </aside>
+          <div class="editor-card">
+            <div class="editor-heading"><h3 id="heading-b">General description</h3><button class="edit-link">Edit</button></div>
+            <textarea aria-label="Character description">Segundo nombre: Casimir.
+
+Quietly observant, with a habit of collecting details other people overlook. His loyalties shift as the story develops.</textarea>
+            <div class="count">156 / 100,000</div>
+          </div>
+        </div>
+      </div>
+      <div class="why"><div><strong>One authoritative list</strong><span>Navigation and membership live side-by-side, not in two regions.</span></div><div><strong>Highly scannable</strong><span>Unchecked future books remain visible and easy to add.</span></div><div><strong>Tradeoff</strong><span>The rail permanently consumes horizontal space.</span></div></div>
+    </section>
+
+    <section data-concept-panel="c" hidden>
+      <div class="concept-intro">
+        <div>
+          <p class="eyebrow">Possibility C · Quietest canvas</p>
+          <h1>Collapse books into a context menu</h1>
+          <p>The editor only shows the current page and a single “Books & pages” control. Opening it reveals every book with membership and navigation actions together.</p>
+        </div>
+        <span class="verdict">Best for focus</span>
+      </div>
+      <div class="mock-app">
+        <div class="app-header">
+          <div class="app-title"><h2>Edit Character</h2><span>characters/Casimir.md</span></div>
+          <div class="header-actions"><button class="ghost">Cancel</button><button class="primary">Save changes</button></div>
+        </div>
+        <div class="hero"><div class="portrait">C</div><div><label>Character name</label><div class="name-field">Casimir</div><div class="aliases">Also known as: Caz · The Archivist</div></div></div>
+        <div class="workspace">
+          <div class="workspace-top">
+            <div class="context-bar">
+              <div class="context-copy"><small>Writing page</small><strong id="context-title-c">General character notes</strong></div>
+              <div class="context-actions"><button class="compact-action" id="menu-toggle-c">Books & pages <span id="context-count-c"></span> ▾</button></div>
+            </div>
+            <div class="popover context-menu" id="menu-c" hidden></div>
+          </div>
+          <div class="editor-grid">
+            <div class="editor-card">
+              <div class="editor-heading"><h3 id="heading-c">Description</h3><button class="edit-link">Edit</button></div>
+              <textarea aria-label="Character description">Segundo nombre: Casimir.
+
+Quietly observant, with a habit of collecting details other people overlook. His loyalties shift as the story develops.</textarea>
+              <div class="count">156 / 100,000</div>
+            </div>
+            <aside class="meta-card"><h3>At a glance</h3><p class="muted-copy">Book controls stay out of the writing canvas until you need them.</p><div class="summary-row" id="summary-c"></div></aside>
+          </div>
+        </div>
+      </div>
+      <div class="why"><div><strong>Maximum writing space</strong><span>No persistent book list competes with the description.</span></div><div><strong>One compact control</strong><span>Open, add, and remove books from the same menu.</span></div><div><strong>Tradeoff</strong><span>Switching pages takes one extra click.</span></div></div>
+    </section>
+  </main>
+
+  <script>
+    const BOOKS = [
+      { id: 'n23', name: 'Día de las Hijas', color: 'var(--green)', hasPage: true },
+      { id: 'n26', name: 'Nueva Alascar', color: 'var(--orange)', hasPage: false },
+      { id: 'n27', name: 'El Palacio de Sal', color: 'var(--blue)', hasPage: false },
+      { id: 'n28', name: 'Las Voces del Río', color: 'var(--teal)', hasPage: false }
+    ];
+    const state = { included: new Set(['n23', 'n26']), activeA: 'general', activeB: 'general', activeC: 'general' };
+
+    const escapeHtml = (value) => value.replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+    const label = book => `${book.id} — ${book.name}`;
+    const getBook = id => BOOKS.find(book => book.id === id);
+
+    document.querySelectorAll('[data-show]').forEach(button => {
+      button.addEventListener('click', () => {
+        document.querySelectorAll('[data-show]').forEach(item => item.setAttribute('aria-selected', String(item === button)));
+        document.querySelectorAll('[data-concept-panel]').forEach(panel => panel.hidden = panel.dataset.conceptPanel !== button.dataset.show);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    });
+
+    function renderA() {
+      const tabs = document.querySelector('#tabs-a');
+      const included = BOOKS.filter(book => state.included.has(book.id));
+      tabs.innerHTML = `<button class="tab ${state.activeA === 'general' ? 'active' : ''}" data-open-a="general">General</button>` +
+        included.map(book => `<button class="tab ${state.activeA === book.id ? 'active' : ''}" data-open-a="${book.id}"><span class="swatch" style="background:${book.color}"></span>${escapeHtml(label(book))}${!book.hasPage ? '<span class="page-dot" title="Page not created"></span>' : ''}<span class="remove" data-remove-a="${book.id}" title="Remove character from this book" aria-label="Remove ${escapeHtml(book.name)}">×</span></button>`).join('') +
+        `<button class="add-tab" id="add-toggle-a">＋ Add book</button>`;
+
+      tabs.querySelectorAll('[data-open-a]').forEach(button => button.addEventListener('click', event => {
+        if (event.target.matches('[data-remove-a]')) return;
+        state.activeA = button.dataset.openA;
+        updateEditorCopy('a', state.activeA);
+        renderA();
+      }));
+      tabs.querySelectorAll('[data-remove-a]').forEach(button => button.addEventListener('click', event => {
+        event.stopPropagation();
+        state.included.delete(button.dataset.removeA);
+        if (state.activeA === button.dataset.removeA) state.activeA = 'general';
+        updateEditorCopy('a', state.activeA);
+        renderAll();
+      }));
+      document.querySelector('#add-toggle-a').addEventListener('click', () => {
+        const popover = document.querySelector('#add-popover-a');
+        popover.hidden = !popover.hidden;
+        renderAddPopoverA();
+      });
+      renderAddPopoverA();
+    }
+
+    function renderAddPopoverA() {
+      const popover = document.querySelector('#add-popover-a');
+      const available = BOOKS.filter(book => !state.included.has(book.id));
+      popover.innerHTML = `<div class="popover-title">Add Casimir to a book</div>` + (available.length ? available.map(book => `<button class="book-option" data-add-a="${book.id}"><span class="swatch" style="background:${book.color}"></span><span>${escapeHtml(label(book))}</span><small>＋ Add</small></button>`).join('') : '<div class="empty-option">Casimir is in every book</div>');
+      popover.querySelectorAll('[data-add-a]').forEach(button => button.addEventListener('click', () => {
+        state.included.add(button.dataset.addA);
+        state.activeA = button.dataset.addA;
+        popover.hidden = true;
+        updateEditorCopy('a', state.activeA);
+        renderAll();
+      }));
+    }
+
+    function renderB() {
+      const rail = document.querySelector('#rail-b');
+      rail.innerHTML = `<button class="rail-item general ${state.activeB === 'general' ? 'active' : ''}" data-open-b="general"><span class="doc-icon">◆</span><span>General notes</span></button>` + BOOKS.map(book => {
+        const checked = state.included.has(book.id);
+        return `<button class="rail-item ${state.activeB === book.id ? 'active' : ''}" data-open-b="${book.id}"><span class="rail-check ${checked ? 'checked' : ''}" data-check-b="${book.id}" role="checkbox" aria-checked="${checked}" aria-label="${checked ? 'Exclude from' : 'Include in'} ${escapeHtml(book.name)}">✓</span><span class="rail-book-name"><span class="swatch" style="display:inline-block;background:${book.color};margin-right:7px"></span>${escapeHtml(label(book))}</span><span class="rail-status">${checked ? (book.hasPage ? 'Page' : 'Add page') : 'Not in book'}</span></button>`;
+      }).join('');
+      document.querySelector('#rail-count').textContent = `${state.included.size} selected`;
+      rail.querySelectorAll('[data-open-b]').forEach(button => button.addEventListener('click', event => {
+        const checkbox = event.target.closest('[data-check-b]');
+        if (checkbox) {
+          event.stopPropagation();
+          const id = checkbox.dataset.checkB;
+          state.included.has(id) ? state.included.delete(id) : state.included.add(id);
+          if (!state.included.has(id) && state.activeB === id) state.activeB = 'general';
+          renderAll();
+          return;
+        }
+        const id = button.dataset.openB;
+        if (id !== 'general' && !state.included.has(id)) state.included.add(id);
+        state.activeB = id;
+        updateEditorCopy('b', id);
+        renderAll();
+      }));
+    }
+
+    function renderC() {
+      const menu = document.querySelector('#menu-c');
+      const activeBook = getBook(state.activeC);
+      document.querySelector('#context-title-c').textContent = activeBook ? label(activeBook) : 'General character notes';
+      document.querySelector('#context-count-c').textContent = `(${state.included.size})`;
+      document.querySelector('#summary-c').innerHTML = BOOKS.filter(book => state.included.has(book.id)).map(book => `<span class="summary-pill"><span class="swatch" style="display:inline-block;background:${book.color};margin-right:5px"></span>${book.id}</span>`).join('') || '<span class="summary-pill">No books</span>';
+      menu.innerHTML = `<div class="menu-section">Navigate and manage</div><div class="menu-row ${state.activeC === 'general' ? 'current' : ''}"><span class="doc-icon">◆</span><div class="menu-book"><strong>General character notes</strong><small>Always available</small></div><button class="open-link" data-open-c="general">Open</button></div><div class="menu-rule"></div>` + BOOKS.map(book => {
+        const checked = state.included.has(book.id);
+        return `<div class="menu-row ${state.activeC === book.id ? 'current' : ''}"><button class="rail-check ${checked ? 'checked' : ''}" data-check-c="${book.id}" role="checkbox" aria-checked="${checked}" aria-label="${checked ? 'Exclude from' : 'Include in'} ${escapeHtml(book.name)}">✓</button><div class="menu-book"><strong><span class="swatch" style="display:inline-block;background:${book.color};margin-right:7px"></span>${escapeHtml(label(book))}</strong><small>${checked ? (book.hasPage ? 'Included · page exists' : 'Included · no page yet') : 'Not included'}</small></div><button class="open-link" data-open-c="${book.id}">${checked ? 'Open' : 'Add & open'}</button></div>`;
+      }).join('');
+      menu.querySelectorAll('[data-check-c]').forEach(button => button.addEventListener('click', () => {
+        const id = button.dataset.checkC;
+        state.included.has(id) ? state.included.delete(id) : state.included.add(id);
+        if (!state.included.has(id) && state.activeC === id) state.activeC = 'general';
+        updateEditorCopy('c', state.activeC);
+        renderAll();
+      }));
+      menu.querySelectorAll('[data-open-c]').forEach(button => button.addEventListener('click', () => {
+        const id = button.dataset.openC;
+        if (id !== 'general') state.included.add(id);
+        state.activeC = id;
+        menu.hidden = true;
+        updateEditorCopy('c', id);
+        renderAll();
+      }));
+    }
+
+    function updateEditorCopy(concept, id) {
+      const book = getBook(id);
+      const heading = document.querySelector(`#heading-${concept}`);
+      if (heading) heading.textContent = book ? `${label(book)} description` : (concept === 'b' ? 'General description' : 'Description');
+      if (concept === 'a') {
+        const textarea = document.querySelector('#text-a');
+        textarea.value = book ? `${book.hasPage ? 'Book-specific notes for' : 'No page yet for'} ${label(book)}.\n\n${book.hasPage ? 'Casimir first appears at the archive and begins following the letters.' : 'Start writing to create this book page.'}` : 'Segundo nombre: Casimir.\n\nQuietly observant, with a habit of collecting details other people overlook. His loyalties shift as the story develops.';
+      }
+    }
+
+    function renderAll() { renderA(); renderB(); renderC(); }
+
+    document.querySelector('#menu-toggle-c').addEventListener('click', () => {
+      const menu = document.querySelector('#menu-c');
+      menu.hidden = !menu.hidden;
+    });
+
+    document.addEventListener('click', event => {
+      const addPopover = document.querySelector('#add-popover-a');
+      if (!event.target.closest('#add-popover-a') && !event.target.closest('#add-toggle-a')) addPopover.hidden = true;
+      const contextMenu = document.querySelector('#menu-c');
+      if (!event.target.closest('#menu-c') && !event.target.closest('#menu-toggle-c')) contextMenu.hidden = true;
+    });
+
+    renderAll();
+  </script>
+</body>
+</html>
