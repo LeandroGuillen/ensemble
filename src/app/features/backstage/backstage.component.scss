@@ -745,6 +745,11 @@
   background: var(--color-bg-tertiary);
 }
 
+.name-remove-action {
+  margin-left: var(--spacing-xs);
+  font-size: 0.75rem;
+}
+
 .add-name-item {
   display: flex;
   align-items: center;

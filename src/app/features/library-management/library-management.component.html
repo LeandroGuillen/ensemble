@@ -40,7 +40,7 @@
         (click)="showAddBookForm()"
         [disabled]="saving"
       >
-        <span class="plus-glyph" aria-hidden="true">+</span>
+        <svg class="ui-icon plus-glyph" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
         Add Book
       </button>
     </div>
@@ -58,9 +58,9 @@
       @if (error) {
         <div class="error-banner">
           <div class="error-content">
-            <span class="error-icon">⚠️</span>
+            <svg class="ui-icon error-icon" aria-hidden="true"><use href="assets/ui-icons.svg#alert-triangle" /></svg>
             <span class="error-message">{{ error }}</span>
-            <button class="error-close" (click)="error = null">×</button>
+            <button class="error-close" (click)="error = null" aria-label="Dismiss error"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg></button>
           </div>
         </div>
       }
@@ -75,7 +75,7 @@
             ) {
               <div class="empty-bookshelf">
                 <div class="empty-book-placeholder">
-                  <div class="placeholder-icon">📖</div>
+                  <div class="placeholder-icon"><svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="assets/ui-icons.svg#book-open" /></svg></div>
                   <p>Your library is empty</p>
                   <p class="empty-subtitle">
                     Add a book, or create a series to start grouping
@@ -99,7 +99,7 @@
                       title="Drag to reorder series"
                       (dragstart)="onSeriesDragStart($event, group.series.id)"
                       (dragend)="onSeriesDragEnd()"
-                      >⠿</span
+                      ><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#grip" /></svg></span
                     >
                     <div class="series-title-block">
                       <h2 class="series-name">{{ group.series.name }}</h2>
@@ -165,7 +165,7 @@
                                     onSagaDragStart($event, shelf.saga!.id)
                                   "
                                   (dragend)="onSagaDragEnd()"
-                                  >⠿</span
+                                  ><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#grip" /></svg></span
                                 >
                                 <h3 class="saga-name">
                                   {{ shelf.saga!.name }}
@@ -261,7 +261,7 @@
                               onSagaDragStart($event, shelf.saga!.id)
                             "
                             (dragend)="onSagaDragEnd()"
-                            >⠿</span
+                            ><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#grip" /></svg></span
                           >
                           <h3 class="saga-name">{{ shelf.saga!.name }}</h3>
                           <div class="saga-actions">

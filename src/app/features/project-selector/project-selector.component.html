@@ -28,7 +28,7 @@
         <!-- Empty State for No Recent Projects -->
         @if (recentProjects.length === 0 && !isLoading) {
           <div class="empty-state">
-            <div class="empty-icon">📁</div>
+            <div class="empty-icon"><svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="assets/ui-icons.svg#folder" /></svg></div>
             <h3>No Recent Projects</h3>
             <p>You haven't opened any projects yet. Create a new project or open an existing one to get started.</p>
           </div>
@@ -60,14 +60,14 @@
                       (click)="startDuplicateProject(project.path, project.name); $event.stopPropagation()"
                       title="Duplicate project"
                       >
-                      📋
+                      <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#clipboard" /></svg>
                     </button>
                   }
                   <button
                     class="btn btn-icon remove-btn"
                     (click)="removeFromRecent(project.path, $event)"
                     title="Remove from recent projects">
-                    ×
+                    <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg>
                   </button>
                 </div>
               </div>
@@ -127,7 +127,7 @@
         <div class="form-header">
           <h2>Create New Project</h2>
           <button class="btn btn-link back-btn" (click)="hideCreateProjectForm()">
-            ← Back
+            <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#arrow-left" /></svg> Back
           </button>
         </div>
         <div class="form-content">
@@ -194,7 +194,7 @@
         <div class="form-header">
           <h2>Duplicate Project</h2>
           <button class="btn btn-link back-btn" (click)="cancelDuplicate()">
-            ← Back
+            <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#arrow-left" /></svg> Back
           </button>
         </div>
         <div class="form-content">

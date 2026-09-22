@@ -25,7 +25,7 @@ export class AddNameCommandService {
       {
         id: 'add-name',
         label: 'New Name',
-        icon: '➕',
+        icon: 'plus',
         keywords: ['name', 'names', 'new', 'create', 'list', 'add'],
         group: 'Names',
         action: () => {

@@ -11,9 +11,9 @@
   @if (error) {
     <div class="error-banner">
       <div class="error-content">
-        <span class="error-icon">⚠️</span>
+        <svg class="ui-icon error-icon" aria-hidden="true"><use href="assets/ui-icons.svg#alert-triangle" /></svg>
         <span class="error-message">{{ error }}</span>
-        <button class="error-close" (click)="error = null">×</button>
+        <button class="error-close" (click)="error = null" aria-label="Dismiss error"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg></button>
       </div>
     </div>
   }
@@ -27,7 +27,7 @@
             <section class="section categories-section" [settingsSearchable]="['Categories', 'folder mode', categoryNamesSearch]">
               <div class="section-header">
                 <button class="btn btn-primary" (click)="showAddCategoryForm()" [disabled]="saving">
-                  <span class="icon">+</span>
+                  <svg class="ui-icon icon" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
                   Add Category
                 </button>
               </div>
@@ -36,7 +36,7 @@
                 <div class="form-card">
                   <div class="form-header">
                     <h3>Add New Category</h3>
-                    <button class="btn-close" (click)="cancelCategoryForm()">×</button>
+                    <button class="btn-close" (click)="cancelCategoryForm()" aria-label="Close"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg></button>
                   </div>
                   <form [formGroup]="categoryForm" (ngSubmit)="saveCategory()">
                     <div class="form-group">
@@ -342,7 +342,7 @@
             <section class="section tags-section" [settingsSearchable]="['Tags', tagNamesSearch]">
               <div class="section-header">
                 <button class="btn btn-primary" (click)="showAddTagForm()" [disabled]="saving">
-                  <span class="icon">+</span>
+                  <svg class="ui-icon icon" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
                   Add Tag
                 </button>
               </div>
@@ -351,7 +351,7 @@
                 <div class="form-card">
                   <div class="form-header">
                     <h3>Add New Tag</h3>
-                    <button class="btn-close" (click)="cancelTagForm()">×</button>
+                    <button class="btn-close" (click)="cancelTagForm()" aria-label="Close"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg></button>
                   </div>
                   <form [formGroup]="tagForm" (ngSubmit)="saveTag()">
                     <div class="form-group">
@@ -533,7 +533,7 @@
             <section class="section" id="character-styles" [settingsSearchable]="['Character Styles', 'portrait', 'anime', 'default style', characterStylesLabel]">
               <div class="section-header">
                 <button class="btn btn-primary" (click)="showAddCharacterStyleForm()" [disabled]="saving">
-                  <span class="icon">+</span>
+                  <svg class="ui-icon icon" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
                   Add Style
                 </button>
               </div>
@@ -542,7 +542,7 @@
                 <div class="form-card">
                   <div class="form-header">
                     <h3>Add New Style</h3>
-                    <button class="btn-close" (click)="cancelCharacterStyleForm()">×</button>
+                    <button class="btn-close" (click)="cancelCharacterStyleForm()" aria-label="Close"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg></button>
                   </div>
                   <form (ngSubmit)="addCharacterStyle()">
                     <div class="form-group">
@@ -589,7 +589,7 @@
                       [attr.aria-label]="isDefaultCharacterStyle(style.id) ? 'Default style' : 'Set ' + style.name + ' as default'"
                       [disabled]="saving || isDefaultCharacterStyle(style.id)"
                       (click)="setDefaultCharacterStyle(style)"
-                    >★</button>
+                    ><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#star" /></svg></button>
                     <div class="item-content">
                       <div class="item-info">
                         <div class="item-name-row">
@@ -651,9 +651,9 @@
                 <div class="form-group" [settingsSearchable]="['Interface zoom', 'zoom', 'scale', zoomPercent + '%']">
                   <label>Interface zoom</label>
                   <div class="zoom-controls-inline">
-                    <button type="button" class="btn btn-secondary btn-zoom" (click)="zoomService.zoomOut()" [disabled]="!zoomService.canZoomOut()" title="Zoom out">−</button>
+                    <button type="button" class="btn btn-secondary btn-zoom" (click)="zoomService.zoomOut()" [disabled]="!zoomService.canZoomOut()" title="Zoom out" aria-label="Zoom out"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#minus" /></svg></button>
                     <span class="zoom-value">{{ zoomPercent }}%</span>
-                    <button type="button" class="btn btn-secondary btn-zoom" (click)="zoomService.zoomIn()" [disabled]="!zoomService.canZoomIn()" title="Zoom in">+</button>
+                    <button type="button" class="btn btn-secondary btn-zoom" (click)="zoomService.zoomIn()" [disabled]="!zoomService.canZoomIn()" title="Zoom in" aria-label="Zoom in"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg></button>
                     <button type="button" class="btn btn-ghost btn-zoom-reset" (click)="zoomService.resetZoom()" [disabled]="zoomService.zoomLevel === 0" title="Reset to 100%">Reset</button>
                   </div>
                   <small class="form-help">Zoom the entire application interface. Preference is saved automatically.</small>
@@ -707,7 +707,7 @@
                                   class="color-text-inline"
                                   pattern="^#[0-9A-Fa-f]{6}$"
                                   >
-                                <button class="btn-icon" (click)="cancelEditingBaseColor()" title="Cancel">×</button>
+                                <button class="btn-icon" (click)="cancelEditingBaseColor()" title="Cancel"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg></button>
                               </div>
                             }
                           </div>
@@ -718,7 +718,7 @@
                               title="Edit color"
                               [disabled]="saving"
                               >
-                              ✎
+                              <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#edit" /></svg>
                             </button>
                           }
                         </div>
@@ -799,7 +799,7 @@
                               title="Remove color"
                               [disabled]="saving"
                               >
-                              ×
+                              <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg>
                             </button>
                           </div>
                         }

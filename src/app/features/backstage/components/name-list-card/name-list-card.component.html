@@ -14,7 +14,9 @@
       [attr.aria-label]="isCollapsed ? 'Expand name list' : 'Collapse name list'"
       [attr.aria-expanded]="!isCollapsed"
     >
-      {{ isCollapsed ? "▶" : "▼" }}
+      <svg class="ui-icon" aria-hidden="true">
+        <use [attr.href]="isCollapsed ? 'assets/ui-icons.svg#chevron-right' : 'assets/ui-icons.svg#chevron-down'" />
+      </svg>
     </button>
     <input
       type="text"
@@ -27,8 +29,8 @@
     <span class="name-count" *ngIf="isCollapsed && nameList.names.length > 0">
       ({{ nameList.names.length }})
     </span>
-    <button class="icon-btn delete-btn" (click)="onDelete($event)" title="Delete list" aria-label="Delete name list">
-      🗑️
+    <button class="text-action-danger delete-btn" (click)="onDelete($event)" title="Delete list" aria-label="Delete name list">
+      Delete
     </button>
   </div>
 
@@ -56,7 +58,7 @@
               title="Take the Stage - Create character with this name"
               aria-label="Take the Stage - Create character with this name"
             >
-              ⭐
+              <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#star" /></svg>
             </button>
             <button
               class="icon-btn-sm notes-toggle"
@@ -66,15 +68,17 @@
               [attr.aria-label]="isNotesExpanded(i) ? 'Hide notes' : 'Show notes'"
               [attr.aria-expanded]="isNotesExpanded(i)"
             >
-              {{ isNotesExpanded(i) ? '▼' : '▶' }}
+              <svg class="ui-icon" aria-hidden="true">
+                <use [attr.href]="isNotesExpanded(i) ? 'assets/ui-icons.svg#chevron-down' : 'assets/ui-icons.svg#chevron-right'" />
+              </svg>
             </button>
             <button
-              class="icon-btn-sm"
+              class="text-action-danger"
               (click)="onRemoveName(i)"
               title="Remove name"
               aria-label="Remove name"
             >
-              ×
+              Remove
             </button>
           </div>
         </div>

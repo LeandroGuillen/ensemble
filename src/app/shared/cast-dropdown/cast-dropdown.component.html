@@ -62,9 +62,7 @@
             {{ selectedCastId ? getSelectedCast()?.name : allLabel }}
           </span>
         </div>
-        <span class="cast-dropdown-arrow" [class.rotated]="isDropdownOpen"
-          >▼</span
-          >
+        <span class="cast-dropdown-arrow" [class.rotated]="isDropdownOpen"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#chevron-down" /></svg></span>
         </button>
 
         @if (isDropdownOpen) {
@@ -76,7 +74,7 @@
               (click)="selectCast('')"
               >
               <div class="cast-item-visual">
-                <div class="cast-item-all-icon">👥</div>
+                <div class="cast-item-all-icon"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#users" /></svg></div>
               </div>
               <div class="cast-item-info">
                 <div class="cast-item-name">{{ allLabel }}</div>

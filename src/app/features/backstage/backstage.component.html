@@ -24,7 +24,7 @@
             title="Clear search"
             aria-label="Clear search"
             >
-            ×
+            <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg>
           </button>
         }
       </div>
@@ -48,7 +48,7 @@
           (click)="toggleSortedView()"
           title="Show sorted"
           >
-          ⇅
+          <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#sort" /></svg>
         </button>
       }
       @if (mode === 'nameLists') {
@@ -57,7 +57,7 @@
           (click)="addNameList()"
           title="New Name List (Ctrl+N)"
           >
-          <span class="plus-glyph" aria-hidden="true">+</span>
+          <svg class="ui-icon plus-glyph" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
           New Name List
           <kbd class="shortcut-hint">Ctrl+N</kbd>
         </button>
@@ -68,7 +68,7 @@
           (click)="addConcept()"
           title="New Concept (Ctrl+N)"
           >
-          <span class="plus-glyph" aria-hidden="true">+</span>
+          <svg class="ui-icon plus-glyph" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
           New Concept
           <kbd class="shortcut-hint">Ctrl+N</kbd>
         </button>
@@ -114,7 +114,7 @@
               (click)="openConceptsInEditor()"
               title="Open concepts.md in system editor"
               >
-              📝
+              <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#file-text" /></svg>
             </button>
           </div>
           @if (filteredConcepts.length > 0) {
@@ -157,7 +157,7 @@
                         (click)="startEditConceptTitle(concepts.indexOf(concept))"
                         title="Edit concept title"
                         >
-                        ✏️
+                        <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#edit" /></svg>
                       </button>
                     }
                   </div>
@@ -198,14 +198,15 @@
                     (click)="takeTheStage(getSelectedConcept()!)"
                     title="Take the Stage - Create character from this concept"
                     >
-                    ⭐ Take the Stage
+                    <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#star" /></svg>
+                    Take the Stage
                   </button>
                   <button
-                    class="btn btn-ghost btn-sm"
+                    class="text-action-danger"
                     (click)="deleteConcept(selectedConceptIndex!)"
                     title="Delete concept"
                     >
-                    🗑️ Delete
+                    Delete
                   </button>
                 </div>
               </div>
@@ -251,7 +252,7 @@
                 (click)="openNamesInEditor()"
                 title="Open names.md in system editor"
                 >
-                📝
+                <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#file-text" /></svg>
               </button>
             </div>
             @if (filteredNameLists.length > 0) {
@@ -291,15 +292,15 @@
                           (click)="startEditNameList(nameLists.indexOf(nameList))"
                           title="Edit name list"
                           >
-                          ✏️
+                          <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#edit" /></svg>
                         </button>
                       }
                       <button
-                        class="btn-icon-sm"
+                        class="text-action-danger"
                         (click)="deleteNameList(nameLists.indexOf(nameList))"
                         title="Delete name list"
                         >
-                        🗑️
+                        Delete
                       </button>
                     </div>
                   </div>
@@ -375,21 +376,21 @@
                           (click)="startDraftWithName(nameItem.name)"
                           title="Start a character draft"
                           >
-                          ◫
+                          <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#file-text" /></svg>
                         </button>
                         <button
                           class="btn-icon-xs"
                           (click)="takeTheStageWithName(nameItem.name)"
                           title="Take the Stage"
                           >
-                          ⭐
+                          <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#star" /></svg>
                         </button>
                         <button
-                          class="btn-icon-xs"
+                          class="text-action-danger name-remove-action"
                           (click)="onRemoveNameItem(getOriginalIndex(i))"
                           title="Remove"
                           >
-                          ×
+                          Remove
                         </button>
                       </div>
                     </div>
@@ -413,7 +414,9 @@
                         title="Generate a name with AI"
                         aria-label="Generate a name with AI"
                         >
-                        {{ generatingName ? "⏳" : "✨" }}
+                        <svg class="ui-icon" aria-hidden="true">
+                          <use [attr.href]="generatingName ? 'assets/ui-icons.svg#hourglass' : 'assets/ui-icons.svg#sparkles'" />
+                        </svg>
                       </button>
                     }
                   </div>

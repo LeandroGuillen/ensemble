@@ -10,7 +10,7 @@
           class="search-input"
         />
         @if (searchTerm) {
-          <button class="search-clear" (click)="clearSearchTerm()" title="Clear search">×</button>
+          <button class="search-clear" (click)="clearSearchTerm()" title="Clear search" aria-label="Clear search"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg></button>
         }
       </div>
 
@@ -38,7 +38,7 @@
           >
             Name
             @if (sortBy === 'name') {
-              <span class="sort-indicator">{{ sortDirection === 'asc' ? '↑' : '↓' }}</span>
+              <span class="sort-indicator"><svg class="ui-icon" aria-hidden="true"><use [attr.href]="sortDirection === 'asc' ? 'assets/ui-icons.svg#arrow-up' : 'assets/ui-icons.svg#arrow-down'" /></svg></span>
             }
           </button>
           <button
@@ -49,7 +49,7 @@
           >
             Book
             @if (sortBy === 'book') {
-              <span class="sort-indicator">{{ sortDirection === 'asc' ? '↑' : '↓' }}</span>
+              <span class="sort-indicator"><svg class="ui-icon" aria-hidden="true"><use [attr.href]="sortDirection === 'asc' ? 'assets/ui-icons.svg#arrow-up' : 'assets/ui-icons.svg#arrow-down'" /></svg></span>
             }
           </button>
           <button
@@ -60,7 +60,7 @@
           >
             Modified
             @if (sortBy === 'modified') {
-              <span class="sort-indicator">{{ sortDirection === 'asc' ? '↑' : '↓' }}</span>
+              <span class="sort-indicator"><svg class="ui-icon" aria-hidden="true"><use [attr.href]="sortDirection === 'asc' ? 'assets/ui-icons.svg#arrow-up' : 'assets/ui-icons.svg#arrow-down'" /></svg></span>
             }
           </button>
         </div>
@@ -85,13 +85,13 @@
         </button>
       </div>
 
-      <button class="btn btn-secondary" (click)="refreshLocations()" title="Refresh">↻</button>
+      <button class="btn btn-secondary btn-icon" (click)="refreshLocations()" title="Refresh" aria-label="Refresh locations"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#refresh" /></svg></button>
       <button
         class="btn btn-primary"
         (click)="createNewLocation()"
         title="New Location (N)"
       >
-        <span class="plus-glyph" aria-hidden="true">+</span>
+        <svg class="ui-icon plus-glyph" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
         New Location
         <kbd class="shortcut-hint">N</kbd>
       </button>
@@ -110,9 +110,9 @@
       @if (error && !isLoading) {
         <div class="error-banner">
           <div class="error-content">
-            <span class="error-icon">⚠️</span>
+            <svg class="ui-icon error-icon" aria-hidden="true"><use href="assets/ui-icons.svg#alert-triangle" /></svg>
             <span class="error-message">{{ error }}</span>
-            <button class="error-close" (click)="error = null">×</button>
+            <button class="error-close" (click)="error = null" aria-label="Dismiss error"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg></button>
           </div>
         </div>
       }
@@ -125,7 +125,7 @@
 
       @if (filteredLocations.length === 0 && !isLoading) {
         <div class="empty-state">
-          <div class="empty-icon">🗺️</div>
+          <div class="empty-icon"><svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="assets/ui-icons.svg#map" /></svg></div>
           @if (!hasActiveFilters) {
             <h3>No Locations Yet</h3>
             <p>Create places and settings for your story world.</p>
@@ -158,7 +158,7 @@
                   <img [src]="getLocationThumbnail(location)!" [alt]="location.name + ' thumbnail'" />
                 } @else {
                   <div class="thumbnail-placeholder">
-                    <span class="placeholder-icon">🗺️</span>
+                    <svg class="ui-icon placeholder-icon" aria-hidden="true"><use href="assets/ui-icons.svg#map" /></svg>
                   </div>
                 }
               </div>
@@ -195,7 +195,7 @@
                   <img [src]="getLocationThumbnail(location)!" [alt]="location.name + ' thumbnail'" />
                 } @else {
                   <div class="thumbnail-placeholder-small">
-                    <span class="placeholder-icon-small">🗺️</span>
+                    <svg class="ui-icon placeholder-icon-small" aria-hidden="true"><use href="assets/ui-icons.svg#map" /></svg>
                   </div>
                 }
               </div>

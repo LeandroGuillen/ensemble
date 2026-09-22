@@ -24,7 +24,7 @@ export class AddConceptCommandService {
       {
         id: 'add-concept',
         label: 'New Concept',
-        icon: '➕',
+        icon: 'plus',
         keywords: ['concept', 'concepts', 'new', 'create', 'idea', 'brainstorm', 'add'],
         group: 'Concepts',
         action: () => {

@@ -20,7 +20,7 @@
               [class.starred]="$index === 0"
               [title]="$index === 0 ? 'Default prompt' : 'Set as default'"
               (click)="setPromptAsDefault($index); $event.stopPropagation()"
-            >★</button>
+            ><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#star" /></svg></button>
             <span class="prompts-list-name">{{ getPromptLabel(prompt, $index) }}</span>
           </li>
         } @empty {

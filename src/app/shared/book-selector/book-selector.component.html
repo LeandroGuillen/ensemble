@@ -4,7 +4,7 @@
     @if (!selectedBook) {
       <div class="all-books-text">
         <span class="all-books-label">All Books</span>
-        <span class="dropdown-arrow" [class.open]="isOpen">▼</span>
+        <span class="dropdown-arrow" [class.open]="isOpen"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#chevron-down" /></svg></span>
       </div>
     }
 
@@ -29,7 +29,7 @@
             <div class="page-layer"></div>
           </div>
         </div>
-        <span class="dropdown-arrow" [class.open]="isOpen">▼</span>
+        <span class="dropdown-arrow" [class.open]="isOpen"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#chevron-down" /></svg></span>
       </div>
     }
   </div>

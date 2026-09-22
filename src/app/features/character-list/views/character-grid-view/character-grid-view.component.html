@@ -49,7 +49,7 @@
             <span class="draft-badge">Draft</span>
           }
           @if (isPov(character)) {
-            <span class="pov-star" [style.color]="povBadgeColor" title="Point of view character" aria-label="Point of view character">★</span>
+            <span class="pov-star" [style.color]="povBadgeColor" title="Point of view character" aria-label="Point of view character"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#star" /></svg></span>
           }
         </h3>
         <p
@@ -88,7 +88,7 @@
           title="Edit character"
           aria-label="Edit character"
           >
-          ✏️
+          <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#edit" /></svg>
         </button>
         <button
           class="icon-btn delete-btn"
@@ -96,7 +96,7 @@
           title="Delete character"
           aria-label="Delete character"
           >
-          🗑️
+          <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#trash" /></svg>
         </button>
       </div>
     </div>

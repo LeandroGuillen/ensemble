@@ -16,7 +16,7 @@
             (click)="clearSearchTerm()"
             title="Clear search"
             >
-            ×
+            <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg>
           </button>
         }
       </div>
@@ -42,7 +42,7 @@
       </div>
 
       <button class="btn btn-primary" (click)="createNewCast()">
-        <span class="plus-glyph" aria-hidden="true">+</span>
+        <svg class="ui-icon plus-glyph" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
         New Cast
       </button>
     </div>
@@ -62,9 +62,9 @@
       @if (error && !isLoading) {
         <div class="error-banner">
           <div class="error-content">
-            <span class="error-icon">⚠️</span>
+            <svg class="ui-icon error-icon" aria-hidden="true"><use href="assets/ui-icons.svg#alert-triangle" /></svg>
             <span class="error-message">{{ error }}</span>
-            <button class="error-close" (click)="error = null">×</button>
+            <button class="error-close" (click)="error = null" aria-label="Dismiss error"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg></button>
           </div>
         </div>
       }
@@ -79,7 +79,7 @@
       <!-- Empty State -->
       @if (filteredCasts.length === 0 && !isLoading) {
         <div class="empty-state">
-          <div class="empty-icon">🎭</div>
+          <div class="empty-icon"><svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="assets/ui-icons.svg#theater" /></svg></div>
           @if (!searchTerm) {
             <h3>No Casts Yet</h3>
           }
@@ -144,7 +144,7 @@
                 <!-- Placeholder (if no custom thumbnail and no character thumbnails) -->
                 @if (!getCastThumbnail(cast) && getCastThumbnailCollage(cast).length === 0) {
                   <div class="collage-placeholder">
-                    <span class="placeholder-icon">🎭</span>
+                    <svg class="ui-icon placeholder-icon" aria-hidden="true"><use href="assets/ui-icons.svg#theater" /></svg>
                   </div>
                 }
               </div>
@@ -162,7 +162,7 @@
                   (click)="deleteCast(cast, $event)"
                   title="Delete cast"
                   >
-                  🗑️
+                  <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#trash" /></svg>
                 </button>
               </div>
             </div>
@@ -207,7 +207,7 @@
                 <!-- Placeholder (if no custom thumbnail and no character thumbnails) -->
                 @if (!getCastThumbnail(cast) && getCastThumbnailCollage(cast).length === 0) {
                   <div class="collage-placeholder-small">
-                    <span class="placeholder-icon-small">🎭</span>
+                    <svg class="ui-icon placeholder-icon-small" aria-hidden="true"><use href="assets/ui-icons.svg#theater" /></svg>
                   </div>
                 }
               </div>
@@ -221,11 +221,11 @@
               <!-- List Item Actions -->
               <div class="cast-list-item-actions">
                 <button
-                  class="btn-icon btn-danger"
+                  class="text-action-danger"
                   (click)="deleteCast(cast, $event)"
                   title="Delete cast"
                   >
-                  🗑️
+                  Delete
                 </button>
               </div>
             </div>

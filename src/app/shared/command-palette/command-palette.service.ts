@@ -4,6 +4,7 @@ import { BehaviorSubject, Subscription } from 'rxjs';
 export interface Command {
   id: string;
   label: string;
+  /** Symbol id from assets/ui-icons.svg. */
   icon?: string;
   action: () => void;
   keywords?: string[];

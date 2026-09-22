@@ -34,7 +34,7 @@
                 </div>
               }
               @if (command.icon && !command.thumbnail) {
-                <span class="command-icon">{{ command.icon }}</span>
+                <span class="command-icon"><svg class="ui-icon" aria-hidden="true"><use [attr.href]="'assets/ui-icons.svg#' + command.icon" /></svg></span>
               }
               <div class="command-content">
                 <span class="command-label">{{ command.label }}</span>

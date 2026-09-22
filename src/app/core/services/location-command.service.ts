@@ -45,7 +45,7 @@ export class LocationCommandService {
       {
         id: 'new-location',
         label: 'New Location',
-        icon: '➕',
+        icon: 'plus',
         keywords: ['create', 'add', 'location', 'new', 'place', 'setting'],
         group: 'locations',
         action: () => this.router.navigate(['/location']),

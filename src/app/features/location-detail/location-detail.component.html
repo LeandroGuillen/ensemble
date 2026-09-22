@@ -44,9 +44,9 @@
           @if (error) {
             <div class="error-banner">
               <div class="error-content">
-                <span class="error-icon">⚠️</span>
+                <svg class="ui-icon error-icon" aria-hidden="true"><use href="assets/ui-icons.svg#alert-triangle" /></svg>
                 <span class="error-message">{{ error }}</span>
-                <button type="button" class="error-close" (click)="error = null">×</button>
+                <button type="button" class="error-close" (click)="error = null" aria-label="Dismiss error"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg></button>
               </div>
             </div>
           }
@@ -71,12 +71,12 @@
                         aria-label="Remove thumbnail"
                         (click)="removeThumbnail(); $event.stopPropagation()"
                       >
-                        ×
+                        <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg>
                       </button>
                     </div>
                   } @else {
                     <div class="thumbnail-placeholder">
-                      <span class="placeholder-icon">🗺️</span>
+                      <svg class="ui-icon placeholder-icon" aria-hidden="true"><use href="assets/ui-icons.svg#map" /></svg>
                       <span class="placeholder-text">Click to add thumbnail</span>
                     </div>
                   }

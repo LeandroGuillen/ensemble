@@ -23,7 +23,7 @@
               }
             </nav>
           </div>
-          <button type="button" class="dialog-close" (click)="onCloseClick()">×</button>
+          <button type="button" class="dialog-close" (click)="onCloseClick()" aria-label="Close"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg></button>
         </header>
 
         <div class="image-browser-toolbar">
@@ -106,7 +106,7 @@
                     <img [src]="directory.previewUrl" alt="" />
                   }
                   <div class="folder-label">
-                    <span aria-hidden="true">📁</span>
+                    <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#folder" /></svg>
                     <strong>{{ directory.name }}</strong>
                   </div>
                 </div>

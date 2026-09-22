@@ -48,7 +48,7 @@
             (click)="setSortBy(sortBy)"
             [attr.aria-label]="sortDirection === 'asc' ? 'Sort ascending; click for descending' : 'Sort descending; click for ascending'"
             [title]="sortDirection === 'asc' ? 'Ascending' : 'Descending'"
-          >{{ sortDirection === 'asc' ? '↑' : '↓' }}</button>
+          ><svg class="ui-icon" aria-hidden="true"><use [attr.href]="sortDirection === 'asc' ? 'assets/ui-icons.svg#arrow-up' : 'assets/ui-icons.svg#arrow-down'" /></svg></button>
         </div>
 
         <div class="compact-select-control">
@@ -141,13 +141,13 @@
             <button class="toggle-option" [class.active]="sortBy === 'name'" (click)="setSortBy('name')" title="Sort by name">
               Name
               @if (sortBy === 'name') {
-                <span class="sort-indicator">{{ sortDirection === "asc" ? "↑" : "↓" }}</span>
+                <span class="sort-indicator"><svg class="ui-icon" aria-hidden="true"><use [attr.href]="sortDirection === 'asc' ? 'assets/ui-icons.svg#arrow-up' : 'assets/ui-icons.svg#arrow-down'" /></svg></span>
               }
             </button>
             <button class="toggle-option" [class.active]="sortBy === 'category'" (click)="setSortBy('category')" title="Sort by category">
               Category
               @if (sortBy === 'category') {
-                <span class="sort-indicator">{{ sortDirection === "asc" ? "↑" : "↓" }}</span>
+                <span class="sort-indicator"><svg class="ui-icon" aria-hidden="true"><use [attr.href]="sortDirection === 'asc' ? 'assets/ui-icons.svg#arrow-up' : 'assets/ui-icons.svg#arrow-down'" /></svg></span>
               }
             </button>
           </div>
@@ -235,7 +235,7 @@
         [disabled]="!currentProject"
         [title]="drawerMode ? 'New Draft (N)' : 'New Character (N)'"
         >
-        <span class="plus-glyph" aria-hidden="true">+</span>
+        <svg class="ui-icon plus-glyph" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
         {{ drawerMode ? 'New Draft' : 'New Character' }}
         <kbd class="shortcut-hint">N</kbd>
       </button>
@@ -340,7 +340,7 @@
             <div class="cast-name-form" (click)="$event.stopPropagation()">
               <div class="form-header">
                 <h3>Create New Cast</h3>
-                <button class="btn-close" (click)="cancelCastForm()">×</button>
+                <button class="btn-close" (click)="cancelCastForm()" aria-label="Close"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg></button>
               </div>
               <div class="form-body">
                 <p class="form-help">

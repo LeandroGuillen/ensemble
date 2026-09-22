@@ -34,9 +34,9 @@
         @if (error) {
           <div class="error-banner">
             <div class="error-content">
-              <span class="error-icon">⚠️</span>
+              <svg class="ui-icon error-icon" aria-hidden="true"><use href="assets/ui-icons.svg#alert-triangle" /></svg>
               <span class="error-message">{{ error }}</span>
-              <button class="error-close" (click)="error = null">×</button>
+              <button class="error-close" (click)="error = null" aria-label="Dismiss error"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg></button>
             </div>
           </div>
         }
@@ -95,9 +95,7 @@
                 @if (!castThumbnail) {
                   <div class="thumbnail-placeholder">
                     @if (!isUploadingThumbnail) {
-                      <span class="placeholder-icon"
-                        >🎬</span
-                        >
+                      <svg class="ui-icon placeholder-icon" aria-hidden="true"><use href="assets/ui-icons.svg#film" /></svg>
                       }
                       @if (isUploadingThumbnail) {
                         <span
@@ -178,7 +176,7 @@
                   <div
                     class="empty-drop-zone"
                     >
-                    <div class="empty-icon">👥</div>
+                    <div class="empty-icon"><svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="assets/ui-icons.svg#users" /></svg></div>
                     <p>Drag characters here to add them to the cast</p>
                   </div>
                 }
@@ -201,7 +199,7 @@
                         <div
                           class="thumbnail-placeholder-small"
                           >
-                          👤
+                          <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#user" /></svg>
                         </div>
                       }
                     </div>
@@ -217,7 +215,7 @@
                         {{ getCategoryName(character.category) }}
                       </div>
                     </div>
-                    <div class="drag-handle" title="Drag to move">⋮⋮</div>
+                    <div class="drag-handle" title="Drag to move"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#grip" /></svg></div>
                   </div>
                 }
               </div>
@@ -254,7 +252,7 @@
                   <div
                     class="empty-drop-zone"
                     >
-                    <div class="empty-icon">📝</div>
+                    <div class="empty-icon"><svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="assets/ui-icons.svg#file-text" /></svg></div>
                     <p>No characters available. Create some characters first.</p>
                   </div>
                 }
@@ -266,7 +264,7 @@
                   <div
                     class="empty-drop-zone"
                     >
-                    <div class="empty-icon">🔍</div>
+                    <div class="empty-icon"><svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="assets/ui-icons.svg#search" /></svg></div>
                     <p>No characters match your filter</p>
                   </div>
                 }
@@ -289,7 +287,7 @@
                         <div
                           class="thumbnail-placeholder-small"
                           >
-                          👤
+                          <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#user" /></svg>
                         </div>
                       }
                     </div>
@@ -305,7 +303,7 @@
                         {{ getCategoryName(character.category) }}
                       </div>
                     </div>
-                    <div class="drag-handle" title="Drag to move">⋮⋮</div>
+                    <div class="drag-handle" title="Drag to move"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#grip" /></svg></div>
                   </div>
                 }
               </div>

@@ -45,7 +45,7 @@ export class CharacterCommandService {
       {
         id: 'new-character',
         label: 'New Character',
-        icon: '➕',
+        icon: 'plus',
         keywords: ['create', 'add', 'character', 'new'],
         group: 'characters',
         action: () => this.characterEditDialog.openCreate(),

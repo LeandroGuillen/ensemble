@@ -215,13 +215,7 @@
   }
 
   &.empty::before {
-    content: "📁";
-    position: absolute;
-    inset: 0 0 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 3.25rem;
+    content: none;
   }
 
   .folder-label {

@@ -140,7 +140,7 @@
                               <span>{{ thread.icon }}</span>
                             }
                             @if (!thread.icon) {
-                              <span class="plot-icon-placeholder">☺</span>
+                              <svg class="ui-icon plot-icon-placeholder" aria-hidden="true"><use href="assets/ui-icons.svg#smile" /></svg>
                             }
                           </span>
                           @if (showThreadIconPicker === thread.id) {
@@ -201,7 +201,7 @@
                             </span>
                           }
                           @if (isCharacterPendingRemoval(thread.id, char.id)) {
-                            <span class="thumb-remove-badge">×</span>
+                            <span class="thumb-remove-badge"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg></span>
                           }
                         </span>
                       }
@@ -230,7 +230,7 @@
                         <span>{{ row.icon }}</span>
                       }
                       @if (!row.icon) {
-                        <span class="plot-icon-placeholder">☺</span>
+                        <svg class="ui-icon plot-icon-placeholder" aria-hidden="true"><use href="assets/ui-icons.svg#smile" /></svg>
                       }
                     </span>
                     @if (showRowIconPicker === rowIdx) {

@@ -47,7 +47,7 @@
 
       @if (isEmpty && networkInitialized) {
         <div class="pinboard-empty-state">
-          <div class="empty-icon">📌</div>
+          <div class="empty-icon"><svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="assets/ui-icons.svg#pin" /></svg></div>
           <h3>Empty Pinboard</h3>
           <p>This pinboard doesn't have any characters yet. Pin characters to visualize their relationships.</p>
           <button class="btn btn-primary" (click)="openAddPinDialog()">

@@ -26,7 +26,7 @@
             (click)="clearSearch()"
             title="Clear search"
             aria-label="Clear search"
-          >×</button>
+          ><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg></button>
         }
       </div>
 
@@ -71,7 +71,7 @@
                 (click)="toggleGroup(entry.id)"
               >
                 <span class="settings-nav-label">{{ entry.label }}</span>
-                <span class="settings-nav-chevron" [class.expanded]="isGroupExpanded(entry.id)">▾</span>
+                <span class="settings-nav-chevron" [class.expanded]="isGroupExpanded(entry.id)"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#chevron-down" /></svg></span>
               </button>
               @if (isGroupExpanded(entry.id)) {
                 <ul class="settings-nav-children">
