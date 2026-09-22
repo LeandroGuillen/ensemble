@@ -1,6 +1,7 @@
 .page-header {
   --page-header-control-height: 36px;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--spacing-lg);
   padding: var(--spacing-md) var(--spacing-xl);
@@ -17,7 +18,6 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
-  flex: 1 1 auto;
   min-width: 0;
 }
 
@@ -38,8 +38,15 @@
   align-items: center;
   gap: var(--spacing-sm);
   justify-content: flex-end;
-  flex: 0 0 auto;
-  margin-left: auto;
+
+  &:empty {
+    display: none;
+  }
+}
+
+.header-toolbar {
+  grid-column: 1 / -1;
+  min-width: 0;
 
   &:empty {
     display: none;
@@ -48,9 +55,13 @@
 
 @media (max-width: 1024px) {
   .page-header {
-    flex-wrap: wrap;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--spacing-md);
     padding: var(--spacing-md) var(--spacing-lg);
+  }
+
+  .header-right {
+    grid-column: 1;
   }
 }
 

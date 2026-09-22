@@ -1,5 +1,5 @@
 <div class="character-list-container">
-  <app-page-header [title]="'Characters'">
+  <app-page-header class="responsive-compact" [title]="'Characters'">
     @if (currentProject) {
       <ng-container pageHeaderSuffix>
       <div class="character-scope-toggle view-toggle view-toggle-text" aria-label="Character collection">
@@ -12,7 +12,129 @@
           Drawer <span class="scope-count">{{ draftCharacters.length }}</span>
         </button>
       </div>
-      <div class="header-display-controls" aria-label="Character display controls">
+      </ng-container>
+    }
+
+    @if (currentProject) {
+      <ng-container pageHeaderToolbar>
+      <div class="header-display-controls header-display-controls--compact" aria-label="Compact character display controls">
+        <button
+          type="button"
+          class="header-filter-toggle header-filter-toggle--compact"
+          [class.active]="filtersSidebarOpen"
+          (click)="toggleFiltersSidebar()"
+          [attr.aria-expanded]="filtersSidebarOpen"
+          aria-controls="character-filters-sidebar"
+          title="Toggle filters"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16M7 12h10M10 19h4"/></svg>
+          <span>Filters</span>
+        </button>
+
+        <div class="compact-select-control">
+          <span class="toolbar-label">Sort</span>
+          <select
+            class="compact-select"
+            [ngModel]="sortBy"
+            (ngModelChange)="setSortBy($event)"
+            aria-label="Sort characters"
+          >
+            <option value="name">Name</option>
+            <option value="category">Category</option>
+          </select>
+          <button
+            type="button"
+            class="compact-direction-btn"
+            (click)="setSortBy(sortBy)"
+            [attr.aria-label]="sortDirection === 'asc' ? 'Sort ascending; click for descending' : 'Sort descending; click for ascending'"
+            [title]="sortDirection === 'asc' ? 'Ascending' : 'Descending'"
+          >{{ sortDirection === 'asc' ? '↑' : '↓' }}</button>
+        </div>
+
+        <div class="compact-select-control">
+          <span class="toolbar-label">Group</span>
+          <select
+            class="compact-select"
+            [ngModel]="groupBy"
+            (ngModelChange)="setGroupBy($event)"
+            aria-label="Group characters"
+          >
+            <option value="none">Flat</option>
+            <option value="category">Category</option>
+            <option value="tag">Tag</option>
+            <option value="cast">Cast</option>
+            <option value="book">Book</option>
+          </select>
+        </div>
+
+        <button
+          type="button"
+          class="compact-view-button"
+          (click)="toggleViewMode()"
+          [title]="'Current view: ' + viewMode + '. Click for next view.'"
+          [attr.aria-label]="'Current view: ' + viewMode + '. Click for next view.'"
+        >
+          @switch (viewMode) {
+            @case ('gallery') {
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+            }
+            @case ('grid') {
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="6" height="5" rx="1"/><rect x="9" y="2" width="6" height="5" rx="1"/><rect x="1" y="9" width="6" height="5" rx="1"/><rect x="9" y="9" width="6" height="5" rx="1"/></svg>
+            }
+            @case ('list') {
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="4" height="4" rx="1"/><rect x="7" y="2" width="8" height="2" rx="1"/><rect x="7" y="5" width="6" height="1" rx=".5"/><rect x="1" y="10" width="4" height="4" rx="1"/><rect x="7" y="10" width="8" height="2" rx="1"/><rect x="7" y="13" width="6" height="1" rx=".5"/></svg>
+            }
+            @default {
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg>
+            }
+          }
+          <span>{{ viewMode }}</span>
+        </button>
+
+        @if (characterStyles.length > 1) {
+          <select
+            class="filter-select compact-style-select"
+            [ngModel]="selectedCharacterStyle"
+            (ngModelChange)="setCharacterStyle($event)"
+            aria-label="Character style"
+            title="Character style"
+          >
+            @for (style of characterStyles; track style.id) {
+              <option [value]="style.id">{{ style.name }}</option>
+            }
+          </select>
+        }
+
+        <div class="header-layout-utilities">
+          @if (viewMode === 'list' || viewMode === 'compact') {
+            <div class="column-toggle" aria-label="Column count">
+              <button class="toggle-option" [class.active]="columns === 1" (click)="setColumns(1)" title="Single column" aria-label="Single column"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="1" width="12" height="14" rx="1" /></svg></button>
+              <button class="toggle-option" [class.active]="columns === 2" (click)="setColumns(2)" title="Two columns" aria-label="Two columns"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6.5" height="14" rx="1" /><rect x="8.5" y="1" width="6.5" height="14" rx="1" /></svg></button>
+            </div>
+          }
+          @if (viewMode === 'gallery') {
+            <div class="thumbnail-size-toggle" aria-label="Thumbnail size">
+              <button class="toggle-option" [class.active]="galleryThumbnailSize === 'big'" (click)="setGalleryThumbnailSize('big')" title="Large thumbnails" aria-label="Large thumbnails"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="14" height="14" rx="1.5" /></svg></button>
+              <button class="toggle-option" [class.active]="galleryThumbnailSize === 'medium'" (click)="setGalleryThumbnailSize('medium')" title="Medium thumbnails" aria-label="Medium thumbnails"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1" /><rect x="9" y="1" width="6" height="6" rx="1" /><rect x="1" y="9" width="6" height="6" rx="1" /><rect x="9" y="9" width="6" height="6" rx="1" /></svg></button>
+              <button class="toggle-option" [class.active]="galleryThumbnailSize === 'small'" (click)="setGalleryThumbnailSize('small')" title="Small thumbnails" aria-label="Small thumbnails"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="4" height="4" rx=".5" /><rect x="6" y="1" width="4" height="4" rx=".5" /><rect x="11" y="1" width="4" height="4" rx=".5" /><rect x="1" y="6" width="4" height="4" rx=".5" /><rect x="6" y="6" width="4" height="4" rx=".5" /><rect x="11" y="6" width="4" height="4" rx=".5" /><rect x="1" y="11" width="4" height="4" rx=".5" /><rect x="6" y="11" width="4" height="4" rx=".5" /><rect x="11" y="11" width="4" height="4" rx=".5" /></svg></button>
+            </div>
+          }
+        </div>
+      </div>
+      <div class="header-display-controls header-display-controls--wide" aria-label="Character display controls">
+        <button
+          type="button"
+          class="header-filter-toggle"
+          [class.active]="filtersSidebarOpen"
+          (click)="toggleFiltersSidebar()"
+          [attr.aria-expanded]="filtersSidebarOpen"
+          aria-controls="character-filters-sidebar"
+          title="Toggle filters"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16M7 12h10M10 19h4"/></svg>
+          <span>Filters</span>
+        </button>
+
         <div class="toolbar-control">
           <span class="toolbar-label">Sort</span>
           <div class="view-toggle view-toggle-text" aria-label="Sort characters">
@@ -71,6 +193,22 @@
             }
           </select>
         }
+
+        <div class="header-layout-utilities">
+          @if (viewMode === 'list' || viewMode === 'compact') {
+            <div class="column-toggle" aria-label="Column count">
+              <button class="toggle-option" [class.active]="columns === 1" (click)="setColumns(1)" title="Single column" aria-label="Single column"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="1" width="12" height="14" rx="1" /></svg></button>
+              <button class="toggle-option" [class.active]="columns === 2" (click)="setColumns(2)" title="Two columns" aria-label="Two columns"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6.5" height="14" rx="1" /><rect x="8.5" y="1" width="6.5" height="14" rx="1" /></svg></button>
+            </div>
+          }
+          @if (viewMode === 'gallery') {
+            <div class="thumbnail-size-toggle" aria-label="Thumbnail size">
+              <button class="toggle-option" [class.active]="galleryThumbnailSize === 'big'" (click)="setGalleryThumbnailSize('big')" title="Large thumbnails" aria-label="Large thumbnails"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="14" height="14" rx="1.5" /></svg></button>
+              <button class="toggle-option" [class.active]="galleryThumbnailSize === 'medium'" (click)="setGalleryThumbnailSize('medium')" title="Medium thumbnails" aria-label="Medium thumbnails"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1" /><rect x="9" y="1" width="6" height="6" rx="1" /><rect x="1" y="9" width="6" height="6" rx="1" /><rect x="9" y="9" width="6" height="6" rx="1" /></svg></button>
+              <button class="toggle-option" [class.active]="galleryThumbnailSize === 'small'" (click)="setGalleryThumbnailSize('small')" title="Small thumbnails" aria-label="Small thumbnails"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="4" height="4" rx=".5" /><rect x="6" y="1" width="4" height="4" rx=".5" /><rect x="11" y="1" width="4" height="4" rx=".5" /><rect x="1" y="6" width="4" height="4" rx=".5" /><rect x="6" y="6" width="4" height="4" rx=".5" /><rect x="11" y="6" width="4" height="4" rx=".5" /><rect x="1" y="11" width="4" height="4" rx=".5" /><rect x="6" y="11" width="4" height="4" rx=".5" /><rect x="11" y="11" width="4" height="4" rx=".5" /></svg></button>
+            </div>
+          }
+        </div>
       </div>
       </ng-container>
     }
@@ -115,20 +253,6 @@
           id="character-filters-sidebar"
           [attr.aria-hidden]="!filtersSidebarOpen"
           >
-        <div class="filters-sidebar-header">
-          <h2>Filters</h2>
-          <button
-            type="button"
-            class="sidebar-collapse-btn"
-            (click)="toggleFiltersSidebar()"
-            aria-label="Hide filters"
-            title="Hide filters"
-            >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="15 18 9 12 15 6"></polyline>
-            </svg>
-          </button>
-        </div>
         <div class="filters-sidebar-content">
           <app-character-filter
             [sidebar]="true"
@@ -160,50 +284,6 @@
     }
 
     <main class="characters-main" [class.filters-collapsed]="!filtersSidebarOpen">
-      @if (currentProject && !filtersSidebarOpen) {
-        <button
-          type="button"
-          class="sidebar-expand-btn"
-          (click)="toggleFiltersSidebar()"
-          aria-label="Show filters"
-          title="Show filters"
-          >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="9 18 15 12 9 6"></polyline>
-          </svg>
-          <span>Filters</span>
-        </button>
-      }
-
-      @if (currentProject && !isLoading && !error && showResultsToolbar) {
-        <div class="results-toolbar" aria-label="Character view options">
-          @if (viewMode === 'list' || viewMode === 'compact') {
-            <div class="column-toggle" aria-label="Column count">
-              <button class="toggle-option" [class.active]="columns === 1" (click)="setColumns(1)" title="Single column" aria-label="Single column">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="1" width="12" height="14" rx="1" /></svg>
-              </button>
-              <button class="toggle-option" [class.active]="columns === 2" (click)="setColumns(2)" title="Two columns" aria-label="Two columns">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6.5" height="14" rx="1" /><rect x="8.5" y="1" width="6.5" height="14" rx="1" /></svg>
-              </button>
-            </div>
-          }
-
-          @if (viewMode === 'gallery') {
-            <div class="thumbnail-size-toggle" aria-label="Thumbnail size">
-              <button class="toggle-option" [class.active]="galleryThumbnailSize === 'big'" (click)="setGalleryThumbnailSize('big')" title="Large thumbnails" aria-label="Large thumbnails">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="14" height="14" rx="1.5" /></svg>
-              </button>
-              <button class="toggle-option" [class.active]="galleryThumbnailSize === 'medium'" (click)="setGalleryThumbnailSize('medium')" title="Medium thumbnails" aria-label="Medium thumbnails">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1" /><rect x="9" y="1" width="6" height="6" rx="1" /><rect x="1" y="9" width="6" height="6" rx="1" /><rect x="9" y="9" width="6" height="6" rx="1" /></svg>
-              </button>
-              <button class="toggle-option" [class.active]="galleryThumbnailSize === 'small'" (click)="setGalleryThumbnailSize('small')" title="Small thumbnails" aria-label="Small thumbnails">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="4" height="4" rx=".5" /><rect x="6" y="1" width="4" height="4" rx=".5" /><rect x="11" y="1" width="4" height="4" rx=".5" /><rect x="1" y="6" width="4" height="4" rx=".5" /><rect x="6" y="6" width="4" height="4" rx=".5" /><rect x="11" y="6" width="4" height="4" rx=".5" /><rect x="1" y="11" width="4" height="4" rx=".5" /><rect x="6" y="11" width="4" height="4" rx=".5" /><rect x="11" y="11" width="4" height="4" rx=".5" /></svg>
-              </button>
-            </div>
-          }
-        </div>
-      }
-
   <!-- Loading State -->
   @if (isLoading) {
     <div class="loading-state">
