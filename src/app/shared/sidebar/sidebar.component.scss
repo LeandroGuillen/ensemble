@@ -354,6 +354,17 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 // Bottom Bar: Settings / Shortcuts / Collapse
+.sidebar-version {
+  padding: var(--spacing-xs) var(--spacing-md) var(--spacing-sm);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.6875rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  text-align: center;
+  opacity: 0.75;
+}
+
 .sidebar-footer {
   display: flex;
   align-items: center;

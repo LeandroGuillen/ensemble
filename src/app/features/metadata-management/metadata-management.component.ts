@@ -14,6 +14,7 @@ import { BackstageService } from '../../core/services/backstage.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { ColorPaletteService } from '../../core/services/color-palette.service';
 import { UpdateService, UpdateStatus } from '../../core/services/update.service';
+import { ElectronService } from '../../core/services/electron.service';
 import { ZoomService } from '../../core/services/zoom.service';
 import { ModalService } from '../../core/services/modal.service';
 import { Category, Tag, ProjectSettings, CategoryFolderMode, CharacterStyle } from '../../core/interfaces/project.interface';
@@ -102,6 +103,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
   // Update checking
   updateStatus: UpdateStatus = { status: 'idle' };
   checkingForUpdates = false;
+  currentVersion = '—';
 
   zoomPercent = 100;
 
@@ -118,6 +120,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
     private themeService: ThemeService,
     private colorPaletteService: ColorPaletteService,
     private updateService: UpdateService,
+    private electronService: ElectronService,
     public zoomService: ZoomService,
     private fb: FormBuilder,
     private logger: LoggingService
@@ -149,6 +152,8 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
   }
 
   ngOnInit(): void {
+    void this.loadCurrentVersion();
+
     // Load available themes
     this.availableThemes = this.themeService.getAvailableThemes();
     
@@ -182,6 +187,9 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(status => {
         this.updateStatus = status;
+        if (status.currentVersion) {
+          this.currentVersion = status.currentVersion;
+        }
         // Reset checking flag when status changes from checking
         if (status.status !== 'checking') {
           this.checkingForUpdates = false;
@@ -208,6 +216,14 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
       .subscribe(() => {
         void this.saveSettings();
       });
+  }
+
+  private async loadCurrentVersion(): Promise<void> {
+    try {
+      this.currentVersion = await this.electronService.getVersion();
+    } catch (error) {
+      this.logger.warn('Failed to get app version', error);
+    }
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -895,7 +911,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
     if (this.updateStatus.status === 'checking') {
       return 'Checking for updates...';
     } else if (this.updateStatus.status === 'available') {
-      return `Update available: ${this.updateStatus.version || 'new version'}`;
+      return 'An update is available';
     } else if (this.updateStatus.status === 'not-available') {
       return 'You are using the latest version';
     } else if (this.updateStatus.status === 'error') {

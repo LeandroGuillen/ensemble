@@ -904,20 +904,23 @@
                 <div class="form-group" [settingsSearchable]="['Application Updates', 'update', 'version']">
                   <label>Application Updates</label>
                   <div class="update-check-section">
-                    <button
-                      type="button"
-                      class="btn btn-secondary"
-                      (click)="checkForUpdates()"
-                      [disabled]="checkingForUpdates"
-                      >
-                      @if (checkingForUpdates) {
-                        <i class="icon-loader"></i>
-                      }
-                      @if (!checkingForUpdates) {
-                        <i class="icon-download"></i>
-                      }
-                      {{ checkingForUpdates ? 'Checking...' : 'Check for Updates' }}
-                    </button>
+                    <div class="update-check-controls">
+                      <button
+                        type="button"
+                        class="btn btn-secondary"
+                        (click)="checkForUpdates()"
+                        [disabled]="checkingForUpdates"
+                        >
+                        @if (checkingForUpdates) {
+                          <i class="icon-loader"></i>
+                        }
+                        @if (!checkingForUpdates) {
+                          <i class="icon-download"></i>
+                        }
+                        {{ checkingForUpdates ? 'Checking...' : 'Check for Updates' }}
+                      </button>
+                      <span class="current-version">Current version: {{ currentVersion }}</span>
+                    </div>
                     @if (hasUpdateStatus()) {
                       <div class="update-status-message" [class.update-available]="isUpdateAvailable()" [class.update-error]="isUpdateError()">
                         @if (isUpdateAvailable()) {
@@ -929,7 +932,13 @@
                         @if (updateStatus.status === 'not-available') {
                           <i class="icon-info"></i>
                         }
-                        <span>{{ getUpdateStatusMessage() }}</span>
+                        <div class="update-status-details">
+                          <span>{{ getUpdateStatusMessage() }}</span>
+                          <span>Current version: {{ updateStatus.currentVersion || currentVersion }}</span>
+                          @if (isUpdateAvailable() && updateStatus.version) {
+                            <span>Available version: {{ updateStatus.version }}</span>
+                          }
+                        </div>
                       </div>
                     }
                   </div>

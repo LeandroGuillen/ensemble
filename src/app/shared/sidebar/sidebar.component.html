@@ -90,6 +90,12 @@
     }
   </nav>
 
+  @if (!isCollapsed) {
+    <div class="sidebar-version" aria-label="Application version">
+      <span>Version {{ appVersion }}</span>
+    </div>
+  }
+
   <!-- Bottom Bar: Settings / Shortcuts / Collapse -->
   <div class="sidebar-footer">
     <button class="footer-btn" (click)="navigateTo('/settings')" title="Settings" aria-label="Settings">

@@ -6,6 +6,7 @@ import { LoggingService } from './logging.service';
 export interface UpdateStatus {
   status: 'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error';
   message?: string;
+  currentVersion?: string;
   version?: string;
   releaseDate?: string;
   releaseNotes?: string;

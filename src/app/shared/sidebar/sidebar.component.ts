@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router, NavigationEnd } from '@angular/router';
 
 import { ProjectService } from '../../core/services';
+import { ElectronService } from '../../core/services/electron.service';
 import { CharacterEditDialogService } from '../../core/services/character-edit-dialog.service';
 import { CommandPaletteService } from '../command-palette/command-palette.service';
 import { KeyboardShortcutsService } from '../keyboard-shortcuts-dialog/keyboard-shortcuts.service';
@@ -31,6 +32,7 @@ export class SidebarComponent implements OnInit {
   currentProjectName = '';
   currentRoute = '';
   isCollapsed = true;
+  appVersion = '';
 
   sections: NavSection[] = [
     {
@@ -57,6 +59,7 @@ export class SidebarComponent implements OnInit {
 
   constructor(
     private projectService: ProjectService,
+    private electronService: ElectronService,
     private router: Router,
     private shortcutsService: KeyboardShortcutsService,
     private commandPaletteService: CommandPaletteService,
@@ -64,6 +67,8 @@ export class SidebarComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    void this.loadAppVersion();
+
     this.projectService.currentProject$.subscribe((project: any) => {
       this.currentProjectName = project?.name || '';
     });
@@ -80,6 +85,14 @@ export class SidebarComponent implements OnInit {
       this.isCollapsed = saved === 'true';
     }
 
+  }
+
+  private async loadAppVersion(): Promise<void> {
+    try {
+      this.appVersion = await this.electronService.getVersion();
+    } catch (error) {
+      console.warn('Failed to get app version:', error);
+    }
   }
 
   isActive(route: string): boolean {
