@@ -53,6 +53,16 @@ describe('FileWatcherService', () => {
       expect(service.isCurrentlyWatching()).toBe(true);
     });
 
+    it('should pass the configured content folders to Electron', async () => {
+      electronService.startFileWatcher.and.returnValue(Promise.resolve({ success: true }));
+
+      await service.startWatching('/test/project', ['my-characters', 'my-locations']);
+
+      expect(electronService.startFileWatcher).toHaveBeenCalledWith(
+        '/test/project', ['my-characters', 'my-locations']
+      );
+    });
+
     it('should stop existing watcher before starting a new one', async () => {
       electronService.startFileWatcher.and.returnValue(Promise.resolve({ success: true }));
       electronService.stopFileWatcher.and.returnValue(Promise.resolve({ success: true }));
@@ -81,6 +91,7 @@ describe('FileWatcherService', () => {
       }
 
       expect(loggingService.error).toHaveBeenCalled();
+      expect(electronService.removeFileChangedListener).toHaveBeenCalled();
     });
   });
 
@@ -141,6 +152,19 @@ describe('FileWatcherService', () => {
   });
 
   describe('fileChanges$', () => {
+    it('should recognize a Windows path when an external editor saves markdown', async () => {
+      electronService.startFileWatcher.and.returnValue(Promise.resolve({ success: true }));
+      let callback: ((event: any, data: { type: string; path: string; filename: string }) => void) | null = null;
+      electronService.onFileChanged.and.callFake((cb) => { callback = cb; });
+      const events: FileChangeEvent[] = [];
+      service.fileChanges$.subscribe((event) => events.push(event));
+
+      await service.startWatching('C:\\project');
+      callback!({}, { type: 'change', path: 'C:\\project\\characters\\ada.md', filename: 'ada.md' });
+
+      expect(events.length).toBe(1);
+      expect(events[0].filename).toBe('ada.md');
+    });
     it('should emit file change events for relevant files', (done) => {
       electronService.startFileWatcher.and.returnValue(Promise.resolve({ success: true }));
 
@@ -269,4 +293,3 @@ describe('FileWatcherService', () => {
     });
   });
 });
-

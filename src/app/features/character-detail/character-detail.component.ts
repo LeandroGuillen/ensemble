@@ -46,6 +46,7 @@ import {
   ImagePickerService,
   MetadataHelperService,
   ProjectService,
+  FileWatcherService,
 } from "../../core/services";
 import { ModalService } from "../../core/services/modal.service";
 import {
@@ -153,6 +154,8 @@ export class CharacterDetailComponent
   /** When saving a book page, the bookId being saved */
   savingBookPageId: string | null = null;
   error: string | null = null;
+  externalMainConflict = false;
+  externalBookConflicts = new Set<string>();
 
   /** Book page state: exists (file on disk) and content. Key = bookId. */
   bookPageData: Record<string, { exists: boolean; content: string }> = {};
@@ -209,6 +212,7 @@ export class CharacterDetailComponent
     private cdr: ChangeDetectorRef,
     private characterService: CharacterService,
     private projectService: ProjectService,
+    private fileWatcherService: FileWatcherService,
     private electronService: ElectronService,
     private metadataService: MetadataService,
     private aiService: AiService,
@@ -225,6 +229,13 @@ export class CharacterDetailComponent
   }
 
   ngOnInit(): void {
+    this.fileWatcherService.fileChanges$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((event) => {
+        void this.handleExternalFileChange(event).catch((error) =>
+          this.logger.error('Failed to refresh externally edited character', error)
+        );
+      });
     // Subscribe to project changes
     this.projectService.currentProject$
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -297,6 +308,8 @@ export class CharacterDetailComponent
           this.isEditing = false;
           this.descriptionEditingTabs = new Set<string>(['main']);
           this.character = null;
+          this.externalMainConflict = false;
+          this.externalBookConflicts.clear();
           const defaultCategory = this.isDraftMode
             ? undefined
             : this.categories.find(
@@ -529,6 +542,9 @@ export class CharacterDetailComponent
         this.activeContentTab = 'main';
         this.updateContentTabs();
         await this.loadBookPages();
+        this.characterForm.markAsPristine();
+        this.externalMainConflict = false;
+        this.externalBookConflicts.clear();
       } else {
         this.notificationService.showError("Character not found");
       }
@@ -539,6 +555,56 @@ export class CharacterDetailComponent
       this.isLoading = false;
       this.cdr.markForCheck();
     }
+  }
+
+  private async handleExternalFileChange(event: { type: string; path: string }): Promise<void> {
+    if (!this.character || this.isLoading || this.isSaving || this.savingBookPageId) return;
+    const samePath = (a: string, b: string) => a.replace(/\\/g, '/') === b.replace(/\\/g, '/');
+    if (samePath(event.path, this.character.filePath)) {
+      if (event.type === 'unlink' || this.characterForm.dirty || this.hasAnyBookPageDirty()) {
+        this.externalMainConflict = true;
+        this.notificationService.showWarning('This character changed on disk. Reload it before saving.');
+      } else {
+        const activeTab = this.activeContentTab;
+        await this.loadCharacter(this.character.id);
+        if (activeTab !== 'main' && this.bookPageData[activeTab]) {
+          this.activeContentTab = activeTab;
+        }
+      }
+      this.cdr.markForCheck();
+      return;
+    }
+
+    for (const bookId of this.character.books || []) {
+      if (!samePath(event.path, this.characterService.getBookPageFilePath(this.character, bookId))) continue;
+      if (this.isBookPageDirty(bookId)) {
+        this.externalBookConflicts.add(bookId);
+        this.notificationService.showWarning('This book page changed on disk. Reload it before saving.');
+      } else {
+        const content = await this.characterService.getBookPageContent(this.character.id, bookId);
+        this.bookPageData[bookId] = { exists: content !== null, content: content ?? '' };
+        this.bookPageOriginalContent[bookId] = content ?? '';
+      }
+      this.cdr.markForCheck();
+      return;
+    }
+  }
+
+  async reloadExternalChanges(): Promise<void> {
+    if (!this.character) return;
+    if (this.characterForm.dirty || this.hasAnyBookPageDirty()) {
+      const confirmed = await this.modalService.confirm(
+        'Reload from disk and discard your unsaved changes?',
+        'Reload External Changes',
+        { confirmText: 'Reload', cancelText: 'Keep Editing', danger: false }
+      );
+      if (!confirmed) return;
+    }
+    if (!await this.electronService.fileExists(this.character.filePath)) {
+      await this.router.navigate(['/characters']);
+      return;
+    }
+    await this.loadCharacter(this.character.id);
   }
 
   private async loadBookPages(): Promise<void> {
@@ -703,6 +769,10 @@ export class CharacterDetailComponent
 
   async onSaveBookPage(bookId: string): Promise<void> {
     if (!this.character) return;
+    if (this.externalMainConflict || this.externalBookConflicts.has(bookId)) {
+      this.notificationService.showError('Reload external changes before saving.');
+      return;
+    }
 
     const active = document.activeElement;
     if (
@@ -774,6 +844,10 @@ export class CharacterDetailComponent
   }
 
   async onSubmit(): Promise<void> {
+    if (this.externalMainConflict) {
+      this.notificationService.showError('Reload external changes before saving.');
+      return;
+    }
     // Name/content use updateOn:'blur', so a value typed into the still-focused
     // field (e.g. submitting with Ctrl+Enter) is pending until blur. Blur it so
     // the pending value is applied before validating.
@@ -863,6 +937,10 @@ export class CharacterDetailComponent
 
   async promoteDraft(): Promise<void> {
     if (!this.isDraftMode || this.isSaving) return;
+    if (this.externalMainConflict) {
+      this.notificationService.showError('Reload external changes before promoting.');
+      return;
+    }
 
     const active = document.activeElement;
     if (active instanceof HTMLElement && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {

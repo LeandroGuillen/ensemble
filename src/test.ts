@@ -23,3 +23,4 @@ import './app/core/services/character.service.spec';
 import './app/core/services/metadata.service.spec';
 import './app/core/services/project.service.spec';
 import './app/core/services/file-watcher.service.spec';
+import './app/features/character-detail/character-detail.external-edit.spec';

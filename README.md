@@ -8,7 +8,7 @@ Character management application for writers and worldbuilders.
 - **Character Management**: Create, edit, and organize character profiles
 - **Relationship Visualization**: Interactive graph view for character relationships
 - **Project Organization**: Work with multiple projects in separate folders
-- **External Editing**: Edit files in your preferred text editor
+- **External Editing**: Saved Markdown edits from apps such as Obsidian refresh character lists and open character pages in Ensemble. If both apps edit the same file, Ensemble asks you to reload before saving.
 
 ## Development
 

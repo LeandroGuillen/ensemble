@@ -3,7 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterOutlet, NavigationEnd } from "@angular/router";
 
 import { Title } from "@angular/platform-browser";
-import { ProjectService, ElectronService, ThemeService, LoggingService, ZoomService, AddNameCommandService, AddConceptCommandService, CharacterCommandService, CharacterService, LocationCommandService, LocationService } from "./core/services";
+import { ProjectService, ElectronService, ThemeService, LoggingService, ZoomService, AddNameCommandService, AddConceptCommandService, CharacterCommandService, CharacterService, LocationCommandService, LocationService, FileWatcherService } from "./core/services";
 import { filter } from "rxjs/operators";
 import { remapCharacterRoute } from "./core/utils/character-id.utils";
 import { CommandPaletteComponent } from "./shared/command-palette/command-palette.component";
@@ -27,6 +27,8 @@ export class AppComponent implements OnInit {
   hasProject = false;
   isWelcomeScreen = false;
   private projectLoadedAndReady = false;
+  private watchedProjectKey: string | null = null;
+  private watcherTransition: Promise<void> = Promise.resolve();
   private readonly destroyRef = inject(DestroyRef);
 
   // Confirmation dialog state
@@ -50,6 +52,7 @@ export class AppComponent implements OnInit {
     private characterService: CharacterService,
     private locationCommandService: LocationCommandService,
     private locationService: LocationService,
+    private fileWatcherService: FileWatcherService,
   ) {}
 
   async ngOnInit() {
@@ -94,6 +97,24 @@ export class AppComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((project: any) => {
         this.hasProject = !!project;
+        const folders = project ? [
+          project.metadata.settings?.charactersFolder?.trim() || 'characters',
+          project.metadata.settings?.locationsFolder?.trim() || 'locations',
+        ] : [];
+        const watchKey = project ? JSON.stringify([project.path, folders]) : null;
+        if (watchKey !== this.watchedProjectKey) {
+          this.watchedProjectKey = watchKey;
+          this.watcherTransition = this.watcherTransition
+            .catch(() => undefined)
+            .then(async () => {
+              if (project) {
+                await this.fileWatcherService.startWatching(project.path, folders);
+              } else {
+                await this.fileWatcherService.stopWatching();
+              }
+            })
+            .catch((error) => this.logger.error('Failed to update project file watcher', error));
+        }
         // Only redirect to project selector if we're already past initial load
         // and the project becomes null (e.g., user closes project)
         if (!project && this.projectLoadedAndReady) {

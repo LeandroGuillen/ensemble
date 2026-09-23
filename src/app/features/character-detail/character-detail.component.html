@@ -86,6 +86,12 @@
   </app-page-header>
 
   <div class="detail-scroll">
+    @if (externalMainConflict || externalBookConflicts.size) {
+      <div class="external-change-notice" role="alert">
+        This character or book page changed outside Ensemble. Reload from disk before saving over that file.
+        <button type="button" class="btn btn-secondary" (click)="reloadExternalChanges()">Reload from disk</button>
+      </div>
+    }
     <div class="detail-shell">
       <!-- Loading -->
       @if (isLoading) {

@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, NgZone } from '@angular/core';
 import { Subject } from 'rxjs';
 import { ElectronService } from './electron.service';
 import { LoggingService } from './logging.service';
@@ -22,10 +22,11 @@ export class FileWatcherService {
 
   constructor(
     private electronService: ElectronService,
-    private logger: LoggingService
+    private logger: LoggingService,
+    private ngZone: NgZone
   ) {}
 
-  async startWatching(projectPath: string): Promise<void> {
+  async startWatching(projectPath: string, watchFolders?: string[]): Promise<void> {
     if (this.isWatching) {
       await this.stopWatching();
     }
@@ -42,7 +43,9 @@ export class FileWatcherService {
       this.electronService.onFileChanged(this.fileChangedCallback);
 
       // Start the file watcher in the main process
-      const result = await this.electronService.startFileWatcher(projectPath);
+      const result = watchFolders
+        ? await this.electronService.startFileWatcher(projectPath, watchFolders)
+        : await this.electronService.startFileWatcher(projectPath);
 
       if (!result.success) {
         throw new Error(result.error || 'Failed to start file watcher');
@@ -51,6 +54,10 @@ export class FileWatcherService {
       this.isWatching = true;
       this.logger.log('File watcher started successfully');
     } catch (error) {
+      if (this.fileChangedCallback) {
+        this.electronService.removeFileChangedListener(this.fileChangedCallback);
+        this.fileChangedCallback = null;
+      }
       this.logger.error('Failed to start file watcher', error);
       throw error;
     }
@@ -86,7 +93,7 @@ export class FileWatcherService {
   }
 
   private handleFileChange(eventType: string, filePath: string): void {
-    const filename = filePath.split('/').pop() || '';
+    const filename = filePath.split(/[\\/]/).pop() || '';
     
     // Only process relevant file types
     if (!this.isRelevantFile(filename)) {
@@ -99,7 +106,7 @@ export class FileWatcherService {
       filename
     };
 
-    this.fileChangesSubject.next(event);
+    this.ngZone.run(() => this.fileChangesSubject.next(event));
   }
 
   private isRelevantFile(filename: string): boolean {
