@@ -230,6 +230,29 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
   .shortcuts-control { order: -1; }
 }
 
+.sidebar-footer.settings-footer,
+.sidebar.collapsed .sidebar-footer.settings-footer {
+  padding: 0;
+}
+
+.sidebar-footer .footer-btn.back-control,
+.sidebar.collapsed .sidebar-footer .footer-btn.back-control {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 20px;
+  gap: 12px;
+  border-radius: 0;
+  justify-content: flex-start;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.sidebar.collapsed .sidebar-footer .footer-btn.back-control {
+  padding: 0;
+  justify-content: center;
+}
+
 // Navigation Container
 .sidebar-nav {
   display: flex;

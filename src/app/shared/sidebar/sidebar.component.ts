@@ -1,4 +1,4 @@
-import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, HostListener, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, NavigationEnd } from '@angular/router';
 
@@ -35,6 +35,7 @@ export class SidebarComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   currentProjectName = '';
   currentRoute = '';
+  private routeBeforeSettings = '/characters';
   isCollapsed = true;
   appVersion = '';
   updateStatus: UpdateStatus = { status: 'idle' };
@@ -75,6 +76,7 @@ export class SidebarComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.currentRoute = this.router.url;
     void this.loadAppVersion();
     this.updateService.updateStatus$
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -87,7 +89,10 @@ export class SidebarComponent implements OnInit {
     this.router.events
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
       .subscribe((event: NavigationEnd) => {
-        this.currentRoute = event.url;
+        if (this.isSettingsRoute(event.urlAfterRedirects) && !this.isSettingsRoute(this.currentRoute)) {
+          this.routeBeforeSettings = this.currentRoute || '/characters';
+        }
+        this.currentRoute = event.urlAfterRedirects;
       });
 
     // Load saved collapse state
@@ -112,6 +117,28 @@ export class SidebarComponent implements OnInit {
 
   navigateTo(route: string): void {
     this.router.navigate([route]);
+  }
+
+  get isInSettings(): boolean {
+    return this.isSettingsRoute(this.currentRoute);
+  }
+
+  backFromSettings(): void {
+    void this.router.navigateByUrl(this.routeBeforeSettings);
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  onKeydown(event: KeyboardEvent): void {
+    if (event.key !== 'Escape' || !this.isInSettings || event.defaultPrevented ||
+        document.querySelector('.modal-overlay, .command-palette-backdrop, .shortcuts-backdrop')) {
+      return;
+    }
+    event.preventDefault();
+    this.backFromSettings();
+  }
+
+  private isSettingsRoute(url: string): boolean {
+    return url === '/settings' || url.startsWith('/settings?') || url.startsWith('/settings#');
   }
 
   handleItemClick(item: NavItem): void {

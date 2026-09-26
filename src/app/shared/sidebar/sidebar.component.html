@@ -97,38 +97,50 @@
   }
 
   <!-- Bottom Bar -->
-  <div class="sidebar-footer">
-    <button class="footer-btn shortcuts-control" (click)="openShortcuts()" title="Keyboard Shortcuts" aria-label="Shortcuts">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <use href="#icon-keyboard"></use>
-      </svg>
-    </button>
-    <button
-      class="footer-btn update-control"
-      [class.update-available]="updateStatus.status === 'available'"
-      [class.update-ready]="updateStatus.status === 'downloaded'"
-      [class.update-error]="updateStatus.status === 'error'"
-      [class.update-busy]="updateActionDisabled"
-      [disabled]="updateActionDisabled"
-      (click)="handleUpdateAction()"
-      [title]="updateActionLabel"
-      [attr.aria-label]="updateActionLabel"
-    >
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <use [attr.href]="updateStatus.status === 'available' || updateStatus.status === 'downloading' ? '#icon-download' : '#icon-refresh-cw'"></use>
-      </svg>
-      @if (!isCollapsed && updateStatus.status === 'available') {
-        <span class="update-pill-label">Update</span>
-      }
-      @if (!isCollapsed && updateStatus.status === 'downloaded') {
-        <span class="update-pill-label">Restart</span>
-      }
-    </button>
-    <button class="footer-btn settings-control" (click)="navigateTo('/settings')" title="Settings" aria-label="Settings">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <use href="#icon-settings"></use>
-      </svg>
-    </button>
+  <div class="sidebar-footer" [class.settings-footer]="isInSettings">
+    @if (isInSettings) {
+      <button class="footer-btn back-control" (click)="backFromSettings()" title="Back" aria-label="Back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M19 12H5"/>
+          <path d="m12 19-7-7 7-7"/>
+        </svg>
+        @if (!isCollapsed) {
+          <span>Back</span>
+        }
+      </button>
+    } @else {
+      <button class="footer-btn settings-control" (click)="navigateTo('/settings')" title="Settings" aria-label="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <use href="#icon-settings"></use>
+        </svg>
+      </button>
+      <button class="footer-btn shortcuts-control" (click)="openShortcuts()" title="Keyboard Shortcuts" aria-label="Shortcuts">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <use href="#icon-keyboard"></use>
+        </svg>
+      </button>
+      <button
+        class="footer-btn update-control"
+        [class.update-available]="updateStatus.status === 'available'"
+        [class.update-ready]="updateStatus.status === 'downloaded'"
+        [class.update-error]="updateStatus.status === 'error'"
+        [class.update-busy]="updateActionDisabled"
+        [disabled]="updateActionDisabled"
+        (click)="handleUpdateAction()"
+        [title]="updateActionLabel"
+        [attr.aria-label]="updateActionLabel"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <use [attr.href]="updateStatus.status === 'available' || updateStatus.status === 'downloading' ? '#icon-download' : '#icon-refresh-cw'"></use>
+        </svg>
+        @if (!isCollapsed && updateStatus.status === 'available') {
+          <span class="update-pill-label">Update</span>
+        }
+        @if (!isCollapsed && updateStatus.status === 'downloaded') {
+          <span class="update-pill-label">Restart</span>
+        }
+      </button>
+    }
   </div>
 
   <!-- SVG Icon Definitions -->
