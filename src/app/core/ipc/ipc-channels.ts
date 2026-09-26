@@ -63,8 +63,6 @@ export interface IpcChannels {
   readonly downloadUpdate: string;
   readonly getUpdateStatus: string;
   readonly quitAndInstall: string;
-  readonly copyUpdateToDownloads: string;
-  readonly openUpdateFolder: string;
 }
 
 export const IpcChannels: IpcChannels = channels as IpcChannels;

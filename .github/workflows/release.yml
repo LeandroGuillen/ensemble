@@ -4,68 +4,169 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
   build-linux:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '26.4.0'
-          cache: 'npm'
-
-      - name: Install system dependencies
+          cache: npm
+      - name: Check release version
+        if: github.event_name == 'push'
+        run: node -e "if ('v' + require('./package.json').version !== process.env.GITHUB_REF_NAME) throw new Error('Tag and package.json version differ')"
+      - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y imagemagick
-
-      - name: Install npm dependencies
-        run: npm ci
-
-      - name: Build icons
-        run: npm run build-icons
-
-      - name: Build Angular app
-        run: npm run build -- --configuration production
-
-      - name: Build AppImage
-        run: |
-          # Temporarily disable publish to prevent electron-builder from auto-publishing
-          # We'll handle publishing manually via GitHub Actions
-          npm run build-electron-linux-appimage -- --publish never
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PUBLISH_FOR_CI: true
-
-      - name: Get version from tag
-        id: get_version
-        run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "Tag version: $VERSION"
-
-      - name: List release artifacts
-        run: |
-          echo "Checking for release artifacts..."
-          ls -lh release/ || echo "Release directory not found"
-          find release -name "*.AppImage" -o -name "*.yml" || echo "No AppImage or YML files found"
-
-      - name: Upload AppImage to release
-        uses: softprops/action-gh-release@v1
+          sudo apt-get install -y imagemagick rpm
+      - run: npm ci
+      - run: npm run build-icons
+      - run: npm run build -- --configuration production
+      - name: Build Linux packages and update metadata
+        run: npx electron-builder --linux AppImage deb rpm --publish never
+      - uses: actions/upload-artifact@v4
         with:
-          files: |
+          name: linux-release
+          path: |
             release/*.AppImage
+            release/*.deb
+            release/*.rpm
             release/latest-linux.yml
-          tag_name: ${{ github.ref_name }}
-          name: Release ${{ steps.get_version.outputs.VERSION }}
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          if-no-files-found: error
+
+  build-mac:
+    if: github.event_name == 'push'
+    runs-on: macos-latest
+    env:
+      CSC_LINK: ${{ secrets.MAC_CERTIFICATE }}
+      CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26.4.0'
+          cache: npm
+      - name: Check release version and signing credentials
+        id: credentials
+        run: |
+          node -e "if ('v' + require('./package.json').version !== process.env.GITHUB_REF_NAME) throw new Error('Tag and package.json version differ')"
+          if [[ -z "$CSC_LINK" && -z "$CSC_KEY_PASSWORD" && -z "$APPLE_ID" && -z "$APPLE_APP_SPECIFIC_PASSWORD" && -z "$APPLE_TEAM_ID" ]]; then
+            echo 'macOS signing credentials are not configured; publishing Linux packages only.'
+            echo 'enabled=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          for name in CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+            test -n "${!name}" || { echo "Missing $name: signed, notarized macOS releases require all five macOS secrets"; exit 1; }
+          done
+          echo 'enabled=true' >> "$GITHUB_OUTPUT"
+      - if: steps.credentials.outputs.enabled == 'true'
+        run: npm ci
+      - name: Install ImageMagick
+        if: steps.credentials.outputs.enabled == 'true'
+        run: brew install imagemagick
+      - if: steps.credentials.outputs.enabled == 'true'
+        run: npm run build-icons
+      - if: steps.credentials.outputs.enabled == 'true'
+        run: npm run build -- --configuration production
+      - name: Build signed macOS packages and update metadata
+        if: steps.credentials.outputs.enabled == 'true'
+        run: npx electron-builder --mac dmg zip --x64 --arm64 --publish never
+      - uses: actions/upload-artifact@v4
+        if: steps.credentials.outputs.enabled == 'true'
+        with:
+          name: mac-release
+          path: |
+            release/*.dmg
+            release/*.zip
+            release/latest-mac.yml
+          if-no-files-found: error
+
+  smoke-debian:
+    needs: build-linux
+    runs-on: ubuntu-latest
+    container: debian:stable-slim
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-release
+          path: release
+      - name: Install DEB and display tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends ./release/*.deb xvfb xdotool x11-utils
+      - name: Smoke test installed DEB
+        run: |
+          version=$(awk -F '"' '/"version"/ {print $4; exit}' package.json)
+          scripts/smoke-linux-package.sh /usr/bin/ensemble "$version"
+
+  smoke-appimage:
+    needs: build-linux
+    runs-on: ubuntu-latest
+    container: debian:stable-slim
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-release
+          path: release
+      - name: Install AppImage runtime and display libraries
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends libgtk-3-0 libnotify4 libnss3 libxss1 libxtst6 libasound2 libgbm1 libdrm2 xvfb xdotool x11-utils
+      - name: Smoke test AppImage without FUSE
+        run: |
+          chmod +x release/*.AppImage
+          APPIMAGE_EXTRACT_AND_RUN=1 scripts/smoke-linux-package.sh "$(find release -maxdepth 1 -name '*.AppImage' -print -quit)" "$(sed -n 's/.*"version": "\([^"]*\)".*/\1/p' package.json | head -1)"
+
+  smoke-fedora:
+    needs: build-linux
+    runs-on: ubuntu-latest
+    container: fedora:latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-release
+          path: release
+      - name: Install RPM and display tools
+        run: dnf install -y ./release/*.rpm xorg-x11-server-Xvfb xdotool xdpyinfo
+      - name: Smoke test installed RPM
+        run: |
+          version=$(awk -F '"' '/"version"/ {print $4; exit}' package.json)
+          scripts/smoke-linux-package.sh /usr/bin/ensemble "$version"
+
+  publish:
+    if: github.event_name == 'push'
+    needs: [build-linux, build-mac, smoke-debian, smoke-appimage, smoke-fedora]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: '*-release'
+          path: release
+          merge-multiple: true
+      - name: Verify release assets and update metadata
+        run: |
+          test -s release/latest-linux.yml
+          compgen -G 'release/*.AppImage' > /dev/null
+          compgen -G 'release/*.deb' > /dev/null
+          compgen -G 'release/*.rpm' > /dev/null
+          if [[ -e release/latest-mac.yml ]]; then
+            test -s release/latest-mac.yml
+            compgen -G 'release/*.zip' > /dev/null
+            compgen -G 'release/*.dmg' > /dev/null
+          fi
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
+          fail_on_unmatched_files: true
+          generate_release_notes: true

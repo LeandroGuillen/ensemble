@@ -16,7 +16,6 @@ export interface UpdateStatus {
     total: number;
   };
   error?: string;
-  path?: string;
 }
 
 @Injectable({
@@ -91,7 +90,7 @@ export class UpdateService {
   }
 
   /**
-   * Quit and install update (for AppImage, user will need to manually replace)
+   * Quit and install the downloaded update
    */
   async quitAndInstall(): Promise<{ success: boolean; error?: string }> {
     if (!this.electronService.isElectron()) {
@@ -113,35 +112,4 @@ export class UpdateService {
     return this.updateStatusSubject.value;
   }
 
-  /**
-   * Copy downloaded update file to Downloads folder
-   */
-  async copyUpdateToDownloads(updatePath: string): Promise<{ success: boolean; path?: string; error?: string }> {
-    if (!this.electronService.isElectron()) {
-      return { success: false, error: 'Not running in Electron' };
-    }
-
-    try {
-      return await this.electronService.copyUpdateToDownloads(updatePath);
-    } catch (error: any) {
-      this.logger.error('Error copying update to Downloads', error);
-      return { success: false, error: error.message || 'Unknown error' };
-    }
-  }
-
-  /**
-   * Open the folder containing the downloaded update file
-   */
-  async openUpdateFolder(updatePath: string): Promise<{ success: boolean; error?: string }> {
-    if (!this.electronService.isElectron()) {
-      return { success: false, error: 'Not running in Electron' };
-    }
-
-    try {
-      return await this.electronService.openUpdateFolder(updatePath);
-    } catch (error: any) {
-      this.logger.error('Error opening update folder', error);
-      return { success: false, error: error.message || 'Unknown error' };
-    }
-  }
 }

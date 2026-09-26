@@ -72,38 +72,7 @@
     }
     @if (updateStatus.status === 'downloaded') {
       <div class="update-content">
-        <p class="update-instructions">
-          Update downloaded successfully. For AppImage, please:
-        </p>
-        <ol class="update-steps">
-          <li>Close Ensemble</li>
-          <li>Replace the old AppImage file with the new one</li>
-          <li>Make the new AppImage executable: <code>chmod +x Ensemble-{{ updateStatus.version }}.AppImage</code></li>
-          <li>Launch the new AppImage</li>
-        </ol>
-        @if (updateStatus.path) {
-          <div class="update-file-info">
-            <p class="update-file-path">
-              <strong>Downloaded to:</strong> {{ updateStatus.path }}
-            </p>
-            <div class="update-file-actions">
-              <button
-                type="button"
-                class="btn btn-secondary btn-sm"
-                (click)="onCopyToDownloads()"
-                >
-                Copy to Downloads
-              </button>
-              <button
-                type="button"
-                class="btn btn-secondary btn-sm"
-                (click)="onOpenFolder()"
-                >
-                Open Folder
-              </button>
-            </div>
-          </div>
-        }
+        <p class="update-instructions">The update is ready. Restart Ensemble to install it.</p>
         <div class="update-actions">
           <button
             type="button"

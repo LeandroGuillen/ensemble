@@ -47,37 +47,9 @@ export class UpdateNotificationComponent implements OnInit {
   }
 
   async onInstall(): Promise<void> {
-    // For AppImage, we show instructions and quit
     const result = await this.updateService.quitAndInstall();
     if (!result.success) {
       console.error('Failed to quit for install:', result.error);
-    }
-  }
-
-  async onCopyToDownloads(): Promise<void> {
-    if (!this.updateStatus?.path) {
-      console.error('Update path not available');
-      return;
-    }
-
-    const result = await this.updateService.copyUpdateToDownloads(this.updateStatus.path);
-    if (result.success) {
-      console.log('Update copied to Downloads:', result.path);
-      // Optionally show a success message or update the UI
-    } else {
-      console.error('Failed to copy update to Downloads:', result.error);
-    }
-  }
-
-  async onOpenFolder(): Promise<void> {
-    if (!this.updateStatus?.path) {
-      console.error('Update path not available');
-      return;
-    }
-
-    const result = await this.updateService.openUpdateFolder(this.updateStatus.path);
-    if (!result.success) {
-      console.error('Failed to open update folder:', result.error);
     }
   }
 

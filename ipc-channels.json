@@ -48,7 +48,5 @@
   "checkForUpdates": "check-for-updates",
   "downloadUpdate": "download-update",
   "getUpdateStatus": "get-update-status",
-  "quitAndInstall": "quit-and-install",
-  "copyUpdateToDownloads": "copy-update-to-downloads",
-  "openUpdateFolder": "open-update-folder"
+  "quitAndInstall": "quit-and-install"
 }

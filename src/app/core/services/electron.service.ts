@@ -325,8 +325,8 @@ export class ElectronService {
     return await this.ipcRenderer.invoke(IpcChannels.openPath, folderPath);
   }
 
-  // ==================== Auto-updater (B2) ====================
-  // These wrap the updater IPC handlers in main.js. Renderer code should
+  // ==================== Auto-updater ====================
+  // These wrap the updater IPC handlers in lib/updater.js. Renderer code should
   // always go through here rather than touching `ipcRenderer` directly.
 
   /** Subscribe to `update-status` events pushed from the main process. */
@@ -368,19 +368,5 @@ export class ElectronService {
       return { success: false, error: 'Not running in Electron' };
     }
     return await this.ipcRenderer.invoke(IpcChannels.quitAndInstall);
-  }
-
-  async copyUpdateToDownloads(updatePath: string): Promise<{ success: boolean; path?: string; error?: string }> {
-    if (!this.isElectron()) {
-      return { success: false, error: 'Not running in Electron' };
-    }
-    return await this.ipcRenderer.invoke(IpcChannels.copyUpdateToDownloads, updatePath);
-  }
-
-  async openUpdateFolder(updatePath: string): Promise<{ success: boolean; error?: string }> {
-    if (!this.isElectron()) {
-      return { success: false, error: 'Not running in Electron' };
-    }
-    return await this.ipcRenderer.invoke(IpcChannels.openUpdateFolder, updatePath);
   }
 }
