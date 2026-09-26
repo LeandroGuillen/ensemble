@@ -884,7 +884,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
   // Update checking
   async checkForUpdates(): Promise<void> {
     this.checkingForUpdates = true;
-    this.updateStatus = { status: 'checking', message: 'Checking for updates...' };
+    this.updateStatus = { status: 'checking' };
     
     try {
       const result = await this.updateService.checkForUpdates();
@@ -895,7 +895,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
           error: result.error
         };
       }
-      // The actual status will be updated via the updateStatus$ subscription
+      // The actual status is updated via the updateStatus$ subscription.
     } catch (error: any) {
       this.logger.error('Error checking for updates', error);
       this.updateStatus = {
@@ -903,25 +903,25 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
         message: 'Failed to check for updates',
         error: error.message || 'Unknown error'
       };
+    } finally {
       this.checkingForUpdates = false;
     }
   }
 
   getUpdateStatusMessage(): string {
-    if (this.updateStatus.status === 'checking') {
-      return 'Checking for updates...';
-    } else if (this.updateStatus.status === 'available') {
-      return 'An update is available';
-    } else if (this.updateStatus.status === 'not-available') {
-      return 'You are using the latest version';
-    } else if (this.updateStatus.status === 'error') {
-      return this.updateStatus.error || 'Error checking for updates';
+    switch (this.updateStatus.status) {
+      case 'checking': return 'Checking…';
+      case 'available': return this.updateStatus.version ? `v${this.updateStatus.version} available` : 'Update available';
+      case 'not-available': return 'Up to date';
+      case 'downloading': return this.updateStatus.progress ? `Downloading ${Math.round(this.updateStatus.progress.percent)}%` : 'Downloading…';
+      case 'downloaded': return 'Ready to restart';
+      case 'error': return 'Update failed';
+      default: return '';
     }
-    return '';
   }
 
   hasUpdateStatus(): boolean {
-    return this.updateStatus.status !== 'idle';
+    return this.updateStatus.status !== 'idle' && this.updateStatus.status !== 'checking';
   }
 
   isUpdateAvailable(): boolean {

@@ -96,16 +96,37 @@
     </div>
   }
 
-  <!-- Bottom Bar: Settings / Shortcuts / Collapse -->
+  <!-- Bottom Bar -->
   <div class="sidebar-footer">
-    <button class="footer-btn" (click)="navigateTo('/settings')" title="Settings" aria-label="Settings">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <use href="#icon-settings"></use>
-      </svg>
-    </button>
-    <button class="footer-btn" (click)="openShortcuts()" title="Keyboard Shortcuts" aria-label="Shortcuts">
+    <button class="footer-btn shortcuts-control" (click)="openShortcuts()" title="Keyboard Shortcuts" aria-label="Shortcuts">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <use href="#icon-keyboard"></use>
+      </svg>
+    </button>
+    <button
+      class="footer-btn update-control"
+      [class.update-available]="updateStatus.status === 'available'"
+      [class.update-ready]="updateStatus.status === 'downloaded'"
+      [class.update-error]="updateStatus.status === 'error'"
+      [class.update-busy]="updateActionDisabled"
+      [disabled]="updateActionDisabled"
+      (click)="handleUpdateAction()"
+      [title]="updateActionLabel"
+      [attr.aria-label]="updateActionLabel"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <use [attr.href]="updateStatus.status === 'available' || updateStatus.status === 'downloading' ? '#icon-download' : '#icon-refresh-cw'"></use>
+      </svg>
+      @if (!isCollapsed && updateStatus.status === 'available') {
+        <span class="update-pill-label">Update</span>
+      }
+      @if (!isCollapsed && updateStatus.status === 'downloaded') {
+        <span class="update-pill-label">Restart</span>
+      }
+    </button>
+    <button class="footer-btn settings-control" (click)="navigateTo('/settings')" title="Settings" aria-label="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <use href="#icon-settings"></use>
       </svg>
     </button>
   </div>
@@ -205,6 +226,13 @@
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
         <polyline points="7 10 12 15 17 10"/>
         <line x1="12" y1="15" x2="12" y2="3"/>
+      </symbol>
+
+      <symbol id="icon-refresh-cw" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 11a8 8 0 0 0-14.2-5L3 9"/>
+        <path d="M3 4v5h5"/>
+        <path d="M4 13a8 8 0 0 0 14.2 5L21 15"/>
+        <path d="M21 20v-5h-5"/>
       </symbol>
 
       <!-- Plot Board (grid/columns icon) -->

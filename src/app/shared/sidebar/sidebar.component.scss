@@ -203,7 +203,7 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
   }
 }
 
-// Collapsed: stack search above New Character, then Shortcuts above Settings
+// Collapsed: stack search above New Character, then update, shortcuts, settings
 .sidebar.collapsed .sidebar-search-row {
   flex-direction: column;
   padding: 0;
@@ -215,13 +215,16 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .sidebar.collapsed .sidebar-footer {
-  flex-direction: column-reverse;
+  flex-direction: column;
   padding: var(--spacing-xs) var(--spacing-sm);
 
   .footer-btn {
     width: 100%;
     justify-content: center;
   }
+
+  .update-control { order: -2; margin-left: 0; }
+  .shortcuts-control { order: -1; }
 }
 
 // Navigation Container
@@ -411,9 +414,61 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
     }
   }
 
+  .update-control {
+    margin-left: auto;
+    justify-content: center;
+    gap: 5px;
+    position: relative;
+
+    &.update-available {
+      background: var(--color-accent-subtle);
+      color: var(--color-accent-primary);
+      font-weight: 600;
+    }
+
+    &.update-ready {
+      background: rgba(74, 222, 128, 0.12);
+      color: var(--color-success);
+      font-weight: 600;
+    }
+
+    &.update-error { color: var(--color-error); }
+
+    &.update-busy {
+      cursor: progress;
+
+      svg { animation: update-spin 1.4s linear infinite; }
+    }
+
+    .update-pill-label {
+      font-size: 0.75rem;
+      white-space: nowrap;
+    }
+  }
+
   .footer-spacer {
     flex: 1;
   }
+}
+
+.sidebar.collapsed .sidebar-footer .update-control {
+  background: transparent;
+
+  &.update-available::after,
+  &.update-ready::after {
+    content: '';
+    position: absolute;
+    top: 4px;
+    right: 5px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+}
+
+@keyframes update-spin {
+  to { transform: rotate(360deg); }
 }
 
 // Collapse Toggle Button (top row, next to brand)

@@ -13,12 +13,11 @@ import { NotificationComponent } from "./shared/notification/notification.compon
 import { ConfirmationDialogComponent } from "./shared/confirmation-dialog/confirmation-dialog.component";
 import { KeyboardShortcutsDialogComponent } from "./shared/keyboard-shortcuts-dialog/keyboard-shortcuts-dialog.component";
 import { KeyboardShortcutsService } from "./shared/keyboard-shortcuts-dialog/keyboard-shortcuts.service";
-import { UpdateNotificationComponent } from "./shared/update-notification/update-notification.component";
 import { ModalService, ConfirmationRequest } from "./core/services/modal.service";
 
 @Component({
     selector: "app-root",
-    imports: [RouterOutlet, CommandPaletteComponent, SidebarComponent, NotificationComponent, ConfirmationDialogComponent, KeyboardShortcutsDialogComponent, UpdateNotificationComponent],
+    imports: [RouterOutlet, CommandPaletteComponent, SidebarComponent, NotificationComponent, ConfirmationDialogComponent, KeyboardShortcutsDialogComponent],
     templateUrl: "./app.component.html",
     styleUrls: ["./app.component.scss"]
 })

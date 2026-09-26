@@ -909,7 +909,7 @@
                         type="button"
                         class="btn btn-secondary"
                         (click)="checkForUpdates()"
-                        [disabled]="checkingForUpdates"
+                        [disabled]="checkingForUpdates || updateStatus.status === 'downloaded' || updateStatus.status === 'downloading'"
                         >
                         @if (checkingForUpdates) {
                           <i class="icon-loader"></i>
@@ -917,32 +917,16 @@
                         @if (!checkingForUpdates) {
                           <i class="icon-download"></i>
                         }
-                        {{ checkingForUpdates ? 'Checking...' : 'Check for Updates' }}
+                        {{ checkingForUpdates ? 'Checking…' : 'Check for updates' }}
                       </button>
-                      <span class="current-version">Current version: {{ currentVersion }}</span>
+                      <span class="current-version">v{{ currentVersion }}</span>
                     </div>
                     @if (hasUpdateStatus()) {
-                      <div class="update-status-message" [class.update-available]="isUpdateAvailable()" [class.update-error]="isUpdateError()">
-                        @if (isUpdateAvailable()) {
-                          <i class="icon-check"></i>
-                        }
-                        @if (isUpdateError()) {
-                          <i class="icon-alert-circle"></i>
-                        }
-                        @if (updateStatus.status === 'not-available') {
-                          <i class="icon-info"></i>
-                        }
-                        <div class="update-status-details">
-                          <span>{{ getUpdateStatusMessage() }}</span>
-                          <span>Current version: {{ updateStatus.currentVersion || currentVersion }}</span>
-                          @if (isUpdateAvailable() && updateStatus.version) {
-                            <span>Available version: {{ updateStatus.version }}</span>
-                          }
-                        </div>
-                      </div>
+                      <span class="update-status-message" [class.update-available]="isUpdateAvailable()" [class.update-error]="isUpdateError()" [title]="updateStatus.error || ''">
+                        {{ getUpdateStatusMessage() }}
+                      </span>
                     }
                   </div>
-                  <small class="form-help">Check if a new version of the application is available.</small>
                 </div>
                 </form>
             </section>

@@ -1,8 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, NavigationEnd } from '@angular/router';
 
 import { ProjectService } from '../../core/services';
 import { ElectronService } from '../../core/services/electron.service';
+import { UpdateService, UpdateStatus } from '../../core/services/update.service';
+import { NotificationService } from '../../core/services/notification.service';
 import { CharacterEditDialogService } from '../../core/services/character-edit-dialog.service';
 import { CommandPaletteService } from '../command-palette/command-palette.service';
 import { KeyboardShortcutsService } from '../keyboard-shortcuts-dialog/keyboard-shortcuts.service';
@@ -29,10 +32,13 @@ interface NavSection {
     styleUrls: ['./sidebar.component.scss']
 })
 export class SidebarComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   currentProjectName = '';
   currentRoute = '';
   isCollapsed = true;
   appVersion = '';
+  updateStatus: UpdateStatus = { status: 'idle' };
+  updateActionPending = false;
 
   sections: NavSection[] = [
     {
@@ -63,11 +69,16 @@ export class SidebarComponent implements OnInit {
     private router: Router,
     private shortcutsService: KeyboardShortcutsService,
     private commandPaletteService: CommandPaletteService,
-    private characterEditDialog: CharacterEditDialogService
+    private characterEditDialog: CharacterEditDialogService,
+    private updateService: UpdateService,
+    private notificationService: NotificationService
   ) {}
 
   ngOnInit(): void {
     void this.loadAppVersion();
+    this.updateService.updateStatus$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(status => { this.updateStatus = status; });
 
     this.projectService.currentProject$.subscribe((project: any) => {
       this.currentProjectName = project?.name || '';
@@ -130,5 +141,37 @@ export class SidebarComponent implements OnInit {
 
   openNewDraft(): void {
     this.characterEditDialog.openCreateDraft();
+  }
+
+  get updateActionLabel(): string {
+    switch (this.updateStatus.status) {
+      case 'available': return `Download update${this.updateStatus.version ? ` ${this.updateStatus.version}` : ''}`;
+      case 'downloading': return `Downloading update${this.updateStatus.progress ? ` ${Math.round(this.updateStatus.progress.percent)}%` : ''}`;
+      case 'downloaded': return 'Restart to apply update';
+      case 'checking': return 'Checking for updates';
+      case 'error': return 'Check for updates again';
+      default: return 'Check for updates';
+    }
+  }
+
+  get updateActionDisabled(): boolean {
+    return this.updateActionPending || this.updateStatus.status === 'checking' || this.updateStatus.status === 'downloading';
+  }
+
+  async handleUpdateAction(): Promise<void> {
+    if (this.updateActionDisabled) return;
+    this.updateActionPending = true;
+    try {
+      const result = this.updateStatus.status === 'downloaded'
+        ? await this.updateService.quitAndInstall()
+        : this.updateStatus.status === 'available'
+          ? await this.updateService.downloadUpdate()
+          : await this.updateService.checkForUpdates();
+      if (!result.success) {
+        this.notificationService.showError(result.error || 'Update failed');
+      }
+    } finally {
+      this.updateActionPending = false;
+    }
   }
 }
