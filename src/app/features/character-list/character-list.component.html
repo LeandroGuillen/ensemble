@@ -113,10 +113,16 @@
             </div>
           }
           @if (viewMode === 'gallery') {
-            <div class="thumbnail-size-toggle" aria-label="Thumbnail size">
-              <button class="toggle-option" [class.active]="galleryThumbnailSize === 'big'" (click)="setGalleryThumbnailSize('big')" title="Large thumbnails" aria-label="Large thumbnails"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="14" height="14" rx="1.5" /></svg></button>
-              <button class="toggle-option" [class.active]="galleryThumbnailSize === 'medium'" (click)="setGalleryThumbnailSize('medium')" title="Medium thumbnails" aria-label="Medium thumbnails"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1" /><rect x="9" y="1" width="6" height="6" rx="1" /><rect x="1" y="9" width="6" height="6" rx="1" /><rect x="9" y="9" width="6" height="6" rx="1" /></svg></button>
-              <button class="toggle-option" [class.active]="galleryThumbnailSize === 'small'" (click)="setGalleryThumbnailSize('small')" title="Small thumbnails" aria-label="Small thumbnails"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="4" height="4" rx=".5" /><rect x="6" y="1" width="4" height="4" rx=".5" /><rect x="11" y="1" width="4" height="4" rx=".5" /><rect x="1" y="6" width="4" height="4" rx=".5" /><rect x="6" y="6" width="4" height="4" rx=".5" /><rect x="11" y="6" width="4" height="4" rx=".5" /><rect x="1" y="11" width="4" height="4" rx=".5" /><rect x="6" y="11" width="4" height="4" rx=".5" /><rect x="11" y="11" width="4" height="4" rx=".5" /></svg></button>
+            <div class="thumbnail-size-slider">
+              <button type="button" class="thumbnail-size-step" (click)="adjustGalleryThumbnailSize(-1)"
+                [disabled]="galleryThumbnailSize === 'small'" aria-label="Decrease thumbnail size" title="Decrease thumbnail size">−</button>
+              <input #compactThumbnailSizeSlider type="range" min="0" max="2" step="1"
+                [value]="galleryThumbnailSize === 'small' ? 0 : galleryThumbnailSize === 'medium' ? 1 : 2"
+                (input)="setGalleryThumbnailSizeFromSlider(compactThumbnailSizeSlider.value)"
+                [attr.aria-valuetext]="galleryThumbnailSize + ' thumbnails'"
+                aria-label="Thumbnail size" [title]="galleryThumbnailSize + ' thumbnails'" />
+              <button type="button" class="thumbnail-size-step" (click)="adjustGalleryThumbnailSize(1)"
+                [disabled]="galleryThumbnailSize === 'big'" aria-label="Increase thumbnail size" title="Increase thumbnail size">+</button>
             </div>
           }
         </div>
@@ -202,10 +208,16 @@
             </div>
           }
           @if (viewMode === 'gallery') {
-            <div class="thumbnail-size-toggle" aria-label="Thumbnail size">
-              <button class="toggle-option" [class.active]="galleryThumbnailSize === 'big'" (click)="setGalleryThumbnailSize('big')" title="Large thumbnails" aria-label="Large thumbnails"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="14" height="14" rx="1.5" /></svg></button>
-              <button class="toggle-option" [class.active]="galleryThumbnailSize === 'medium'" (click)="setGalleryThumbnailSize('medium')" title="Medium thumbnails" aria-label="Medium thumbnails"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1" /><rect x="9" y="1" width="6" height="6" rx="1" /><rect x="1" y="9" width="6" height="6" rx="1" /><rect x="9" y="9" width="6" height="6" rx="1" /></svg></button>
-              <button class="toggle-option" [class.active]="galleryThumbnailSize === 'small'" (click)="setGalleryThumbnailSize('small')" title="Small thumbnails" aria-label="Small thumbnails"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="4" height="4" rx=".5" /><rect x="6" y="1" width="4" height="4" rx=".5" /><rect x="11" y="1" width="4" height="4" rx=".5" /><rect x="1" y="6" width="4" height="4" rx=".5" /><rect x="6" y="6" width="4" height="4" rx=".5" /><rect x="11" y="6" width="4" height="4" rx=".5" /><rect x="1" y="11" width="4" height="4" rx=".5" /><rect x="6" y="11" width="4" height="4" rx=".5" /><rect x="11" y="11" width="4" height="4" rx=".5" /></svg></button>
+            <div class="thumbnail-size-slider">
+              <button type="button" class="thumbnail-size-step" (click)="adjustGalleryThumbnailSize(-1)"
+                [disabled]="galleryThumbnailSize === 'small'" aria-label="Decrease thumbnail size" title="Decrease thumbnail size">−</button>
+              <input #wideThumbnailSizeSlider type="range" min="0" max="2" step="1"
+                [value]="galleryThumbnailSize === 'small' ? 0 : galleryThumbnailSize === 'medium' ? 1 : 2"
+                (input)="setGalleryThumbnailSizeFromSlider(wideThumbnailSizeSlider.value)"
+                [attr.aria-valuetext]="galleryThumbnailSize + ' thumbnails'"
+                aria-label="Thumbnail size" [title]="galleryThumbnailSize + ' thumbnails'" />
+              <button type="button" class="thumbnail-size-step" (click)="adjustGalleryThumbnailSize(1)"
+                [disabled]="galleryThumbnailSize === 'big'" aria-label="Increase thumbnail size" title="Increase thumbnail size">+</button>
             </div>
           }
         </div>

@@ -923,6 +923,17 @@ getFilterSummary(): string {
     this.preferences.setGalleryThumbnailSize(size);
   }
 
+  setGalleryThumbnailSizeFromSlider(value: string): void {
+    const sizes: Array<'small' | 'medium' | 'big'> = ['small', 'medium', 'big'];
+    this.setGalleryThumbnailSize(sizes[Number(value)]);
+  }
+
+  adjustGalleryThumbnailSize(direction: -1 | 1): void {
+    const sizes: Array<'small' | 'medium' | 'big'> = ['small', 'medium', 'big'];
+    const nextIndex = Math.max(0, Math.min(2, sizes.indexOf(this.galleryThumbnailSize) + direction));
+    this.setGalleryThumbnailSize(sizes[nextIndex]);
+  }
+
   // Multi-select functionality
   toggleCharacterSelection(characterId: string): void {
     const index = this.selectedCharacterIds.indexOf(characterId);
