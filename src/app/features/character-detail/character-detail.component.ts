@@ -405,11 +405,7 @@ export class CharacterDetailComponent
       event.preventDefault();
       this.ngZone.run(() => {
         this.reattachIfDetached();
-        if (this.activeContentTab === 'main') {
-          this.onSubmit();
-        } else if (this.activeContentTab && this.character) {
-          this.onSaveBookPage(this.activeContentTab);
-        }
+        this.onSubmit();
       });
       return;
     }
@@ -767,87 +763,8 @@ export class CharacterDetailComponent
     }
   }
 
-  async onSaveBookPage(bookId: string): Promise<void> {
-    if (!this.character) return;
-    if (this.externalMainConflict || this.externalBookConflicts.has(bookId)) {
-      this.notificationService.showError('Reload external changes before saving.');
-      return;
-    }
-
-    const active = document.activeElement;
-    if (
-      active instanceof HTMLElement &&
-      (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')
-    ) {
-      active.blur();
-    }
-
-    // Commit any pending alias draft so it is included in the save.
-    this.addAlias();
-
-    this.savingBookPageId = bookId;
-    this.error = null;
-    try {
-      if (this.characterForm.dirty) {
-        if (this.characterForm.invalid) {
-          this.markFormGroupTouched(this.characterForm);
-          this.scrollToFirstInvalidField();
-          return;
-        }
-        const updatedCharacter = await this.characterService.updateCharacter(
-          this.character.id,
-          {
-            name: this.characterForm.value.name,
-            aliases: [...this.aliases],
-            category: this.characterForm.value.category,
-            tags: this.characterForm.value.tags || [],
-            books: this.characterForm.value.books || [],
-            bookCategories: normalizeBookCategories(
-              this.bookCategoriesMap,
-              this.characterForm.value.books || []
-            ),
-            bookTags: normalizeBookTags(
-              this.bookTagsMap,
-              this.characterForm.value.books || []
-            ),
-            thumbnails: { ...this.thumbnailsMap },
-            bookThumbnails: normalizeBookThumbnailsMap(
-              this.bookThumbnailsMap,
-              this.characterForm.value.books || []
-            ),
-            prompts: this.prompts.map((p) => ({ ...p })),
-            content: this.characterForm.value.content || '',
-          }
-        );
-        if (!updatedCharacter) throw new Error('Character not found');
-        this.character = updatedCharacter;
-        this.characterForm.markAsPristine();
-      }
-
-      const data = this.bookPageData[bookId];
-      if (data?.exists) {
-        const content = data.content ?? '';
-        await this.characterService.saveBookPage(this.character.id, bookId, content);
-        this.bookPageOriginalContent[bookId] = content;
-      }
-      this.notificationService.showSuccess(this.isDraftMode ? 'Draft saved successfully' : 'Character saved successfully');
-      this.router.navigate(['/characters'], {
-        queryParams: this.isDraftMode ? { drawer: 'true' } : undefined,
-      });
-    } catch (err) {
-      this.notificationService.showError(err instanceof Error ? err.message : 'Failed to save book page');
-      this.cdr.markForCheck();
-    } finally {
-      this.savingBookPageId = null;
-      this.cdr.markForCheck();
-    }
-  }
-
   async onSubmit(): Promise<void> {
-    if (this.externalMainConflict) {
-      this.notificationService.showError('Reload external changes before saving.');
-      return;
-    }
+    if (this.isSaving || this.savingBookPageId) return;
     // Name/content use updateOn:'blur', so a value typed into the still-focused
     // field (e.g. submitting with Ctrl+Enter) is pending until blur. Blur it so
     // the pending value is applied before validating.
@@ -857,6 +774,13 @@ export class CharacterDetailComponent
       (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')
     ) {
       active.blur();
+    }
+
+    const bookIds: string[] = this.characterForm.value.books || [];
+    const dirtyBookIds = bookIds.filter((bookId) => this.isBookPageDirty(bookId));
+    if (this.externalMainConflict || dirtyBookIds.some((bookId) => this.externalBookConflicts.has(bookId))) {
+      this.notificationService.showError('Reload external changes before saving.');
+      return;
     }
 
     if (this.characterForm.invalid) {
@@ -890,18 +814,25 @@ export class CharacterDetailComponent
         if (!updatedCharacter) {
           throw new Error("Character not found");
         }
-        this.notificationService.showSuccess(
-          this.isDraftMode ? "Draft saved successfully" : "Character saved successfully"
-        );
+        this.character = updatedCharacter;
+        this.characterForm.markAsPristine();
+        for (const bookId of dirtyBookIds) {
+          const content = this.bookPageData[bookId].content;
+          await this.characterService.saveBookPage(updatedCharacter.id, bookId, content);
+          this.bookPageOriginalContent[bookId] = content;
+        }
       } else {
         if (this.isDraftMode) {
           await this.characterService.createDraft(formData);
-          this.notificationService.showSuccess("Draft created successfully");
         } else {
           await this.characterService.createCharacter(formData);
-          this.notificationService.showSuccess("Character created successfully");
         }
       }
+
+      this.notificationService.showSuccess(
+        this.isDraftMode ? (this.isEditing ? "Draft saved successfully" : "Draft created successfully")
+          : (this.isEditing ? "Character saved successfully" : "Character created successfully")
+      );
 
       this.router.navigate(["/characters"], {
         queryParams: this.isDraftMode ? { drawer: 'true' } : undefined,

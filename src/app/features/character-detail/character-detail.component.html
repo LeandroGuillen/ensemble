@@ -70,15 +70,15 @@
       <button
         type="button"
         class="btn btn-primary"
-        [disabled]="savingBookPageId || (!bookPageData[activeContentTab]?.exists && !characterForm.dirty)"
-        (click)="onSaveBookPage(activeContentTab)"
+        [disabled]="isSaving || savingBookPageId || (!bookPageData[activeContentTab]?.exists && !characterForm.dirty && !hasAnyBookPageDirty())"
+        (click)="onSubmit()"
         title="Save changes (Ctrl+Enter)"
       >
-        @if (savingBookPageId) {
+        @if (isSaving) {
           <span class="spinner spinner-sm"></span>
         }
-        {{ savingBookPageId ? 'Saving…' : 'Save Changes' }}
-        @if (!savingBookPageId) {
+        {{ isSaving ? 'Saving…' : 'Save Changes' }}
+        @if (!isSaving) {
           <kbd class="shortcut-hint">⌃↵</kbd>
         }
       </button>
