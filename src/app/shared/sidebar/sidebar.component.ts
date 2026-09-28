@@ -1,4 +1,4 @@
-import { Component, DestroyRef, HostListener, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, ElementRef, HostListener, OnInit, ViewChild, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, NavigationEnd } from '@angular/router';
 
@@ -8,6 +8,8 @@ import { UpdateService, UpdateStatus } from '../../core/services/update.service'
 import { NotificationService } from '../../core/services/notification.service';
 import { CharacterEditDialogService } from '../../core/services/character-edit-dialog.service';
 import { CommandPaletteService } from '../command-palette/command-palette.service';
+import { ThemeService } from '../../core/services/theme.service';
+import { Theme } from '../../core/interfaces/theme.interface';
 import { KeyboardShortcutsService } from '../keyboard-shortcuts-dialog/keyboard-shortcuts.service';
 import { filter } from 'rxjs/operators';
 
@@ -40,6 +42,11 @@ export class SidebarComponent implements OnInit {
   appVersion = '';
   updateStatus: UpdateStatus = { status: 'idle' };
   updateActionPending = false;
+  themes: Theme[] = [];
+  currentThemeId = '';
+  themeMenuOpen = false;
+  @ViewChild('themeMenu') private themeMenu?: ElementRef<HTMLElement>;
+  themeMenuPosition = { left: 0, bottom: 0 };
 
   sections: NavSection[] = [
     {
@@ -72,12 +79,17 @@ export class SidebarComponent implements OnInit {
     private commandPaletteService: CommandPaletteService,
     private characterEditDialog: CharacterEditDialogService,
     private updateService: UpdateService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private themeService: ThemeService
   ) {}
 
   ngOnInit(): void {
     this.currentRoute = this.router.url;
     void this.loadAppVersion();
+    this.themes = this.themeService.getAvailableThemes();
+    this.themeService.currentTheme$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(theme => this.currentThemeId = theme?.id ?? '');
     this.updateService.updateStatus$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(status => { this.updateStatus = status; });
@@ -127,8 +139,23 @@ export class SidebarComponent implements OnInit {
     void this.router.navigateByUrl(this.routeBeforeSettings);
   }
 
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    this.closeThemeMenu();
+  }
+
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    this.closeThemeMenu();
+  }
+
   @HostListener('document:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape' && this.themeMenuOpen) {
+      event.preventDefault();
+      this.closeThemeMenu();
+      return;
+    }
     if (event.key !== 'Escape' || !this.isInSettings || event.defaultPrevented ||
         document.querySelector('.modal-overlay, .command-palette-backdrop, .shortcuts-backdrop')) {
       return;
@@ -156,6 +183,41 @@ export class SidebarComponent implements OnInit {
   toggleCollapse(): void {
     this.isCollapsed = !this.isCollapsed;
     localStorage.setItem('sidebar-collapsed', String(this.isCollapsed));
+  }
+
+  toggleThemeMenu(event: MouseEvent): void {
+    event.stopPropagation();
+    if (this.themeMenuOpen) {
+      this.closeThemeMenu();
+      return;
+    }
+    // Position next to the button: above it when expanded, to its right when collapsed.
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    this.themeMenuPosition = this.isCollapsed
+      ? { left: rect.right + 8, bottom: window.innerHeight - rect.bottom }
+      : { left: rect.left, bottom: window.innerHeight - rect.top + 6 };
+    this.themeMenuOpen = true;
+    this.themeMenu?.nativeElement.showPopover();
+  }
+
+  private closeThemeMenu(): void {
+    if (!this.themeMenuOpen) {
+      return;
+    }
+    this.themeMenuOpen = false;
+    this.themeMenu?.nativeElement.hidePopover();
+  }
+
+  async selectTheme(themeId: string): Promise<void> {
+    this.closeThemeMenu();
+    if (themeId === this.currentThemeId) {
+      return;
+    }
+    try {
+      await this.themeService.setTheme(themeId);
+    } catch (error) {
+      this.notificationService.showError('Failed to switch theme');
+    }
   }
 
   openShortcuts(): void {
