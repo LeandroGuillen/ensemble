@@ -60,11 +60,8 @@ export const routes: Routes = [
   },
   {
     path: "pinboard",
-    loadComponent: () =>
-      import("./features/pinboard-view/pinboard-view.component").then(
-        (m) => m.PinboardViewComponent
-      ),
-    canActivate: [projectGuard],
+    redirectTo: "/casts",
+    pathMatch: "full",
   },
   {
     path: "settings",
@@ -151,6 +148,10 @@ export const routes: Routes = [
         (m) => m.CastDetailComponent
       ),
     canActivate: [projectGuard],
+    children: [
+      { path: '', pathMatch: 'full', children: [] },
+      { path: 'pinboard', children: [] },
+    ],
   },
   {
     path: "locations",

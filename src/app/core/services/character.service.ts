@@ -1120,6 +1120,7 @@ export class CharacterService {
       if (!isDraft) {
         try {
           await this.metadataService.removeCharacterFromBookPovs(character.id);
+          await this.castService.removeCharacterFromCasts(character.id);
         } catch (cleanupError) {
           this.logger.error('Failed to remove deleted character from book PoV lists', cleanupError);
         }

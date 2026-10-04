@@ -1,6 +1,6 @@
 @if (visible) {
   <app-modal-frame
-    title="Pin Character"
+    title="Add Member"
     dialogClass="add-pin-dialog"
     (closed)="onClose()"
   >
@@ -23,7 +23,7 @@
             <p>No characters available.</p>
           }
           @if (characters.length > 0 && characterFilter === '') {
-            <p>All characters are already on the pinboard.</p>
+            <p>All characters are already in this cast.</p>
           }
           @if (characters.length > 0 && characterFilter !== '') {
             <p>No characters match your filter.</p>

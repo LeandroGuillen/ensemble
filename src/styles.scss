@@ -394,7 +394,8 @@
    per-component padding without needing !important.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-.page-header {
+.page-header,
+.canvas-toolbar {
   /* Text buttons (.btn family) — drop vertical padding in favor of fixed height */
   .btn:not(.btn-sm):not(.btn-lg),
   .btn-action {

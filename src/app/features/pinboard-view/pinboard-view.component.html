@@ -1,4 +1,4 @@
-<app-page-header [title]="getCurrentPinboardName()">
+<div class="canvas-toolbar">
   <app-pinboard-toolbar
     [currentZoomLevel]="networkService.getCurrentZoomLevel()"
     [canZoomIn]="networkService.currentZoomIndex < networkService.zoomLevels.length - 1"
@@ -12,50 +12,23 @@
     (toggleSnapToGrid)="onToggleSnapToGrid()"
     (pinCharacter)="openAddPinDialog()"
   ></app-pinboard-toolbar>
-</app-page-header>
+</div>
+
 
 <div class="pinboard-page">
   <div class="pinboard-view">
-    <div
-      class="pinboard-sidebar-anim"
-      [@pinboardSidebar]="sidebarOpen ? 'open' : 'closed'"
-      >
-      <app-pinboard-sidebar
-        [attr.aria-hidden]="!sidebarOpen"
-        (createPinboard)="onCreatePinboard()"
-        (renamePinboard)="onRenamePinboard($event)"
-        (deletePinboard)="onDeletePinboard($event)"
-        (toggleCollapse)="toggleSidebar()"
-      ></app-pinboard-sidebar>
-    </div>
-
     <div class="pinboard-container">
-      @if (!sidebarOpen) {
-        <button
-          type="button"
-          class="sidebar-expand-btn"
-          (click)="toggleSidebar()"
-          [attr.aria-expanded]="sidebarOpen"
-          title="Show sidebar"
-          aria-label="Show sidebar"
-          >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polyline points="9 18 15 12 9 6"></polyline>
-          </svg>
-        </button>
-      }
-
       @if (isEmpty && networkInitialized) {
         <div class="pinboard-empty-state">
           <div class="empty-icon"><svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="assets/ui-icons.svg#pin" /></svg></div>
-          <h3>Empty Pinboard</h3>
-          <p>This pinboard doesn't have any characters yet. Pin characters to visualize their relationships.</p>
+          <h3>Empty Cast</h3>
+          <p>Add members to this cast to visualize their relationships. Every member appears on the pinboard.</p>
           <button class="btn btn-primary" (click)="openAddPinDialog()">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
               <circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="2" fill="none" />
               <path d="M8 5V11M5 8H11" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
             </svg>
-            Pin Your First Character
+            Add Your First Member
           </button>
         </div>
       }
@@ -101,7 +74,7 @@
           (click)="removePinFromPinboard(interactionService.hoveredNodeId!)"
           (mouseenter)="$event.stopPropagation()"
           (mouseleave)="$event.stopPropagation()"
-          title="Remove this character from the pinboard"
+          title="Remove this member from the cast"
           >
           <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M2 4h12M5.333 4V2.667a1.333 1.333 0 0 1 1.334-1.334h2.666a1.333 1.333 0 0 1 1.334 1.334V4m2 0v9.333a1.333 1.333 0 0 1-1.334 1.334H4.667a1.333 1.333 0 0 1-1.334-1.334V4h9.334z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -149,16 +122,3 @@
   (characterSelected)="onCharacterSelected($event)"
   (visibleChange)="!$event && closeDialogs()"
 ></app-pin-add-dialog>
-
-<app-pinboard-create-dialog
-  [(visible)]="showCreatePinboardDialog"
-  [pinboards]="pinboards"
-  (create)="onPinboardCreate($event)"
-></app-pinboard-create-dialog>
-
-<app-pinboard-rename-dialog
-  [(visible)]="showRenamePinboardDialog"
-  [currentName]="getPinboardToRenameName()"
-  [allPinboardNames]="getAllPinboardNames()"
-  (rename)="onPinboardRename($event)"
-></app-pinboard-rename-dialog>

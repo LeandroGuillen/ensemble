@@ -1,5 +1,24 @@
+:host(app-pinboard-view) {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.canvas-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  min-height: 64px;
+  padding: var(--spacing-sm) var(--spacing-xl);
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-primary);
+  flex-shrink: 0;
+}
+
 .pinboard-page {
-  height: calc(100vh - 64px); // Subtract page header height
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -383,10 +402,6 @@
 }
 
 @media (max-width: 768px) {
-  .pinboard-page {
-    height: calc(100vh - 56px); // Smaller header on mobile
-  }
-
   .pinboard-view {
     padding: var(--spacing-xs);
   }

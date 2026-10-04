@@ -82,6 +82,8 @@ export interface Tag {
 }
 
 export interface Cast {
+  /** Stable link to this cast's relationship canvas. */
+  pinboardId?: string;
   id: string;
   name: string;
   characterIds: string[];

@@ -2,6 +2,7 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
+  min-height: 0;
   background-color: var(--color-bg-primary);
 }
 
@@ -17,21 +18,39 @@
   position: relative;
 }
 
-// Sticky Form Actions at Top
-.form-actions-top {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background-color: var(--color-bg-primary);
-  padding: var(--spacing-md) 0;
-  margin-bottom: var(--spacing-md);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.form-actions-buttons {
+// The editor frame is shared by both views; canvas tools never move its controls.
+.cast-editor-actions {
   display: flex;
   gap: var(--spacing-sm);
-  justify-content: flex-end;
+
+  .btn-primary { min-width: 128px; }
+}
+
+.cast-editor-navigation {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  min-height: 36px;
+  gap: var(--spacing-md);
+}
+
+.cast-member-count {
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}
+
+.cast-canvas-content {
+  flex: 1;
+  min-height: 0;
+}
+
+.cast-detail-content[hidden] { display: none; }
+
+.editor-error {
+  padding: var(--spacing-sm) var(--spacing-xl);
+  background: var(--color-bg-secondary);
+  color: var(--color-error);
+  border-bottom: 1px solid var(--color-border);
 }
 
 // Error Banner
@@ -502,4 +521,8 @@
   .form-section {
     padding: var(--spacing-md);
   }
+}
+
+@media (max-width: 1200px) {
+  .cast-member-count { display: none; }
 }

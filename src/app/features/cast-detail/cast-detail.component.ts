@@ -1,6 +1,6 @@
-import { DestroyRef, inject, Component, OnInit, NgZone, ChangeDetectorRef } from '@angular/core';
+import { DestroyRef, inject, Component, OnInit, OnDestroy, ViewChild, NgZone, ChangeDetectorRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router } from "@angular/router";
+import { ActivatedRoute, Router, NavigationEnd } from "@angular/router";
 
 import {
   FormsModule,
@@ -25,6 +25,8 @@ import {
 import { pathJoin } from "../../core/utils/path.utils";
 import { contrastTextColor } from "../../core/utils/color-contrast.utils";
 import { aliasesMatchSearch } from "../../core/utils/character-alias.utils";
+import { CastEditorSessionService } from '../../core/services/cast-editor-session.service';
+import { PinboardViewComponent } from '../pinboard-view/pinboard-view.component';
 import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
 
 @Component({
@@ -32,12 +34,16 @@ import { PageHeaderComponent } from "../../shared/page-header/page-header.compon
     imports: [
     FormsModule,
     ReactiveFormsModule,
-    PageHeaderComponent
+    PageHeaderComponent,
+    PinboardViewComponent
 ],
     templateUrl: "./cast-detail.component.html",
     styleUrls: ["./cast-detail.component.scss"]
 })
-export class CastDetailComponent implements OnInit {
+export class CastDetailComponent implements OnInit, OnDestroy {
+  @ViewChild(PinboardViewComponent) pinboardView?: PinboardViewComponent;
+  view: 'members' | 'pinboard' = 'members';
+  readonly editorSession = inject(CastEditorSessionService);
   private readonly destroyRef = inject(DestroyRef);
 
   castId: string | null = null;
@@ -59,6 +65,7 @@ export class CastDetailComponent implements OnInit {
   castThumbnail: string | null = null;
   isUploadingThumbnail = false;
   pendingThumbnailPath: string | null = null;
+  pendingThumbnailRemoval = false;
 
   isLoading = false;
   isSaving = false;
@@ -88,6 +95,19 @@ export class CastDetailComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.updateViewFromRoute();
+    this.router.events.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(event => {
+      if (event instanceof NavigationEnd) this.updateViewFromRoute();
+    });
+    this.editorSession.changes$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(state => {
+      if (state && JSON.stringify(this.castForm.value.characterIds) !== JSON.stringify(state.cast.characterIds)) {
+        this.castForm.patchValue({ characterIds: [...state.cast.characterIds] }, { emitEvent: false });
+        this.castForm.markAsDirty();
+      }
+    });
+    this.castForm.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(value => {
+      if (this.editorSession.cast) this.editorSession.updateCast(value);
+    });
     // Ensure characters are loaded for the current project
     this.loadCharactersIfNeeded();
 
@@ -132,7 +152,10 @@ export class CastDetailComponent implements OnInit {
   }
 
   private async loadCast(): Promise<void> {
+    const project = this.projectService.getCurrentProject();
+    if (project) await this.castService.loadCasts(project.path);
     if (this.isNewCast) {
+      this.editorSession.end();
       // New cast - reset form
       this.castForm.reset({
         name: "",
@@ -146,9 +169,11 @@ export class CastDetailComponent implements OnInit {
       const cast = this.castService.getCastById(this.castId);
       if (cast) {
         this.cast = cast;
+        const board = this.projectService.getPinboards().find(board => board.id === cast.pinboardId);
+        if (board) this.editorSession.begin(cast, board);
         this.castForm.patchValue({
           name: cast.name,
-          characterIds: cast.characterIds || [],
+          characterIds: [...(cast.characterIds || [])],
           description: cast.description || "",
         });
 
@@ -327,7 +352,7 @@ export class CastDetailComponent implements OnInit {
     const characterId = event.dataTransfer?.getData("text/plain");
     if (!characterId) return;
 
-    const currentIds = this.castForm.get("characterIds")?.value || [];
+    const currentIds = [...(this.castForm.get("characterIds")?.value || [])];
     const isCurrentlySelected = currentIds.includes(characterId);
 
     if (zone === "selected" && !isCurrentlySelected) {
@@ -343,6 +368,7 @@ export class CastDetailComponent implements OnInit {
       }
     }
 
+    this.castForm.markAsDirty();
     this.draggedCharacterId = null;
   }
 
@@ -363,6 +389,20 @@ export class CastDetailComponent implements OnInit {
     return contrastTextColor(this.getCategoryColor(categoryId));
   }
 
+  private updateViewFromRoute(): void {
+    this.view = this.route.snapshot.firstChild?.routeConfig?.path === 'pinboard' ? 'pinboard' : 'members';
+  }
+
+  async switchView(view: 'members' | 'pinboard'): Promise<void> {
+    if (!this.castId || this.isSaving || this.view === view) return;
+    this.pinboardView?.networkService.saveViewState();
+    await this.router.navigate(view === 'pinboard' ? ['/cast', this.castId, 'pinboard'] : ['/cast', this.castId]);
+  }
+
+  ngOnDestroy(): void {
+    this.editorSession.end();
+  }
+
   async saveCast(): Promise<void> {
     if (this.castForm.invalid) {
       this.markFormTouched();
@@ -373,39 +413,37 @@ export class CastDetailComponent implements OnInit {
       this.isSaving = true;
       this.error = null;
 
+      this.pinboardView?.networkService.saveViewState();
       const formData = this.castForm.value;
+      const pendingBoard = this.editorSession.board ? structuredClone(this.editorSession.board) : null;
 
-      let savedCast: Cast;
+      let savedCast: Cast | undefined;
 
       if (this.isNewCast) {
         savedCast = await this.metadataService.addCast(formData);
-        this.notificationService.showSuccess("Cast created successfully");
-
-        // If there's a pending thumbnail, upload it now
-        if (this.pendingThumbnailPath && savedCast.id) {
-          try {
-            await this.castService.addThumbnail(
-              savedCast.id,
-              this.pendingThumbnailPath
-            );
-          } catch (thumbnailError) {
-            console.warn(
-              "Failed to upload thumbnail after creating cast:",
-              thumbnailError
-            );
-            // Don't fail the entire save operation for thumbnail issues
-          }
-        }
       } else if (this.castId) {
         savedCast = await this.metadataService.updateCast(
           this.castId,
           formData
         );
-        this.notificationService.showSuccess("Cast saved successfully");
+
       }
 
-      // Navigate back to cast list
-      this.router.navigate(["/casts"]);
+      if (savedCast) {
+        if (this.pendingThumbnailRemoval) await this.castService.removeThumbnail(savedCast.id);
+        if (this.pendingThumbnailPath) await this.castService.addThumbnail(savedCast.id, this.pendingThumbnailPath);
+        savedCast = this.castService.getCastById(savedCast.id) || savedCast;
+        this.pendingThumbnailPath = null;
+        this.pendingThumbnailRemoval = false;
+        if (pendingBoard && savedCast.pinboardId) {
+          await this.projectService.updatePinboardById(savedCast.pinboardId, pendingBoard);
+          if (pendingBoard.viewState) await this.projectService.savePinboardViewState(pendingBoard.viewState, savedCast.pinboardId);
+        }
+        this.cast = savedCast;
+        this.editorSession.end();
+        this.castForm.markAsPristine();
+        await this.router.navigate(['/casts']);
+      }
     } catch (error) {
       this.error = `Failed to save cast: ${error}`;
       this.logger.error("Failed to save cast:", error);
@@ -415,6 +453,7 @@ export class CastDetailComponent implements OnInit {
   }
 
   cancel(): void {
+    this.editorSession.end();
     this.router.navigate(["/casts"]);
   }
 
@@ -466,13 +505,7 @@ export class CastDetailComponent implements OnInit {
     try {
       const imagePath = await this.electronService.selectImage();
       if (imagePath) {
-        if (this.isNewCast) {
-          // For new casts, just preview the image
-          await this.previewThumbnail(imagePath);
-        } else {
-          // For existing casts, upload immediately
-          await this.uploadThumbnail(imagePath);
-        }
+        await this.previewThumbnail(imagePath);
       }
     } catch (error) {
       this.error = `Failed to select thumbnail: ${error}`;
@@ -491,39 +524,12 @@ export class CastDetailComponent implements OnInit {
         this.castThumbnail = dataUrl;
         // Store the source path for later upload when cast is saved
         this.pendingThumbnailPath = sourcePath;
+        this.pendingThumbnailRemoval = false;
+        this.castForm.markAsDirty();
       }
     } catch (error) {
       this.error = `Failed to preview thumbnail: ${error}`;
       this.logger.error("Failed to preview thumbnail:", error);
-    } finally {
-      this.isUploadingThumbnail = false;
-    }
-  }
-
-  private async uploadThumbnail(sourcePath: string): Promise<void> {
-    if (!this.cast || !this.cast.id) return;
-
-    try {
-      this.isUploadingThumbnail = true;
-      this.error = null;
-
-      // Upload thumbnail via CastService
-      const thumbnailFilename = await this.castService.addThumbnail(
-        this.cast.id,
-        sourcePath
-      );
-
-      if (thumbnailFilename) {
-        // Reload the cast to get updated thumbnail
-        const updatedCast = this.castService.getCastById(this.cast.id);
-        if (updatedCast) {
-          this.cast = updatedCast;
-          await this.loadCastThumbnail(updatedCast);
-        }
-      }
-    } catch (error) {
-      this.error = `Failed to upload thumbnail: ${error}`;
-      this.logger.error("Failed to upload thumbnail:", error);
     } finally {
       this.isUploadingThumbnail = false;
     }
@@ -536,29 +542,9 @@ export class CastDetailComponent implements OnInit {
       return;
     }
 
-    try {
-      this.error = null;
-
-      if (this.isNewCast) {
-        // For new casts, just clear the preview and pending path
-        this.castThumbnail = null;
-        this.pendingThumbnailPath = null;
-      } else if (this.cast && this.cast.id) {
-        // For existing casts, remove from the cast service
-        await this.castService.removeThumbnail(this.cast.id);
-
-        // Reload the cast to get updated thumbnail (might find another image)
-        const updatedCast = this.castService.getCastById(this.cast.id);
-        if (updatedCast) {
-          this.cast = updatedCast;
-          await this.loadCastThumbnail(updatedCast);
-        } else {
-          this.castThumbnail = null;
-        }
-      }
-    } catch (error) {
-      this.error = `Failed to remove thumbnail: ${error}`;
-      this.logger.error("Failed to remove thumbnail:", error);
-    }
+    this.castThumbnail = null;
+    this.pendingThumbnailPath = null;
+    this.pendingThumbnailRemoval = !this.isNewCast;
+    this.castForm.markAsDirty();
   }
 }

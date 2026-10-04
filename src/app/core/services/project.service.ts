@@ -448,15 +448,7 @@ export class ProjectService {
         characterStyles: DEFAULT_CHARACTER_STYLES.map((s) => ({ ...s })),
         defaultCharacterStyle: DEFAULT_CHARACTER_STYLE_ID,
       },
-      pinboards: [
-        {
-          id: generateId(),
-          name: 'Default',
-          nodes: [],
-          edges: [],
-          createdAt: new Date().toISOString(),
-        },
-      ],
+      pinboards: [],
     };
   }
 
@@ -866,17 +858,9 @@ export class ProjectService {
       return;
     }
 
-    // No pinboards, create empty default pinboard
-    metadata.pinboards = [
-      {
-        id: generateId(),
-        name: 'Default',
-        nodes: [],
-        edges: [],
-        createdAt: new Date().toISOString(),
-      },
-    ];
-    this.ensureLastSession(metadata).lastPinboardId = metadata.pinboards[0].id;
+    // Canvases are created with casts. An empty project needs no default group.
+    metadata.pinboards = [];
+    if (metadata.lastSession) delete metadata.lastSession.lastPinboardId;
   }
 
   /**

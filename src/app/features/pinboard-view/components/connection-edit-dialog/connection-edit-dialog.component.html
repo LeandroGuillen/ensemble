@@ -16,7 +16,7 @@
                 }
               }
             </div>
-            @if (form.arrowTo) {
+            @if (form.arrowFrom) {
               <div class="preview-arrow-indicator" [style.border-color]="form.color" [style.color]="form.color">
                 <svg width="16" height="16" viewBox="0 0 16 16">
                   <path d="M14 8 L4 8 M4 8 L8 4 M4 8 L8 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
@@ -32,7 +32,7 @@
             }
           </div>
           <div class="preview-node-container">
-            @if (form.arrowFrom) {
+            @if (form.arrowTo) {
               <div class="preview-arrow-indicator" [style.border-color]="form.color" [style.color]="form.color">
                 <svg width="16" height="16" viewBox="0 0 16 16">
                   <path d="M2 8 L12 8 M12 8 L8 4 M12 8 L8 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
@@ -82,7 +82,7 @@
       <div class="form-group checkbox-group">
         <label>
           <input type="checkbox" [(ngModel)]="form.arrowFrom" name="arrowFrom" />
-          Arrow from source
+          Arrow to source
         </label>
       </div>
       <div class="form-group checkbox-group">

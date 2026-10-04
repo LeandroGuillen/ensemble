@@ -24,3 +24,10 @@ import './app/core/services/metadata.service.spec';
 import './app/core/services/project.service.spec';
 import './app/core/services/file-watcher.service.spec';
 import './app/features/character-detail/character-detail.external-edit.spec';
+
+import './app/core/services/cast.service.spec';
+import './app/core/utils/cast-pinboard.utils.spec';
+
+import './app/core/services/cast-editor-session.service.spec';
+
+import './app/features/pinboard-view/components/connection-edit-dialog/connection-edit-dialog.component.spec';

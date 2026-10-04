@@ -7,6 +7,8 @@ import { generateId } from '../utils/id.utils';
 import { DEFAULT_CONNECTION_COLOR, DEFAULT_CONNECTION_LABEL_COLOR } from '../constants/project.constants';
 import { resolveThumbnailForStyle } from '../utils/thumbnail.utils';
 import { requireProject } from '../utils/project.utils';
+import { CastEditorSessionService } from './cast-editor-session.service';
+import { CastService } from './cast.service';
 import { ProjectService } from './project.service';
 import { CharacterService } from './character.service';
 import { LoggingService } from './logging.service';
@@ -25,8 +27,20 @@ export class PinboardService {
   constructor(
     private projectService: ProjectService,
     private characterService: CharacterService,
+    private castService: CastService,
+    private editorSession: CastEditorSessionService,
     private logger: LoggingService
   ) {
+    this.editorSession.changes$.pipe(takeUntilDestroyed()).subscribe(state => {
+      if (state) {
+        this.pinboardLoaded = true;
+        if (this.currentPinboardIdSubject.value !== state.board.id) this.currentPinboardIdSubject.next(state.board.id);
+        const data = { nodes: state.board.nodes, edges: state.board.edges };
+        if (JSON.stringify(data) !== JSON.stringify(this.pinboardDataSubject.value)) this.pinboardDataSubject.next(data);
+      } else if (this.projectService.getCurrentProject()) {
+        this.loadPinboardFromProject(this.projectService.getCurrentProject());
+      }
+    });
     // Subscribe to project changes to load pinboard data
     this.projectService.currentProject$.pipe(takeUntilDestroyed()).subscribe(project => {
       if (project && project.path !== this.currentProjectPath) {
@@ -36,11 +50,13 @@ export class PinboardService {
         this.currentProjectPath = null;
         this.pinboardDataSubject.next({ nodes: [], edges: [] });
         this.currentPinboardIdSubject.next(null);
-      } else if (project) {
+      } else if (project && !this.editorSession.board) {
         // Project path unchanged, but check if pinboard changed
         const currentPinboardId = project.metadata.lastSession?.lastPinboardId ?? null;
         const previousPinboardId = this.currentPinboardIdSubject.value;
-        if (currentPinboardId !== previousPinboardId) {
+        const board = this.projectService.getCurrentPinboard();
+        if (currentPinboardId !== previousPinboardId ||
+            JSON.stringify({ nodes: board?.nodes || [], edges: board?.edges || [] }) !== JSON.stringify(this.pinboardDataSubject.value)) {
           this.loadPinboardFromProject(project);
         }
       }
@@ -51,8 +67,8 @@ export class PinboardService {
    * Loads pinboard data from the current active pinboard
    */
   private loadPinboardFromProject(project: any): void {
-    const currentPinboard = this.projectService.getCurrentPinboard();
-    const currentPinboardId = project?.metadata?.lastSession?.lastPinboardId || null;
+    const currentPinboard = this.editorSession.board || this.projectService.getCurrentPinboard();
+    const currentPinboardId = currentPinboard?.id || null;
 
     // Ensure the data structure is valid
     const validPinboard = {
@@ -74,6 +90,11 @@ export class PinboardService {
     if (project) {
       this.loadPinboardFromProject(project);
     }
+  }
+
+  private async saveData(data: PinboardData): Promise<void> {
+    if (this.editorSession.board) this.editorSession.updateData(data);
+    else await this.projectService.updatePinboard(data);
   }
 
   getPinboardData(): Observable<PinboardData> {
@@ -103,7 +124,7 @@ export class PinboardService {
       edges: [...currentData.edges, newConnection]
     };
 
-    await this.projectService.updatePinboard(updatedData);
+    await this.saveData(updatedData);
     this.pinboardDataSubject.next(updatedData);
 
     return newConnection;
@@ -129,7 +150,7 @@ export class PinboardService {
       edges: updatedEdges
     };
 
-    await this.projectService.updatePinboard(updatedData);
+    await this.saveData(updatedData);
     this.pinboardDataSubject.next(updatedData);
 
     return updatedEdge;
@@ -151,7 +172,7 @@ export class PinboardService {
       edges: filteredEdges
     };
 
-    await this.projectService.updatePinboard(updatedData);
+    await this.saveData(updatedData);
     this.pinboardDataSubject.next(updatedData);
 
     return true;
@@ -178,7 +199,7 @@ export class PinboardService {
       nodes: updatedNodes
     };
 
-    await this.projectService.updatePinboard(updatedData);
+    await this.saveData(updatedData);
     this.pinboardDataSubject.next(updatedData);
   }
 
@@ -194,56 +215,23 @@ export class PinboardService {
     }
 
     const currentData = this.pinboardDataSubject.value;
-    const existingPins = new Map(currentData.nodes.map(node => [node.id, node]));
-    const characterIds = new Set(characters.map(char => char.id));
     
     let hasChanges = false;
     
     // Start with existing pins
-    const updatedPins: PinboardPin[] = [...currentData.nodes];
+    const updatedPins: PinboardPin[] = currentData.nodes.map(node => ({ ...node }));
     
-    // Add pins for new characters
-    for (const character of characters) {
-      if (!existingPins.has(character.id)) {
-        const newPosition = this.generateDefaultPosition(character.id);
-        updatedPins.push({
-          id: character.id,
-          name: character.name,
-          position: newPosition,
-          category: character.category
-        });
+    // Refresh character details only; cast membership owns the node set.
+    for (const pin of updatedPins) {
+      const character = characters.find(char => char.id === pin.id);
+      if (character && (pin.name !== character.name || pin.category !== character.category)) {
+        pin.name = character.name;
+        pin.category = character.category;
         hasChanges = true;
-      } else {
-        // Update existing pin properties (but preserve position)
-        const existingPin = existingPins.get(character.id)!;
-        const pinIndex = updatedPins.findIndex(n => n.id === character.id);
-        if (pinIndex !== -1) {
-          const updatedPin = {
-            ...existingPin,
-            name: character.name,
-            category: character.category
-            // Keep existing position
-          };
-          
-          // Check if anything actually changed
-          if (JSON.stringify(updatedPin) !== JSON.stringify(existingPin)) {
-            updatedPins[pinIndex] = updatedPin;
-            hasChanges = true;
-          }
-        }
       }
     }
-    
-    // Remove pins for deleted characters
-    const filteredPins = updatedPins.filter(node => characterIds.has(node.id));
-    if (filteredPins.length !== updatedPins.length) {
-      hasChanges = true;
-    }
-
-    // Remove connections for deleted characters (referential integrity)
-    const validEdges = currentData.edges.filter(edge => 
-      characterIds.has(edge.source) && characterIds.has(edge.target)
-    );
+    const filteredPins = updatedPins;
+    const validEdges = currentData.edges;
 
     if (hasChanges || validEdges.length !== currentData.edges.length) {
       const updatedData = {
@@ -251,7 +239,7 @@ export class PinboardService {
         edges: validEdges
       };
 
-      await this.projectService.updatePinboard(updatedData);
+      await this.saveData(updatedData);
       this.pinboardDataSubject.next(updatedData);
     }
   }
@@ -277,7 +265,7 @@ export class PinboardService {
       edges: updatedEdges
     };
 
-    await this.projectService.updatePinboard(updatedData);
+    await this.saveData(updatedData);
     this.pinboardDataSubject.next(updatedData);
   }
 
@@ -293,7 +281,7 @@ export class PinboardService {
       
       const baseNode: any = {
         id: node.id,
-        label: node.name,
+        label: character?.name || node.name,
         x: node.position.x,
         y: node.position.y,
         font: {
@@ -453,7 +441,7 @@ export class PinboardService {
       nodes: updatedNodes
     };
 
-    await this.projectService.updatePinboard(updatedData);
+    await this.saveData(updatedData);
     this.pinboardDataSubject.next(updatedData);
   }
 
@@ -545,64 +533,37 @@ export class PinboardService {
    * Adds a single pin to the pinboard at an unoccupied position
    */
   async addPin(character: any, gridSize: number = 100): Promise<void> {
-    requireProject(this.projectService.getCurrentProject());
-
-    const currentData = this.pinboardDataSubject.value;
-
-    // Ensure nodes array exists
-    if (!currentData || !currentData.nodes) {
-      this.logger.error('Invalid pinboard data structure', currentData);
-      throw new Error('Pinboard data is not properly initialized');
-    }
-
-    // Check if pin already exists
-    if (currentData.nodes.some(node => node.id === character.id)) {
-      this.logger.warn('Pin already exists for character:', character.name);
+    const draft = this.editorSession.cast;
+    if (draft) {
+      if (!draft.characterIds.includes(character.id)) {
+        this.editorSession.updateCast({ characterIds: [...draft.characterIds, character.id] });
+        await this.ensurePinsForCharacters([character]);
+      }
       return;
     }
-
-    // Find an unoccupied position
-    const position = this.findUnoccupiedPosition(gridSize);
-
-    const newPin: PinboardPin = {
-      id: character.id,
-      name: character.name,
-      position,
-      category: character.category
-    };
-
-    const updatedData = {
-      nodes: [...(currentData.nodes || []), newPin],
-      edges: [...(currentData.edges || [])]
-    };
-
-    await this.projectService.updatePinboard(updatedData);
-    this.pinboardDataSubject.next(updatedData);
+    const cast = this.castService.getCastsSnapshot().find(cast =>
+      cast.pinboardId === this.projectService.getCurrentPinboard()?.id);
+    if (!cast) throw new Error('No active cast');
+    if (cast.characterIds.includes(character.id)) return;
+    await this.castService.updateCast(cast.id, { characterIds: [...cast.characterIds, character.id] });
+    await this.ensurePinsForCharacters([character]);
   }
 
   /**
    * Removes a pin from the current pinboard (and its connections)
    */
   async removePin(characterId: string): Promise<void> {
-    requireProject(this.projectService.getCurrentProject());
-
-    const currentData = this.pinboardDataSubject.value;
-
-    // Remove the pin
-    const updatedNodes = currentData.nodes.filter(node => node.id !== characterId);
-
-    // Remove all edges involving this character
-    const updatedEdges = currentData.edges.filter(edge =>
-      edge.source !== characterId && edge.target !== characterId
-    );
-
-    const updatedData = {
-      nodes: updatedNodes,
-      edges: updatedEdges
-    };
-
-    await this.projectService.updatePinboard(updatedData);
-    this.pinboardDataSubject.next(updatedData);
+    const draft = this.editorSession.cast;
+    if (draft) {
+      this.editorSession.updateCast({ characterIds: draft.characterIds.filter(id => id !== characterId) });
+      return;
+    }
+    const cast = this.castService.getCastsSnapshot().find(cast =>
+      cast.pinboardId === this.projectService.getCurrentPinboard()?.id);
+    if (!cast) throw new Error('No active cast');
+    await this.castService.updateCast(cast.id, {
+      characterIds: cast.characterIds.filter(id => id !== characterId),
+    });
   }
 
   /**

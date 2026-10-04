@@ -12,7 +12,6 @@ import {
   ViewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { animate, state, style, transition, trigger } from '@angular/animations';
 import { take } from 'rxjs/operators';
 import { Character, Pinboard, PinboardConnection } from '../../core/interfaces';
 import { LegacyPinboardConnectionFields } from '../../core/interfaces/legacy.interface';
@@ -26,10 +25,9 @@ import {
   ModalService,
   CharacterEditDialogService,
 } from '../../core/services';
-import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
-import { PinboardSidebarComponent } from '../../shared/pinboard-sidebar/pinboard-sidebar.component';
-import { PinboardCreateDialogComponent } from '../../shared/pinboard-create-dialog/pinboard-create-dialog.component';
-import { PinboardRenameDialogComponent } from '../../shared/pinboard-rename-dialog/pinboard-rename-dialog.component';
+import { ActivatedRoute, Router } from '@angular/router';
+import { CastEditorSessionService } from '../../core/services/cast-editor-session.service';
+import { CastService } from '../../core/services/cast.service';
 import { PinboardNetworkService } from './pinboard-network.service';
 import { PinboardCanvasInteractionService } from './pinboard-canvas-interaction.service';
 import { ConnectionFormData, createEmptyConnectionForm } from './pinboard-connection-form';
@@ -40,10 +38,6 @@ import { ConnectionEditDialogComponent } from './components/connection-edit-dial
 @Component({
   selector: 'app-pinboard-view',
   imports: [
-    PageHeaderComponent,
-    PinboardSidebarComponent,
-    PinboardCreateDialogComponent,
-    PinboardRenameDialogComponent,
     PinboardToolbarComponent,
     PinAddDialogComponent,
     ConnectionEditDialogComponent,
@@ -51,15 +45,7 @@ import { ConnectionEditDialogComponent } from './components/connection-edit-dial
   providers: [PinboardNetworkService, PinboardCanvasInteractionService],
   templateUrl: './pinboard-view.component.html',
   styleUrls: ['./pinboard-view.component.scss'],
-  animations: [
-    trigger('pinboardSidebar', [
-      state('open', style({ width: '240px' })),
-      state('closed', style({ width: '0', overflow: 'hidden' })),
-      transition('open <=> closed', [
-        animate('240ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'),
-      ]),
-    ]),
-  ],
+
 })
 export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('pinboardContainer', { static: true }) pinboardContainer!: ElementRef;
@@ -69,7 +55,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private readonly destroyRef = inject(DestroyRef);
 
-  sidebarOpen = true;
+  castId: string | null = null;
   showConnectionDialog = false;
   showEditDialog = false;
   showAddPinDialog = false;
@@ -79,13 +65,13 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
   connectionForm: ConnectionFormData = createEmptyConnectionForm();
   editingConnection: PinboardConnection | null = null;
 
-  showCreatePinboardDialog = false;
-  showRenamePinboardDialog = false;
-  pinboardToRename: string | null = null;
   currentPinboard: Pinboard | null = null;
-  pinboards: Pinboard[] = [];
 
   constructor(
+    private route: ActivatedRoute,
+    private router: Router,
+    private castService: CastService,
+    private editorSession: CastEditorSessionService,
     private pinboardService: PinboardService,
     private characterService: CharacterService,
     private projectService: ProjectService,
@@ -122,6 +108,29 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
     this.subscribeToData();
     this.subscribeToPinboardChanges();
     this.loadPinboards();
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
+      void this.openCast(params.get('id') || this.route.parent?.snapshot.paramMap.get('id') || null);
+    });
+  }
+
+  private async openCast(id: string | null): Promise<void> {
+    try {
+      const project = this.projectService.getCurrentProject();
+      if (!project || !id) return;
+      await this.castService.loadCasts(project.path);
+      const cast = this.castService.getCastById(id);
+      if (!cast?.pinboardId) {
+        this.notificationService.showError('Cast not found');
+        await this.router.navigate(['/casts']);
+        return;
+      }
+      this.castId = id;
+      await this.pinboardService.switchPinboard(cast.pinboardId);
+      await this.pinboardService.ensurePinsForCharacters(this.characters);
+      await this.refreshPinboardData();
+    } catch (error) {
+      this.notificationService.showError(`Failed to open cast pinboard: ${error}`);
+    }
   }
 
   ngAfterViewInit(): void {
@@ -133,7 +142,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnDestroy(): void {
-    this.networkService.saveViewState();
+    if (this.editorSession.board) this.networkService.saveViewState();
     this.interactionService.detach();
     this.networkService.destroy();
   }
@@ -168,8 +177,6 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
       !this.showAddPinDialog &&
       !this.showConnectionDialog &&
       !this.showEditDialog &&
-      !this.showCreatePinboardDialog &&
-      !this.showRenamePinboardDialog &&
       !this.interactionService.connectionMode
     ) {
       keyboardEvent.preventDefault();
@@ -294,7 +301,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
     const characterName = character?.name || 'Character';
 
     const confirmed = await this.modalService.confirm(
-      `Are you sure you want to remove "${characterName}" from the pinboard?`,
+      `Are you sure you want to remove "${characterName}" from this cast? This also removes their connections in this cast.`,
       'Remove Character',
       {
         confirmText: 'Remove',
@@ -343,88 +350,8 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
     ];
   }
 
-  toggleSidebar(): void {
-    this.sidebarOpen = !this.sidebarOpen;
-  }
-
-  onCreatePinboard(): void {
-    this.showCreatePinboardDialog = true;
-  }
-
-  async onPinboardCreate(event: { name: string; duplicateFromId?: string }): Promise<void> {
-    try {
-      await this.projectService.createPinboard(event.name, event.duplicateFromId);
-      this.showCreatePinboardDialog = false;
-
-      const pinboards = this.projectService.getPinboards();
-      const newPinboard = pinboards.find(p => p.name === event.name);
-      if (newPinboard) {
-        await this.pinboardService.switchPinboard(newPinboard.id);
-      }
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to create pinboard';
-      this.notificationService.showError(message);
-    }
-  }
-
-  onRenamePinboard(id: string): void {
-    this.pinboardToRename = id;
-    this.showRenamePinboardDialog = true;
-  }
-
-  async onPinboardRename(name: string): Promise<void> {
-    if (!this.pinboardToRename) return;
-
-    try {
-      await this.projectService.updatePinboardName(this.pinboardToRename, name);
-      this.showRenamePinboardDialog = false;
-      this.pinboardToRename = null;
-      this.loadPinboards();
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to rename pinboard';
-      this.notificationService.showError(message);
-    }
-  }
-
-  async onDeletePinboard(id: string): Promise<void> {
-    const confirmed = await this.modalService.confirm(
-      'Are you sure you want to delete this pinboard? This action cannot be undone.',
-      'Delete Pinboard',
-      {
-        confirmText: 'Delete',
-        cancelText: 'Cancel',
-        danger: true,
-      }
-    );
-
-    if (!confirmed) return;
-
-    try {
-      await this.projectService.deletePinboard(id);
-      this.loadPinboards();
-      this.currentPinboard = this.projectService.getCurrentPinboard();
-      if (this.currentPinboard) {
-        await this.refreshPinboardData();
-        this.networkService.restoreViewState();
-      }
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to delete pinboard';
-      this.notificationService.showError(message);
-    }
-  }
-
   getCurrentPinboardName(): string {
     return this.currentPinboard?.name || 'Pinboard';
-  }
-
-  getAllPinboardNames(): string[] {
-    return this.pinboards.map(p => p.name);
-  }
-
-  getPinboardToRenameName(): string {
-    if (!this.pinboardToRename) return '';
-    const pinboard = this.pinboards.find(p => p.id === this.pinboardToRename);
-    return pinboard?.name || '';
   }
 
   private async loadCharactersIfNeeded(): Promise<void> {
@@ -469,6 +396,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
       .subscribe(async (characters) => {
         const hadNoCharacters = this.characters.length === 0;
         this.characters = characters;
+        await this.pinboardService.ensurePinsForCharacters(characters);
         await this.loadThumbnailDataUrls(characters);
 
         if (hadNoCharacters && characters.length > 0 && this.networkService.getNetwork()) {
@@ -512,11 +440,11 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private loadPinboards(): void {
-    this.pinboards = this.projectService.getPinboards();
     this.currentPinboard = this.projectService.getCurrentPinboard();
   }
 
   private async refreshPinboardData(): Promise<void> {
+    if (!this.networkService.networkInitialized) return;
     const snapshot = this.pinboardService.getCurrentPinboardDataSnapshot();
     await this.networkService.updateFromPinboardData(snapshot, this.characters);
     this.cdr.detectChanges();

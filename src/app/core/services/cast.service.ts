@@ -1,3 +1,4 @@
+import { reconcileCastPinboard } from '../utils/cast-pinboard.utils';
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { Cast } from '../interfaces/project.interface';
@@ -15,6 +16,7 @@ export interface CastIndexEntry {
   id: string;
   name: string;
   characterIds?: string[];
+  pinboardId?: string;
 }
 
 interface CastsFile {
@@ -77,6 +79,7 @@ export class CastService {
           .map((entry) => ({
             id: entry.id,
             name: entry.name,
+            pinboardId: entry.pinboardId,
             characterIds: Array.isArray(entry.characterIds) ? entry.characterIds : [],
           })),
       };
@@ -98,7 +101,7 @@ export class CastService {
     }
   }
 
-  private async upsertCastsFileEntry(cast: { id: string; name: string; characterIds: string[] }): Promise<void> {
+  private async upsertCastsFileEntry(cast: { id: string; name: string; characterIds: string[]; pinboardId?: string }): Promise<void> {
     const current = await this.readCastsFile();
     const entries = current?.casts || [];
     const index = entries.findIndex((entry) => entry.id === cast.id);
@@ -106,6 +109,7 @@ export class CastService {
       id: cast.id,
       name: cast.name,
       characterIds: cast.characterIds,
+      pinboardId: cast.pinboardId,
     };
     if (index !== -1) {
       entries[index] = entry;
@@ -141,7 +145,16 @@ export class CastService {
    * Loads all casts from the casts directory
    * Structure: casts/<cast-slug>/
    */
+  private loading: Promise<void> | null = null;
+
   async loadCasts(projectPath: string): Promise<void> {
+    if (this.loading) await this.loading;
+    if (this.currentProjectPath === projectPath && this.hasLoadedForCurrentProject) return;
+    this.loading = this.loadCastsFromDisk(projectPath);
+    try { await this.loading; } finally { this.loading = null; }
+  }
+
+  private async loadCastsFromDisk(projectPath: string): Promise<void> {
     // If this is the same project and we've already loaded, don't reload
     if (this.currentProjectPath === projectPath && this.hasLoadedForCurrentProject) {
       return;
@@ -165,8 +178,6 @@ export class CastService {
         if (!createResult.success) {
           throw new Error(`Failed to create casts directory: ${createResult.error}`);
         }
-        this.hasLoadedForCurrentProject = true;
-        return;
       }
 
       // Read all cast folders
@@ -201,6 +212,7 @@ export class CastService {
       // Sort casts by name and update the list
       mergedCasts.sort((a, b) => a.name.localeCompare(b.name));
       this.castsSubject.next(mergedCasts);
+      await this.migratePinboards();
       this.hasLoadedForCurrentProject = true;
     } catch (error) {
       this.logger.error('Failed to load casts:', error);
@@ -255,6 +267,7 @@ export class CastService {
           mergedCasts.push({
             ...folderCast,
             name: entry.name,
+            pinboardId: entry.pinboardId,
             characterIds: entry.characterIds || [],
           });
         } else {
@@ -306,6 +319,7 @@ export class CastService {
         mergedCasts.push({
           id: entry.id,
           name: entry.name,
+          pinboardId: entry.pinboardId,
           characterIds: entry.characterIds || [],
         });
       }
@@ -316,6 +330,38 @@ export class CastService {
       // Return folder casts as fallback
       return folderCasts;
     }
+  }
+
+  /** Import each legacy canvas independently; the index link makes retries idempotent. */
+  private async migratePinboards(): Promise<void> {
+    for (const board of [...this.projectService.getPinboards()]) {
+      if (this.castsSubject.value.some(cast => cast.pinboardId === board.id)) continue;
+      let name = board.name;
+      let suffix = 2;
+      while (this.castsSubject.value.some(cast => asciiSlugify(cast.name) === asciiSlugify(name))) {
+        name = `${board.name} (${suffix++})`;
+      }
+      await this.createCast({ name, characterIds: board.nodes.map(node => node.id), pinboardId: board.id });
+    }
+    for (const cast of this.castsSubject.value) {
+      if (!cast.pinboardId) {
+        cast.pinboardId = cast.id;
+        await this.upsertCastsFileEntry(cast);
+      }
+      await this.syncCastPinboard(cast);
+    }
+  }
+
+  /** Membership controls canvas nodes. Positions and surviving connections stay intact. */
+  private async syncCastPinboard(cast: Cast): Promise<void> {
+    const boards = this.projectService.getPinboards();
+    const id = cast.pinboardId || cast.id;
+    const existing = boards.find(board => board.id === id);
+    const board = reconcileCastPinboard(cast, existing);
+    if (JSON.stringify(existing) === JSON.stringify(board)) return;
+    await this.projectService.updateMetadata({
+      pinboards: existing ? boards.map(item => item.id === id ? board : item) : [...boards, board],
+    });
   }
 
   /**
@@ -332,7 +378,10 @@ export class CastService {
 
       // Create folder structure: charactersFolder/castsFolder/<slug>/
       const castsPath = this.projectService.getCastsFolderPath();
-      const castFolderPath = pathJoin(castsPath, slug);
+      let castFolderPath = pathJoin(castsPath, slug);
+      if (await this.electronService.fileExists(castFolderPath)) {
+        castFolderPath = pathJoin(castsPath, `${slug}-${id}`);
+      }
 
       // Ensure casts folder exists
       await this.electronService.createDirectory(castsPath);
@@ -366,6 +415,7 @@ export class CastService {
         id,
         name: castData.name,
         characterIds: castData.characterIds || [],
+        pinboardId: castData.pinboardId || id,
         description: castData.description,
         thumbnail: thumbnail || undefined,
         folderPath: castFolderPath,
@@ -376,11 +426,13 @@ export class CastService {
         id,
         name: cast.name,
         characterIds: cast.characterIds,
+        pinboardId: cast.pinboardId,
       });
 
       // Update in-memory list
       const currentCasts = this.castsSubject.value;
       const updatedCasts = [...currentCasts, cast].sort((a, b) => a.name.localeCompare(b.name));
+      await this.syncCastPinboard(cast);
       this.castsSubject.next(updatedCasts);
 
       return cast;
@@ -407,16 +459,25 @@ export class CastService {
       const existingCast = casts[index];
       let newFolderPath = existingCast.folderPath!;
 
+      if (!newFolderPath) {
+        newFolderPath = pathJoin(this.projectService.getCastsFolderPath(), `${asciiSlugify(existingCast.name) || 'cast'}-${id}`);
+        assertIpcSuccess(await this.electronService.createDirectory(newFolderPath), 'Create cast folder');
+        assertIpcSuccess(await this.electronService.writeFileAtomic(pathJoin(newFolderPath, '.castid'), id), 'Save cast id');
+      }
+
       // Check if we need to move the folder (name changed)
       const nameChanged = updates.name && updates.name !== existingCast.name;
 
       if (nameChanged && updates.name) {
         const newSlug = asciiSlugify(updates.name) || 'cast';
         const castsPath = this.projectService.getCastsFolderPath();
-        const newCastFolderPath = pathJoin(castsPath, newSlug);
+        let newCastFolderPath = pathJoin(castsPath, newSlug);
+        if (newCastFolderPath !== newFolderPath && await this.electronService.fileExists(newCastFolderPath)) {
+          newCastFolderPath = pathJoin(castsPath, `${newSlug}-${id}`);
+        }
 
         // Move the entire cast folder
-        const moveResult = await this.electronService.moveDirectory(existingCast.folderPath!, newCastFolderPath);
+        const moveResult = await this.electronService.moveDirectory(newFolderPath, newCastFolderPath);
         if (!moveResult.success) {
           throw new Error(`Failed to move cast folder: ${moveResult.error}`);
         }
@@ -457,12 +518,14 @@ export class CastService {
         id: updatedCast.id,
         name: updatedCast.name,
         characterIds: updatedCast.characterIds || [],
+        pinboardId: updatedCast.pinboardId,
       });
 
       // Update in-memory list
       const updatedCasts = [...casts];
       updatedCasts[index] = updatedCast;
       const sortedCasts = updatedCasts.sort((a, b) => a.name.localeCompare(b.name));
+      await this.syncCastPinboard(updatedCast);
       this.castsSubject.next(sortedCasts);
 
       return updatedCast;
@@ -502,6 +565,9 @@ export class CastService {
 
       // Update in-memory list (remove cast regardless of whether it had a folder)
       const filteredCasts = casts.filter((c) => c.id !== id);
+      if (cast.pinboardId && this.projectService.getPinboards().some(board => board.id === cast.pinboardId)) {
+        await this.projectService.deletePinboard(cast.pinboardId);
+      }
       this.castsSubject.next(filteredCasts);
 
       return true;
@@ -732,6 +798,17 @@ export class CastService {
       await this.forceReloadCasts();
     } catch (error) {
       this.logger.error('Failed to reload casts after character id remap', error);
+    }
+  }
+
+  async removeCharacterFromCasts(characterId: string): Promise<void> {
+    const project = this.projectService.getCurrentProject();
+    if (!project) return;
+    await this.loadCasts(project.path);
+    for (const cast of this.castsSubject.value) {
+      if (cast.characterIds.includes(characterId)) {
+        await this.updateCast(cast.id, { characterIds: cast.characterIds.filter(id => id !== characterId) });
+      }
     }
   }
 

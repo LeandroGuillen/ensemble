@@ -1,3 +1,4 @@
+import { CastEditorSessionService } from '../../core/services/cast-editor-session.service';
 import { Injectable } from '@angular/core';
 import { DataSet, Edge, Network, Node, Options } from 'vis-network/standalone';
 import { Character, PinboardData } from '../../core/interfaces';
@@ -31,7 +32,8 @@ export class PinboardNetworkService {
 
   constructor(
     private pinboardService: PinboardService,
-    private projectService: ProjectService
+    private projectService: ProjectService,
+    private editorSession: CastEditorSessionService
   ) {}
 
   getNetwork(): Network | null {
@@ -249,6 +251,10 @@ export class PinboardNetworkService {
       snapToGrid: this.snapToGrid,
     };
 
+    if (this.editorSession.board) {
+      this.editorSession.updateViewState(state);
+      return;
+    }
     this.projectService.savePinboardViewState(state).catch((error) => {
       console.warn('Failed to save pinboard view state:', error);
     });
@@ -265,6 +271,10 @@ export class PinboardNetworkService {
       snapToGrid: this.snapToGrid,
     };
 
+    if (this.editorSession.board?.id === pinboardId) {
+      this.editorSession.updateViewState(state);
+      return;
+    }
     try {
       await this.projectService.savePinboardViewState(state, pinboardId);
     } catch (error) {
@@ -275,7 +285,7 @@ export class PinboardNetworkService {
   restoreViewState(): void {
     if (!this.network) return;
 
-    const state = this.projectService.getPinboardViewState();
+    const state = this.editorSession.board?.viewState || this.projectService.getPinboardViewState();
     if (!state) return;
 
     if (state.zoomIndex >= 0 && state.zoomIndex < this.zoomLevels.length) {

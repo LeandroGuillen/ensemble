@@ -1,45 +1,27 @@
 <div class="cast-detail">
-  <app-page-header
-    [title]="isNewCast ? 'New Cast' : 'Edit Cast'"
-  ></app-page-header>
+  <app-page-header [title]="isNewCast ? 'New Cast' : (cast?.name || 'Cast')">
+    <div class="cast-editor-actions">
+      <button type="button" class="btn btn-secondary" (click)="cancel()" [disabled]="isSaving">Cancel</button>
+      <button type="button" class="btn btn-primary" (click)="saveCast()" [disabled]="isSaving || castForm.invalid">
+        {{ isSaving ? 'Saving…' : (isNewCast ? 'Create Cast' : 'Save Changes') }}
+      </button>
+    </div>
+    <div pageHeaderSuffix class="cast-editor-navigation">
+      <div class="view-toggle view-toggle-text" aria-label="Cast view">
+        <button class="toggle-option" type="button" [class.active]="view === 'members'" [attr.aria-current]="view === 'members' ? 'page' : null" (click)="switchView('members')" [disabled]="isSaving">Members</button>
+        <button class="toggle-option" type="button" [class.active]="view === 'pinboard'" [attr.aria-current]="view === 'pinboard' ? 'page' : null" (click)="switchView('pinboard')" [disabled]="isSaving || isNewCast">Pinboard</button>
+      </div>
+      <span class="cast-member-count">{{ getSelectedCharacters().length }} members</span>
+    </div>
+  </app-page-header>
 
-  <div class="cast-detail-content">
+  @if (error) {
+    <div class="editor-error" role="alert">{{ error }}</div>
+  }
+
+  <div class="cast-detail-content" [hidden]="view !== 'members'">
     <div class="cast-detail-inner">
-      <!-- Form -->
       <form [formGroup]="castForm" (ngSubmit)="saveCast()" class="cast-form">
-        <!-- Sticky Form Actions at Top -->
-        <div class="form-actions-top">
-          <div class="form-actions-buttons">
-            <button type="button" class="btn btn-secondary" (click)="cancel()">
-              Cancel
-            </button>
-            <button
-              type="submit"
-              class="btn btn-primary"
-              [disabled]="isSaving || castForm.invalid"
-              >
-              @if (isSaving) {
-                <span class="spinner-small"></span>
-              }
-              @if (!isSaving) {
-                <span>{{
-                  isNewCast ? "Create Cast" : "Save Changes"
-                }}</span>
-              }
-            </button>
-          </div>
-        </div>
-
-        <!-- Error Display -->
-        @if (error) {
-          <div class="error-banner">
-            <div class="error-content">
-              <svg class="ui-icon error-icon" aria-hidden="true"><use href="assets/ui-icons.svg#alert-triangle" /></svg>
-              <span class="error-message">{{ error }}</span>
-              <button class="error-close" (click)="error = null" aria-label="Dismiss error"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg></button>
-            </div>
-          </div>
-        }
         <!-- Cast Name and Description -->
         <div class="form-section">
           <h2 class="section-title">Cast Details</h2>
@@ -312,4 +294,9 @@
         </form>
       </div>
     </div>
-  </div>
+    @if (view === 'pinboard' && castId && editorSession.cast?.id === castId) {
+    <div class="cast-canvas-content">
+      <app-pinboard-view></app-pinboard-view>
+    </div>
+  }
+</div>
