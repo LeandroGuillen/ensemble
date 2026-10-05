@@ -3,6 +3,8 @@ import { animate, state, style, transition, trigger } from '@angular/animations'
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { ChangeDetectorRef, Component, DestroyRef, ElementRef, HostListener, inject, OnInit, ViewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { House } from '../../core/interfaces/house.interface';
+import { HouseService } from '../../core/services/house.service';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Observable } from 'rxjs';
@@ -65,6 +67,8 @@ export class CharacterListComponent implements OnInit {
   categories: Category[] = [];
   tags: Tag[] = [];
   casts: Cast[] = [];
+  houses: House[] = [];
+  selectedHouse = "";
   books: Book[] = [];
   currentProject: Project | null = null;
 
@@ -121,6 +125,7 @@ export class CharacterListComponent implements OnInit {
     private projectService: ProjectService,
     private metadataService: MetadataService,
     private castService: CastService,
+    private houseService: HouseService,
     public metadataHelper: MetadataHelperService,
     private modalService: ModalService,
     private preferences: PreferencesService,
@@ -134,6 +139,11 @@ export class CharacterListComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.houseService.houses$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(houses => {
+      this.houses = houses;
+      if (this.selectedHouse && !houses.some(house => house.id === this.selectedHouse)) this.selectedHouse = "";
+      this.applyFilters();
+    });
     this.route.queryParamMap
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((params) => {
@@ -252,6 +262,7 @@ export class CharacterListComponent implements OnInit {
         // The cast index (casts.json) loads asynchronously per project; make sure
         // it is loaded and stay in sync so cast grouping shows without visiting Casts first.
         this.castService.loadCasts(project.path);
+        void this.houseService.loadHouses().catch(error => this.logger.error("Failed to load houses", error));
 
         // Load filter expanded state from project settings
         this.filterExpanded = project.metadata.lastSession?.lastCharacterListFilterExpanded ?? false;
@@ -540,6 +551,8 @@ export class CharacterListComponent implements OnInit {
     this.applyFilters();
   }
 
+  onHouseChange(houseId: string): void { this.selectedHouse = houseId; this.applyFilters(); }
+
   onCastChange(): void {
     // Save selected cast to localStorage
     localStorage.setItem('characterSelectedCast', this.selectedCast);
@@ -597,6 +610,7 @@ export class CharacterListComponent implements OnInit {
     this.disabledCategoryIds = [];
     this.selectedTags = [];
     this.selectedCast = '';
+    this.selectedHouse = '';
     this.selectedBook = '';
     this.selectedPictureFilter = '';
     this.povOnly = false;
@@ -673,6 +687,8 @@ export class CharacterListComponent implements OnInit {
         const hasAllSelectedTags = this.selectedTags.every((tagId) => character.tags.includes(tagId));
         if (!hasAllSelectedTags) return false;
       }
+
+      if (this.selectedHouse && !this.houses.find(house => house.id === this.selectedHouse)?.characterIds.includes(character.id)) return false;
 
       // Cast filter - character must be in the selected cast
       if (this.selectedCast) {
@@ -862,6 +878,8 @@ getFilterSummary(): string {
       const tagNames = this.selectedTags.map((tagId) => this.metadataHelper.getTagName(tagId));
       filters.push(`tags: ${tagNames.join(', ')}`);
     }
+
+    if (this.selectedHouse) filters.push(`house: ${this.houses.find(house => house.id === this.selectedHouse)?.name || "House"}`);
 
     if (this.selectedCast) {
       const cast = this.casts.find((c) => c.id === this.selectedCast);

@@ -1,3 +1,4 @@
+import { houseEditorGuard } from "./core/guards/house-editor.guard";
 import { Routes } from "@angular/router";
 import { projectGuard } from "./core/guards/project.guard";
 import { characterPickerGuard } from "./core/guards/character-picker.guard";
@@ -176,6 +177,23 @@ export const routes: Routes = [
         (m) => m.LocationDetailComponent
       ),
     canActivate: [projectGuard],
+  },
+  {
+    path: "houses",
+    loadComponent: () => import("./features/house-list/house-list.component").then(m => m.HouseListComponent),
+    canActivate: [projectGuard],
+  },
+  {
+    path: "house",
+    loadComponent: () => import("./features/house-detail/house-detail.component").then(m => m.HouseDetailComponent),
+    canActivate: [projectGuard],
+    canDeactivate: [houseEditorGuard],
+  },
+  {
+    path: "house/:id",
+    loadComponent: () => import("./features/house-detail/house-detail.component").then(m => m.HouseDetailComponent),
+    canActivate: [projectGuard],
+    canDeactivate: [houseEditorGuard],
   },
   { path: "**", redirectTo: "/project-selector" },
 ];

@@ -103,6 +103,12 @@
           </div>
         </div>
       }
+      @if (houses.length > 0) {
+        <div class="filter-section section-house">
+          <label class="filter-label">House</label>
+          <app-category-toggle [options]="getHouseToggleOptions()" [selectedValue]="selectedHouse" emptyLabel="All" (valueChange)="houseChange.emit($event)" />
+        </div>
+      }
       <!-- Book Filter -->
       @if (books.length > 0) {
         <div class="filter-section section-book">

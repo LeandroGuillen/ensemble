@@ -31,3 +31,8 @@ import './app/core/utils/cast-pinboard.utils.spec';
 import './app/core/services/cast-editor-session.service.spec';
 
 import './app/features/pinboard-view/components/connection-edit-dialog/connection-edit-dialog.component.spec';
+
+import './app/core/services/house.service.spec';
+import './app/features/character-detail/character-detail.save.spec';
+import './app/features/house-detail/house-detail.component.spec';
+import './app/shared/character-houses/character-houses.component.spec';

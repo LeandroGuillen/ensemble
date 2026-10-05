@@ -6,6 +6,7 @@ Character management application for writers and worldbuilders.
 
 - **File-based Storage**: All data stored as plain text files (markdown and JSON)
 - **Character Management**: Create, edit, and organize character profiles
+- **Houses**: Family and dynasty profiles with crests, mottos, colors, seats, multiple character memberships, and ordered leadership history. Reigns support joint heads, periods, notes, optional book references, and an explicit current leadership entry.
 - **Relationship Visualization**: Interactive graph view for character relationships
 - **Project Organization**: Work with multiple projects in separate folders
 - **External Editing**: Saved Markdown edits from apps such as Obsidian refresh character lists and open character pages in Ensemble. If both apps edit the same file, Ensemble asks you to reload before saving.
@@ -60,6 +61,9 @@ older version. Use full Debian and Fedora VMs for those final release checks.
 ```
 project-folder/
 ├── ensemble.json           # Project metadata: categories, tags, settings, lastSession, relationships
+├── houses/                 # Family and dynasty records
+│   └── house-stark/
+│       └── house-stark.md   # House frontmatter + Markdown history
 └── characters/             # Configurable character root
     ├── roger-rabbit/
     │   ├── roger-rabbit.md       # Main file (frontmatter + description)
@@ -116,3 +120,21 @@ not update themselves.
 ## License
 
 MIT
+
+## Houses
+
+Houses are stored under `houses/`, one folder per House. The main Markdown file
+has `type: house` in its YAML frontmatter. Crests use the same project image
+references as character thumbnails. Membership is stored in the House's
+`characterIds`; characters may belong to multiple Houses, regardless of book.
+Membership selections in the character editor are committed with Save Changes.
+
+The `leadership` array is chronological, oldest to newest: its saved array order
+is authoritative. Each entry has a stable `id`, `characterIds` (one or more
+joint heads), optional `period` and `notes`, and `books` containing optional book
+IDs. Dates and book references do not sort entries. Repeated characters across
+entries represent interrupted reigns. `currentLeadershipId` explicitly marks
+the current reign; an omitted value means unspecified or no current head.
+External Markdown edits refresh Houses. Open editors with unsaved changes require
+a reload before saving a changed file. Deleting a House preserves characters
+and other files in its folder.

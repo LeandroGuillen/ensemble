@@ -1,0 +1,201 @@
+<div class="house-page">
+  <app-page-header [title]="house ? house.name : 'New House'">
+    @if (dirty) { <span class="unsaved">● Unsaved</span> }
+    <a class="btn btn-ghost" routerLink="/houses">Back to Houses</a>
+    <button class="btn btn-primary" (click)="save()" [disabled]="saving || pickingMember || loading || conflict || deleted || !model.name.trim()">{{ saving ? 'Saving…' : house ? 'Save Changes' : 'Create House' }}</button>
+  </app-page-header>
+  <main>
+    @if (loading) { <p class="empty">Loading House…</p> }
+    @if (error) { <p class="error" role="alert">{{ error }}</p> }
+    @if (conflict) {
+      <div class="notice" role="alert">
+        {{ deleted ? 'This House was removed outside Ensemble.' : 'This House changed outside Ensemble. Reload before saving.' }}
+        <button class="btn btn-secondary" (click)="reload()" [disabled]="saving">Reload from disk</button>
+      </div>
+    }
+    @if (!loading && !deleted) {
+      <fieldset [disabled]="saving" class="editor">
+        <section class="panel identity">
+          <div class="crest-panel">
+            <button class="crest" (click)="openPicker()" aria-label="Choose House crest">
+              @if (crest) { <img [src]="crest" [alt]="model.name + ' crest'" /> }
+              @else { <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#shield" /></svg><span>Add crest</span> }
+            </button>
+            <button type="button" class="text-action current-head-shortcut" (click)="scrollToLeadership(leadershipSection)" [title]="currentHeadNames + ' — Go to leadership history'" [attr.aria-label]="'Current Head: ' + currentHeadNames + '. Go to leadership history'">
+              <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#crown" /></svg>
+              <span>Current Head</span>
+            </button>
+            @if (model.thumbnail) { <button type="button" class="text-action crest-remove" (click)="removeCrest()">Remove crest</button> }
+          </div>
+          <div class="identity-fields">
+            <label for="house-name">House name *</label>
+            <input id="house-name" class="form-control name" [(ngModel)]="model.name" (ngModelChange)="changed()" placeholder="House Stark" required />
+            <label for="house-motto">Motto</label>
+            <input id="house-motto" class="form-control" [(ngModel)]="model.motto" (ngModelChange)="changed()" placeholder="Winter is coming" />
+            <label for="house-seat">Seat</label>
+            <div class="seat-row">
+              <select id="house-seat" class="form-control" [(ngModel)]="model.seatId" (ngModelChange)="changed()">
+                <option [ngValue]="undefined">No seat selected</option>
+                @if (model.seatId && !seatExists) { <option [value]="model.seatId">Missing location ({{ model.seatId }})</option> }
+                @for (location of locations; track location.id) { <option [value]="location.id">{{ location.name }}</option> }
+              </select>
+              @if (model.seatId && seatExists) { <a class="btn btn-secondary" [routerLink]="['/location', model.seatId]">Open seat</a> }
+            </div>
+            <label id="house-colors-label">House colors</label>
+            <div class="colors" role="group" aria-labelledby="house-colors-label">
+              @for (color of model.colors; track $index) {
+                <div class="color-swatch">
+                  <input #colorPicker type="color" class="color" [value]="color" (input)="changeColor($index, colorPicker.value)" [attr.aria-label]="'Change House color ' + ($index + 1)" [title]="'Change ' + color" />
+                  <button type="button" class="color-remove" (click)="removeColor($index)" [attr.aria-label]="'Remove House color ' + ($index + 1)" [title]="'Remove ' + color">
+                    <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg>
+                  </button>
+                </div>
+              }
+              <button type="button" class="color-add" (click)="addColor()" aria-label="Add House color" title="Add color">
+                <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
+              </button>
+            </div>
+          </div>
+        </section>
+        <section class="panel">
+          <h2>History &amp; description</h2>
+          <label class="hint" for="house-content">Origins, traditions, branches, and the story of this House. Markdown supported.</label>
+          <textarea id="house-content" class="form-control history" [(ngModel)]="model.content" (ngModelChange)="changed()" placeholder="## Origins&#10;&#10;Founded centuries before the story begins…"></textarea>
+        </section>
+        <section class="panel members-panel">
+          <div class="section-heading">
+            <h2>Members <span class="count">{{ model.characterIds.length }}</span></h2>
+            <button type="button" class="text-action" (click)="addMember()" [disabled]="pickingMember">
+              <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
+              <span>{{ pickingMember ? 'Choosing character…' : 'Add member' }}</span>
+            </button>
+          </div>
+          <p class="hint">Membership belongs to the House across your world’s history. Characters can belong to several Houses.</p>
+          <div class="members" role="list" aria-label="House members">
+            @for (character of members; track character.id) {
+              <article class="member" role="listitem">
+                <a class="member-profile" [routerLink]="['/character', character.id]" [attr.aria-label]="'Open ' + character.name">
+                  <div class="member-portrait">
+                    @if (charactersService.getCachedThumbnail(character.id); as thumbnail) { <img [src]="thumbnail" alt="" /> }
+                    @else { <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#user" /></svg> }
+                  </div>
+                  <div class="member-info"><strong>{{ character.name }}</strong><span>View character ↗</span></div>
+                </a>
+                <button class="member-remove" (click)="toggleMember(character.id)" [attr.aria-label]="'Remove ' + character.name + ' from House'" title="Remove member">
+                  <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg>
+                </button>
+              </article>
+            }
+          </div>
+          @if (!model.characterIds.length) { <p class="empty">No members yet. Add characters to this House.</p> }
+          @for (id of missingMembers; track id) { <p class="missing">{{ characterName(id) }} <button class="btn btn-ghost" (click)="toggleMember(id)">Remove reference</button></p> }
+        </section>
+        <section #leadershipSection class="panel succession" tabindex="-1" aria-labelledby="leadership-history-heading">
+          <div class="section-heading">
+            <h2 id="leadership-history-heading">Leadership history</h2>
+            <div class="leadership-actions">
+              @if (leadershipEditing) {
+                <button type="button" class="text-action" (click)="addReign()">
+                  <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
+                  <span>Add reign</span>
+                </button>
+              }
+              <div class="leadership-mode" role="group" aria-label="Leadership history mode">
+                <button type="button" class="text-action" [class.active]="!leadershipEditing" [attr.aria-pressed]="!leadershipEditing" (click)="leadershipEditing = false">View</button>
+                <span class="mode-separator" aria-hidden="true">/</span>
+                <button type="button" class="text-action" [class.active]="leadershipEditing" [attr.aria-pressed]="leadershipEditing" (click)="leadershipEditing = true">Edit</button>
+              </div>
+            </div>
+          </div>
+          @if (!leadershipEditing) {
+            <ol class="leadership-summary" aria-label="Leadership succession, oldest to newest">
+              @for (entry of model.leadership; track entry.id; let index = $index) {
+                <li class="leadership-row" [class.current]="model.currentLeadershipId === entry.id">
+                  <span class="order" aria-hidden="true">{{ index + 1 }}</span>
+                  <div class="leadership-info">
+                    <div class="leadership-names">
+                      @for (id of entry.characterIds; track id; let last = $last) {
+                        @if (!missingHeads(entry).includes(id)) { <a [routerLink]="['/character', id]">{{ characterName(id) }}</a> }
+                        @else { <span class="missing">{{ characterName(id) }}</span> }
+                        @if (!last) { <span class="joint-separator">&amp;</span> }
+                      } @empty { <span class="hint">Heads not selected</span> }
+                      @if (model.currentLeadershipId === entry.id) { <span class="current-label">Current</span> }
+                    </div>
+                    @if (entry.period) { <p class="leadership-period">{{ entry.period }}</p> }
+                  </div>
+                </li>
+              } @empty { <li class="empty">No leadership recorded yet.</li> }
+            </ol>
+          } @else {
+          <p class="hint">Oldest to newest. Drag or use the arrows to set succession order. Periods and book tags are optional.</p>
+          <div class="history-toolbar">
+            <div class="current-head">
+              <label for="current-reign">Current leadership</label>
+              <select id="current-reign" class="form-control" [(ngModel)]="model.currentLeadershipId" (ngModelChange)="changed()">
+                <option [ngValue]="undefined">Unspecified / no current head</option>
+                @for (entry of model.leadership; track entry.id; let index = $index) {
+                  <option [value]="entry.id">{{ index + 1 }}. {{ entry.characterIds.length ? characterName(entry.characterIds[0]) : 'Choose heads' }}{{ entry.characterIds.length > 1 ? ' and co-heads' : '' }}{{ entry.period ? ' — ' + entry.period : '' }}</option>
+                }
+              </select>
+            </div>
+            <div>
+              <label for="history-book">Show reigns referenced in</label>
+              <select id="history-book" class="form-control" [(ngModel)]="selectedBook">
+                <option value="">All history</option>
+                @for (book of books; track book.id) { <option [value]="book.id">{{ bookName(book) }}</option> }
+              </select>
+            </div>
+          </div>
+          @if (selectedBook) { <p class="hint">Showing book references in their saved succession order. Select All history to reorder.</p> }
+          <div class="reigns" cdkDropList [cdkDropListData]="model.leadership" [cdkDropListDisabled]="!!selectedBook || saving" (cdkDropListDropped)="drop($event)">
+            @for (entry of visibleLeadership; track entry.id) {
+              <article class="reign" cdkDrag [cdkDragDisabled]="!!selectedBook || saving" [class.current]="model.currentLeadershipId === entry.id">
+                <div class="reign-heading">
+                  <button class="drag-handle" cdkDragHandle aria-label="Drag reign to reorder" [disabled]="!!selectedBook" title="Drag to reorder">⠿</button>
+                  <span class="order">{{ model.leadership.indexOf(entry) + 1 }}</span>
+                  <h3>{{ entry.characterIds.length ? characterName(entry.characterIds[0]) : 'New reign' }}</h3>
+                  @if (model.currentLeadershipId === entry.id) { <span class="current-label">Current</span> }
+                  <div class="reorder">
+                    <button class="btn btn-ghost" (click)="moveReign(model.leadership.indexOf(entry), -1)" [disabled]="!!selectedBook || model.leadership.indexOf(entry) === 0" aria-label="Move reign earlier">↑</button>
+                    <button class="btn btn-ghost" (click)="moveReign(model.leadership.indexOf(entry), 1)" [disabled]="!!selectedBook || model.leadership.indexOf(entry) === model.leadership.length - 1" aria-label="Move reign later">↓</button>
+                    <button class="btn btn-ghost" appConfirmButton confirmLabel="Confirm removal" (confirmed)="removeReign(entry.id)">Remove</button>
+                  </div>
+                </div>
+                <div class="reign-fields">
+                  <div>
+                    <label [for]="'heads-' + entry.id">Heads * <span class="hint">Select multiple for joint leadership</span></label>
+                    <select multiple class="form-control heads" [id]="'heads-' + entry.id" [(ngModel)]="entry.characterIds" (ngModelChange)="changed()">
+                      @for (id of headOptions(entry); track id) {
+                        <option [value]="id">{{ characterName(id) }}{{ !model.characterIds.includes(id) ? ' (previously assigned)' : '' }}</option>
+                      }
+                    </select>
+                    @if (!members.length && !entry.characterIds.length) { <p class="hint">Add members to this House to choose its heads.</p> }
+                    <div class="head-links">@for (id of entry.characterIds; track id) {
+                      @if (!missingHeads(entry).includes(id)) { <a [routerLink]="['/character', id]">{{ characterName(id) }} ↗</a> }
+                      @else { <span class="missing">{{ characterName(id) }}</span> }
+                    }</div>
+                  </div>
+                  <div>
+                    <label [for]="'period-' + entry.id">Reign / period</label>
+                    <input class="form-control" [id]="'period-' + entry.id" [(ngModel)]="entry.period" (ngModelChange)="changed()" placeholder="Years 120–148, or During the Northern War" />
+                    <label [for]="'notes-' + entry.id">Notes</label>
+                    <textarea class="form-control" [id]="'notes-' + entry.id" [(ngModel)]="entry.notes" (ngModelChange)="changed()" placeholder="Accession, succession, or historical context" rows="3"></textarea>
+                  </div>
+                </div>
+                <div class="book-tags" role="group" [attr.aria-label]="'Book references for reign ' + (model.leadership.indexOf(entry) + 1)">
+                  <span class="hint">Book references</span>
+                  @for (book of books; track book.id) { <button class="book-tag" [class.selected]="entry.books.includes(book.id)" [attr.aria-pressed]="entry.books.includes(book.id)" [style.--book-color]="book.color" (click)="toggleBook(entry, book.id)">{{ bookName(book) }}</button> }
+                  @for (id of missingBooks(entry); track id) { <button class="book-tag missing selected" (click)="toggleBook(entry, id)" [attr.aria-label]="'Remove missing book reference ' + id">Missing book ({{ id }}) ×</button> }
+                  @if (!entry.books.length) { <span class="hint">Books unspecified</span> }
+                </div>
+              </article>
+            } @empty { <p class="empty">{{ selectedBook ? 'No reigns reference this book.' : 'Record past generations, even if they never appear in a book.' }}</p> }
+          </div>
+          }
+        </section>
+        @if (house) { <div class="delete-house"><button class="btn btn-ghost" appConfirmButton confirmLabel="Confirm delete House" (confirmed)="delete()" [disabled]="conflict">Delete House</button><span class="hint">Characters and crest files are kept.</span></div> }
+      </fieldset>
+    }
+  </main>
+</div>
+<app-image-picker-dialog [(visible)]="showPicker" (imageSelected)="onImage($event)" (explorerError)="error = $event" />

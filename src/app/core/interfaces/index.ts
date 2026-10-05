@@ -9,3 +9,5 @@ export * from "./image-generation.interface";
 export * from "./theme.interface";
 export * from "./color-palette.interface";
 export * from "./legacy.interface";
+
+export * from "./house.interface";

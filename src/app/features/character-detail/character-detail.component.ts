@@ -67,6 +67,7 @@ import {
   MultiSelectButtonsComponent,
   SelectableItem,
 } from "../../shared/multi-select-buttons/multi-select-buttons.component";
+import { CharacterHousesComponent } from "../../shared/character-houses/character-houses.component";
 import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
 import { ImagePickerDialogComponent } from "../../shared/image-picker-dialog/image-picker-dialog.component";
 import { CharacterPromptsEditorComponent } from "./components/character-prompts-editor/character-prompts-editor.component";
@@ -84,6 +85,7 @@ import { GeneratePortraitDialogComponent } from "./components/generate-portrait-
     ImagePickerDialogComponent,
     CharacterPromptsEditorComponent,
     GeneratePortraitDialogComponent,
+    CharacterHousesComponent,
 ],
     templateUrl: "./character-detail.component.html",
     styleUrls: ["./character-detail.component.scss"]
@@ -91,6 +93,7 @@ import { GeneratePortraitDialogComponent } from "./components/generate-portrait-
 export class CharacterDetailComponent
   implements OnInit, OnDestroy, AfterViewInit
 {
+  @ViewChild(CharacterHousesComponent) housesEditor?: CharacterHousesComponent;
   @ViewChild("nameInput") nameInput?: ElementRef<HTMLInputElement>;
   @ViewChild("addBookMenu") addBookMenu?: ElementRef<HTMLDetailsElement>;
 
@@ -805,6 +808,7 @@ export class CharacterDetailComponent
       this.addAlias();
 
       const formData = this.buildFormData();
+      const wasEditing = this.isEditing;
 
       if (this.isEditing && this.character) {
         const updatedCharacter = await this.characterService.updateCharacter(
@@ -815,7 +819,6 @@ export class CharacterDetailComponent
           throw new Error("Character not found");
         }
         this.character = updatedCharacter;
-        this.characterForm.markAsPristine();
         for (const bookId of dirtyBookIds) {
           const content = this.bookPageData[bookId].content;
           await this.characterService.saveBookPage(updatedCharacter.id, bookId, content);
@@ -825,13 +828,17 @@ export class CharacterDetailComponent
         if (this.isDraftMode) {
           await this.characterService.createDraft(formData);
         } else {
-          await this.characterService.createCharacter(formData);
+          this.character = await this.characterService.createCharacter(formData);
+          this.isEditing = true;
         }
       }
 
+      if (!this.isDraftMode && this.character) await this.housesEditor?.save(this.character.id);
+      this.characterForm.markAsPristine();
+
       this.notificationService.showSuccess(
         this.isDraftMode ? (this.isEditing ? "Draft saved successfully" : "Draft created successfully")
-          : (this.isEditing ? "Character saved successfully" : "Character created successfully")
+          : (wasEditing ? "Character saved successfully" : "Character created successfully")
       );
 
       this.router.navigate(["/characters"], {

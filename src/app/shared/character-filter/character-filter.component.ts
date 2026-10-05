@@ -1,5 +1,6 @@
 
 import { Component, ElementRef, EventEmitter, HostListener, Input, Output } from '@angular/core';
+import { House } from '../../core/interfaces/house.interface';
 import { FormsModule } from '@angular/forms';
 import { Book, Cast, Category, Character, Tag } from '../../core/interfaces';
 import { MetadataHelperService } from '../../core/services/metadata-helper.service';
@@ -35,6 +36,8 @@ export class CharacterFilterComponent {
   @Input() categories: Category[] = [];
   @Input() tags: Tag[] = [];
   @Input() casts: Cast[] = [];
+  @Input() houses: House[] = [];
+  @Input() selectedHouse = "";
   @Input() books: Book[] = [];
   @Input() allCharacters: Character[] = [];
   @Input() searchTerm = '';
@@ -51,6 +54,7 @@ export class CharacterFilterComponent {
   @Output() searchTermChange = new EventEmitter<string>();
   @Output() categoriesChange = new EventEmitter<string[]>();
   @Output() tagsChange = new EventEmitter<string[]>();
+  @Output() houseChange = new EventEmitter<string>();
   @Output() castChange = new EventEmitter<string>();
   @Output() bookChange = new EventEmitter<string>();
   @Output() pictureFilterChange = new EventEmitter<'' | 'with' | 'without'>();
@@ -177,6 +181,10 @@ export class CharacterFilterComponent {
     }));
   }
 
+  getHouseToggleOptions(): ToggleOption[] {
+    return this.houses.map(house => ({ id: house.id, name: house.name, tooltip: house.name }));
+  }
+
   getBookToggleOptions(): ToggleOption[] {
     return this.books.map((book) => ({
       id: book.id,
@@ -209,6 +217,8 @@ export class CharacterFilterComponent {
       }
     }
 
+    if (this.selectedHouse) filters.push(this.houses.find(house => house.id === this.selectedHouse)?.name || "House");
+
     if (this.selectedCast) {
       filters.push(this.getCastName(this.selectedCast));
     }
@@ -235,6 +245,7 @@ export class CharacterFilterComponent {
       this.enabledCategoryIds.length < this.categories.length ||
       this.selectedTags.length > 0 ||
       this.selectedCast ||
+      this.selectedHouse ||
       this.selectedBook ||
       this.povOnly ||
       this.selectedPictureFilter

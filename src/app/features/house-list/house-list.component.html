@@ -1,0 +1,38 @@
+<div class="houses-page">
+  <app-page-header title="Houses">
+    <div class="actions">
+      <input class="form-control" type="search" aria-label="Search houses" placeholder="Search houses…" [(ngModel)]="search" />
+      <button class="btn btn-secondary" (click)="refresh()" [disabled]="loading">Refresh</button>
+      <a class="btn btn-primary" routerLink="/house">New House</a>
+    </div>
+  </app-page-header>
+  <main>
+    @if (error) { <p class="error" role="alert">{{ error }}</p> }
+    @if (loading) { <p class="empty">Loading houses…</p> }
+    @else if (!filtered.length) {
+      <div class="empty">
+        <svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="assets/ui-icons.svg#shield" /></svg>
+        <h2>{{ search ? 'No houses found' : 'Your world’s dynasties start here' }}</h2>
+        <p>{{ search ? 'Try another name or motto.' : 'Record their identity, members, and generations of leadership.' }}</p>
+        @if (!search) { <a class="btn btn-primary" routerLink="/house">Create First House</a> }
+      </div>
+    } @else {
+      <div class="house-grid">
+        @for (house of filtered; track house.id) {
+          <a class="house-card" [routerLink]="['/house', house.id]">
+            <div class="crest" [style.border-bottom-color]="house.colors[0] || 'var(--color-border)'">
+              @if (crests.get(house.id); as crest) { <img [src]="crest" [alt]="house.name + ' crest'" /> }
+              @else { <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#shield" /></svg> }
+            </div>
+            <div class="card-body">
+              <h2>{{ house.name }}</h2>
+              @if (house.motto) { <p class="motto">“{{ house.motto }}”</p> }
+              <div class="meta"><span>{{ house.characterIds.length }} members</span><span>{{ house.leadership.length }} reigns</span></div>
+              <div class="colors">@for (color of house.colors; track $index) { <span [style.background]="color" [title]="color"></span> }</div>
+            </div>
+          </a>
+        }
+      </div>
+    }
+  </main>
+</div>

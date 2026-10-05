@@ -260,6 +260,9 @@
             </div>
           </section>
 
+          @if (!isDraftMode) {
+            <app-character-houses [characterId]="character?.id || null" [disabled]="isSaving" (membershipChange)="characterForm.markAsDirty()" />
+          }
           <div class="thumb-strip-row">
             @if (characterStyles.length > 1) {
               <div class="style-strip" role="listbox" aria-label="Character styles">

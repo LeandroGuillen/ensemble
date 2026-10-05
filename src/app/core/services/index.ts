@@ -28,3 +28,5 @@ export { ImagePickerService } from "./image-picker.service";
 export { UpdateService } from "./update.service";
 export { ZoomService } from "./zoom.service";
 export { ImageGenerationService } from "./image-generation/image-generation.service";
+
+export { HouseService } from "./house.service";
