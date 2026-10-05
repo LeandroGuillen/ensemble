@@ -10,6 +10,7 @@ import {
   ViewChild,
   NgZone,
 } from '@angular/core';
+import { combineLatest, debounceTime } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Location as AngularLocation } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -37,6 +38,7 @@ import { PageHeaderComponent } from '../../shared/page-header/page-header.compon
 import { MultiSelectButtonsComponent, SelectableItem } from '../../shared/multi-select-buttons/multi-select-buttons.component';
 import { ImagePickerDialogComponent } from '../../shared/image-picker-dialog/image-picker-dialog.component';
 import { formatThumbnailWikiLink, parseThumbnailReference, resolveThumbnailPath } from '../../core/utils/thumbnail.utils';
+import { renderLocationMarkdown } from '../../core/utils/location-links.utils';
 import { getBookDisplayName } from '../../core/utils/book-display.utils';
 
 @Component({
@@ -67,6 +69,11 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
   thumbnailPreviewUrl: string | null = null;
   showImagePickerDialog = false;
 
+  showDescriptionPreview = false;
+  missingLocationLinks: string[] = [];
+  newLocationFromLink: string | null = null;
+  descriptionPreviewHtml = '';
+
   isLoading = false;
   isSaving = false;
   error: string | null = null;
@@ -96,14 +103,24 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   ngOnInit(): void {
+    this.locationForm.get('content')!.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.refreshDescriptionPreview());
+    this.locationService.getLocations()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.refreshDescriptionPreview());
     void this.ensureLocationsLoaded();
 
-    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
-      const id = params.get('id');
-      this.isNewLocation = !id;
-      this.locationId = id;
-      void this.loadLocation();
-    });
+    combineLatest([this.route.paramMap, this.route.queryParamMap])
+      .pipe(debounceTime(0), takeUntilDestroyed(this.destroyRef))
+      .subscribe(([params, queryParams]) => {
+        const id = params.get('id');
+        this.isNewLocation = !id;
+        this.locationId = id;
+        this.newLocationFromLink = !id && queryParams.get('fromLink') === '1'
+          ? queryParams.get('name') : null;
+        void this.loadLocation();
+      });
 
     this.metadataService.metadata$
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -169,10 +186,12 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private async loadLocation(): Promise<void> {
+    this.showDescriptionPreview = false;
+    this.error = null;
     if (this.isNewLocation) {
       this.location = null;
       this.locationForm.reset({
-        name: '',
+        name: this.newLocationFromLink || '',
         books: [],
         thumbnail: '',
         content: '',
@@ -201,6 +220,7 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
         thumbnail: location.thumbnail || '',
         content: location.content || '',
       });
+      this.showDescriptionPreview = !!location.content?.trim();
       this.locationForm.markAsPristine();
       await this.refreshThumbnailPreview();
     } catch (error) {
@@ -210,6 +230,28 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
       this.isLoading = false;
       this.cdr.markForCheck();
     }
+  }
+
+  private refreshDescriptionPreview(): void {
+    const preview = renderLocationMarkdown(
+      this.locationForm.get('content')?.value || '',
+      this.locationService.getLocationsSnapshot(),
+      this.projectService.getCurrentProject()?.metadata?.settings?.locationsFolder || 'locations'
+    );
+    this.descriptionPreviewHtml = preview.html;
+    this.missingLocationLinks = preview.missingLinks;
+    this.cdr.markForCheck();
+  }
+
+  async onDescriptionLinkClick(event: MouseEvent): Promise<void> {
+    const link = (event.target as HTMLElement).closest('a');
+    const href = link?.getAttribute('href');
+    if (!href?.startsWith('#/location/') && !href?.startsWith('#/location?')) return;
+    event.preventDefault();
+    const destination = href.slice(1);
+    if (destination === `/location/${encodeURIComponent(this.locationId || '')}`) return;
+    if (this.locationForm.dirty && !(await this.modalService.confirm('Discard unsaved changes?'))) return;
+    await this.router.navigateByUrl(destination);
   }
 
   onBooksChange(bookIds: string[]): void {

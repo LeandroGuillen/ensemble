@@ -1,6 +1,6 @@
 {
   "name": "ensemble",
-  "version": "1.14.12",
+  "version": "1.14.13",
   "description": "Character management application for writers and worldbuilders",
   "main": "main.js",
   "scripts": {
