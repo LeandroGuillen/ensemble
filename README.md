@@ -6,6 +6,7 @@ Character management application for writers and worldbuilders.
 
 - **File-based Storage**: All data stored as plain text files (markdown and JSON)
 - **Character Management**: Create, edit, and organize character profiles
+- **Lore figures**: Founders, ancestors, legends, and other background figures use the full character editor, with only a name required. Characters, Lore, and Drawer have separate counters and saved filters. Lore figures appear in character pickers with a Lore label; drafts remain excluded.
 - **Houses**: Family and dynasty profiles with crests, mottos, colors, seats, multiple character memberships, and ordered leadership history. Reigns support joint heads, periods, notes, optional book references, and an explicit current leadership entry.
 - **Relationship Visualization**: Interactive graph view for character relationships
 - **Project Organization**: Work with multiple projects in separate folders
@@ -138,3 +139,20 @@ the current reign; an omitted value means unspecified or no current head.
 External Markdown edits refresh Houses. Open editors with unsaved changes require
 a reload before saving a changed file. Deleting a House preserves characters
 and other files in its folder.
+
+## Lore figures
+
+Lore uses the same character files and editor as Characters. Set `lore: true` in
+a record's frontmatter to place it in the Lore collection. Only the name is
+required; images, category, tags, books, descriptions, and other details are
+optional. The editor's Collection switch moves records between Characters and
+Lore while preserving their IDs, files, and references.
+
+Lore figures can be House members, historical leaders, cast members, and other
+character references. Character pickers show them with a **Lore** label.
+Drawer drafts remain separate and are excluded from those pickers.
+
+Drawer drafts can be converted from their editor using **Convert to Character**
+or **Convert to Lore**. Characters require a name and category; Lore figures
+require only a name. Conversion saves current edits and book notes, preserves
+the record's ID and images, and moves its folder out of `@drafts/`.

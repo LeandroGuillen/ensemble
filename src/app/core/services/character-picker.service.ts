@@ -26,7 +26,7 @@ export class CharacterPickerService {
       await this.characterService.loadCharacters(project.path);
     }
 
-    const characters = this.characterService['charactersSubject'].value as Character[];
+    const characters = this.characterService.getReferenceCharactersSnapshot();
 
     await this.characterService.loadThumbnailsForCharacters(characters);
 
@@ -35,7 +35,7 @@ export class CharacterPickerService {
       id: `pick-${char.id}`,
       label: char.name,
       thumbnail: this.characterService.getCachedThumbnail(char.id, styleId) || undefined,
-      metadata: this.metadataHelper.getCategoryName(char.category),
+      metadata: char.lore ? `Lore${char.category ? ' · ' + this.metadataHelper.getCategoryName(char.category) : ''}` : this.metadataHelper.getCategoryName(char.category),
       aliases: char.aliases,
       keywords: [
         char.name,

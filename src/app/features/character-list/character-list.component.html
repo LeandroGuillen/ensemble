@@ -3,10 +3,13 @@
     @if (currentProject) {
       <ng-container pageHeaderSuffix>
       <div class="character-scope-toggle view-toggle view-toggle-text" aria-label="Character collection">
-        <button type="button" class="toggle-option" [class.active]="!drawerMode" (click)="setDrawerMode(false)">
+        <button type="button" class="toggle-option" [class.active]="collection === 'characters'" [attr.aria-pressed]="collection === 'characters'" (click)="setCollection('characters')">
           Characters <span class="scope-count">{{ activeCharacters.length }}</span>
         </button>
-        <button type="button" #drawerToggle class="toggle-option drawer-drop-target" [class.active]="drawerMode" [class.drag-over]="drawerDropHighlighted" [class.pulsing]="isDraggingCharacter"
+        <button type="button" class="toggle-option" [class.active]="loreMode" [attr.aria-pressed]="loreMode" (click)="setCollection('lore')">
+          Lore <span class="scope-count">{{ loreFigures.length }}</span>
+        </button>
+        <button type="button" #drawerToggle class="toggle-option drawer-drop-target" [class.active]="drawerMode" [attr.aria-pressed]="drawerMode" [class.drag-over]="drawerDropHighlighted" [class.pulsing]="isDraggingCharacter"
           (click)="setDrawerMode(true)"
           title="Drop a character here to move it to the Drawer">
           Drawer <span class="scope-count">{{ draftCharacters.length }}</span>
@@ -245,10 +248,10 @@
         class="btn btn-primary new-character-btn"
         (click)="createNewCharacter()"
         [disabled]="!currentProject"
-        [title]="drawerMode ? 'New Draft (N)' : 'New Character (N)'"
+        [title]="drawerMode ? 'New Draft (N)' : loreMode ? 'New Lore Figure (N)' : 'New Character (N)'"
         >
         <svg class="ui-icon plus-glyph" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
-        {{ drawerMode ? 'New Draft' : 'New Character' }}
+        {{ drawerMode ? 'New Draft' : loreMode ? 'New Lore Figure' : 'New Character' }}
         <kbd class="shortcut-hint">N</kbd>
       </button>
     </div>
@@ -857,11 +860,11 @@
                   (povOnly && !drawerMode) ||
                   selectedPictureFilter
                 ) {
-                  <h3>No {{ drawerMode ? 'drafts' : 'characters' }} match your filters</h3>
+                  <h3>No {{ drawerMode ? 'drafts' : loreMode ? 'Lore figures' : 'characters' }} match your filters</h3>
                   <p>Try adjusting your search criteria or clearing the filters to see more.</p>
                 } @else {
-                  <h3>No characters yet</h3>
-                  <p>Create your first character to get started with your project!</p>
+                  <h3>{{ loreMode ? 'No Lore figures yet' : 'No characters yet' }}</h3>
+                  <p>{{ loreMode ? 'Record founders, ancestors, legends, and other people from your world’s history.' : 'Create your first character to get started with your project!' }}</p>
                 }
                 <div class="empty-state-actions">
                   @if (
@@ -885,7 +888,7 @@
                     !selectedPictureFilter
                   ) {
                     <button class="btn btn-primary" (click)="createNewCharacter()">
-                      {{ drawerMode ? 'Create a Draft' : 'Create Your First Character' }}
+                      {{ drawerMode ? 'Create a Draft' : loreMode ? 'Create Your First Lore Figure' : 'Create Your First Character' }}
                     </button>
                   }
                 </div>

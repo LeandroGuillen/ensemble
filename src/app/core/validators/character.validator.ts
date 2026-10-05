@@ -23,7 +23,7 @@ export class CharacterValidator {
       });
     }
 
-    if (!character.category || character.category.trim().length === 0) {
+    if (!character.lore && (!character.category || character.category.trim().length === 0)) {
       errors.push({
         field: 'category',
         message: 'Character category is required',
@@ -91,7 +91,7 @@ export class CharacterValidator {
       });
     }
 
-    if (!formData.category || formData.category.trim().length === 0) {
+    if (!formData.lore && (!formData.category || formData.category.trim().length === 0)) {
       errors.push({
         field: 'category',
         message: 'Character category is required',
@@ -138,7 +138,7 @@ export class CharacterValidator {
 
     // Validate category exists in metadata
     const categoryExists = metadata.categories.some(cat => cat.id === character.category);
-    if (!categoryExists) {
+    if (!categoryExists && (!character.lore || !!character.category)) {
       errors.push({
         field: 'category',
         message: `Category '${character.category}' does not exist in project metadata`,

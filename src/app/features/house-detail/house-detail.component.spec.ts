@@ -40,7 +40,7 @@ describe('House editor', () => {
       { provide: HouseService, useValue: service },
       { provide: CharacterPickerService, useValue: characterPicker },
       { provide: CharacterService, useValue: {
-        getCharacters: () => of([{ id: 'ned', name: 'Eddard Stark' }, { id: 'cat', name: 'Catelyn Stark' }]),
+        getReferenceCharacters: () => of([{ id: 'ned', name: 'Eddard Stark' }, { id: 'cat', name: 'Catelyn Stark' }]),
         loadCharacters: async () => undefined, loadThumbnailsForCharacters: async () => undefined, getCachedThumbnail: () => null,
       } },
       { provide: LocationService, useValue: { getLocations: () => of([{ id: 'winterfell', name: 'Winterfell' }]), loadLocations: async () => undefined } },

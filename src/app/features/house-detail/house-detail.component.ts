@@ -45,7 +45,7 @@ export class HouseDetailComponent implements OnInit, OnDestroy {
   private request = 0;
 
   ngOnInit(): void {
-    this.charactersService.getCharacters().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(characters => {
+    this.charactersService.getReferenceCharacters().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(characters => {
       this.characters = characters;
       this.loadMemberThumbnails();
     });

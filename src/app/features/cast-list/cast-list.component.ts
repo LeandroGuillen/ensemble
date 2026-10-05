@@ -98,7 +98,7 @@ export class CastListComponent implements OnInit {
 
     // Subscribe to character changes
     this.characterService
-      .getCharacters()
+      .getReferenceCharacters()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((characters) => {
         this.characters = characters;

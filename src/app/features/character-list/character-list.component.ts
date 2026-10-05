@@ -91,8 +91,13 @@ export class CharacterListComponent implements OnInit {
   allCharacters: Character[] = [];
   activeCharacters: Character[] = [];
   draftCharacters: Character[] = [];
+  loreFigures: Character[] = [];
   filteredCharacters: Character[] = [];
-  drawerMode = false;
+  collection: 'characters' | 'lore' | 'drawer' = 'characters';
+  get drawerMode(): boolean { return this.collection === 'drawer'; }
+  get loreMode(): boolean { return this.collection === 'lore'; }
+  private collectionInitialized = false;
+  private filterProjectPath: string | undefined;
   // Use service cache - sync from service on init and after loading
   thumbnailDataUrls: Map<string, string> = new Map();
   thumbnailModificationTimes: Map<string, string> = new Map();
@@ -144,12 +149,6 @@ export class CharacterListComponent implements OnInit {
       if (this.selectedHouse && !houses.some(house => house.id === this.selectedHouse)) this.selectedHouse = "";
       this.applyFilters();
     });
-    this.route.queryParamMap
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((params) => {
-        this.drawerMode = params.get('drawer') === 'true';
-        this.updateDisplayedCollection();
-      });
 
     const savedSidebarState = localStorage.getItem('characterFiltersSidebarOpen');
     if (savedSidebarState !== null) {
@@ -245,12 +244,15 @@ export class CharacterListComponent implements OnInit {
     // Subscribe to project changes
     this.projectService.currentProject$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((project) => {
       this.currentProject = project;
+      const projectChanged = this.collectionInitialized && this.filterProjectPath !== project?.path;
+      this.filterProjectPath = project?.path;
       this.categories = this.projectService.getCategories();
       const categoryIds = new Set(this.categories.map((category) => category.id));
       this.disabledCategoryIds = this.disabledCategoryIds.filter((id) => categoryIds.has(id));
       this.enabledCategoryIds = this.categories
         .filter((category) => !this.disabledCategoryIds.includes(category.id))
         .map((category) => category.id);
+      if (projectChanged) this.restoreCollectionFilters();
       this.tags = this.projectService.getTags();
       this.casts = this.metadataService.getCasts();
       this.books = this.metadataService.getBooks();
@@ -297,10 +299,24 @@ export class CharacterListComponent implements OnInit {
       this.draftCharacters = drafts;
       this.updateDisplayedCollection();
     });
+    this.characterService.getLoreFigures().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(figures => {
+      this.loreFigures = figures;
+      this.updateDisplayedCollection();
+    });
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
+      const next = params.get('drawer') === 'true' ? 'drawer' : params.get('lore') === 'true' ? 'lore' : 'characters';
+      if (this.collectionInitialized && next === this.collection) return;
+      if (this.collectionInitialized) this.saveCollectionFilters();
+      this.collection = next;
+      this.restoreCollectionFilters();
+      this.collectionInitialized = true;
+      this.filterProjectPath = this.currentProject?.path;
+      this.updateDisplayedCollection();
+    });
   }
 
   private updateDisplayedCollection(): void {
-    this.allCharacters = this.drawerMode ? this.draftCharacters : this.activeCharacters;
+    this.allCharacters = this.drawerMode ? this.draftCharacters : this.loreMode ? this.loreFigures : this.activeCharacters;
     this.filteredCharacters = this.filterAndSortCharacters(this.allCharacters);
     this.selectedCharacterIds = [];
     this.recomputeGroups();
@@ -309,14 +325,58 @@ export class CharacterListComponent implements OnInit {
     void this.loadThumbnailDataUrls(this.allCharacters);
   }
 
-  setDrawerMode(drawerMode: boolean): void {
-    if (this.drawerMode === drawerMode) return;
+  setDrawerMode(drawerMode: boolean): void { this.setCollection(drawerMode ? 'drawer' : 'characters'); }
+
+  setCollection(collection: 'characters' | 'lore' | 'drawer'): void {
+    if (this.collection === collection) return;
     void this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { drawer: drawerMode ? 'true' : null },
-      queryParamsHandling: 'merge',
-      replaceUrl: true,
+      queryParams: { drawer: collection === 'drawer' ? 'true' : null, lore: collection === 'lore' ? 'true' : null },
+      queryParamsHandling: 'merge', replaceUrl: true,
     });
+  }
+
+  private get collectionFilterKey(): string {
+    return `characterCollectionFilters:${this.currentProject?.path || ''}:${this.collection}`;
+  }
+
+  private saveCollectionFilters(): void {
+    if (!this.collectionInitialized || !this.currentProject) return;
+    localStorage.setItem(this.collectionFilterKey, JSON.stringify({
+      searchTerm: this.searchTerm, disabledCategoryIds: this.disabledCategoryIds,
+      selectedTags: this.selectedTags, selectedCast: this.selectedCast, selectedHouse: this.selectedHouse,
+      selectedBook: this.selectedBook, selectedPictureFilter: this.selectedPictureFilter, povOnly: this.povOnly,
+      groupBy: this.groupBy, sortBy: this.sortBy, sortDirection: this.sortDirection,
+      viewMode: this.viewMode, columns: this.columns, galleryThumbnailSize: this.galleryThumbnailSize,
+    }));
+  }
+
+  private restoreCollectionFilters(): void {
+    const saved = localStorage.getItem(this.collectionFilterKey);
+    // Preserve old Characters preferences on the first visit; new collections start unfiltered.
+    if (!saved && !this.collectionInitialized && this.collection === 'characters') return;
+    let raw: Record<string, unknown> = {};
+    try { if (saved) raw = JSON.parse(saved) || {}; } catch { /* Reset invalid preferences. */ }
+    const strings = (value: unknown): string[] => Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : [];
+    const text = (value: unknown): string => typeof value === 'string' ? value : '';
+    this.searchTerm = text(raw['searchTerm']);
+    this.disabledCategoryIds = strings(raw['disabledCategoryIds']).filter(id => this.categories.some(category => category.id === id));
+    this.enabledCategoryIds = this.categories.filter(category => !this.disabledCategoryIds.includes(category.id)).map(category => category.id);
+    this.selectedTags = strings(raw['selectedTags']);
+    this.selectedCast = text(raw['selectedCast']);
+    this.selectedHouse = text(raw['selectedHouse']);
+    this.selectedBook = text(raw['selectedBook']);
+    this.selectedPictureFilter = raw['selectedPictureFilter'] === 'with' || raw['selectedPictureFilter'] === 'without' ? raw['selectedPictureFilter'] : '';
+    this.povOnly = !this.drawerMode && raw['povOnly'] === true;
+    const group = raw['groupBy'];
+    this.groupBy = group === 'category' || group === 'tag' || group === 'cast' || group === 'book' ? group : 'none';
+    this.sortBy = raw['sortBy'] === 'category' ? 'category' : 'name';
+    this.sortDirection = raw['sortDirection'] === 'desc' ? 'desc' : 'asc';
+    const view = raw['viewMode'];
+    this.viewMode = view === 'list' || view === 'compact' || view === 'gallery' ? view : 'grid';
+    this.columns = raw['columns'] === 1 ? 1 : 2;
+    this.galleryThumbnailSize = raw['galleryThumbnailSize'] === 'small' || raw['galleryThumbnailSize'] === 'big' ? raw['galleryThumbnailSize'] : 'medium';
+    this.recomputePovBadgeState();
   }
 
   @HostListener('document:keydown', ['$event'])
@@ -485,6 +545,8 @@ export class CharacterListComponent implements OnInit {
   createNewCharacter(): void {
     if (this.drawerMode) {
       this.characterEditDialog.openCreateDraft();
+    } else if (this.loreMode) {
+      this.characterEditDialog.openCreateLore();
     } else {
       this.characterEditDialog.openCreate();
     }
@@ -635,6 +697,7 @@ export class CharacterListComponent implements OnInit {
   }
 
   private applyFilters(): void {
+    this.saveCollectionFilters();
     // Simply re-filter and sort the current character list
     // No need to subscribe again - the subscription in ngOnInit handles updates
     this.filteredCharacters = this.filterAndSortCharacters(this.allCharacters);
@@ -924,21 +987,25 @@ getFilterSummary(): string {
       this.viewMode = 'grid';
     }
     this.preferences.setViewMode(this.viewMode);
+    this.saveCollectionFilters();
   }
 
   setViewMode(mode: 'grid' | 'list' | 'compact' | 'gallery'): void {
     this.viewMode = mode;
     this.preferences.setViewMode(this.viewMode);
+    this.saveCollectionFilters();
   }
 
   setColumns(count: 1 | 2): void {
     this.columns = count;
     localStorage.setItem('characterColumns', count.toString());
+    this.saveCollectionFilters();
   }
 
   setGalleryThumbnailSize(size: 'big' | 'medium' | 'small'): void {
     this.galleryThumbnailSize = size;
     this.preferences.setGalleryThumbnailSize(size);
+    this.saveCollectionFilters();
   }
 
   setGalleryThumbnailSizeFromSlider(value: string): void {
@@ -1025,6 +1092,7 @@ getFilterSummary(): string {
   setGroupBy(groupBy: 'none' | 'category' | 'tag' | 'cast' | 'book'): void {
     this.groupBy = groupBy;
     localStorage.setItem('characterGroupBy', this.groupBy);
+    this.saveCollectionFilters();
     this.activeDropCategoryId = null;
     this.updateCategoryDropListIds();
   }

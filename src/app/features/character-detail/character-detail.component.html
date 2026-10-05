@@ -1,5 +1,5 @@
 <div class="character-detail" [class.studio-layout]="studioLayout">
-  <app-page-header [title]="isDraftMode ? (isEditing ? 'Edit Character Draft' : 'New Character Draft') : (isEditing ? 'Edit Character' : 'New Character')">
+  <app-page-header [title]="isDraftMode ? (isEditing ? 'Edit Character Draft' : 'New Character Draft') : isLoreMode ? (isEditing ? 'Edit Lore Figure' : 'New Lore Figure') : (isEditing ? 'Edit Character' : 'New Character')">
     <div pageHeaderSuffix class="header-meta">
       @if (isEditing && character) {
         <button
@@ -45,10 +45,17 @@
         <button
           type="button"
           class="btn btn-secondary"
-          [disabled]="isSaving"
-          (click)="promoteDraft()"
-          title="Promote to a real character"
-        ><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#star" /></svg> Take the Stage</button>
+          [disabled]="isSaving || savingBookPageId"
+          (click)="convertDraft('characters')"
+          title="Move this draft to Characters (name and category required)"
+        >Convert to Character</button>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          [disabled]="isSaving || savingBookPageId"
+          (click)="convertDraft('lore')"
+          title="Move this draft to Lore (only a name required)"
+        >Convert to Lore</button>
       }
       <button
         type="button"
@@ -60,7 +67,7 @@
         @if (isSaving) {
           <span class="spinner spinner-sm"></span>
         }
-        {{ isSaving ? 'Saving…' : isDraftMode ? (isEditing ? 'Save Draft' : 'Create Draft') : (isEditing ? 'Save Changes' : 'Create Character') }}
+        {{ isSaving ? 'Saving…' : isDraftMode ? (isEditing ? 'Save Draft' : 'Create Draft') : (isEditing ? 'Save Changes' : isLoreMode ? 'Create Lore Figure' : 'Create Character') }}
         @if (!isSaving) {
           <kbd class="shortcut-hint">⌃↵</kbd>
         }
@@ -220,9 +227,18 @@
                 </div>
               </div>
 
+              @if (!isDraftMode) {
+                <div class="hero-field">
+                  <label class="form-label">Collection</label>
+                  <div class="view-toggle view-toggle-text" role="group" aria-label="Character collection">
+                    <button type="button" class="toggle-option" [class.active]="!isLoreMode" [attr.aria-pressed]="!isLoreMode" (click)="setLoreMode(false)">Characters</button>
+                    <button type="button" class="toggle-option" [class.active]="isLoreMode" [attr.aria-pressed]="isLoreMode" (click)="setLoreMode(true)">Lore</button>
+                  </div>
+                </div>
+              }
               @if (categories.length > 0) {
                 <div class="hero-field form-group-category" [class.field-highlight]="characterForm.get('category')?.invalid && characterForm.get('category')?.touched">
-                  <label class="form-label">Category{{ isDraftMode ? '' : ' *' }}</label>
+                  <label class="form-label">Category{{ isDraftMode || isLoreMode ? '' : ' *' }}</label>
                   <app-category-toggle
                     [options]="categoryToggleOptions"
                     [selectedValue]="getSelectedCategoryForActiveTab()"

@@ -25,13 +25,13 @@ export class CharacterCommandService {
 
     if (!this.subscribed) {
       this.subscribed = true;
-      this.characterService.getCharacters().subscribe((characters) => {
+      this.characterService.getReferenceCharacters().subscribe((characters) => {
         if (this.active) {
           this.publishAndLoadThumbnails(characters);
         }
       });
     } else {
-      this.publishAndLoadThumbnails(this.characterService.getCharactersSnapshot());
+      this.publishAndLoadThumbnails(this.characterService.getReferenceCharactersSnapshot());
     }
   }
 
@@ -54,7 +54,7 @@ export class CharacterCommandService {
         id: `character-${character.id}`,
         label: character.name,
         thumbnail: this.characterService.getCachedThumbnail(character.id) || undefined,
-        metadata: this.metadataHelper.getCategoryName(character.category),
+        metadata: character.lore ? 'Lore' : this.metadataHelper.getCategoryName(character.category),
         aliases: character.aliases,
         keywords: [
           character.name,
@@ -73,7 +73,7 @@ export class CharacterCommandService {
     this.publish(characters);
     void this.characterService.loadThumbnailsForCharacters(characters).then(() => {
       if (this.active) {
-        this.publish(this.characterService.getCharactersSnapshot());
+        this.publish(this.characterService.getReferenceCharactersSnapshot());
       }
     });
   }

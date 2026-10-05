@@ -51,7 +51,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('pinboardContainer', { static: true }) pinboardContainer!: ElementRef;
 
   pinboardData$ = this.pinboardService.getPinboardData();
-  characters$ = this.characterService.getCharacters();
+  characters$ = this.characterService.getReferenceCharacters();
 
   private readonly destroyRef = inject(DestroyRef);
 

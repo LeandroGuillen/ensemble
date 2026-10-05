@@ -313,6 +313,60 @@ describe('CharacterService', () => {
     });
   });
 
+  describe('Lore figures', () => {
+    beforeEach(() => {
+      projectService.getCurrentProject.and.returnValue(createValidProject());
+      electronService.writeFileAtomic.and.resolveTo({ success: true });
+    });
+
+    it('creates a name-only Lore figure separately and keeps it available for references', async () => {
+      const figure = await service.createCharacter({ name: 'Founder', lore: true, category: '', tags: [], books: [], prompts: [], content: '' });
+      expect(service.getCharactersSnapshot()).toEqual([]);
+      expect(service.getLoreFiguresSnapshot()).toEqual([figure]);
+      expect(service.getCharacterById(figure.id)).toEqual(figure);
+      expect(service.getReferenceCharactersSnapshot()).toEqual([figure]);
+      const saved = electronService.writeFileAtomic.calls.mostRecent().args[1];
+      expect(saved).toContain('lore: true');
+      expect(saved).not.toContain('category:');
+      await expectAsync(service.createCharacter({ name: '  ', lore: true, category: '', tags: [], books: [], prompts: [], content: '' })).toBeRejected();
+    });
+
+    it('moves between Characters and Lore without changing IDs, files, or descriptions', async () => {
+      const original = await service.createCharacter(createValidCharacterFormData());
+      const lore = await service.updateCharacter(original.id, { lore: true });
+      expect(lore?.id).toBe(original.id);
+      expect(lore?.filePath).toBe(original.filePath);
+      expect(lore?.content).toBe(original.content);
+      expect(service.getCharactersSnapshot()).toEqual([]);
+      expect(service.getLoreFiguresSnapshot().map(c => c.id)).toEqual([original.id]);
+      await service.updateCharacter(original.id, { lore: false });
+      expect(service.getLoreFiguresSnapshot()).toEqual([]);
+      expect(service.getCharactersSnapshot()[0].id).toBe(original.id);
+      expect(electronService.writeFileAtomic.calls.mostRecent().args[1]).not.toContain('lore: true');
+      expect(electronService.moveDirectory).not.toHaveBeenCalled();
+    });
+
+    it('reloads all three collections and excludes drafts from reference lookup', async () => {
+      electronService.fileExists.and.resolveTo(true);
+      electronService.readDirectoryRecursive.and.resolveTo({ success: true, files: [
+        { relativePath: '_active.md', absolutePath: '/test/project/characters/_active.md' },
+        { relativePath: '_founder.md', absolutePath: '/test/project/characters/_founder.md' },
+        { relativePath: '@drafts/draft/draft.md', absolutePath: '/test/project/characters/@drafts/draft/draft.md' },
+      ] });
+      electronService.readFile.and.callFake((path: string) => Promise.resolve({ success: true, content:
+        path.endsWith('_active.md') ? '---\nid: active\nname: Active\ncategory: main-character\n---\n' :
+        path.endsWith('_founder.md') ? '---\nid: founder\nname: Founder\nlore: true\n---\nFounder notes' :
+        '---\nid: draft\nname: Draft\n---\n' }));
+      await service.forceReloadCharacters();
+      expect(service.getCharactersSnapshot().map(c => c.id)).toEqual(['active']);
+      expect(service.getLoreFiguresSnapshot().map(c => c.id)).toEqual(['founder']);
+      expect(service.getLoreFiguresSnapshot()[0].category).toBe('');
+      expect(service.getLoreFiguresSnapshot()[0].content).toContain('Founder notes');
+      expect(service.getDraftsSnapshot().map(c => c.id)).toEqual(['draft']);
+      expect(service.getReferenceCharactersSnapshot().map(c => c.id)).toEqual(['active', 'founder']);
+    });
+  });
+
   describe('character drafts', () => {
     it('creates a completely empty draft without exposing it as an active character', async () => {
       const project = createValidProject();
@@ -385,6 +439,46 @@ describe('CharacterService', () => {
       expect(promoted.books).toEqual(['book-1']);
       const savedContent = electronService.writeFileAtomic.calls.mostRecent().args[1] as string;
       expect(savedContent).not.toContain('draft: true');
+    });
+
+    it('converts a draft with only a name to Lore and preserves its ID and notes', async () => {
+      projectService.getCurrentProject.and.returnValue(createValidProject());
+      electronService.writeFileAtomic.and.resolveTo({ success: true });
+      const draft = await service.createDraft({
+        name: 'Founder', category: '', tags: [], books: [], prompts: [], content: 'An ancient legend',
+        aliases: ['First King'],
+      });
+
+      await expectAsync(service.promoteDraft(draft.id, 'characters')).toBeRejectedWithError(
+        'A category is required before promoting this draft'
+      );
+      expect(service.getDraftById(draft.id)).toBeDefined();
+
+      const figure = await service.promoteDraft(draft.id, 'lore');
+      expect(figure.id).toBe(draft.id);
+      expect(figure.lore).toBeTrue();
+      expect(figure.draft).toBeUndefined();
+      expect(figure.content).toBe('An ancient legend');
+      expect(figure.aliases).toEqual(['First King']);
+      expect(figure.relativePath).toBe('founder/founder.md');
+      expect(service.getDraftById(draft.id)).toBeUndefined();
+      expect(service.getCharactersSnapshot()).toEqual([]);
+      expect(service.getLoreFiguresSnapshot()).toEqual([figure]);
+      expect(service.getReferenceCharactersSnapshot()).toEqual([figure]);
+      expect(electronService.writeFileAtomic.calls.mostRecent().args[1]).toContain('lore: true');
+    });
+
+    it('keeps an unnamed draft in Drawer when conversion to Lore is requested', async () => {
+      projectService.getCurrentProject.and.returnValue(createValidProject());
+      electronService.writeFileAtomic.and.resolveTo({ success: true });
+      const draft = await service.createDraft({
+        name: '', category: '', tags: [], books: [], prompts: [], content: '',
+      });
+      await expectAsync(service.promoteDraft(draft.id, 'lore')).toBeRejectedWithError(
+        'A name is required before promoting this draft'
+      );
+      expect(service.getDraftById(draft.id)).toBeDefined();
+      expect(service.getLoreFiguresSnapshot()).toEqual([]);
     });
 
     it('refuses to promote a draft without a name or category', async () => {

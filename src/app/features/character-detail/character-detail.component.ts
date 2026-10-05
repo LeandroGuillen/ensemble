@@ -149,6 +149,7 @@ export class CharacterDetailComponent
 
   isEditing = false;
   isDraftMode = false;
+  isLoreMode = false;
   isLoading = false;
   activeTab: 'basic' = 'basic';
   /** 'main' or bookId; which content tab is active */
@@ -228,6 +229,7 @@ export class CharacterDetailComponent
     private ngZone: NgZone
   ) {
     this.isDraftMode = this.route.snapshot.data['draft'] === true;
+    this.isLoreMode = !this.isDraftMode && this.route.snapshot.queryParamMap?.get('lore') === 'true';
     this.characterForm = this.createForm();
   }
 
@@ -274,7 +276,7 @@ export class CharacterDetailComponent
         this.updateContentTabs();
 
         // Set default category only when form has no valid selection (don't overwrite user's choice)
-        if (this.categories.length > 0 && !this.isEditing && !this.isDraftMode) {
+        if (this.categories.length > 0 && !this.isEditing && !this.isDraftMode && !this.isLoreMode) {
           const currentValue = this.characterForm.get('category')?.value;
           const hasValidSelection =
             currentValue && this.categories.some((c) => c.id === currentValue);
@@ -313,7 +315,7 @@ export class CharacterDetailComponent
           this.character = null;
           this.externalMainConflict = false;
           this.externalBookConflicts.clear();
-          const defaultCategory = this.isDraftMode
+          const defaultCategory = this.isDraftMode || this.isLoreMode
             ? undefined
             : this.categories.find(
                 (category) =>
@@ -341,6 +343,7 @@ export class CharacterDetailComponent
     this.route.queryParams
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((params) => {
+        if (!this.isEditing && !this.isDraftMode) this.setLoreMode(params["lore"] === "true", false);
         if (params["name"] && !this.isEditing) {
           this.characterForm.patchValue({ name: params["name"] });
           this.cdr.markForCheck();
@@ -444,11 +447,21 @@ export class CharacterDetailComponent
     }
   }
 
+  setLoreMode(lore: boolean, markDirty = true): void {
+    this.isLoreMode = lore;
+    const category = this.characterForm.get('category');
+    category?.setValidators(this.isDraftMode || lore ? [] : [Validators.required]);
+    category?.updateValueAndValidity();
+    if (this.fieldErrors) this.fieldErrors['category'] = this.computeFieldError('category');
+    if (markDirty) this.characterForm.markAsDirty();
+    this.cdr.markForCheck();
+  }
+
   private createForm(): FormGroup {
     const nameValidators = this.isDraftMode
       ? [Validators.maxLength(100)]
       : [Validators.required, Validators.minLength(1), Validators.maxLength(100)];
-    const categoryValidators = this.isDraftMode ? [] : [Validators.required];
+    const categoryValidators = this.isDraftMode || this.isLoreMode ? [] : [Validators.required];
     return this.fb.group({
       name: [
         "",
@@ -509,6 +522,7 @@ export class CharacterDetailComponent
 
       if (refreshedCharacter) {
         this.character = refreshedCharacter;
+        this.setLoreMode(!!refreshedCharacter.lore, false);
 
         if (id !== refreshedCharacter.id) {
           this.router.navigate(
@@ -809,6 +823,7 @@ export class CharacterDetailComponent
 
       const formData = this.buildFormData();
       const wasEditing = this.isEditing;
+      const collectionChanged = !!this.character && !!this.character.lore !== !!formData.lore;
 
       if (this.isEditing && this.character) {
         const updatedCharacter = await this.characterService.updateCharacter(
@@ -838,11 +853,12 @@ export class CharacterDetailComponent
 
       this.notificationService.showSuccess(
         this.isDraftMode ? (this.isEditing ? "Draft saved successfully" : "Draft created successfully")
-          : (wasEditing ? "Character saved successfully" : "Character created successfully")
+          : (this.isLoreMode ? (wasEditing ? "Lore figure saved successfully" : "Lore figure created successfully") : (wasEditing ? "Character saved successfully" : "Character created successfully"))
       );
 
       this.router.navigate(["/characters"], {
-        queryParams: this.isDraftMode ? { drawer: 'true' } : undefined,
+        queryParams: this.isDraftMode ? { drawer: 'true' } : this.isLoreMode ? { lore: 'true' } : undefined,
+        ...(collectionChanged ? { replaceUrl: true } : {}),
       });
     } catch (error) {
       this.notificationService.showError(
@@ -860,6 +876,7 @@ export class CharacterDetailComponent
     const books = this.characterForm.value.books || [];
     return {
       name: this.characterForm.value.name || '',
+      lore: !!this.isLoreMode && !this.isDraftMode,
       aliases: [...this.aliases],
       category: this.characterForm.value.category || '',
       tags: this.characterForm.value.tags || [],
@@ -873,10 +890,12 @@ export class CharacterDetailComponent
     };
   }
 
-  async promoteDraft(): Promise<void> {
-    if (!this.isDraftMode || this.isSaving) return;
-    if (this.externalMainConflict) {
-      this.notificationService.showError('Reload external changes before promoting.');
+  async convertDraft(collection: 'characters' | 'lore'): Promise<void> {
+    if (!this.isDraftMode || this.isSaving || this.savingBookPageId) return;
+    const bookIds: string[] = this.characterForm.value.books || [];
+    const dirtyBookIds = bookIds.filter(bookId => this.isBookPageDirty(bookId));
+    if (this.externalMainConflict || dirtyBookIds.some(bookId => this.externalBookConflicts.has(bookId))) {
+      this.notificationService.showError('Reload external changes before converting this draft.');
       return;
     }
 
@@ -888,13 +907,23 @@ export class CharacterDetailComponent
 
     const data = this.buildFormData();
     if (!data.name.trim()) {
-      this.notificationService.showError('Add a name before promoting this draft.');
+      this.notificationService.showError('Add a name before converting this draft.');
       this.nameInput?.nativeElement.focus();
       return;
     }
-    if (!data.category.trim()) {
-      this.notificationService.showError('Choose a category before promoting this draft.');
+    if (collection === 'characters' && !data.category.trim()) {
+      this.notificationService.showError('Choose a category before converting this draft to a character.');
       document.querySelector('.form-group-category')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    if (this.characterForm.invalid) {
+      this.markFormGroupTouched(this.characterForm);
+      this.scrollToFirstInvalidField();
+      return;
+    }
+    if (!this.currentProject) {
+      this.notificationService.showError('No project loaded');
       return;
     }
 
@@ -908,14 +937,29 @@ export class CharacterDetailComponent
         draft = await this.characterService.createDraft(data);
       }
       if (!draft) throw new Error('Character draft not found');
-      const promoted = await this.characterService.promoteDraft(draft.id);
-      this.notificationService.showSuccess(`“${promoted.name}” is now a character.`);
-      await this.router.navigate(['/character', promoted.id]);
+      // Keep the saved draft on failure so retrying never creates a second record.
+      this.character = draft;
+      this.isEditing = true;
+      for (const bookId of dirtyBookIds) {
+        const content = this.bookPageData[bookId].content;
+        await this.characterService.saveBookPage(draft.id, bookId, content);
+        this.bookPageOriginalContent[bookId] = content;
+      }
+      const converted = await this.characterService.promoteDraft(draft.id, collection);
+      this.character = converted;
+      this.characterForm.markAsPristine();
+      this.notificationService.showSuccess(`“${converted.name}” is now ${collection === 'lore' ? 'a Lore figure' : 'a character'}.`);
+      // Replace the obsolete draft route so Back opens the destination collection.
+      await this.router.navigate(['/characters'], {
+        queryParams: collection === 'lore' ? { lore: 'true' } : undefined,
+        replaceUrl: true,
+      });
+      await this.router.navigate(['/character', converted.id]);
     } catch (error) {
       this.notificationService.showError(
-        error instanceof Error ? error.message : 'Failed to promote character draft'
+        error instanceof Error ? error.message : 'Failed to convert character draft'
       );
-      this.logger.error('Promote draft error:', error);
+      this.logger.error('Convert draft error:', error);
     } finally {
       this.isSaving = false;
       this.cdr.markForCheck();
@@ -993,7 +1037,7 @@ export class CharacterDetailComponent
       this.location.back();
     } else {
       this.router.navigate(["/characters"], {
-        queryParams: this.isDraftMode ? { drawer: 'true' } : undefined,
+        queryParams: this.isDraftMode ? { drawer: 'true' } : this.isLoreMode ? { lore: 'true' } : undefined,
       });
     }
   }
@@ -1664,7 +1708,8 @@ export class CharacterDetailComponent
       await this.characterService.updateCharacter(this.character.id, data);
       const draft = await this.characterService.moveToDraft(this.character.id);
       this.notificationService.showSuccess(`"${draft.name || 'Unnamed draft'}" moved back to drafts`);
-      this.router.navigate(['/characters'], { queryParams: { drawer: 'true' } });
+      this.characterForm.markAsPristine();
+      this.router.navigate(['/characters'], { queryParams: { drawer: 'true' }, replaceUrl: true });
     } catch (error) {
       this.notificationService.showError(
         error instanceof Error ? error.message : `Failed to move character to drafts: ${error}`
@@ -1695,7 +1740,7 @@ export class CharacterDetailComponent
         `${this.isDraftMode ? 'Draft' : 'Character'} "${this.character.name || 'Unnamed draft'}" deleted successfully`
       );
       this.router.navigate(["/characters"], {
-        queryParams: this.isDraftMode ? { drawer: 'true' } : undefined,
+        queryParams: this.isDraftMode ? { drawer: 'true' } : this.isLoreMode ? { lore: 'true' } : undefined,
       });
     } catch (error) {
       this.notificationService.showError(`Failed to delete character: ${error}`);

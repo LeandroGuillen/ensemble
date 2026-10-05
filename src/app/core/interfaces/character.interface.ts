@@ -5,6 +5,8 @@ export interface CharacterPrompt {
 }
 
 export interface Character {
+  /** Background figure; separate from active characters and incomplete drafts. */
+  lore?: boolean;
   /** Stable identity stored in frontmatter; survives rename/move. */
   id: string;
   /** In-memory staging state, derived from the `@drafts` folder for folder-based records. */
@@ -33,6 +35,7 @@ export interface Character {
 }
 
 export interface CharacterFormData {
+  lore?: boolean;
   name: string;
   /** Alternative names (a.k.a.'s); omitted or empty when none. */
   aliases?: string[];
@@ -51,6 +54,7 @@ export interface CharacterFormData {
 }
 
 export interface CharacterFrontmatter {
+  lore?: boolean;
   /** Stable character identity; assigned on first load when missing. */
   id?: string;
   /** Optional only for drafts. Active character files still require a name. */

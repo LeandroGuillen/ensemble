@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, combineLatest, map, Observable } from 'rxjs';
 import { Character, CharacterFormData, CharacterFrontmatter, CharacterPrompt } from '../interfaces/character.interface';
 import { Category } from '../interfaces/project.interface';
 import { parseMarkdown, generateMarkdown } from '../utils/markdown.utils';
@@ -47,8 +47,13 @@ function normalizePrompts(raw: unknown): CharacterPrompt[] {
 export class CharacterService {
   private charactersSubject = new BehaviorSubject<Character[]>([]);
   public characters$ = this.charactersSubject.asObservable();
+  private loreSubject = new BehaviorSubject<Character[]>([]);
+  public lore$ = this.loreSubject.asObservable();
   private draftsSubject = new BehaviorSubject<Character[]>([]);
   public drafts$ = this.draftsSubject.asObservable();
+  private readonly referenceCharacters$ = combineLatest([this.characters$, this.lore$]).pipe(
+    map(([characters, lore]) => [...characters, ...lore].sort((a, b) => a.name.localeCompare(b.name)))
+  );
   private hasLoadedForCurrentProject = false;
   private currentProjectPath: string | null = null;
   
@@ -114,6 +119,17 @@ export class CharacterService {
     return this.characters$;
   }
 
+  getLoreFigures(): Observable<Character[]> { return this.lore$; }
+  getLoreFiguresSnapshot(): Character[] { return this.loreSubject.value; }
+  /** All named references, including Lore; drafts remain excluded. */
+  getReferenceCharacters(): Observable<Character[]> { return this.referenceCharacters$; }
+  getReferenceCharactersSnapshot(): Character[] {
+    return [...this.charactersSubject.value, ...this.loreSubject.value].sort((a, b) => a.name.localeCompare(b.name));
+  }
+  private collectionFor(character?: Character): BehaviorSubject<Character[]> {
+    return character?.draft ? this.draftsSubject : character?.lore ? this.loreSubject : this.charactersSubject;
+  }
+
   /** Drafts are deliberately isolated from all normal character consumers. */
   getDrafts(): Observable<Character[]> {
     return this.drafts$;
@@ -138,7 +154,7 @@ export class CharacterService {
 
   /** Matches stable id, or a leftover path-based id via `relativePath`. */
   private findCharacter(id: string): Character | undefined {
-    return this.findInCollection(this.charactersSubject.value, id);
+    return this.findInCollection(this.getReferenceCharactersSnapshot(), id);
   }
 
   /** Internal lookup for operations shared by active characters and drafts. */
@@ -238,6 +254,7 @@ export class CharacterService {
     if (projectPath) {
       // Clear current characters before reloading
       this.charactersSubject.next([]);
+      this.loreSubject.next([]);
       this.draftsSubject.next([]);
       await this.loadCharacters(projectPath);
     }
@@ -279,6 +296,7 @@ export class CharacterService {
       this.currentProjectPath = projectPath;
       this.hasLoadedForCurrentProject = false;
       this.charactersSubject.next([]);
+      this.loreSubject.next([]);
       this.draftsSubject.next([]);
       // Clear thumbnail cache when switching projects
       this.thumbnailDataUrls.clear();
@@ -334,13 +352,15 @@ export class CharacterService {
       this.assignUniqueCharacterIds(records, needsIdPersist);
 
       const characters = records
-        .filter((record) => !record.draft)
+        .filter((record) => !record.draft && !record.lore)
         .sort((a, b) => a.name.localeCompare(b.name));
+      const lore = records.filter(record => !record.draft && record.lore).sort((a, b) => a.name.localeCompare(b.name));
       const drafts = records
         .filter((record) => record.draft)
         .sort((a, b) => b.modified.getTime() - a.modified.getTime());
       await this.persistAssignedIdsAndRemap(records, needsIdPersist);
       this.charactersSubject.next(characters);
+      this.loreSubject.next(lore);
       this.draftsSubject.next(drafts);
       this.hasLoadedForCurrentProject = true;
     } catch (error) {
@@ -393,9 +413,10 @@ export class CharacterService {
       const character: Character = {
         id: storedId || generateId(),
         draft: isDraft || undefined,
+        lore: !isDraft && frontmatter.lore === true || undefined,
         name: typeof frontmatter.name === 'string' ? frontmatter.name : '',
         aliases: normalizeAliases(frontmatter.aliases),
-        category: frontmatter.category || 'uncategorized',
+        category: frontmatter.category || (frontmatter.lore ? '' : 'uncategorized'),
         tags: frontmatter.tags || [],
         books,
         bookCategories: normalizeBookCategories(frontmatter.bookCategories, books),
@@ -553,6 +574,7 @@ export class CharacterService {
    * Creates `<characters>/<slug>/<slug>.md`.
    */
   async createCharacter(data: CharacterFormData): Promise<Character> {
+    if (data.lore && !data.name.trim()) throw new Error('A name is required for a Lore figure.');
     let createdFolderPath: string | null = null;
     try {
       const books = data.books || [];
@@ -581,8 +603,9 @@ export class CharacterService {
       const character: Character = {
         id,
         name: data.name,
+        lore: data.lore || undefined,
         aliases: normalizeAliases(data.aliases),
-        category: data.category,
+        category: data.category || '',
         tags: data.tags || [],
         books,
         bookCategories,
@@ -601,9 +624,10 @@ export class CharacterService {
       await this.saveCharacterToFile(character);
 
       // Update in-memory list
-      const currentCharacters = this.charactersSubject.value;
+      const subject = this.collectionFor(character);
+      const currentCharacters = subject.value;
       const updatedCharacters = [...currentCharacters, character].sort((a, b) => a.name.localeCompare(b.name));
-      this.charactersSubject.next(updatedCharacters);
+      subject.next(updatedCharacters);
 
       return character;
     } catch (error) {
@@ -893,8 +917,8 @@ export class CharacterService {
     };
   }
 
-  /** Promotes an explicitly saved draft into the active character collection. */
-  async promoteDraft(id: string): Promise<Character> {
+  /** Moves an explicitly saved draft into Characters or Lore, preserving its identity. */
+  async promoteDraft(id: string, collection: 'characters' | 'lore' = 'characters'): Promise<Character> {
     const draft = this.getDraftById(id);
     if (!draft) {
       throw new Error('Character draft not found');
@@ -902,7 +926,7 @@ export class CharacterService {
     if (!draft.name.trim()) {
       throw new Error('A name is required before promoting this draft');
     }
-    if (!draft.category.trim()) {
+    if (collection === 'characters' && !draft.category.trim()) {
       throw new Error('A category is required before promoting this draft');
     }
 
@@ -911,7 +935,7 @@ export class CharacterService {
     const relocated = isFolderBasedCharacterPath(localizedDraft.relativePath)
       ? await this.relocateFolderCharacter(localizedDraft, localizedDraft.name, false)
       : localizedDraft;
-    const promoted: Character = { ...relocated, draft: undefined, modified: new Date() };
+    const promoted: Character = { ...relocated, draft: undefined, lore: collection === 'lore' || undefined, modified: new Date() };
     try {
       await this.saveCharacterToFile(promoted);
     } catch (error) {
@@ -922,8 +946,9 @@ export class CharacterService {
     }
 
     this.draftsSubject.next(this.draftsSubject.value.filter((item) => item.id !== id));
-    this.charactersSubject.next(
-      [...this.charactersSubject.value, promoted].sort((a, b) => a.name.localeCompare(b.name))
+    const destination = this.collectionFor(promoted);
+    destination.next(
+      [...destination.value, promoted].sort((a, b) => a.name.localeCompare(b.name))
     );
     return promoted;
   }
@@ -939,7 +964,7 @@ export class CharacterService {
     }
 
     const relocated = await this.relocateFolderCharacter(character, character.name, true);
-    const draft: Character = { ...relocated, draft: true, modified: new Date() };
+    const draft: Character = { ...relocated, draft: true, lore: undefined, modified: new Date() };
     try {
       await this.saveCharacterToFile(draft);
     } catch (error) {
@@ -949,7 +974,8 @@ export class CharacterService {
       throw error;
     }
 
-    this.charactersSubject.next(this.charactersSubject.value.filter((item) => item.id !== id));
+    const source = this.collectionFor(character);
+    source.next(source.value.filter((item) => item.id !== id));
     this.draftsSubject.next([...this.draftsSubject.value, draft]);
     return draft;
   }
@@ -973,7 +999,7 @@ export class CharacterService {
       }
 
       const isDraft = !!this.getDraftById(id);
-      const sourceSubject = isDraft ? this.draftsSubject : this.charactersSubject;
+      const sourceSubject = this.collectionFor(this.findRecord(id));
       const characters = sourceSubject.value;
       const existingCharacter = this.findRecord(id);
       const index = existingCharacter
@@ -982,6 +1008,11 @@ export class CharacterService {
 
       if (!existingCharacter || index === -1) {
         return null;
+      }
+
+      const nextLore = !isDraft && (data.lore ?? existingCharacter.lore);
+      if (nextLore && !(data.name ?? existingCharacter.name).trim()) {
+        throw new Error('A name is required for a Lore figure.');
       }
 
       let newFilePath = existingCharacter.filePath;
@@ -1040,6 +1071,7 @@ export class CharacterService {
       const updatedCharacter: Character = {
         ...relocatedCharacter,
         name: data.name ?? existingCharacter.name,
+        lore: nextLore || undefined,
         aliases: 'aliases' in data ? normalizeAliases(data.aliases) : existingCharacter.aliases,
         category: data.category ?? existingCharacter.category,
         tags: data.tags ?? existingCharacter.tags,
@@ -1081,7 +1113,11 @@ export class CharacterService {
           ? b.modified.getTime() - a.modified.getTime()
           : a.name.localeCompare(b.name)
       );
-      sourceSubject.next(sortedCharacters);
+      const destinationSubject = this.collectionFor(finalCharacter);
+      if (destinationSubject !== sourceSubject) {
+        sourceSubject.next(characters.filter(character => character.id !== finalCharacter.id));
+        destinationSubject.next([...destinationSubject.value, finalCharacter].sort((a, b) => a.name.localeCompare(b.name)));
+      } else sourceSubject.next(sortedCharacters);
 
       return finalCharacter;
     } catch (error) {
@@ -1096,7 +1132,7 @@ export class CharacterService {
   async deleteCharacter(id: string): Promise<boolean> {
     try {
       const isDraft = !!this.getDraftById(id);
-      const sourceSubject = isDraft ? this.draftsSubject : this.charactersSubject;
+      const sourceSubject = this.collectionFor(this.findRecord(id));
       const characters = sourceSubject.value;
       const character = this.findRecord(id);
 
@@ -1139,7 +1175,7 @@ export class CharacterService {
   async refreshCharacter(id: string): Promise<Character | null> {
     try {
       const isDraft = !!this.getDraftById(id);
-      const sourceSubject = isDraft ? this.draftsSubject : this.charactersSubject;
+      const sourceSubject = this.collectionFor(this.findRecord(id));
       const characters = sourceSubject.value;
       const existingCharacter = this.findRecord(id);
 
@@ -1171,10 +1207,10 @@ export class CharacterService {
         refreshedCharacter.id = existingCharacter.id;
       }
 
-      // An external edit may explicitly promote/demote a record by changing
-      // `draft`. Repartition both public collections instead of leaving the
+      // An external edit may change a record's draft or Lore status.
+      // Repartition the public collections instead of leaving the
       // record in the collection it occupied before the edit.
-      if (!!refreshedCharacter.draft !== isDraft) {
+      if (!!refreshedCharacter.draft !== isDraft || !!refreshedCharacter.lore !== !!existingCharacter.lore) {
         await this.forceReloadCharacters();
         return this.findRecord(refreshedCharacter.id) || null;
       }
@@ -1206,6 +1242,7 @@ export class CharacterService {
     try {
       const frontmatter: CharacterFrontmatter = {
         id: character.id,
+        ...(character.lore ? { lore: true } : {}),
         // Folder-based drafts are identified by `@drafts`, not duplicated in metadata.
         ...(character.draft && !isFolderBasedCharacterPath(character.relativePath)
           ? { draft: true }
@@ -1214,7 +1251,7 @@ export class CharacterService {
         ...(character.aliases && character.aliases.length > 0
           ? { aliases: character.aliases }
           : {}),
-        category: character.category,
+        ...(character.lore && !character.category ? {} : { category: character.category }),
         tags: character.tags,
         books: character.books,
         ...(character.bookCategories && Object.keys(character.bookCategories).length > 0
@@ -1348,7 +1385,7 @@ export class CharacterService {
 
       const activeCharacters = this.charactersSubject.value;
       const drafts = this.draftsSubject.value;
-      const character = [...activeCharacters, ...drafts].find(
+      const character = [...activeCharacters, ...this.loreSubject.value, ...drafts].find(
         (char) => char.filePath === event.path
       );
       const normalizedRoot = charactersPath.replace(/\\/g, '/').replace(/\/+$/, '');
@@ -1361,13 +1398,8 @@ export class CharacterService {
 
       if (event.type === 'unlink') {
         if (character) {
-          if (character.draft) {
-            this.draftsSubject.next(drafts.filter((char) => char.filePath !== event.path));
-          } else {
-            this.charactersSubject.next(
-              activeCharacters.filter((char) => char.filePath !== event.path)
-            );
-          }
+          const collection = this.collectionFor(character);
+          collection.next(collection.value.filter(char => char.filePath !== event.path));
           this.logger.log(`Character removed: ${character.name}`);
         }
       } else if (event.type === 'change' || event.type === 'add') {

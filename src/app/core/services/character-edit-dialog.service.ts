@@ -21,6 +21,10 @@ export class CharacterEditDialogService {
     this.router.navigate(['/character'], extras);
   }
 
+  openCreateLore(): void {
+    this.router.navigate(['/character'], { queryParams: { lore: 'true' } });
+  }
+
   openEditDraft(characterId: string): void {
     this.router.navigate(['/character-draft', characterId]);
   }
