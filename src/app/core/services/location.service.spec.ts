@@ -6,7 +6,7 @@ import { ProjectService } from './project.service';
 import { FileWatcherService } from './file-watcher.service';
 import { LoggingService } from './logging.service';
 import { Project } from '../interfaces/project.interface';
-import { LocationFormData } from '../interfaces/location.interface';
+import { LOCATION_TYPES, LocationFormData } from '../interfaces/location.interface';
 
 describe('LocationService', () => {
   let service: LocationService;
@@ -133,8 +133,38 @@ A foggy port.`,
       expect(locations.length).toBe(1);
       expect(locations[0].name).toBe('Grey Harbor');
       expect(locations[0].id).toBeTruthy();
+      expect(locations[0].type).toBeUndefined();
       expect(electronService.writeFileAtomic).toHaveBeenCalled();
     });
+  });
+
+  it('round-trips every location type through Markdown storage', async () => {
+    projectService.getCurrentProject.and.returnValue(createValidProject());
+    electronService.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));
+    electronService.fileExists.and.returnValue(Promise.resolve(true));
+
+    for (const type of LOCATION_TYPES) {
+      const created = await service.createLocation({ ...createFormData(), type: type.value });
+      const markdown = electronService.writeFileAtomic.calls.mostRecent().args[1];
+      electronService.readDirectoryRecursive.and.returnValue(Promise.resolve({
+        success: true,
+        files: [{ relativePath: created.relativePath, absolutePath: created.filePath }],
+      }));
+      electronService.readFile.and.returnValue(Promise.resolve({ success: true, content: markdown }));
+      await service.forceReloadLocations();
+      expect(service.getLocationById(created.id)?.type).toBe(type.value);
+    }
+  });
+
+  it('preserves type on unrelated edits and allows clearing it', async () => {
+    projectService.getCurrentProject.and.returnValue(createValidProject());
+    electronService.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));
+    const created = await service.createLocation({ ...createFormData(), type: 'settlement' });
+    expect((await service.updateLocation(created.id, { content: 'Updated description' }))?.type)
+      .toBe('settlement');
+    expect((await service.updateLocation(created.id, { type: 'district' }))?.type).toBe('district');
+    expect((await service.updateLocation(created.id, { type: undefined }))?.type).toBeUndefined();
+    expect(electronService.writeFileAtomic.calls.mostRecent().args[1]).not.toContain('type:');
   });
 
   describe('createLocation', () => {

@@ -156,3 +156,16 @@ Drawer drafts can be converted from their editor using **Convert to Character**
 or **Convert to Lore**. Characters require a name and category; Lore figures
 require only a name. Conversion saves current edits and book notes, preserves
 the record's ID and images, and moves its folder out of `@drafts/`.
+
+## Locations
+
+Locations have an optional Type: Country, Region, Settlement, District, Building,
+Natural Feature, Continent, Plane, or Other. The editor includes explanations and
+examples for each type. Types are stored in Markdown frontmatter as `type` (for
+example, `type: settlement` or `type: natural-feature`). Existing locations without
+a type remain Unspecified.
+
+The Locations page displays type badges in grid and list views. Search matches
+names, descriptions, book names, and type labels. Type, book, and picture filters
+can be combined; their selections are remembered, and Clear Filters resets them.
+The toolbar wraps below the page title as space becomes limited.

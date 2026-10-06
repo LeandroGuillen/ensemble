@@ -80,7 +80,7 @@
                     </div>
                   } @else {
                     <div class="thumbnail-placeholder">
-                      <svg class="ui-icon placeholder-icon" aria-hidden="true"><use href="assets/ui-icons.svg#map" /></svg>
+                      <svg class="ui-icon placeholder-icon" aria-hidden="true"><use [attr.href]="placeholderIcon" /></svg>
                       <span class="placeholder-text">Click to add thumbnail</span>
                     </div>
                   }
@@ -102,6 +102,27 @@
                   @if (getFieldError('name')) {
                     <div class="field-error">{{ getFieldError('name') }}</div>
                   }
+                </div>
+
+                <div class="form-group">
+                  <label for="locationType" class="form-label">Type</label>
+                  <app-location-type-select formControlName="type"></app-location-type-select>
+                  <p class="field-hint" id="locationTypeHint">
+                    @if (selectedTypeInfo; as type) {
+                      {{ type.description }} Examples: {{ type.examples }}
+                    } @else {
+                      Choose the kind of place this is.
+                    }
+                  </p>
+                  <details class="type-guide">
+                    <summary>Location types and examples</summary>
+                    <dl>
+                      @for (type of locationTypes; track type.value) {
+                        <dt>{{ type.label }}</dt>
+                        <dd>{{ type.description }} Examples: {{ type.examples }}</dd>
+                      }
+                    </dl>
+                  </details>
                 </div>
 
                 <div class="form-group">

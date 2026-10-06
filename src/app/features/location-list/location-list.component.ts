@@ -3,7 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Book } from '../../core/interfaces/project.interface';
-import { Location } from '../../core/interfaces/location.interface';
+import { LOCATION_TYPES, Location, LocationType, isLocationType, getLocationTypeLabel, getLocationPlaceholderIcon } from '../../core/interfaces/location.interface';
 import {
   MetadataService,
   LocationService,
@@ -28,6 +28,11 @@ export class LocationListComponent implements OnInit {
   filteredLocations: Location[] = [];
   books: Book[] = [];
   thumbnailDataUrls: Map<string, string> = new Map();
+
+  readonly locationTypes = LOCATION_TYPES;
+  readonly getTypeLabel = getLocationTypeLabel;
+  readonly getPlaceholderIcon = getLocationPlaceholderIcon;
+  selectedType: LocationType | '' | 'unspecified' = '';
 
   searchTerm = '';
   selectedBook = '';
@@ -73,6 +78,15 @@ export class LocationListComponent implements OnInit {
     const savedSortDirection = localStorage.getItem('locationSortDirection') as 'asc' | 'desc' | null;
     if (savedSortDirection === 'asc' || savedSortDirection === 'desc') {
       this.sortDirection = savedSortDirection;
+    }
+
+    const savedType = localStorage.getItem('locationSelectedType');
+    if (isLocationType(savedType) || savedType === 'unspecified') {
+      this.selectedType = savedType;
+    }
+    const savedPicture = localStorage.getItem('locationSelectedPicture');
+    if (savedPicture === 'with' || savedPicture === 'without') {
+      this.selectedPictureFilter = savedPicture;
     }
 
     void this.loadLocationsIfNeeded();
@@ -215,6 +229,8 @@ export class LocationListComponent implements OnInit {
   }
 
   onFilterChange(): void {
+    localStorage.setItem('locationSelectedType', this.selectedType);
+    localStorage.setItem('locationSelectedPicture', this.selectedPictureFilter);
     if (this.selectedBook) {
       localStorage.setItem('locationSelectedBook', this.selectedBook);
     } else {
@@ -226,6 +242,9 @@ export class LocationListComponent implements OnInit {
   clearFilters(): void {
     this.clearSearchTerm();
     this.selectedBook = '';
+    this.selectedType = '';
+    localStorage.removeItem('locationSelectedType');
+    localStorage.removeItem('locationSelectedPicture');
     this.selectedPictureFilter = '';
     localStorage.removeItem('locationSelectedBook');
     this.applyFilters();
@@ -235,6 +254,12 @@ export class LocationListComponent implements OnInit {
     const searchLower = this.searchTerm.trim().toLowerCase();
 
     const filtered = this.allLocations.filter((location) => {
+      const matchesType = this.selectedType === 'unspecified'
+        ? !location.type
+        : !this.selectedType || location.type === this.selectedType;
+      if (!matchesType) {
+        return false;
+      }
       if (this.selectedBook && !location.books.includes(this.selectedBook)) {
         return false;
       }
@@ -254,6 +279,7 @@ export class LocationListComponent implements OnInit {
       return (
         location.name.toLowerCase().includes(searchLower) ||
         bookNames.includes(searchLower) ||
+        getLocationTypeLabel(location.type).toLowerCase().includes(searchLower) ||
         (location.content || '').toLowerCase().includes(searchLower)
       );
     });
@@ -358,6 +384,6 @@ export class LocationListComponent implements OnInit {
   }
 
   get hasActiveFilters(): boolean {
-    return !!(this.searchTerm || this.selectedBook || this.selectedPictureFilter);
+    return !!(this.searchTerm || this.selectedBook || this.selectedType || this.selectedPictureFilter);
   }
 }

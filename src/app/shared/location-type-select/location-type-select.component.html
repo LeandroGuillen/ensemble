@@ -1,0 +1,27 @@
+<button #trigger id="locationType" type="button" class="form-control type-trigger"
+  cdkOverlayOrigin #origin="cdkOverlayOrigin"
+  role="combobox" aria-label="Type" aria-haspopup="listbox" aria-describedby="locationTypeHint"
+  [attr.aria-expanded]="open" [attr.aria-controls]="open ? 'location-type-options' : null"
+  [attr.aria-activedescendant]="open ? 'location-type-option-' + activeIndex : null"
+  [disabled]="disabled" (click)="toggle()" (keydown)="onKeydown($event)" (blur)="onBlur()">
+  <svg class="ui-icon" aria-hidden="true"><use [attr.href]="getIcon(value || undefined)" /></svg>
+  <span>{{ getLabel(value || undefined) }}</span>
+  <svg class="ui-icon chevron" aria-hidden="true"><use href="assets/ui-icons.svg#chevron-down" /></svg>
+</button>
+
+<ng-template cdkConnectedOverlay [cdkConnectedOverlayOrigin]="origin" [cdkConnectedOverlayOpen]="open"
+  [cdkConnectedOverlayWidth]="trigger.getBoundingClientRect().width"
+  [cdkConnectedOverlayPush]="true" [cdkConnectedOverlayViewportMargin]="8"
+  (overlayOutsideClick)="close()" (detach)="close()" (attach)="scrollActiveOption()">
+  <div id="location-type-options" class="type-options" role="listbox" aria-label="Location types">
+    @for (option of options; track option.value; let i = $index) {
+      <div class="type-option" role="option" [id]="'location-type-option-' + i"
+        [attr.aria-selected]="value === option.value" [class.active]="activeIndex === i"
+        [class.selected]="value === option.value" (mouseenter)="activeIndex = i"
+        (mousedown)="$event.preventDefault()" (click)="select(i)">
+        <svg class="ui-icon" aria-hidden="true"><use [attr.href]="getIcon(option.value || undefined)" /></svg>
+        <span>{{ option.label }}</span>
+      </div>
+    }
+  </div>
+</ng-template>

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { Location, LocationFormData, LocationFrontmatter } from '../interfaces/location.interface';
+import { isLocationType, Location, LocationFormData, LocationFrontmatter } from '../interfaces/location.interface';
 import { parseMarkdown, generateMarkdown } from '../utils/markdown.utils';
 import { asciiSlugify } from '../utils/slug.utils';
 import { generateId } from '../utils/id.utils';
@@ -143,6 +143,7 @@ export class LocationService {
       const location: Location = {
         id: generateId(),
         name: data.name,
+        type: isLocationType(data.type) ? data.type : undefined,
         books,
         thumbnail: data.thumbnail?.trim() || undefined,
         content: data.content || '',
@@ -207,6 +208,7 @@ export class LocationService {
       const updatedLocation: Location = {
         ...existing,
         name: data.name ?? existing.name,
+        type: 'type' in data ? (isLocationType(data.type) ? data.type : undefined) : existing.type,
         books: data.books ?? existing.books,
         thumbnail: nextThumbnail,
         content: data.content !== undefined ? data.content : existing.content,
@@ -357,6 +359,7 @@ export class LocationService {
       const location: Location = {
         id: storedId || generateId(),
         name: frontmatter.name,
+        type: isLocationType(frontmatter.type) ? frontmatter.type : undefined,
         books: frontmatter.books || [],
         thumbnail: thumbnail || undefined,
         content: content || '',
@@ -427,6 +430,7 @@ export class LocationService {
       const frontmatter: LocationFrontmatter = {
         id: location.id,
         name: location.name,
+        ...(location.type ? { type: location.type } : {}),
         books: location.books,
         ...(location.thumbnail ? { thumbnail: location.thumbnail } : {}),
         created: location.created.toISOString(),

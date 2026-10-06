@@ -22,7 +22,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { Book } from '../../core/interfaces/project.interface';
-import { Location } from '../../core/interfaces/location.interface';
+import { LOCATION_TYPES, Location, getLocationPlaceholderIcon } from '../../core/interfaces/location.interface';
 import { ProjectImage } from '../../core/interfaces';
 import {
   MetadataService,
@@ -40,6 +40,7 @@ import { ImagePickerDialogComponent } from '../../shared/image-picker-dialog/ima
 import { formatThumbnailWikiLink, parseThumbnailReference, resolveThumbnailPath } from '../../core/utils/thumbnail.utils';
 import { renderLocationMarkdown } from '../../core/utils/location-links.utils';
 import { getBookDisplayName } from '../../core/utils/book-display.utils';
+import { LocationTypeSelectComponent } from '../../shared/location-type-select/location-type-select.component';
 
 @Component({
   selector: 'app-location-detail',
@@ -49,6 +50,7 @@ import { getBookDisplayName } from '../../core/utils/book-display.utils';
     PageHeaderComponent,
     MultiSelectButtonsComponent,
     ImagePickerDialogComponent,
+    LocationTypeSelectComponent,
   ],
   templateUrl: './location-detail.component.html',
   styleUrls: ['./location-detail.component.scss'],
@@ -57,6 +59,16 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
   private readonly destroyRef = inject(DestroyRef);
 
   @ViewChild('nameInput') nameInput?: ElementRef<HTMLInputElement>;
+
+  readonly locationTypes = LOCATION_TYPES;
+
+  get placeholderIcon(): string {
+    return getLocationPlaceholderIcon(this.locationForm.get('type')?.value);
+  }
+
+  get selectedTypeInfo() {
+    return LOCATION_TYPES.find((type) => type.value === this.locationForm.get('type')?.value);
+  }
 
   locationId: string | null = null;
   isNewLocation = false;
@@ -96,6 +108,7 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
   ) {
     this.locationForm = this.fb.group({
       name: ['', [Validators.required, Validators.maxLength(100)]],
+      type: [''],
       books: [[] as string[]],
       thumbnail: [''],
       content: [''],
@@ -192,6 +205,7 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
       this.location = null;
       this.locationForm.reset({
         name: this.newLocationFromLink || '',
+        type: '',
         books: [],
         thumbnail: '',
         content: '',
@@ -216,6 +230,7 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
       this.location = location;
       this.locationForm.patchValue({
         name: location.name,
+        type: location.type || '',
         books: location.books || [],
         thumbnail: location.thumbnail || '',
         content: location.content || '',
@@ -349,6 +364,7 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
       const formData = this.locationForm.getRawValue();
       const payload = {
         name: formData.name.trim(),
+        type: formData.type || undefined,
         books: formData.books || [],
         thumbnail: formData.thumbnail?.trim() || undefined,
         content: formData.content || '',

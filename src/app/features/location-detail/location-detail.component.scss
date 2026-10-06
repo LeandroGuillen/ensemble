@@ -304,3 +304,22 @@
   font-size: 0.8125rem;
   line-height: 1.5;
 }
+
+.type-guide {
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+
+  summary {
+    cursor: pointer;
+  }
+
+  dt {
+    font-weight: 600;
+    margin-top: var(--spacing-sm);
+  }
+
+  dd {
+    margin: var(--spacing-xs) 0 0;
+    line-height: 1.5;
+  }
+}
