@@ -22,7 +22,11 @@ import {
 import { ActivatedRoute, Router, RouterLink } from "@angular/router";
 import { Location } from "@angular/common";
 import { debounceTime } from "rxjs/operators";
-import { merge } from "rxjs";
+import { combineLatest, merge } from "rxjs";
+import { HouseService } from '../../core/services/house.service';
+import { LocationService } from '../../core/services/location.service';
+import { WikiLinkCollection } from '../../core/utils/wiki-links.utils';
+import { renderCharacterMarkdown } from "../../core/utils/character-links.utils";
 import {
   Book,
   Category,
@@ -134,7 +138,6 @@ export class CharacterDetailComponent
     if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) {
       active.blur();
     }
-    this.reattachIfDetached();
     this.studioLayout = !this.studioLayout;
     try {
       localStorage.setItem(
@@ -166,6 +169,15 @@ export class CharacterDetailComponent
   bookPageOriginalContent: Record<string, string> = {};
   /** Description tabs currently unlocked for editing. New characters start unlocked. */
   descriptionEditingTabs = new Set<string>(['main']);
+  newCharacterFromLink: string | null = null;
+  private linkCharacters: Character[] = [];
+  private readonly linkLocationsService = inject(LocationService);
+  private readonly linkHousesService = inject(HouseService);
+  private otherLinkCollections: WikiLinkCollection[] = [];
+  private descriptionPreviews = new Map<string, {
+    content: string; characters: Character[]; folder: string; otherCollections: WikiLinkCollection[];
+    preview: { html: string; missingLinks: string[] };
+  }>();
   /** Per-book category overrides for the form. Key = bookId. */
   bookCategoriesMap: Record<string, string> = {};
   /** Per-book tag overrides. Keys are bookId → selected tag ids. */
@@ -204,9 +216,6 @@ export class CharacterDetailComponent
   /** Draft text for the next alias being typed. */
   aliasDraft = "";
 
-  /** True while a text input/textarea in this form has focus — CD is detached to avoid wasted work. */
-  private textInputFocused = false;
-
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -233,6 +242,21 @@ export class CharacterDetailComponent
   }
 
   ngOnInit(): void {
+    combineLatest([this.linkLocationsService.getLocations(), this.linkHousesService.houses$, this.projectService.currentProject$])
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(([locations, houses, project]) => {
+        this.otherLinkCollections = [
+          { targets: locations, folder: project?.metadata.settings.locationsFolder || 'locations', route: 'location', singular: 'Location' },
+          { targets: houses, folder: 'houses', route: 'house', singular: 'House' },
+        ];
+        this.cdr.markForCheck();
+      });
+    this.characterService.getReferenceCharacters()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((characters) => {
+        this.linkCharacters = characters;
+        this.cdr.markForCheck();
+      });
     this.fileWatcherService.fileChanges$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((event) => {
@@ -245,6 +269,10 @@ export class CharacterDetailComponent
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((project) => {
         this.currentProject = project;
+        if (project) {
+          void Promise.all([this.linkLocationsService.loadLocations(project.path), this.linkHousesService.loadHouses()])
+            .catch(error => this.logger.error('Failed to load link targets', error));
+        }
         this.categories = this.projectService.getCategories();
         this.tags = this.projectService.getTags();
         this.books = this.metadataService.getBooks();
@@ -300,18 +328,25 @@ export class CharacterDetailComponent
       });
 
     // Subscribe to route parameter changes (not just snapshot)
-    this.route.paramMap
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((params) => {
+    combineLatest([this.route.paramMap, this.route.queryParamMap])
+      .pipe(debounceTime(0), takeUntilDestroyed(this.destroyRef))
+      .subscribe(([params, queryParams]) => {
         const characterId = params.get("id");
+        this.newCharacterFromLink = (!characterId || characterId === 'new') && queryParams.get('fromLink') === '1'
+          ? queryParams.get('name') : null;
         if (characterId && characterId !== "new") {
           this.isEditing = true;
           this.descriptionEditingTabs.clear();
           this.loadCharacter(decodeURIComponent(characterId));
         } else {
           this.isEditing = false;
+          if (!this.isDraftMode) this.setLoreMode(queryParams.get('lore') === 'true', false);
           this.descriptionEditingTabs = new Set<string>(['main']);
           this.character = null;
+          this.activeContentTab = 'main';
+          this.bookPageData = {};
+          this.bookPageOriginalContent = {};
+          this.aliases = [];
           this.externalMainConflict = false;
           this.externalBookConflicts.clear();
           const defaultCategory = this.isDraftMode || this.isLoreMode
@@ -321,12 +356,13 @@ export class CharacterDetailComponent
                   category.id === this.currentProject?.metadata.settings.defaultCategory
               ) || this.categories[0];
           this.characterForm.reset({
-            name: '',
+            name: queryParams.get('name') || '',
             category: defaultCategory?.id || '',
             tags: [],
             books: [],
             content: this.isDraftMode ? history.state?.initialContent || '' : '',
           });
+          if (this.characterForm.get('content')?.value?.trim()) this.descriptionEditingTabs.delete('main');
           this.thumbnailsMap = {};
           this.bookCategoriesMap = {};
           this.bookTagsMap = {};
@@ -334,17 +370,6 @@ export class CharacterDetailComponent
           this.thumbnailPreviewUrls = new Map();
           this.prompts = [];
           this.contentTabs = [{ id: 'main', label: 'General' }];
-          this.cdr.markForCheck();
-        }
-      });
-
-    // Check for query params (e.g., from Backstage)
-    this.route.queryParams
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((params) => {
-        if (!this.isEditing && !this.isDraftMode) this.setLoreMode(params["lore"] === "true", false);
-        if (params["name"] && !this.isEditing) {
-          this.characterForm.patchValue({ name: params["name"] });
           this.cdr.markForCheck();
         }
       });
@@ -380,16 +405,12 @@ export class CharacterDetailComponent
     document.removeEventListener('keydown', this.keydownListener);
     this.electronService.setBrowserNavigationInterception(false);
     this.imagePickerService.close();
-    if (this.textInputFocused) {
-      this.cdr.reattach();
-    }
   }
 
   private keydownListener = (event: KeyboardEvent) => {
     if (event.key === "Escape") {
       event.preventDefault();
       this.ngZone.run(() => {
-        this.reattachIfDetached();
         if (this.addBookMenu?.nativeElement.open) {
           this.addBookMenu.nativeElement.open = false;
           return;
@@ -409,7 +430,6 @@ export class CharacterDetailComponent
     if (event.ctrlKey && event.key === "Enter") {
       event.preventDefault();
       this.ngZone.run(() => {
-        this.reattachIfDetached();
         this.onSubmit();
       });
       return;
@@ -436,14 +456,6 @@ export class CharacterDetailComponent
     this.ngZone.runOutsideAngular(() => {
       document.addEventListener('keydown', this.keydownListener);
     });
-  }
-
-  private reattachIfDetached(): void {
-    if (this.textInputFocused) {
-      this.textInputFocused = false;
-      this.cdr.reattach();
-      this.cdr.detectChanges();
-    }
   }
 
   setLoreMode(lore: boolean, markDirty = true): void {
@@ -537,6 +549,8 @@ export class CharacterDetailComponent
           books: this.character.books,
           content: this.character.content || '',
         });
+
+        this.descriptionEditingTabs = new Set<string>(this.character.content?.trim() ? [] : ['main']);
 
         this.thumbnailsMap = { ...(this.character.thumbnails || {}) };
         this.bookCategoriesMap = { ...(this.character.bookCategories || {}) };
@@ -633,6 +647,8 @@ export class CharacterDetailComponent
       const text = content ?? '';
       this.bookPageData[bookId] = { exists, content: text };
       this.bookPageOriginalContent[bookId] = text;
+      if (!text.trim()) this.descriptionEditingTabs.add(bookId);
+      else this.descriptionEditingTabs.delete(bookId);
     }
     this.cdr.markForCheck();
   }
@@ -649,6 +665,8 @@ export class CharacterDetailComponent
     const text = content ?? '';
     this.bookPageData[bookId] = { exists, content: text };
     this.bookPageOriginalContent[bookId] = text;
+    if (!text.trim()) this.descriptionEditingTabs.add(bookId);
+    else this.descriptionEditingTabs.delete(bookId);
     this.cdr.markForCheck();
   }
 
@@ -686,6 +704,40 @@ export class CharacterDetailComponent
 
   isDescriptionEditing(tabId: string): boolean {
     return this.descriptionEditingTabs.has(tabId);
+  }
+
+  getDescriptionPreview(tabId: string): { html: string; missingLinks: string[] } {
+    const content = tabId === 'main'
+      ? this.characterForm.get('content')?.value || '' : this.getBookPageContent(tabId);
+    const folder = this.currentProject?.metadata.settings.charactersFolder || 'characters';
+    const cached = this.descriptionPreviews.get(tabId);
+    if (cached && cached.content === content && cached.characters === this.linkCharacters && cached.folder === folder && cached.otherCollections === this.otherLinkCollections) {
+      return cached.preview;
+    }
+    const preview = renderCharacterMarkdown(content, this.linkCharacters, folder, this.otherLinkCollections);
+    this.descriptionPreviews.set(tabId, { content, characters: this.linkCharacters, folder, otherCollections: this.otherLinkCollections, preview });
+    return preview;
+  }
+
+  toggleDescriptionPreview(tabId: string): void {
+    if (this.isDescriptionEditing(tabId)) {
+      // Apply values pending on blur before rendering the preview.
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+      this.descriptionEditingTabs.delete(tabId);
+    } else {
+      this.enableDescriptionEditing(tabId);
+    }
+  }
+
+  async onDescriptionLinkClick(event: MouseEvent): Promise<void> {
+    const href = (event.target as HTMLElement).closest('a')?.getAttribute('href');
+    if (!href || !/^#\/(character|location|house)(?:\/|\?)/.test(href)) return;
+    event.preventDefault();
+    const destination = href.slice(1);
+    if (destination === `/character/${encodeURIComponent(this.character?.id || '')}` && !this.isDraftMode) return;
+    if ((this.characterForm.dirty || this.hasAnyBookPageDirty()) &&
+        !(await this.modalService.confirm('Discard unsaved changes?'))) return;
+    await this.router.navigateByUrl(destination);
   }
 
   enableDescriptionEditing(tabId: string): void {
@@ -1317,21 +1369,9 @@ export class CharacterDetailComponent
     this.cdr.markForCheck();
   }
 
-  /**
-   * Detach CD while a text input is focused. Since name/content use updateOn:'blur',
-   * form values don't change during typing — running CD on every keystroke is wasted work
-   * (~114ms per key in production, ~190ms in dev mode).
-   */
-  onTextInputFocus(_event: FocusEvent): void {
-    this.textInputFocused = true;
-    this.cdr.detach();
-  }
-
   onTextInputBlur(fieldName: string): void {
-    this.textInputFocused = false;
-    this.cdr.reattach();
     this.onFieldBlur(fieldName);
-    this.cdr.detectChanges();
+    this.cdr.markForCheck();
   }
 
   // Mark field as touched on blur for better validation feedback

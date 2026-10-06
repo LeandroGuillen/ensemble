@@ -41,7 +41,7 @@
         }
       </div>
       <div class="gallery-name">
-        {{ getCharacterDisplayName(character) }}
+        <span class="character-name-text" [title]="getCharacterDisplayName(character)">{{ getCharacterDisplayName(character) }}</span>
         @if (character.draft) {
           <span class="draft-badge">Draft</span>
         }

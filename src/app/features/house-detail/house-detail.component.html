@@ -13,6 +13,9 @@
         <button class="btn btn-secondary" (click)="reload()" [disabled]="saving">Reload from disk</button>
       </div>
     }
+    @if (!loading && newHouseFromLink) {
+      <p class="notice" role="status">The linked House “{{ newHouseFromLink }}” does not exist yet. Its name has been filled in below. Choose Create House to save it.</p>
+    }
     @if (!loading && !deleted) {
       <fieldset [disabled]="saving" class="editor">
         <section class="panel identity">

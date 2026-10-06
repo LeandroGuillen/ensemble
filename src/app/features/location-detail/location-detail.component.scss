@@ -1,3 +1,5 @@
+@use 'styles/markdown-preview' as markdown;
+
 .location-detail {
   display: flex;
   flex-direction: column;
@@ -286,13 +288,13 @@
 }
 
 :host ::ng-deep .description-preview {
+  @include markdown.typography;
   a { color: var(--color-accent-primary); text-decoration: underline; }
   .unresolved-location-link {
     color: var(--color-text-muted);
     text-decoration: underline dashed;
     cursor: pointer;
   }
-  pre { white-space: pre-wrap; }
 }
 
 .link-warning {

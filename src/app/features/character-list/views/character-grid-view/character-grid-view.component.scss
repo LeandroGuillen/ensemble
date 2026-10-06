@@ -180,3 +180,11 @@
 .gallery-item.dnd-enabled:active {
   cursor: grabbing;
 }
+
+.character-name-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 0 1 auto;
+}

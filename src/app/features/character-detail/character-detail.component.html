@@ -117,6 +117,9 @@
 
       @if (currentProject && !isLoading) {
         <form [formGroup]="characterForm" (ngSubmit)="onSubmit()" class="detail-form">
+          @if (newCharacterFromLink) {
+            <p class="link-warning" role="status">The linked character “{{ newCharacterFromLink }}” does not exist yet. Its name has been filled in below. Choose Create Character to save it.</p>
+          }
           <!-- HERO: thumbnail + name + category -->
           <section class="hero-card">
             <div class="hero-thumb-column">
@@ -176,7 +179,6 @@
                       formControlName="name"
                       placeholder="{{ isDraftMode ? 'Name (optional)' : 'Name * — required' }}"
                       [class.error]="fieldErrors['name']"
-                      (focus)="onTextInputFocus($event)"
                       (blur)="onTextInputBlur('name')"
                       aria-describedby="name-error"
                       [attr.aria-invalid]="fieldErrors['name'] ? 'true' : 'false'"
@@ -410,26 +412,42 @@
             <div class="detail-grid detail-grid-single">
               <section class="panel content-panel">
                 <header class="description-header">
-                  <h3 class="description-title">Description</h3>
-                  @if (!isDescriptionEditing('main')) {
-                    <button
-                      type="button"
-                      class="description-edit-link"
-                      (click)="enableDescriptionEditing('main')"
-                    >Edit</button>
-                  }
+                  <div class="description-label">
+                    <h3 class="description-title">Description</h3>
+                    <div class="description-help">
+                      <details>
+                        <summary aria-label="Description link help" aria-describedby="characterLinkHint" aria-controls="characterLinkHint">?</summary>
+                      </details>
+                      <p class="description-help-text" id="characterLinkHint">Link to a character, location, or House with [[Name]] or [[Name|display text]]. Use file paths such as [[characters/ada/ada.md]], [[locations/_harbor.md]], or [[houses/bulanco/bulanco.md]] to specify the target.</p>
+                    </div>
+                  </div>
+                  <button type="button" class="btn btn-ghost"
+                    [attr.aria-pressed]="!isDescriptionEditing('main')"
+                    (click)="toggleDescriptionPreview('main')">
+                    {{ isDescriptionEditing('main') ? 'Preview description' : 'Edit description' }}
+                  </button>
                 </header>
+                @if (!isDescriptionEditing('main')) {
+                  @let preview = getDescriptionPreview('main');
+                  @if (preview.missingLinks.length) {
+                    <p class="link-warning" role="status">Missing links: {{ preview.missingLinks.join(', ') }}. These links open the corresponding creation page with the linked name filled in.</p>
+                  }
+                  <div class="description-preview" (click)="onDescriptionLinkClick($event)"
+                    [innerHTML]="preview.html"></div>
+                  @if (!preview.html) {
+                    <p class="field-hint">No description yet.</p>
+                  }
+                }
                 <textarea
                   id="content"
                   class="form-control content-editor"
                   formControlName="content"
                   rows="20"
                   placeholder="Character notes…"
-                  [readOnly]="!isDescriptionEditing('main')"
+                  [hidden]="!isDescriptionEditing('main')"
                   [class.error]="fieldErrors['content']"
-                  (focus)="onTextInputFocus($event)"
                   (blur)="onTextInputBlur('content')"
-                  aria-describedby="content-error"
+                  aria-describedby="characterLinkHint content-error"
                   [attr.aria-invalid]="fieldErrors['content'] ? 'true' : 'false'"
                 ></textarea>
                 <div class="panel-footer">
@@ -483,25 +501,42 @@
               }
               @if (bookPageData[activeContentTab]?.exists) {
                 <header class="description-header">
-                  <h3 class="description-title">Description</h3>
-                  @if (!isDescriptionEditing(activeContentTab)) {
-                    <button
-                      type="button"
-                      class="description-edit-link"
-                      (click)="enableDescriptionEditing(activeContentTab)"
-                    >Edit</button>
-                  }
+                  <div class="description-label">
+                    <h3 class="description-title">Description</h3>
+                    <div class="description-help">
+                      <details>
+                        <summary aria-label="Description link help" aria-describedby="bookCharacterLinkHint" aria-controls="bookCharacterLinkHint">?</summary>
+                      </details>
+                      <p class="description-help-text" id="bookCharacterLinkHint">Link to a character, location, or House with [[Name]] or [[Name|display text]]. Use file paths such as [[characters/ada/ada.md]], [[locations/_harbor.md]], or [[houses/bulanco/bulanco.md]] to specify the target.</p>
+                    </div>
+                  </div>
+                  <button type="button" class="btn btn-ghost"
+                    [attr.aria-pressed]="!isDescriptionEditing(activeContentTab)"
+                    (click)="toggleDescriptionPreview(activeContentTab)">
+                    {{ isDescriptionEditing(activeContentTab) ? 'Preview description' : 'Edit description' }}
+                  </button>
                 </header>
+                @if (!isDescriptionEditing(activeContentTab)) {
+                  @let preview = getDescriptionPreview(activeContentTab);
+                  @if (preview.missingLinks.length) {
+                    <p class="link-warning" role="status">Missing links: {{ preview.missingLinks.join(', ') }}. These links open the corresponding creation page with the linked name filled in.</p>
+                  }
+                  <div class="description-preview" (click)="onDescriptionLinkClick($event)"
+                    [innerHTML]="preview.html"></div>
+                  @if (!preview.html) {
+                    <p class="field-hint">No description yet.</p>
+                  }
+                }
                 <textarea
                   [id]="'book-content-' + activeContentTab"
+                  aria-describedby="bookCharacterLinkHint"
                   class="form-control content-editor"
                   rows="20"
                   placeholder="Book notes…"
-                  [readOnly]="!isDescriptionEditing(activeContentTab)"
+                  [hidden]="!isDescriptionEditing(activeContentTab)"
                   [ngModel]="getBookPageContent(activeContentTab)"
                   (ngModelChange)="setBookPageContent(activeContentTab, $event)"
                   [ngModelOptions]="{standalone: true}"
-                  (focus)="onTextInputFocus($event)"
                   (blur)="onTextInputBlur('')"
                 ></textarea>
                 <div class="panel-footer">

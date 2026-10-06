@@ -118,6 +118,11 @@
 }
 
 .gallery-name {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-width: 0;
   padding: var(--spacing-sm);
   font-size: 0.9375rem;
   font-weight: 600;
@@ -130,12 +135,12 @@
   white-space: nowrap;
 
   .pov-star {
-    display: inline-block;
-    margin-left: 0.3rem;
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
     font-size: 1.125rem;
     line-height: 1;
     cursor: default;
-    vertical-align: -0.08em;
   }
 }
 .character-item.dnd-enabled,
@@ -146,4 +151,12 @@
 .character-item.dnd-enabled:active,
 .gallery-item.dnd-enabled:active {
   cursor: grabbing;
+}
+
+.character-name-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 0 1 auto;
 }

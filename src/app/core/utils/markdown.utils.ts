@@ -1,4 +1,7 @@
 import * as yaml from "js-yaml";
+import { unified } from 'unified';
+import remarkParse from 'remark-parse';
+import type { Definition, Root, RootContent } from 'mdast';
 
 export interface MarkdownFile<T = any> {
   frontmatter: T;
@@ -198,63 +201,72 @@ export function escapeHtml(text: string): string {
     .replace(/>/g, '&gt;');
 }
 
-/**
- * Convert a limited markdown subset to HTML (headers, emphasis, code, links,
- * strikethrough, paragraphs). Input is HTML-escaped first.
- * Callers that bind to `[innerHTML]` should still sanitize (e.g. DomSanitizer).
- */
+const markdownParser = unified().use(remarkParse);
+
+function escapeMarkdownAttribute(value: string): string {
+  return escapeHtml(value).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function safeMarkdownUrl(value: string): string | null {
+  const protocol = value.replace(/[\s\u0000-\u001f\u007f]/g, '').match(/^([a-z][a-z0-9+.-]*):/i)?.[1];
+  return protocol && !['http', 'https', 'mailto'].includes(protocol.toLowerCase()) ? null : value;
+}
+
+/** Render parsed Markdown blocks and inline formatting without allowing raw HTML. */
 export function markdownToHtml(markdown: string): string {
-  if (!markdown) {
-    return '';
-  }
+  if (!markdown) return '';
+  const root = markdownParser.parse(markdown);
+  const definitions = new Map<string, Definition>();
+  const collectDefinitions = (node: Root | RootContent): void => {
+    if (node.type === 'definition') definitions.set(node.identifier.toLowerCase(), node);
+    if ('children' in node) node.children.forEach(collectDefinitions);
+  };
+  collectDefinitions(root);
 
-  let html = escapeHtml(markdown);
-
-  // Code blocks (must come before inline code and other formatting)
-  html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
-
-  // Inline code (must come before bold/italic)
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-  // Headers
-  html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
-  html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
-  html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
-
-  // Bold
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/__(.+?)__/g, '<strong>$1</strong>');
-
-  // Italic (simple approach - single asterisk/underscore)
-  html = html.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, '<em>$1</em>');
-  html = html.replace(/(?<!_)_([^_]+?)_(?!_)/g, '<em>$1</em>');
-
-  // Strikethrough
-  html = html.replace(/~~(.+?)~~/g, '<del>$1</del>');
-
-  // Links
-  html = html.replace(
-    /\[([^\]]+)\]\(([^)]+)\)/g,
-    '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'
-  );
-
-  // Line breaks - convert double newlines to paragraphs
-  const paragraphs = html.split(/\n\n+/);
-  html = paragraphs
-    .map((para) => {
-      para = para.trim();
-      if (!para) {
-        return '';
+  const link = (url: string, label: string, title?: string | null): string => {
+    const safeUrl = safeMarkdownUrl(url);
+    if (safeUrl === null) return label;
+    const titleAttribute = title ? ` title="${escapeMarkdownAttribute(title)}"` : '';
+    return `<a href="${escapeMarkdownAttribute(safeUrl)}"${titleAttribute} target="_blank" rel="noopener noreferrer">${label}</a>`;
+  };
+  const render = (node: Root | RootContent): string => {
+    const children = () => 'children' in node ? node.children.map(render).join('') : '';
+    switch (node.type) {
+      case 'root': return children();
+      case 'heading': return `<h${node.depth}>${children()}</h${node.depth}>`;
+      case 'paragraph': return `<p>${children()}</p>`;
+      case 'text': return escapeHtml(node.value).replace(/~~([^~\n]+)~~/g, '<del>$1</del>').replace(/\n/g, '<br>');
+      case 'emphasis': return `<em>${children()}</em>`;
+      case 'strong': return `<strong>${children()}</strong>`;
+      case 'inlineCode': return `<code>${escapeHtml(node.value)}</code>`;
+      case 'code': return `<pre><code>${escapeHtml(node.value)}</code></pre>`;
+      case 'break': return '<br>';
+      case 'thematicBreak': return '<hr>';
+      case 'blockquote': return `<blockquote>${children()}</blockquote>`;
+      case 'list': {
+        const tag = node.ordered ? 'ol' : 'ul';
+        const start = node.ordered && node.start != null && node.start !== 1 ? ` start="${node.start}"` : '';
+        return `<${tag}${start}>${children()}</${tag}>`;
       }
-      // Convert single newlines to <br> within paragraphs
-      para = para.replace(/\n/g, '<br>');
-      // Don't wrap if already has block-level tags
-      if (/^<(h[1-6]|pre|ul|ol)/.test(para)) {
-        return para;
+      case 'listItem': return `<li>${children()}</li>`;
+      case 'link': return link(node.url, children(), node.title);
+      case 'linkReference': {
+        const definition = definitions.get(node.identifier.toLowerCase());
+        return definition ? link(definition.url, children(), definition.title) : children();
       }
-      return `<p>${para}</p>`;
-    })
-    .join('');
-
-  return html;
+      case 'image': {
+        const url = safeMarkdownUrl(node.url);
+        return url === null ? escapeHtml(node.alt || '') : `<img src="${escapeMarkdownAttribute(url)}" alt="${escapeMarkdownAttribute(node.alt || '')}">`;
+      }
+      case 'imageReference': {
+        const definition = definitions.get(node.identifier.toLowerCase());
+        const url = definition && safeMarkdownUrl(definition.url);
+        return url ? `<img src="${escapeMarkdownAttribute(url)}" alt="${escapeMarkdownAttribute(node.alt || '')}">` : escapeHtml(node.alt || '');
+      }
+      case 'html': return escapeHtml(node.value);
+      case 'definition': return '';
+      default: return children();
+    }
+  };
+  return render(root);
 }

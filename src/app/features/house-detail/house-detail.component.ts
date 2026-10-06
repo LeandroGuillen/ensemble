@@ -37,6 +37,7 @@ export class HouseDetailComponent implements OnInit, OnDestroy {
   conflict = false;
   deleted = false;
   error = '';
+  newHouseFromLink: string | null = null;
   crest: string | null = null;
   pickingMember = false;
   selectedBook = '';
@@ -68,6 +69,8 @@ export class HouseDetailComponent implements OnInit, OnDestroy {
     this.leadershipEditing = false;
     this.error = '';
     this.house = null;
+    this.newHouseFromLink = !id && this.route.snapshot.queryParamMap?.get('fromLink') === '1'
+      ? this.route.snapshot.queryParamMap.get('name') : null;
     this.dirty = false;
     this.conflict = false;
     this.deleted = false;
@@ -81,7 +84,7 @@ export class HouseDetailComponent implements OnInit, OnDestroy {
         if (!house) { this.deleted = true; throw new Error('This House no longer exists.'); }
         this.accept(house);
       } else {
-        this.model = { name: '', motto: '', colors: [], characterIds: [], leadership: [], content: '' };
+        this.model = { name: this.newHouseFromLink || '', motto: '', colors: [], characterIds: [], leadership: [], content: '' };
         this.crest = null;
       }
     } catch (error) { if (request === this.request) this.error = String(error); }

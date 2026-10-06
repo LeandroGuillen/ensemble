@@ -57,6 +57,17 @@ describe('House editor', () => {
     fixture.detectChanges();
   });
 
+  it('prefills the name when opening a missing House link', async () => {
+    const route = TestBed.inject(ActivatedRoute);
+    (route.snapshot as any).queryParamMap = convertToParamMap({ name: 'Bulanco', fromLink: '1' });
+    await (component as any).open(null);
+    fixture.detectChanges();
+    expect(component.model.name).toBe('Bulanco');
+    expect(component.newHouseFromLink).toBe('Bulanco');
+    expect(component.dirty).toBeFalse();
+    expect(fixture.nativeElement.textContent).toContain('Choose Create House to save it');
+  });
+
   it('renders historical reigns and preserves missing character references', async () => {
     expect(component.loading).toBeFalse();
     expect(fixture.nativeElement.textContent).toContain('Ancient era');
