@@ -89,23 +89,6 @@ describe('Character detail save', () => {
     expect(characterService.saveBookPage).not.toHaveBeenCalled();
     expect(router.navigate).not.toHaveBeenCalled();
   });
-  it('commits House selections with the character save', async () => {
-    const membershipSave = jasmine.createSpy('saveMemberships').and.resolveTo();
-    component.housesEditor = { save: membershipSave } as any;
-    await component.onSubmit();
-    expect(membershipSave).toHaveBeenCalledOnceWith('ada');
-    expect(router.navigate).toHaveBeenCalled();
-  });
-
-  it('keeps the editor dirty and open if House membership saving fails', async () => {
-    component.characterForm.markAsDirty();
-    component.housesEditor = { save: jasmine.createSpy('saveMemberships').and.rejectWith(new Error('House write failed')) } as any;
-    await component.onSubmit();
-    expect(component.characterForm.dirty).toBeTrue();
-    expect(notification.showError).toHaveBeenCalled();
-    expect(router.navigate).not.toHaveBeenCalled();
-  });
-
   it('converts to Lore without a category and saves edited book notes before moving', async () => {
     component.isDraftMode = true;
     component.characterForm.patchValue({ category: '' });

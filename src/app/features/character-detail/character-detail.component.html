@@ -166,33 +166,38 @@
 
             <div class="hero-main">
               <div class="hero-field">
-                <div class="name-input-group">
-                  <input
-                    #nameInput
-                    type="text"
-                    id="name"
-                    class="form-control form-control-hero"
-                    formControlName="name"
-                    placeholder="{{ isDraftMode ? 'Name (optional)' : 'Name * — required' }}"
-                    [class.error]="fieldErrors['name']"
-                    (focus)="onTextInputFocus($event)"
-                    (blur)="onTextInputBlur('name')"
-                    aria-describedby="name-error"
-                    [attr.aria-invalid]="fieldErrors['name'] ? 'true' : 'false'"
-                    [attr.aria-label]="'Name' + (isDraftMode ? '' : ' (required)')"
-                  />
-                  @if (isDraftMode) {
-                    <button
-                      type="button"
-                      class="generate-name-btn"
-                      (click)="generateName()"
-                      [disabled]="!aiEnabled || isGeneratingName"
-                      [title]="aiEnabled ? 'Generate name with AI' : 'Enable AI in settings to generate names'"
-                      [attr.aria-label]="aiEnabled ? 'Generate name with AI' : 'Enable AI in settings to generate names'"
-                    >
-                      @if (!isGeneratingName) { <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#dice" /></svg> }
-                      @if (isGeneratingName) { <span class="spinner spinner-sm"></span> }
-                    </button>
+                <div class="name-line">
+                  <div class="name-input-group">
+                    <input
+                      #nameInput
+                      type="text"
+                      id="name"
+                      class="form-control form-control-hero"
+                      formControlName="name"
+                      placeholder="{{ isDraftMode ? 'Name (optional)' : 'Name * — required' }}"
+                      [class.error]="fieldErrors['name']"
+                      (focus)="onTextInputFocus($event)"
+                      (blur)="onTextInputBlur('name')"
+                      aria-describedby="name-error"
+                      [attr.aria-invalid]="fieldErrors['name'] ? 'true' : 'false'"
+                      [attr.aria-label]="'Name' + (isDraftMode ? '' : ' (required)')"
+                    />
+                    @if (isDraftMode) {
+                      <button
+                        type="button"
+                        class="generate-name-btn"
+                        (click)="generateName()"
+                        [disabled]="!aiEnabled || isGeneratingName"
+                        [title]="aiEnabled ? 'Generate name with AI' : 'Enable AI in settings to generate names'"
+                        [attr.aria-label]="aiEnabled ? 'Generate name with AI' : 'Enable AI in settings to generate names'"
+                      >
+                        @if (!isGeneratingName) { <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#dice" /></svg> }
+                        @if (isGeneratingName) { <span class="spinner spinner-sm"></span> }
+                      </button>
+                    }
+                  </div>
+                  @if (!isDraftMode) {
+                    <app-character-houses [characterId]="character?.id || null" />
                   }
                 </div>
                 @if (fieldErrors['name']) {
@@ -276,9 +281,6 @@
             </div>
           </section>
 
-          @if (!isDraftMode) {
-            <app-character-houses [characterId]="character?.id || null" [disabled]="isSaving" (membershipChange)="characterForm.markAsDirty()" />
-          }
           <div class="thumb-strip-row">
             @if (characterStyles.length > 1) {
               <div class="style-strip" role="listbox" aria-label="Character styles">

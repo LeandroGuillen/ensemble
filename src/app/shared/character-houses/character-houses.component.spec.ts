@@ -1,40 +1,47 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BehaviorSubject } from 'rxjs';
 import { provideRouter } from '@angular/router';
 import { CharacterHousesComponent } from './character-houses.component';
 import { HouseService } from '../../core/services/house.service';
 
 describe('Character House memberships', () => {
-  let component: CharacterHousesComponent;
-  let service: jasmine.SpyObj<HouseService>;
+  let fixture: ComponentFixture<CharacterHousesComponent>;
   let houses$: BehaviorSubject<any[]>;
   beforeEach(() => {
     houses$ = new BehaviorSubject([{ id: 'one', name: 'House One', characterIds: ['ned'] }, { id: 'two', name: 'House Two', characterIds: [] }]);
-    service = jasmine.createSpyObj('HouseService', ['loadHouses', 'setMembership'], { houses$: houses$.asObservable() });
+    const service = jasmine.createSpyObj('HouseService', ['loadHouses'], { houses$: houses$.asObservable() });
     service.loadHouses.and.resolveTo();
-    service.setMembership.and.resolveTo();
     TestBed.configureTestingModule({ imports: [CharacterHousesComponent], providers: [provideRouter([]), { provide: HouseService, useValue: service }] });
-    component = TestBed.createComponent(CharacterHousesComponent).componentInstance;
-    component.characterId = 'ned';
-    component.ngOnInit();
+    fixture = TestBed.createComponent(CharacterHousesComponent);
   });
 
-  it('keeps pending selections when Houses reload and saves only changed memberships', async () => {
-    component.toggle('two');
-    houses$.next([...houses$.value]);
-    expect(component.selected).toEqual(['one', 'two']);
-    await component.save('ned');
-    expect(service.setMembership).toHaveBeenCalledOnceWith('two', 'ned', true);
+  it('shows only assigned Houses as links without membership controls', () => {
+    fixture.componentRef.setInput('characterId', 'ned');
+    fixture.detectChanges();
+    const element: HTMLElement = fixture.nativeElement;
+    expect(element.textContent).toContain('House One');
+    expect(element.textContent).not.toContain('House Two');
+    expect(element.querySelector('a')?.getAttribute('href')).toBe('/house/one');
+    expect(element.querySelector('input')).toBeNull();
   });
 
-  it('retries only unfinished membership writes after a partial failure', async () => {
-    component.toggle('one');
-    component.toggle('two');
-    service.setMembership.and.callFake(async id => { if (id === 'two') throw new Error('Disk failure'); });
-    await expectAsync(component.save('ned')).toBeRejectedWithError('Disk failure');
-    service.setMembership.calls.reset();
-    service.setMembership.and.resolveTo();
-    await component.save('ned');
-    expect(service.setMembership).toHaveBeenCalledOnceWith('two', 'ned', true);
+  it('hides the appendix for unassigned and new characters', () => {
+    fixture.componentRef.setInput('characterId', 'arya');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('nav')).toBeNull();
+    fixture.componentRef.setInput('characterId', null);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent.trim()).toBe('');
+  });
+
+  it('updates visible Houses when memberships change or another character opens', () => {
+    fixture.componentRef.setInput('characterId', 'ned');
+    fixture.detectChanges();
+    houses$.next([{ id: 'two', name: 'House Two', characterIds: ['arya'] }]);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('nav')).toBeNull();
+    fixture.componentRef.setInput('characterId', 'arya');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('House Two');
   });
 });

@@ -519,6 +519,19 @@
   margin-top: var(--spacing-xs);
 }
 
+// Name and compact House appendix wrap together as space allows.
+.name-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-xs) var(--spacing-md);
+
+  .name-input-group {
+    flex: 1 1 240px;
+    min-width: min(100%, 240px);
+  }
+}
+
 // Name + AI dice button
 .name-input-group {
   display: flex;

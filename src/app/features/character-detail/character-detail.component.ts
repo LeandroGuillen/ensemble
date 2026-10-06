@@ -93,7 +93,6 @@ import { GeneratePortraitDialogComponent } from "./components/generate-portrait-
 export class CharacterDetailComponent
   implements OnInit, OnDestroy, AfterViewInit
 {
-  @ViewChild(CharacterHousesComponent) housesEditor?: CharacterHousesComponent;
   @ViewChild("nameInput") nameInput?: ElementRef<HTMLInputElement>;
   @ViewChild("addBookMenu") addBookMenu?: ElementRef<HTMLDetailsElement>;
 
@@ -848,7 +847,6 @@ export class CharacterDetailComponent
         }
       }
 
-      if (!this.isDraftMode && this.character) await this.housesEditor?.save(this.character.id);
       this.characterForm.markAsPristine();
 
       this.notificationService.showSuccess(
