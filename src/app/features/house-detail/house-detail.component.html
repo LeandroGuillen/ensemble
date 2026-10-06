@@ -17,15 +17,21 @@
       <fieldset [disabled]="saving" class="editor">
         <section class="panel identity">
           <div class="crest-panel">
-            <button class="crest" (click)="openPicker()" aria-label="Choose House crest">
-              @if (crest) { <img [src]="crest" [alt]="model.name + ' crest'" /> }
-              @else { <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#shield" /></svg><span>Add crest</span> }
-            </button>
+            <div class="crest-image">
+              <button type="button" class="crest" (click)="openPicker()" aria-label="Choose House crest">
+                @if (crest) { <img [src]="crest" [alt]="model.name + ' crest'" /> }
+                @else { <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#shield" /></svg><span>Add crest</span> }
+              </button>
+              @if (model.thumbnail) {
+                <button type="button" class="crest-remove" (click)="removeCrest()" title="Remove image" aria-label="Remove image">
+                  <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg>
+                </button>
+              }
+            </div>
             <button type="button" class="text-action current-head-shortcut" (click)="scrollToLeadership(leadershipSection)" [title]="currentHeadNames + ' — Go to leadership history'" [attr.aria-label]="'Current Head: ' + currentHeadNames + '. Go to leadership history'">
               <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#crown" /></svg>
               <span>Current Head</span>
             </button>
-            @if (model.thumbnail) { <button type="button" class="text-action crest-remove" (click)="removeCrest()">Remove crest</button> }
           </div>
           <div class="identity-fields">
             <label for="house-name">House name *</label>
@@ -39,7 +45,7 @@
                 @if (model.seatId && !seatExists) { <option [value]="model.seatId">Missing location ({{ model.seatId }})</option> }
                 @for (location of locations; track location.id) { <option [value]="location.id">{{ location.name }}</option> }
               </select>
-              @if (model.seatId && seatExists) { <a class="btn btn-secondary" [routerLink]="['/location', model.seatId]">Open seat</a> }
+              @if (model.seatId && seatExists) { <a class="btn btn-secondary" [routerLink]="['/location', model.seatId]">Go to seat</a> }
             </div>
             <label id="house-colors-label">House colors</label>
             <div class="colors" role="group" aria-labelledby="house-colors-label">

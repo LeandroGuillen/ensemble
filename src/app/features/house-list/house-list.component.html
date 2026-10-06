@@ -20,9 +20,12 @@
       <div class="house-grid">
         @for (house of filtered; track house.id) {
           <a class="house-card" [routerLink]="['/house', house.id]">
-            <div class="crest" [style.border-bottom-color]="house.colors[0] || 'var(--color-border)'">
+            <div class="crest">
               @if (crests.get(house.id); as crest) { <img [src]="crest" [alt]="house.name + ' crest'" /> }
               @else { <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#shield" /></svg> }
+            </div>
+            <div class="house-flag" aria-hidden="true">
+              @for (color of house.colors; track $index) { <span [style.background]="color"></span> }
             </div>
             <div class="card-body">
               <h2>{{ house.name }}</h2>
