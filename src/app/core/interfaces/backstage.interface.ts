@@ -10,6 +10,7 @@ export interface NameWithNotes {
 
 export interface NameList {
   title: string;
+  description?: string;
   names: NameWithNotes[];
 }
 

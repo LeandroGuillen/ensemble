@@ -19,6 +19,7 @@ import './app/core/validators/project.validator.spec';
 import './app/core/validators/pinboard.validator.spec';
 
 // Services
+import './app/core/services/backstage.service.spec';
 import './app/core/services/character.service.spec';
 import './app/core/services/metadata.service.spec';
 import './app/core/services/project.service.spec';

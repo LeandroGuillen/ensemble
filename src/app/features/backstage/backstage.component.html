@@ -326,6 +326,15 @@
             <!-- Right: Detail View -->
             @if (getSelectedNameList()) {
               <div class="detail-panel names-panel" tabindex="0" (focus)="onNamesPanelFocus()" (click)="onNamesPanelClick($event)">
+                <textarea
+                  class="name-list-description"
+                  [value]="getSelectedNameList()?.description || ''"
+                  [rows]="(getSelectedNameList()?.description || '').split('\n').length + 1"
+                  (blur)="onNameListDescriptionChange($any($event.target).value)"
+                  (keydown)="$event.stopPropagation()"
+                  aria-label="Name List description"
+                  placeholder="Add a Name List description..."
+                ></textarea>
                 <div class="names-list-container">
                   @for (nameItem of getDisplayNames(); track nameItem; let i = $index) {
                     <div

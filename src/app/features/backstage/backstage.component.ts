@@ -152,11 +152,12 @@ export class BackstageComponent implements OnInit {
     // Filter name lists
     this.filteredNameLists = this.nameLists.filter((list) => {
       const titleMatch = list.title.toLowerCase().includes(query);
+      const descriptionMatch = list.description?.toLowerCase().includes(query) ?? false;
       const namesMatch = list.names.some((nameItem) =>
         nameItem.name.toLowerCase().includes(query) ||
         nameItem.notes?.toLowerCase().includes(query)
       );
-      return titleMatch || namesMatch;
+      return titleMatch || descriptionMatch || namesMatch;
     });
   }
 
@@ -616,6 +617,13 @@ export class BackstageComponent implements OnInit {
       this.error = `Failed to update name list: ${error}`;
       this.logger.error("Failed to update name list:", error);
     }
+  }
+
+  async onNameListDescriptionChange(value: string): Promise<void> {
+    const list = this.getSelectedNameList();
+    const description = value.trim();
+    if (this.selectedNameListIndex === null || !list || description === (list.description || '')) return;
+    await this.updateNameList(this.selectedNameListIndex, { description: description || undefined });
   }
 
   async deleteNameList(index: number): Promise<void> {

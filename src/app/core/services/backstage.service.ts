@@ -154,12 +154,8 @@ export class BackstageService {
   private parseNameListsMarkdown(content: string): NameList[] {
     const nameLists: NameList[] = [];
     // Try double hash first (preferred format), fall back to single hash for compatibility
-    let sections = content.split(/^## /m).filter((s) => s.trim());
-
-    // If no double-hash sections found, try single hash (old format)
-    if (sections.length <= 1 && content.includes('#')) {
-      sections = content.split(/^# /m).filter((s) => s.trim());
-    }
+    const headingPattern = /^## /m.test(content) ? /^## /m : /^# /m;
+    const sections = content.split(headingPattern).filter((s) => s.trim());
 
     for (const section of sections) {
       const lines = section.split('\n');
@@ -167,6 +163,7 @@ export class BackstageService {
 
       // Parse names with notes from list items
       const names: Array<{ name: string; notes?: string }> = [];
+      const descriptionLines: string[] = [];
       let i = 1; // Start after title line
       
       while (i < lines.length) {
@@ -225,12 +222,17 @@ export class BackstageService {
             notes: notesWithTabs,
           });
         } else {
+          // Plain text before the first name belongs to the list description.
+          if (names.length === 0) {
+            descriptionLines.push(line);
+          }
           i++;
         }
       }
 
       nameLists.push({
         title: titleLine,
+        description: descriptionLines.join('\n').trim() || undefined,
         names,
       });
     }
@@ -260,7 +262,8 @@ export class BackstageService {
             return result;
           })
           .join('\n');
-        return `## ${list.title}\n\n${nameItems}\n`;
+        const description = list.description?.trim();
+        return `## ${list.title}\n\n${description ? `${description}\n\n` : ''}${nameItems}\n`;
       })
       .join('\n');
 
@@ -309,6 +312,7 @@ export class BackstageService {
     // Ensure names array has the correct structure
     const normalizedNameList: NameList = {
       title: nameList.title,
+      description: nameList.description,
       names: nameList.names.map((name) => 
         typeof name === 'string' 
           ? { name } 
