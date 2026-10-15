@@ -699,6 +699,11 @@
   transition: border-color var(--transition-fast), background-color var(--transition-fast);
   position: relative;
 
+  &.group-content-tinted {
+    background-color: color-mix(in srgb, var(--group-color) 7%, transparent);
+    border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+  }
+
   &.drop-active {
     border-color: var(--color-accent-primary);
     background: rgba(229, 168, 85, 0.08);

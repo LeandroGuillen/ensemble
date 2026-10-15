@@ -421,7 +421,8 @@
                       </div>
                     </div>
                     <div
-                      class="category-content"
+                      class="category-content group-content-tinted"
+                      [style.--group-color]="metadataHelper.getCategoryColor(group.categoryId)"
                       cdkDropList
                       [id]="getCategoryDropListId(group.categoryId)"
                       [cdkDropListData]="group.characters"
@@ -535,7 +536,10 @@
                         <span class="category-name">{{ metadataHelper.getTagName(group.tagId) }}</span>
                       </div>
                     </div>
-                    <div class="category-content">
+                    <div
+                      class="category-content group-content-tinted"
+                      [style.--group-color]="metadataHelper.getTagColor(group.tagId)"
+                      >
                       <!-- Grid View (Cards) -->
                       @if (viewMode === 'grid') {
                         <app-character-grid-view
@@ -618,7 +622,10 @@
                         <span class="category-name">{{ metadataHelper.getCastName(group.castId) }}</span>
                       </div>
                     </div>
-                    <div class="category-content">
+                    <div
+                      class="category-content group-content-tinted"
+                      [style.--group-color]="metadataHelper.getCastColor(group.castId)"
+                      >
                       @if (viewMode === 'grid') {
                         <app-character-grid-view
                           [characters]="group.characters"
@@ -693,7 +700,10 @@
                         <span class="category-name">{{ metadataHelper.getBookName(group.bookId) }}</span>
                       </div>
                     </div>
-                    <div class="category-content">
+                    <div
+                      class="category-content group-content-tinted"
+                      [style.--group-color]="metadataHelper.getBookColor(group.bookId)"
+                      >
                       @if (viewMode === 'grid') {
                         <app-character-grid-view
                           [characters]="group.characters"
