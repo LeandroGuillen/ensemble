@@ -45,9 +45,6 @@
           <div class="list-item-identity">
             <h3 class="list-item-name">
               <span class="character-name-text" [title]="getCharacterDisplayName(character)">{{ getCharacterDisplayName(character) }}</span>
-              @if (character.draft) {
-                <span class="draft-badge">Draft</span>
-              }
               @if (isPov(character)) {
                 <span class="pov-star" [style.color]="povBadgeColor" title="Point of view character" aria-label="Point of view character"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#star" /></svg></span>
               }

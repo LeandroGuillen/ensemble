@@ -7,10 +7,12 @@ import { HouseService } from '../../core/services/house.service';
 describe('Character House memberships', () => {
   let fixture: ComponentFixture<CharacterHousesComponent>;
   let houses$: BehaviorSubject<any[]>;
+  let service: jasmine.SpyObj<HouseService>;
   beforeEach(() => {
     houses$ = new BehaviorSubject([{ id: 'one', name: 'House One', characterIds: ['ned'] }, { id: 'two', name: 'House Two', characterIds: [] }]);
-    const service = jasmine.createSpyObj('HouseService', ['loadHouses'], { houses$: houses$.asObservable() });
+    service = jasmine.createSpyObj('HouseService', ['loadHouses', 'loadCrest'], { houses$: houses$.asObservable() });
     service.loadHouses.and.resolveTo();
+    service.loadCrest.and.resolveTo(null);
     TestBed.configureTestingModule({ imports: [CharacterHousesComponent], providers: [provideRouter([]), { provide: HouseService, useValue: service }] });
     fixture = TestBed.createComponent(CharacterHousesComponent);
   });
@@ -32,6 +34,31 @@ describe('Character House memberships', () => {
     fixture.componentRef.setInput('characterId', null);
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent.trim()).toBe('');
+  });
+
+  it('places the saved image and name inside the same House link', async () => {
+    service.loadCrest.and.resolveTo('data:image/png;base64,crest');
+    fixture.componentRef.setInput('characterId', 'ned');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const link: HTMLAnchorElement = fixture.nativeElement.querySelector('a');
+    expect(link.getAttribute('href')).toBe('/house/one');
+    expect(link.querySelector('img')?.getAttribute('src')).toBe('data:image/png;base64,crest');
+    expect(link.querySelector('.house-name')?.textContent).toContain('House One');
+    expect(service.loadCrest).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a shield and the House link when the image cannot be loaded', async () => {
+    service.loadCrest.and.rejectWith(new Error('Missing image'));
+    fixture.componentRef.setInput('characterId', 'ned');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const link: HTMLAnchorElement = fixture.nativeElement.querySelector('a');
+    expect(link.querySelector('.house-image svg')).not.toBeNull();
+    expect(link.querySelector('img')).toBeNull();
+    expect(link.getAttribute('href')).toBe('/house/one');
   });
 
   it('updates visible Houses when memberships change or another character opens', () => {

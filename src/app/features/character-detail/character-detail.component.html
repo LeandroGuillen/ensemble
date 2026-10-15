@@ -1,4 +1,4 @@
-<div class="character-detail" [class.studio-layout]="studioLayout">
+<div class="character-detail">
   <app-page-header [title]="isDraftMode ? (isEditing ? 'Edit Character Draft' : 'New Character Draft') : isLoreMode ? (isEditing ? 'Edit Lore Figure' : 'New Lore Figure') : (isEditing ? 'Edit Character' : 'New Character')">
     <div pageHeaderSuffix class="header-meta">
       @if (isEditing && character) {
@@ -17,19 +17,6 @@
     @if (characterForm.dirty || hasAnyBookPageDirty()) {
       <span class="dirty-pill" title="You have unsaved changes">● Unsaved</span>
     }
-    <button
-      type="button"
-      class="layout-switch"
-      role="switch"
-      [attr.aria-checked]="studioLayout"
-      aria-label="Studio layout"
-      [title]="studioLayout ? 'Switch to Classic — your edits stay here' : 'Try Studio — your edits stay here'"
-      (click)="toggleEditorLayout()"
-    >
-      <span [class.selected]="!studioLayout">Classic</span>
-      <span class="layout-switch-track" aria-hidden="true"><span></span></span>
-      <span [class.selected]="studioLayout">Studio</span>
-    </button>
     <button
       type="button"
       class="btn btn-ghost"
@@ -153,21 +140,84 @@
                   }
                 } @else {
                   <div class="hero-thumb-placeholder">
-                    @if (studioLayout) {
-                      <svg class="studio-portrait-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                        <circle cx="32" cy="23" r="10" />
-                        <path d="M13 54c0-12 8-19 19-19s19 7 19 19" />
-                      </svg>
-                    } @else {
-                      <svg class="ui-icon hero-thumb-icon" aria-hidden="true"><use href="assets/ui-icons.svg#user" /></svg>
-                    }
+                    <svg class="portrait-placeholder-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                      <circle cx="32" cy="23" r="10" />
+                      <path d="M13 54c0-12 8-19 19-19s19 7 19 19" />
+                    </svg>
                     <span class="hero-thumb-hint">Click to add</span>
                   </div>
                 }
               </div>
+              @if (characterStyles.length > 1) {
+                <div class="style-strip" role="listbox" aria-label="Character styles">
+                  @for (style of characterStyles; track style.id) {
+                    <button
+                      type="button"
+                      class="style-strip-item"
+                      role="option"
+                      [attr.aria-selected]="style.id === selectedStyleId"
+                      [class.is-selected]="style.id === selectedStyleId"
+                      [class.has-image]="hasThumbnailForStyle(style.id)"
+                      (click)="selectStyle(style.id)"
+                      [title]="'Show ' + style.name"
+                      [attr.aria-label]="'Show ' + style.name + ' style'"
+                    >
+                      @if (getStylePreviewUrl(style.id); as preview) {
+                        <img [src]="preview" [alt]="style.name" />
+                      } @else {
+                        <span class="style-strip-placeholder">?</span>
+                      }
+                      <span class="style-strip-label">{{ style.name }}</span>
+                    </button>
+                  }
+                </div>
+              } @else {
+                <a
+                  class="add-style-link"
+                  routerLink="/settings"
+                  [queryParams]="{ section: 'character-styles' }"
+                  fragment="character-styles"
+                  title="Add another character style in Settings"
+                >Add another style</a>
+              }
             </div>
 
             <div class="hero-main">
+              <div class="secondary-actions" role="group" aria-label="Character actions">
+                <button
+                  type="button"
+                  class="danger-link portrait-link"
+                  (click)="openGeneratePortrait()"
+                  [disabled]="!imageGenerationEnabled || isSaving || savingBookPageId"
+                >Generate portrait</button>
+                @if (!isDraftMode) {
+                  <button
+                    type="button"
+                    class="danger-link collection-link"
+                    (click)="setLoreMode(!isLoreMode)"
+                    [disabled]="isSaving || savingBookPageId"
+                    title="Change collection when you save"
+                  >{{ isLoreMode ? 'Promote to Character' : 'Move to Lore' }}</button>
+                }
+                @if (!isDraftMode && isEditing) {
+                  <button
+                    type="button"
+                    class="danger-link"
+                    (click)="moveCharacterToDraft()"
+                    [disabled]="isSaving || savingBookPageId"
+                    title="Move character back to drafts"
+                  >Move to draft</button>
+                }
+                @if (isEditing) {
+                  <button
+                    type="button"
+                    class="danger-link"
+                    (click)="deleteCharacter()"
+                    [disabled]="isSaving || savingBookPageId"
+                    title="Delete character"
+                  >Delete {{ isDraftMode ? 'draft' : 'character' }}</button>
+                }
+              </div>
               <div class="hero-field">
                 <div class="name-line">
                   <div class="name-input-group">
@@ -234,15 +284,6 @@
                 </div>
               </div>
 
-              @if (!isDraftMode) {
-                <div class="hero-field">
-                  <label class="form-label">Collection</label>
-                  <div class="view-toggle view-toggle-text" role="group" aria-label="Character collection">
-                    <button type="button" class="toggle-option" [class.active]="!isLoreMode" [attr.aria-pressed]="!isLoreMode" (click)="setLoreMode(false)">Characters</button>
-                    <button type="button" class="toggle-option" [class.active]="isLoreMode" [attr.aria-pressed]="isLoreMode" (click)="setLoreMode(true)">Lore</button>
-                  </div>
-                </div>
-              }
               @if (categories.length > 0) {
                 <div class="hero-field form-group-category" [class.field-highlight]="characterForm.get('category')?.invalid && characterForm.get('category')?.touched">
                   <label class="form-label">Category{{ isDraftMode || isLoreMode ? '' : ' *' }}</label>
@@ -282,68 +323,6 @@
               }
             </div>
           </section>
-
-          <div class="thumb-strip-row">
-            @if (characterStyles.length > 1) {
-              <div class="style-strip" role="listbox" aria-label="Character styles">
-                @for (style of characterStyles; track style.id) {
-                  <button
-                    type="button"
-                    class="style-strip-item"
-                    role="option"
-                    [attr.aria-selected]="style.id === selectedStyleId"
-                    [class.is-selected]="style.id === selectedStyleId"
-                    [class.has-image]="hasThumbnailForStyle(style.id)"
-                    (click)="selectStyle(style.id)"
-                    [title]="'Show ' + style.name"
-                    [attr.aria-label]="'Show ' + style.name + ' style'"
-                  >
-                    @if (getStylePreviewUrl(style.id); as preview) {
-                      <img [src]="preview" [alt]="style.name" />
-                    } @else {
-                      <span class="style-strip-placeholder">?</span>
-                    }
-                    <span class="style-strip-label">{{ style.name }}</span>
-                  </button>
-                }
-              </div>
-            } @else {
-              <a
-                class="add-style-link"
-                routerLink="/settings"
-                [queryParams]="{ section: 'character-styles' }"
-                fragment="character-styles"
-                title="Add another character style in Settings"
-              >Add another style</a>
-            }
-
-            <div class="secondary-actions" role="group" aria-label="Character actions">
-              <button
-                type="button"
-                class="danger-link portrait-link"
-                (click)="openGeneratePortrait()"
-                [disabled]="!imageGenerationEnabled || isSaving || savingBookPageId"
-              >Generate portrait</button>
-              @if (!isDraftMode && isEditing) {
-                <button
-                  type="button"
-                  class="danger-link"
-                  (click)="moveCharacterToDraft()"
-                  [disabled]="isSaving || savingBookPageId"
-                  title="Move character back to drafts"
-                >Move to draft</button>
-              }
-              @if (isEditing) {
-                <button
-                  type="button"
-                  class="danger-link"
-                  (click)="deleteCharacter()"
-                  [disabled]="isSaving || savingBookPageId"
-                  title="Delete character"
-                >Delete {{ isDraftMode ? 'draft' : 'character' }}</button>
-              }
-            </div>
-          </div>
 
           <div class="writing-workspace">
           <!-- Content tabs -->

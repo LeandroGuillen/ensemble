@@ -122,33 +122,6 @@ export class CharacterDetailComponent
   /** Cached field errors — updated on form changes (debounced) and on blur. */
   fieldErrors: Record<string, string | null> = {};
 
-  private static readonly EDITOR_LAYOUT_KEY = 'ensemble.characterDetail.layout';
-  studioLayout = this.readStudioLayout();
-
-  private readStudioLayout(): boolean {
-    try {
-      return localStorage.getItem(CharacterDetailComponent.EDITOR_LAYOUT_KEY) !== 'classic';
-    } catch {
-      return true;
-    }
-  }
-
-  toggleEditorLayout(): void {
-    const active = document.activeElement;
-    if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) {
-      active.blur();
-    }
-    this.studioLayout = !this.studioLayout;
-    try {
-      localStorage.setItem(
-        CharacterDetailComponent.EDITOR_LAYOUT_KEY,
-        this.studioLayout ? 'studio' : 'classic'
-      );
-    } catch {
-      this.cdr.markForCheck();
-    }
-  }
-
   isEditing = false;
   isDraftMode = false;
   isLoreMode = false;
