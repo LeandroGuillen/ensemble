@@ -57,5 +57,29 @@ describe('Character detail focused loading', () => {
     expect(fixture.nativeElement.querySelector('.tags-select')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('.description-preview').textContent).toContain('Loaded description');
     expect((fixture.nativeElement.querySelector('#content') as HTMLTextAreaElement).hidden).toBeTrue();
+
+    // The book context sits above the portrait and exposes a visible reset.
+    component.books = [{ id: 'first', name: 'First book', color: '#3498db' }] as any;
+    component.contentTabs = [{ id: 'main', label: 'General' }, { id: 'first', label: 'First book' }];
+    component.activeContentTab = 'first';
+    component.thumbnailsMap = { portrait: 'main.png' };
+    component.bookThumbnailsMap = { first: { portrait: 'first.png' } };
+    spyOn(component, 'getBookName').and.returnValue('First book');
+    spyOn(component, 'refreshThumbnailPreviews').and.resolveTo();
+    (component as any).cdr.markForCheck();
+    fixture.detectChanges();
+    const tabs = fixture.nativeElement.querySelector('.content-tabs') as HTMLElement;
+    const hero = fixture.nativeElement.querySelector('.hero-card') as HTMLElement;
+    expect(tabs.compareDocumentPosition(hero) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.portrait-scope').textContent).toContain('Picture for First book');
+    expect(fixture.nativeElement.querySelector('.portrait-scope').textContent).toContain('Only used in this book');
+    (fixture.nativeElement.querySelector('.portrait-scope button') as HTMLButtonElement).click();
+    (component as any).cdr.markForCheck();
+    fixture.detectChanges();
+    expect(component.bookThumbnailsMap['first']).toBeUndefined();
+    expect(component.thumbnailsMap['portrait']).toBe('main.png');
+    expect(fixture.nativeElement.querySelector('.portrait-scope').textContent).toContain('Using main picture');
+    expect(fixture.nativeElement.querySelector('.portrait-change-btn').textContent).toContain('Set book picture');
+
   });
 });

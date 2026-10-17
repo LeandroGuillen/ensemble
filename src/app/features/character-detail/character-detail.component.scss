@@ -1114,3 +1114,35 @@
   font-size: 0.8125rem;
   line-height: 1.5;
 }
+
+// The picture controls follow the active book and selected style.
+.portrait-change-btn {
+  width: 100%;
+  max-width: 240px;
+}
+
+.portrait-scope {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary);
+}
+
+.portrait-scope-copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.8125rem;
+
+  span {
+    color: var(--color-text-secondary);
+    font-size: 0.75rem;
+  }
+}

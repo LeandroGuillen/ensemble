@@ -107,6 +107,69 @@
           @if (newCharacterFromLink) {
             <p class="link-warning" role="status">The linked character “{{ newCharacterFromLink }}” does not exist yet. Its name has been filled in below. Choose Create Character to save it.</p>
           }
+          <!-- Content tabs -->
+          @if (books.length > 0 || contentTabs.length > 1) {
+            <nav class="content-tabs" aria-label="Content sections">
+              <div class="content-tab-list">
+                @for (tab of contentTabs; track tab.id) {
+                  @if (tab.id === 'main') {
+                    <button
+                      type="button"
+                      class="content-tab"
+                      [class.active]="activeContentTab === tab.id"
+                      (click)="setActiveContentTab(tab.id)"
+                    >{{ tab.label }}</button>
+                  } @else {
+                    <span class="content-tab-group" [class.active]="activeContentTab === tab.id">
+                      <button
+                        type="button"
+                        class="content-tab content-tab-book"
+                        [class.active]="activeContentTab === tab.id"
+                        [disabled]="!isEditing"
+                        [title]="isEditing ? 'Open ' + tab.label + ' page' : 'Book pages are available after creating the character'"
+                        (click)="setActiveContentTab(tab.id)"
+                      >
+                        <span class="content-tab-color" [style.background-color]="getBookColor(tab.id)" aria-hidden="true"></span>
+                        {{ tab.label }}
+                        @if (isEditing && bookPageData[tab.id]?.exists === false) {
+                          <span class="content-tab-badge" title="No page yet">+</span>
+                        }
+                      </button>
+                      <button
+                        type="button"
+                        class="content-tab-remove"
+                        (click)="removeBook(tab.id)"
+                        [attr.aria-label]="'Remove ' + tab.label + ' from character'"
+                        [title]="'Remove from ' + tab.label"
+                      ><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg></button>
+                    </span>
+                  }
+                }
+              </div>
+
+              <details class="add-book-menu" #addBookMenu>
+                <summary class="content-tab add-book-summary">+ Add book</summary>
+                <div class="add-book-popover">
+                  <div class="add-book-popover-title">Add character to a book</div>
+                  @for (book of availableBooks; track book.id) {
+                    <button
+                      type="button"
+                      class="add-book-option"
+                      (click)="addBook(book.id); addBookMenu.open = false"
+                    >
+                      <span class="content-tab-color" [style.background-color]="book.color" aria-hidden="true"></span>
+                      <span>{{ getBookName(book.id) }}</span>
+                      <span class="add-book-option-action">+ Add</span>
+                    </button>
+                  } @empty {
+                    <p class="add-book-empty">This character is in every book.</p>
+                  }
+                </div>
+              </details>
+            </nav>
+          }
+
+
           <!-- HERO: thumbnail + name + category -->
           <section class="hero-card">
             <div class="hero-thumb-column">
@@ -127,7 +190,7 @@
                 @if (thumbnailPreviewUrl) {
                   <img [src]="thumbnailPreviewUrl" [alt]="selectedStyleName + ' thumbnail'" />
                   <div class="hero-thumb-overlay"><span>Click to change</span></div>
-                  @if (hasOwnThumbnailForStyle(selectedStyleId || defaultCharacterStyle)) {
+                  @if (!activeBookId && hasOwnThumbnailForStyle(selectedStyleId || defaultCharacterStyle)) {
                     <button
                       type="button"
                       class="hero-thumb-remove-btn"
@@ -148,6 +211,11 @@
                   </div>
                 }
               </div>
+              <button type="button" class="btn btn-secondary portrait-change-btn"
+                (click)="openImagePicker()">
+                {{ activeBookId && !hasOwnThumbnailForStyle(selectedStyleId || defaultCharacterStyle)
+                  ? 'Set book picture' : thumbnailPreviewUrl ? 'Change picture' : 'Add picture' }}
+              </button>
               @if (characterStyles.length > 1) {
                 <div class="style-strip" role="listbox" aria-label="Character styles">
                   @for (style of characterStyles; track style.id) {
@@ -324,69 +392,27 @@
             </div>
           </section>
 
-          <div class="writing-workspace">
-          <!-- Content tabs -->
-          @if (books.length > 0 || contentTabs.length > 1) {
-            <nav class="content-tabs" aria-label="Content sections">
-              <div class="content-tab-list">
-                @for (tab of contentTabs; track tab.id) {
-                  @if (tab.id === 'main') {
-                    <button
-                      type="button"
-                      class="content-tab"
-                      [class.active]="activeContentTab === tab.id"
-                      (click)="setActiveContentTab(tab.id)"
-                    >{{ tab.label }}</button>
+          <div class="portrait-scope" role="status">
+            <div class="portrait-scope-copy">
+              <strong>{{ activeBookId ? 'Picture for ' + getBookName(activeBookId) : 'Main character picture' }}</strong>
+              <span>
+                @if (activeBookId) {
+                  @if (hasOwnThumbnailForStyle(selectedStyleId || defaultCharacterStyle)) {
+                    Only used in this book · {{ selectedStyleName }} style
                   } @else {
-                    <span class="content-tab-group" [class.active]="activeContentTab === tab.id">
-                      <button
-                        type="button"
-                        class="content-tab content-tab-book"
-                        [class.active]="activeContentTab === tab.id"
-                        [disabled]="!isEditing"
-                        [title]="isEditing ? 'Open ' + tab.label + ' page' : 'Book pages are available after creating the character'"
-                        (click)="setActiveContentTab(tab.id)"
-                      >
-                        <span class="content-tab-color" [style.background-color]="getBookColor(tab.id)" aria-hidden="true"></span>
-                        {{ tab.label }}
-                        @if (isEditing && bookPageData[tab.id]?.exists === false) {
-                          <span class="content-tab-badge" title="No page yet">+</span>
-                        }
-                      </button>
-                      <button
-                        type="button"
-                        class="content-tab-remove"
-                        (click)="removeBook(tab.id)"
-                        [attr.aria-label]="'Remove ' + tab.label + ' from character'"
-                        [title]="'Remove from ' + tab.label"
-                      ><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg></button>
-                    </span>
+                    Using main picture · {{ selectedStyleName }} style
                   }
+                } @else {
+                  Used by books without their own picture · {{ selectedStyleName }} style
                 }
-              </div>
+              </span>
+            </div>
+            @if (activeBookId && hasOwnThumbnailForStyle(selectedStyleId || defaultCharacterStyle)) {
+              <button type="button" class="btn btn-ghost" (click)="removeThumbnail()">Use main picture</button>
+            }
+          </div>
 
-              <details class="add-book-menu" #addBookMenu>
-                <summary class="content-tab add-book-summary">+ Add book</summary>
-                <div class="add-book-popover">
-                  <div class="add-book-popover-title">Add character to a book</div>
-                  @for (book of availableBooks; track book.id) {
-                    <button
-                      type="button"
-                      class="add-book-option"
-                      (click)="addBook(book.id); addBookMenu.open = false"
-                    >
-                      <span class="content-tab-color" [style.background-color]="book.color" aria-hidden="true"></span>
-                      <span>{{ getBookName(book.id) }}</span>
-                      <span class="add-book-option-action">+ Add</span>
-                    </button>
-                  } @empty {
-                    <p class="add-book-empty">This character is in every book.</p>
-                  }
-                </div>
-              </details>
-            </nav>
-          }
-
+          <div class="writing-workspace">
           @if (activeContentTab === 'main') {
             <div class="detail-grid detail-grid-single">
               <section class="panel content-panel">

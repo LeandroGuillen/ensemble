@@ -37,3 +37,7 @@ import './app/core/services/house.service.spec';
 import './app/features/character-detail/character-detail.save.spec';
 import './app/features/house-detail/house-detail.component.spec';
 import './app/shared/character-houses/character-houses.component.spec';
+
+import './app/features/character-list/character-list.pictures.spec';
+import './app/features/character-detail/character-detail.pictures.spec';
+import './app/features/character-detail/character-detail.focus.spec';

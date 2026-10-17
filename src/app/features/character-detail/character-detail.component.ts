@@ -164,6 +164,7 @@ export class CharacterDetailComponent
 
   // Thumbnail previews by character style
   thumbnailPreviewUrls: Map<string, string> = new Map();
+  private thumbnailPreviewRequest = 0;
   characterStyles: CharacterStyle[] = [];
   defaultCharacterStyle = '';
   /** Style currently shown in the hero thumbnail (change/remove/generate target). */
@@ -1305,7 +1306,11 @@ export class CharacterDetailComponent
   }
 
   async refreshThumbnailPreviews(bookId: string | null = this.activeBookId): Promise<void> {
+    const request = ++this.thumbnailPreviewRequest;
     const next = new Map<string, string>();
+    // Clear the previous context while the selected book’s pictures load.
+    this.thumbnailPreviewUrls = new Map();
+    this.cdr.markForCheck();
     if (!this.currentProject?.path) {
       this.thumbnailPreviewUrls = next;
       this.cdr.markForCheck();
@@ -1338,6 +1343,7 @@ export class CharacterDetailComponent
         }
       })
     );
+    if (request !== this.thumbnailPreviewRequest) return;
     this.thumbnailPreviewUrls = next;
     this.cdr.markForCheck();
   }
