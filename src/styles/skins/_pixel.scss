@@ -1,0 +1,270 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Pixel skin — blocky, pixel-art chrome.
+
+   Active when SkinService sets html[data-skin='pixel']. Colors still come from
+   the active theme; this layer only changes shape, type, depth and motion:
+   square corners, chunky 2px borders, hard offset shadows, bevelled buttons,
+   pixel fonts and stepped (frame-by-frame) transitions.
+
+   Shadow tokens use !important because ThemeService writes them as inline
+   styles on <html>; a stylesheet !important custom property wins over those.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+$pixel-skin: "html[data-skin='pixel']";
+
+/* Bevel helpers: light top-left edge, dark bottom-right edge (classic raised block) */
+$bevel-raised: inset -2px -2px 0 0 rgba(0, 0, 0, 0.35), inset 2px 2px 0 0 rgba(255, 255, 255, 0.14);
+$bevel-sunken: inset 2px 2px 0 0 rgba(0, 0, 0, 0.35), inset -2px -2px 0 0 rgba(255, 255, 255, 0.06);
+$drop: 2px 2px 0 0 rgba(0, 0, 0, 0.5);
+
+#{$pixel-skin} {
+  /* Every radius token collapses to a hard corner */
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-full: 0;
+
+  /* Pixel type: readable pixel sans for UI, chunky display face for titles */
+  --font-sans: 'Pixelify Sans', 'Silkscreen', monospace;
+  --font-serif: 'Silkscreen', 'Pixelify Sans', monospace;
+  --font-mono: 'VT323', 'JetBrains Mono', monospace;
+
+  /* Hard, offset, blur-free shadows */
+  --shadow-sm: 2px 2px 0 0 rgba(0, 0, 0, 0.45) !important;
+  --shadow-md: 3px 3px 0 0 rgba(0, 0, 0, 0.5) !important;
+  --shadow-lg: 4px 4px 0 0 rgba(0, 0, 0, 0.55) !important;
+  --shadow-xl: 6px 6px 0 0 rgba(0, 0, 0, 0.6) !important;
+  --shadow-glow: 0 0 0 2px var(--color-accent-primary) !important;
+  --shadow-card: 3px 3px 0 0 rgba(0, 0, 0, 0.45) !important;
+
+  /* Motion moves in discrete frames instead of easing */
+  --transition-fast: 90ms steps(2, end);
+  --transition-base: 160ms steps(3, end);
+  --transition-slow: 280ms steps(4, end);
+  --transition-spring: 240ms steps(4, end);
+  --theme-transition: none;
+
+  -webkit-font-smoothing: none;
+  text-rendering: optimizeSpeed;
+
+  /* ─── Global shape ─────────────────────────────────────────────────────── */
+
+  *,
+  *::before,
+  *::after {
+    border-radius: 0 !important;
+  }
+
+  body {
+    font-family: var(--font-sans);
+  }
+
+  h1,
+  h2 {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    letter-spacing: 0;
+  }
+
+  h3,
+  h4,
+  h5,
+  h6 {
+    letter-spacing: 0;
+  }
+
+  code,
+  kbd,
+  pre,
+  samp {
+    font-family: var(--font-mono);
+    font-size: 1.15em;
+  }
+
+  ::selection {
+    background-color: var(--color-accent-primary);
+    color: var(--color-text-inverse);
+  }
+
+  *:focus-visible {
+    outline: 2px dashed var(--color-accent-primary);
+    outline-offset: 2px;
+  }
+
+  /* Icons: square caps and joins, no anti-aliased curves */
+  svg {
+    shape-rendering: crispEdges;
+    stroke-linecap: square;
+    stroke-linejoin: miter;
+  }
+
+  /* Blocky scrollbars */
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--color-bg-secondary);
+    box-shadow: inset 2px 0 0 0 var(--color-border-subtle);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--color-border-light);
+    background-clip: border-box;
+    border: 2px solid var(--color-bg-secondary);
+    box-shadow: $bevel-raised;
+
+    &:hover {
+      background-color: var(--color-text-muted);
+    }
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: var(--color-bg-secondary);
+  }
+
+  /* ─── Buttons ──────────────────────────────────────────────────────────── */
+
+  .btn {
+    border: 2px solid var(--color-border-light);
+    box-shadow: $bevel-raised, $drop;
+    letter-spacing: 0.02em;
+
+    &:active:not(:disabled) {
+      transform: translate(2px, 2px);
+      box-shadow: $bevel-sunken;
+    }
+  }
+
+  .btn-primary {
+    background: var(--color-accent-primary);
+    border-color: var(--color-accent-dark);
+    box-shadow: $bevel-raised, $drop;
+
+    &:hover:not(:disabled) {
+      background: var(--color-accent-secondary);
+      box-shadow: $bevel-raised, $drop;
+      filter: none;
+    }
+  }
+
+  .btn-secondary {
+    &:hover:not(:disabled) {
+      border-color: var(--color-accent-muted);
+    }
+
+    &.active {
+      border-color: var(--color-accent-dark);
+    }
+  }
+
+  .btn-ghost {
+    border-color: transparent;
+    box-shadow: none;
+
+    &:hover:not(:disabled) {
+      border-color: var(--color-border);
+    }
+
+    &:active:not(:disabled) {
+      box-shadow: $bevel-sunken;
+    }
+  }
+
+  .btn-danger {
+    border-width: 2px;
+  }
+
+  .icon-btn,
+  .close-btn {
+    border: 2px solid transparent;
+
+    &:hover {
+      border-color: var(--color-border);
+    }
+
+    &:active {
+      transform: translate(1px, 1px);
+    }
+  }
+
+  .app-confirm-button--armed,
+  .confirm-delete-btn {
+    border-width: 2px;
+  }
+
+  /* ─── Form controls ────────────────────────────────────────────────────── */
+
+  .form-control,
+  input[type='text'],
+  input[type='search'],
+  input[type='number'],
+  input[type='url'],
+  input[type='email'],
+  input[type='password'],
+  textarea,
+  select {
+    border-width: 2px;
+  }
+
+  .form-control {
+    box-shadow: $bevel-sunken;
+
+    &:focus {
+      border-color: var(--color-accent-primary);
+      box-shadow: $bevel-sunken, 0 0 0 2px var(--color-accent-subtle);
+    }
+
+    &.error:focus {
+      box-shadow: $bevel-sunken, 0 0 0 2px rgba(248, 113, 113, 0.25);
+    }
+  }
+
+  /* Square, mitered dropdown chevron */
+  select.form-control {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' shape-rendering='crispEdges'%3E%3Cpath d='M0 0h10v2H8v2H6v2H4V4H2V2H0z' fill='%23a0a8b8'/%3E%3C/svg%3E");
+  }
+
+  .form-label {
+    letter-spacing: 0.06em;
+  }
+
+  /* ─── Surfaces: modals, menus, popovers ────────────────────────────────── */
+
+  .modal-overlay {
+    backdrop-filter: none;
+    /* 2px checkerboard dither instead of blur */
+    background-color: rgba(0, 0, 0, 0.55);
+    background-image: conic-gradient(rgba(0, 0, 0, 0.35) 25%, transparent 0 50%, rgba(0, 0, 0, 0.35) 0 75%, transparent 0);
+    background-size: 4px 4px;
+  }
+
+  .modal-dialog {
+    border-width: 2px;
+    box-shadow: $bevel-raised, var(--shadow-xl);
+  }
+
+  .modal-header {
+    border-bottom-width: 2px;
+  }
+
+  [popover],
+  .theme-menu {
+    border-width: 2px;
+  }
+
+  hr {
+    border: none;
+    height: 2px;
+    background: var(--color-border);
+  }
+
+  /* Images stay sharp when scaled, like sprites */
+  img {
+    image-rendering: pixelated;
+  }
+}

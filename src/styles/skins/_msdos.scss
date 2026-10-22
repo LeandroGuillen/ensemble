@@ -1,0 +1,250 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   MS-DOS skin — text-mode terminal.
+
+   Active when SkinService sets html[data-skin='msdos']. Colors come from the
+   active theme. Everything is a VGA text cell: one monospace font, square
+   blocks, no easing, [ bracketed ] buttons, double-line dialog frames with
+   solid black drop shadows, dithered backdrops and inverse-video selection.
+
+   Shadow tokens use !important because ThemeService writes them inline on <html>.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+$msdos-skin: "html[data-skin='msdos']";
+
+$frame: var(--color-text-secondary);
+$block-shadow: 8px 8px 0 0 rgba(0, 0, 0, 0.85);
+/* ▒ dither */
+$dither: conic-gradient(var(--color-bg-tertiary) 25%, transparent 0 50%, var(--color-bg-tertiary) 0 75%, transparent 0);
+
+#{$msdos-skin} {
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-full: 0;
+
+  --font-sans: 'VT323', 'Lucida Console', 'Courier New', monospace;
+  --font-serif: var(--font-sans);
+  --font-mono: var(--font-sans);
+
+  --shadow-sm: none !important;
+  --shadow-md: 4px 4px 0 0 rgba(0, 0, 0, 0.85) !important;
+  --shadow-lg: #{$block-shadow} !important;
+  --shadow-xl: #{$block-shadow} !important;
+  --shadow-glow: 0 0 0 1px var(--color-text-primary) !important;
+  --shadow-card: none !important;
+
+  /* Text mode has no animation */
+  --transition-fast: 0s;
+  --transition-base: 0s;
+  --transition-slow: 0s;
+  --transition-spring: 0s;
+  --theme-transition: none;
+
+  -webkit-font-smoothing: none;
+  /* VT323 has a small x-height; scale every face to a readable text cell */
+  font-size-adjust: ex-height 0.46;
+
+  *,
+  *::before,
+  *::after {
+    border-radius: 0 !important;
+    font-family: var(--font-sans) !important;
+    letter-spacing: 0 !important;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    caret-color: var(--color-text-primary);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-weight: 400;
+    text-transform: uppercase;
+  }
+
+  ::selection {
+    background-color: var(--color-text-primary);
+    color: var(--color-bg-primary);
+  }
+
+  *:focus-visible {
+    outline: 1px solid var(--color-text-primary);
+    outline-offset: 0;
+  }
+
+  svg {
+    shape-rendering: crispEdges;
+    stroke-linecap: square;
+    stroke-linejoin: miter;
+  }
+
+  img {
+    image-rendering: pixelated;
+  }
+
+  /* Text-mode scrollbar: ░ track, █ thumb */
+  ::-webkit-scrollbar {
+    width: 14px;
+    height: 14px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background-color: var(--color-bg-primary);
+    background-image: $dither;
+    background-size: 4px 4px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--color-text-secondary);
+    border: none;
+    background-clip: border-box;
+
+    &:hover {
+      background-color: var(--color-text-primary);
+    }
+  }
+
+  /* ─── Buttons: [ OK ] ──────────────────────────────────────────────────── */
+
+  .btn {
+    border: none;
+    font-weight: 400;
+    text-transform: uppercase;
+    box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 0.85);
+
+    &:not(.btn-icon)::before {
+      content: '[';
+      margin-right: 0.5ch;
+    }
+
+    &:not(.btn-icon)::after {
+      content: ']';
+      margin-left: 0.5ch;
+    }
+
+    &:hover:not(:disabled),
+    &:focus-visible {
+      background: var(--color-text-primary);
+      color: var(--color-bg-primary);
+      outline: none;
+    }
+
+    &:active:not(:disabled) {
+      transform: translate(4px, 4px);
+      box-shadow: none;
+    }
+  }
+
+  .btn-primary {
+    background: var(--color-accent-primary);
+    filter: none;
+
+    &:hover:not(:disabled) {
+      box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 0.85);
+      filter: none;
+    }
+  }
+
+  .btn-secondary,
+  .btn-danger {
+    background: var(--color-bg-elevated);
+    border: none;
+  }
+
+  .btn-ghost {
+    box-shadow: none;
+
+    &:active:not(:disabled) {
+      transform: none;
+    }
+  }
+
+  .icon-btn:hover,
+  .close-btn:hover {
+    background: var(--color-text-primary);
+    color: var(--color-bg-primary);
+  }
+
+  /* ─── Form controls: input fields are inverse blocks ───────────────────── */
+
+  .form-label {
+    font-weight: 400;
+  }
+
+  .form-control {
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    box-shadow: none;
+
+    &:hover {
+      border-color: var(--color-border-light);
+    }
+
+    &:focus {
+      border-color: var(--color-text-primary);
+      box-shadow: none;
+    }
+  }
+
+  select.form-control {
+    background-image: none;
+    padding-right: var(--spacing-md);
+  }
+
+  /* ─── Surfaces: double-line dialog boxes ───────────────────────────────── */
+
+  .modal-overlay {
+    backdrop-filter: none;
+    background-color: color-mix(in srgb, var(--color-bg-primary) 70%, transparent);
+    background-image: $dither;
+    background-size: 4px 4px;
+  }
+
+  /* ╔═ TITLE ═╗ frame inset from the box edge, then a solid block shadow */
+  .modal-dialog {
+    border: 4px double $frame;
+    box-shadow: 0 0 0 6px var(--color-bg-secondary), 14px 14px 0 6px rgba(0, 0, 0, 0.85);
+  }
+
+  .modal-header {
+    justify-content: center;
+    position: relative;
+    border-bottom: 1px solid $frame;
+
+    h3 {
+      padding: 0 1ch;
+      font-size: 1.25rem;
+      background: $frame;
+      color: var(--color-bg-secondary);
+    }
+
+    .close-btn {
+      position: absolute;
+      right: var(--spacing-sm);
+      top: 50%;
+      transform: translateY(-50%);
+    }
+  }
+
+  [popover],
+  .theme-menu {
+    border: 4px double $frame;
+    box-shadow: var(--shadow-md);
+  }
+
+  .theme-menu-item:hover {
+    background: var(--color-text-primary);
+    color: var(--color-bg-primary);
+  }
+
+  hr {
+    border: none;
+    border-top: 1px dashed $frame;
+  }
+}

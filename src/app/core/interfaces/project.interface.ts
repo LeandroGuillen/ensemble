@@ -191,6 +191,7 @@ export interface ProjectSettings {
   ai?: AiSettings;
   imageGeneration?: ImageGenerationSettings;
   theme?: string; // Theme ID (e.g., "blue-gold")
+  skin?: string; // Skin ID (e.g., "classic", "pixel")
   colorPalette?: import('./color-palette.interface').ColorPaletteConfig;
 }
 

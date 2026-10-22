@@ -1,0 +1,189 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Soft UI skin — neumorphism.
+
+   Active when SkinService sets html[data-skin='soft']. Colors come from the
+   active theme: light and dark shadows are mixed from the surface color so
+   controls look extruded from (or pressed into) the same material. No
+   borders, generous radii, accent-colored text for primary actions, Nunito.
+
+   Shadow tokens use !important because ThemeService writes them inline on <html>.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+$soft-skin: "html[data-skin='soft']";
+
+$surface: var(--color-bg-secondary);
+$lift: color-mix(in srgb, var(--color-bg-secondary), #fff 9%);
+$sink: color-mix(in srgb, var(--color-bg-secondary), #000 38%);
+
+$raised: 6px 6px 14px $sink, -6px -6px 14px $lift;
+$raised-sm: 3px 3px 7px $sink, -3px -3px 7px $lift;
+$raised-lg: 12px 12px 28px $sink, -12px -12px 28px $lift;
+$pressed: inset 4px 4px 9px $sink, inset -4px -4px 9px $lift;
+
+#{$soft-skin} {
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 26px;
+  --radius-2xl: 32px;
+
+  --font-sans: 'Nunito', system-ui, sans-serif;
+  --font-serif: 'Nunito', system-ui, sans-serif;
+
+  --shadow-sm: #{$raised-sm} !important;
+  --shadow-md: #{$raised} !important;
+  --shadow-lg: #{$raised} !important;
+  --shadow-xl: #{$raised-lg} !important;
+  --shadow-glow: 0 0 0 3px color-mix(in srgb, var(--color-accent-primary) 30%, transparent), #{$raised-sm} !important;
+  --shadow-card: #{$raised-sm} !important;
+
+  --transition-fast: 160ms ease;
+  --transition-base: 240ms ease;
+  --transition-slow: 380ms ease;
+  --transition-spring: 320ms cubic-bezier(0.34, 1.3, 0.64, 1);
+
+  body {
+    font-family: var(--font-sans);
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-serif);
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--color-accent-primary) 30%, transparent);
+  }
+
+  *:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent-primary) 45%, transparent);
+  }
+
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: $surface;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+    box-shadow: inset 2px 2px 3px $lift, inset -2px -2px 3px $sink;
+  }
+
+  /* ─── Buttons: extruded, press in on click ─────────────────────────────── */
+
+  .btn {
+    background: $surface;
+    color: var(--color-text-primary);
+    border: none;
+    box-shadow: $raised-sm;
+    font-weight: 700;
+
+    &:hover:not(:disabled) {
+      background: $surface;
+      box-shadow: $raised;
+    }
+
+    &:active:not(:disabled) {
+      transform: none;
+      box-shadow: $pressed;
+    }
+  }
+
+  .btn-primary {
+    color: var(--color-accent-primary);
+
+    &:hover:not(:disabled) {
+      color: var(--color-accent-secondary);
+      box-shadow: $raised, 0 0 14px color-mix(in srgb, var(--color-accent-primary) 20%, transparent);
+      filter: none;
+    }
+  }
+
+  .btn-secondary.active {
+    background: $surface;
+    color: var(--color-accent-primary);
+    box-shadow: $pressed;
+  }
+
+  .btn-danger {
+    color: var(--color-error);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    box-shadow: none;
+
+    &:hover:not(:disabled) {
+      box-shadow: $raised-sm;
+    }
+  }
+
+  .icon-btn:hover,
+  .close-btn:hover {
+    background: $surface;
+    box-shadow: $raised-sm;
+  }
+
+  .icon-btn:active,
+  .close-btn:active {
+    transform: none;
+    box-shadow: $pressed;
+  }
+
+  /* ─── Form controls: pressed wells ─────────────────────────────────────── */
+
+  .form-label {
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 700;
+  }
+
+  .form-control {
+    background: $surface;
+    border: none;
+    box-shadow: $pressed;
+
+    &:focus {
+      box-shadow: $pressed, 0 0 0 3px color-mix(in srgb, var(--color-accent-primary) 30%, transparent);
+    }
+  }
+
+  /* ─── Surfaces ─────────────────────────────────────────────────────────── */
+
+  .modal-overlay {
+    background: color-mix(in srgb, var(--color-bg-primary) 55%, transparent);
+    backdrop-filter: blur(6px);
+  }
+
+  .modal-dialog {
+    background: $surface;
+    border: none;
+    box-shadow: $raised-lg;
+  }
+
+  .modal-header {
+    border-bottom: none;
+    box-shadow: 0 1px 0 $lift, 0 -1px 0 $sink inset;
+  }
+
+  [popover],
+  .theme-menu {
+    background: $surface;
+    border: none;
+    box-shadow: $raised;
+  }
+
+  hr {
+    border: none;
+    height: 4px;
+    border-radius: 2px;
+    box-shadow: inset 1px 1px 2px $sink, inset -1px -1px 2px $lift;
+  }
+}

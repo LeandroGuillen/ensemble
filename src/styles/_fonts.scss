@@ -1,0 +1,99 @@
+/* Bundled web fonts (all SIL OFL 1.1, via @fontsource) so the app works offline.
+   Only the weights the UI and skins use are loaded; each file covers all
+   scripts via unicode-range, so browsers fetch only the subsets in use. */
+
+/* Base UI */
+@use '@fontsource/outfit/300' as *;
+@use '@fontsource/outfit/400' as *;
+@use '@fontsource/outfit/500' as *;
+@use '@fontsource/outfit/600' as *;
+@use '@fontsource/outfit/700' as *;
+@use '@fontsource/playfair-display/500' as *;
+@use '@fontsource/playfair-display/600' as *;
+@use '@fontsource/playfair-display/700' as *;
+@use '@fontsource/jetbrains-mono/400' as *;
+@use '@fontsource/jetbrains-mono/500' as *;
+
+/* Pixel / MS-DOS skins */
+@use '@fontsource/pixelify-sans/400' as *;
+@use '@fontsource/pixelify-sans/500' as *;
+@use '@fontsource/pixelify-sans/600' as *;
+@use '@fontsource/pixelify-sans/700' as *;
+@use '@fontsource/silkscreen/400' as *;
+@use '@fontsource/silkscreen/700' as *;
+@use '@fontsource/vt323/400' as *;
+
+/* StarCraft skin */
+@use '@fontsource/orbitron/500' as *;
+@use '@fontsource/orbitron/600' as *;
+@use '@fontsource/orbitron/700' as *;
+@use '@fontsource/rajdhani/400' as *;
+@use '@fontsource/rajdhani/500' as *;
+@use '@fontsource/rajdhani/600' as *;
+@use '@fontsource/rajdhani/700' as *;
+@use '@fontsource/share-tech-mono/400' as *;
+
+/* Warcraft skin */
+@use '@fontsource/cinzel/500' as *;
+@use '@fontsource/cinzel/600' as *;
+@use '@fontsource/cinzel/700' as *;
+@use '@fontsource/alegreya/400' as *;
+@use '@fontsource/alegreya/400-italic' as *;
+@use '@fontsource/alegreya/500' as *;
+@use '@fontsource/alegreya/700' as *;
+
+/* Liquid skin */
+@use '@fontsource/inter/400' as *;
+@use '@fontsource/inter/500' as *;
+@use '@fontsource/inter/600' as *;
+@use '@fontsource/inter/700' as *;
+
+/* Typewriter skin */
+@use '@fontsource/courier-prime/400' as *;
+@use '@fontsource/courier-prime/700' as *;
+@use '@fontsource/courier-prime/400-italic' as *;
+@use '@fontsource/special-elite/400' as *;
+
+/* Notebook skin */
+@use '@fontsource/patrick-hand/400' as *;
+@use '@fontsource/caveat/500' as *;
+@use '@fontsource/caveat/700' as *;
+
+/* Manuscript skin */
+@use '@fontsource/im-fell-english/400' as *;
+@use '@fontsource/im-fell-english/400-italic' as *;
+@use '@fontsource/unifrakturmaguntia/400' as *;
+
+/* Blueprint skin */
+@use '@fontsource/architects-daughter/400' as *;
+
+/* JRPG skin */
+@use '@fontsource/dotgothic16/400' as *;
+
+/* Cyberpunk skin */
+@use '@fontsource/chakra-petch/400' as *;
+@use '@fontsource/chakra-petch/500' as *;
+@use '@fontsource/chakra-petch/700' as *;
+
+/* Brutalist skin */
+@use '@fontsource/space-grotesk/500' as *;
+@use '@fontsource/space-grotesk/700' as *;
+@use '@fontsource/space-mono/400' as *;
+@use '@fontsource/space-mono/700' as *;
+
+/* Soft UI skin */
+@use '@fontsource/nunito/400' as *;
+@use '@fontsource/nunito/700' as *;
+@use '@fontsource/nunito/800' as *;
+
+/* Art Deco skin */
+@use '@fontsource/josefin-sans/400' as *;
+@use '@fontsource/josefin-sans/600' as *;
+@use '@fontsource/josefin-sans/700' as *;
+@use '@fontsource/poiret-one/400' as *;
+@use '@fontsource/limelight/400' as *;
+
+/* Comic skin */
+@use '@fontsource/bangers/400' as *;
+@use '@fontsource/comic-neue/400' as *;
+@use '@fontsource/comic-neue/700' as *;

@@ -74,7 +74,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
       kind: 'leaf',
       id: 'appearance',
       label: 'Appearance',
-      description: 'Theme, colors, and interface zoom',
+      description: 'Theme, skin, colors, and interface zoom',
     },
     {
       kind: 'group',
@@ -372,6 +372,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
       imagesFolder: settings?.imagesFolder || 'img',
       theme: settings?.theme || theme?.id || '',
       themeName: theme?.name || '',
+      skin: settings?.skin || 'classic',
       colorPaletteColors: this.colorPaletteService.getAllColors().join(' '),
       categoryNames: categories.map((c) => c.name).join(' '),
       tagNames: tags.map((t) => t.name).join(' '),

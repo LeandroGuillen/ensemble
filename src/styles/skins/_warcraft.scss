@@ -1,0 +1,209 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Warcraft skin — high-fantasy war table.
+
+   Active when SkinService sets html[data-skin='warcraft']. Colors come from
+   the active theme; the accent becomes the gilded trim. Ridged metal frames,
+   carved stone buttons, vignetted panels, engraved Cinzel capitals and a
+   book-like serif for body text.
+
+   Shadow tokens use !important because ThemeService writes them inline on <html>.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+$warcraft-skin: "html[data-skin='warcraft']";
+
+$gilt: var(--color-accent-muted);
+$gilt-bright: var(--color-accent-primary);
+$engrave: 0 1px 0 rgba(0, 0, 0, 0.7), 0 0 6px rgba(0, 0, 0, 0.35);
+$vignette: inset 0 0 0 1px rgba(0, 0, 0, 0.6), inset 0 0 36px rgba(0, 0, 0, 0.45);
+$stone: linear-gradient(180deg, color-mix(in srgb, var(--color-text-primary) 8%, var(--color-bg-elevated)) 0%, var(--color-bg-tertiary) 55%, color-mix(in srgb, #000 30%, var(--color-bg-tertiary)) 100%);
+
+#{$warcraft-skin} {
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 4px;
+  --radius-xl: 6px;
+  --radius-2xl: 8px;
+
+  --font-sans: 'Alegreya', Georgia, serif;
+  --font-serif: 'Cinzel', 'Alegreya', Georgia, serif;
+
+  /* Deep, heavy shadows like objects on a table */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.6) !important;
+  --shadow-md: 0 3px 8px rgba(0, 0, 0, 0.6) !important;
+  --shadow-lg: 0 6px 16px rgba(0, 0, 0, 0.65) !important;
+  --shadow-xl: 0 12px 32px rgba(0, 0, 0, 0.7) !important;
+  --shadow-glow: 0 0 14px color-mix(in srgb, var(--color-accent-primary) 45%, transparent) !important;
+  --shadow-card: 0 2px 6px rgba(0, 0, 0, 0.55), inset 0 0 0 1px color-mix(in srgb, var(--color-accent-muted) 35%, transparent) !important;
+
+  --transition-fast: 140ms ease-out;
+  --transition-base: 220ms ease-out;
+  --transition-slow: 380ms ease-out;
+  --transition-spring: 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  body {
+    font-family: var(--font-sans);
+    font-size: 1.02em;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-shadow: $engrave;
+  }
+
+  h1,
+  h2 {
+    color: var(--color-accent-secondary);
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--color-accent-primary) 40%, transparent);
+    color: var(--color-text-primary);
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--color-accent-primary);
+    outline-offset: 2px;
+    box-shadow: 0 0 10px color-mix(in srgb, var(--color-accent-primary) 50%, transparent);
+  }
+
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: color-mix(in srgb, #000 35%, var(--color-bg-secondary));
+    box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.6);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(90deg, var(--color-accent-dark), var(--color-accent-primary), var(--color-accent-dark));
+    background-clip: border-box;
+    border: 2px solid color-mix(in srgb, #000 35%, var(--color-bg-secondary));
+    border-radius: 3px;
+
+    &:hover {
+      filter: brightness(1.15);
+    }
+  }
+
+  /* ─── Buttons: carved stone with gilded rims ───────────────────────────── */
+
+  .btn {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-shadow: $engrave;
+    border: 2px ridge $gilt;
+
+    &:active:not(:disabled) {
+      transform: translateY(1px);
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
+    }
+  }
+
+  .btn-primary {
+    background: linear-gradient(180deg, var(--color-accent-secondary) 0%, var(--color-accent-primary) 40%, var(--color-accent-dark) 100%);
+    border-color: var(--color-accent-dark);
+    color: var(--color-text-inverse);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), inset 0 -2px 3px rgba(0, 0, 0, 0.35), 0 2px 4px rgba(0, 0, 0, 0.6);
+
+    &:hover:not(:disabled) {
+      filter: brightness(1.12);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -2px 3px rgba(0, 0, 0, 0.35), 0 0 12px color-mix(in srgb, var(--color-accent-primary) 55%, transparent);
+    }
+  }
+
+  .btn-secondary {
+    background: $stone;
+    border-color: $gilt;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -2px 3px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.55);
+
+    &:hover:not(:disabled) {
+      background: $stone;
+      border-color: $gilt-bright;
+      color: var(--color-accent-secondary);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -2px 3px rgba(0, 0, 0, 0.4), 0 0 10px color-mix(in srgb, var(--color-accent-primary) 40%, transparent);
+    }
+  }
+
+  .btn-ghost {
+    border-color: transparent;
+
+    &:hover:not(:disabled) {
+      color: var(--color-accent-secondary);
+      border-color: color-mix(in srgb, var(--color-accent-muted) 60%, transparent);
+    }
+  }
+
+  .btn-danger {
+    border-style: ridge;
+    border-width: 2px;
+  }
+
+  .icon-btn:hover,
+  .close-btn:hover {
+    color: var(--color-accent-secondary);
+    text-shadow: 0 0 8px color-mix(in srgb, var(--color-accent-primary) 60%, transparent);
+  }
+
+  /* ─── Form controls: recessed parchment slots ──────────────────────────── */
+
+  .form-label {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    color: var(--color-accent-muted);
+    letter-spacing: 0.08em;
+  }
+
+  .form-control {
+    background: color-mix(in srgb, #000 25%, var(--color-bg-tertiary));
+    border: 2px groove $gilt;
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5);
+
+    &:focus {
+      border-color: $gilt-bright;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5), 0 0 10px color-mix(in srgb, var(--color-accent-primary) 40%, transparent);
+    }
+  }
+
+  /* ─── Surfaces: framed war-table panels ────────────────────────────────── */
+
+  .modal-overlay {
+    background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0.88) 100%);
+    backdrop-filter: blur(2px) sepia(0.25);
+  }
+
+  .modal-dialog {
+    border: 4px ridge $gilt;
+    background-image: radial-gradient(ellipse at top, color-mix(in srgb, var(--color-accent-primary) 8%, transparent) 0%, transparent 60%);
+    box-shadow: $vignette, var(--shadow-xl);
+  }
+
+  .modal-header {
+    border-bottom: 2px groove $gilt;
+
+    h3 {
+      color: var(--color-accent-secondary);
+    }
+  }
+
+  [popover],
+  .theme-menu {
+    border: 3px ridge $gilt;
+    box-shadow: $vignette, var(--shadow-lg);
+  }
+
+  hr {
+    border: none;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, $gilt, transparent);
+  }
+}

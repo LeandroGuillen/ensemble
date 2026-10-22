@@ -1,0 +1,214 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Art Deco skin — 1920s gilded geometry.
+
+   Active when SkinService sets html[data-skin='art-deco']. Colors come from
+   the active theme; the accent is the gold leaf. Double-ruled frames with
+   inner keylines, sunburst title panels, metallic primary buttons, diamond
+   dividers, wide-tracked capitals in Josefin Sans with Poiret One and
+   Limelight display faces.
+
+   Shadow tokens use !important because ThemeService writes them inline on <html>.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+$deco-skin: "html[data-skin='art-deco']";
+
+$gold: var(--color-accent-primary);
+$gold-line: var(--color-accent-muted);
+$metal: linear-gradient(135deg, var(--color-accent-dark) 0%, var(--color-accent-secondary) 45%, var(--color-accent-primary) 55%, var(--color-accent-dark) 100%);
+$sunburst: repeating-conic-gradient(from -90deg at 50% 100%, color-mix(in srgb, var(--color-accent-primary) 14%, transparent) 0 3deg, transparent 3deg 9deg);
+
+#{$deco-skin} {
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+
+  --font-sans: 'Josefin Sans', 'Futura', system-ui, sans-serif;
+  --font-serif: 'Poiret One', 'Josefin Sans', sans-serif;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35) !important;
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.45) !important;
+  --shadow-xl: 0 18px 48px rgba(0, 0, 0, 0.55) !important;
+  --shadow-glow: 0 0 0 1px var(--color-accent-primary), 0 0 14px color-mix(in srgb, var(--color-accent-primary) 35%, transparent) !important;
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 0 0 1px color-mix(in srgb, var(--color-accent-muted) 30%, transparent) !important;
+
+  --transition-fast: 150ms ease;
+  --transition-base: 250ms ease;
+  --transition-slow: 400ms ease;
+  --transition-spring: 350ms ease;
+
+  body {
+    font-family: var(--font-sans);
+  }
+
+  /* Poiret One is a hairline face: only for large titles */
+  h1 {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  h2,
+  h3 {
+    font-family: 'Limelight', var(--font-serif);
+    font-weight: 400;
+    letter-spacing: 0.06em;
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--color-accent-primary) 35%, transparent);
+  }
+
+  *:focus-visible {
+    outline: 1px solid $gold;
+    outline-offset: 3px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: $metal;
+    border: none;
+  }
+
+  /* ─── Buttons: framed with an inner keyline ────────────────────────────── */
+
+  .btn {
+    border: 1px solid $gold-line;
+    outline: 1px solid color-mix(in srgb, var(--color-accent-muted) 55%, transparent);
+    outline-offset: -4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    padding-top: calc(var(--spacing-sm) + 2px);
+
+    &:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+  }
+
+  .btn-primary {
+    background: $metal;
+    border-color: var(--color-accent-dark);
+    outline-color: color-mix(in srgb, var(--color-text-inverse) 35%, transparent);
+    box-shadow: var(--shadow-sm);
+
+    &:hover:not(:disabled) {
+      box-shadow: var(--shadow-glow);
+      filter: brightness(1.08);
+    }
+  }
+
+  .btn-secondary {
+    background: var(--color-bg-tertiary);
+
+    &:hover:not(:disabled) {
+      border-color: $gold;
+      color: $gold;
+    }
+  }
+
+  .btn-ghost {
+    border-color: transparent;
+    outline-color: transparent;
+
+    &:hover:not(:disabled) {
+      color: $gold;
+      outline-color: color-mix(in srgb, var(--color-accent-muted) 55%, transparent);
+    }
+  }
+
+  .btn-icon,
+  .btn-sm {
+    outline: none;
+    letter-spacing: 0.1em;
+  }
+
+  /* ─── Form controls ────────────────────────────────────────────────────── */
+
+  .form-label {
+    letter-spacing: 0.2em;
+    color: $gold-line;
+  }
+
+  .form-control {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid $gold-line;
+    box-shadow: none;
+
+    &:focus {
+      border-bottom-color: $gold;
+      box-shadow: 0 1px 0 0 $gold;
+    }
+  }
+
+  textarea.form-control {
+    border: 1px solid $gold-line;
+  }
+
+  /* ─── Surfaces: gilded frames ──────────────────────────────────────────── */
+
+  .modal-overlay {
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(3px);
+  }
+
+  .modal-dialog {
+    border: 3px double $gold-line;
+    outline: 1px solid color-mix(in srgb, var(--color-accent-muted) 60%, transparent);
+    outline-offset: -10px;
+  }
+
+  .modal-header {
+    justify-content: center;
+    position: relative;
+    background: $sunburst;
+    border-bottom: 1px solid $gold-line;
+
+    h3 {
+      font-family: 'Limelight', var(--font-serif);
+      font-weight: 400;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: $gold;
+    }
+
+    .close-btn {
+      position: absolute;
+      right: var(--spacing-md);
+    }
+  }
+
+  [popover],
+  .theme-menu {
+    border: 3px double $gold-line;
+  }
+
+  /* Diamond divider */
+  hr {
+    position: relative;
+    border: none;
+    height: 1px;
+    overflow: visible;
+    background: linear-gradient(90deg, transparent, $gold-line 15% 85%, transparent);
+
+    &::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: -4px;
+      width: 9px;
+      height: 9px;
+      background: $gold;
+      transform: translateX(-50%) rotate(45deg);
+    }
+  }
+}

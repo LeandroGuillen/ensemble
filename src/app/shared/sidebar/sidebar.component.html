@@ -162,7 +162,7 @@
     popover="manual"
     class="theme-menu"
     role="menu"
-    aria-label="Theme"
+    aria-label="Theme and skin"
     [style.left.px]="themeMenuPosition.left"
     [style.bottom.px]="themeMenuPosition.bottom"
     (click)="$event.stopPropagation()"
@@ -181,6 +181,26 @@
         </span>
         <span class="theme-menu-label">{{ theme.name }}</span>
         @if (theme.id === currentThemeId) {
+          <svg class="theme-menu-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M20 6 9 17l-5-5"/>
+          </svg>
+        }
+      </button>
+    }
+    <div class="theme-menu-divider" role="separator"></div>
+    <div class="theme-menu-heading">Skin</div>
+    @for (skin of skins; track skin.id) {
+      <button
+        class="theme-menu-item"
+        role="menuitemradio"
+        [class.selected]="skin.id === currentSkinId"
+        [attr.aria-checked]="skin.id === currentSkinId"
+        [title]="skin.description || skin.name"
+        (click)="selectSkin(skin.id)"
+      >
+        <span class="skin-swatch" [attr.data-skin-swatch]="skin.id"></span>
+        <span class="theme-menu-label">{{ skin.name }}</span>
+        @if (skin.id === currentSkinId) {
           <svg class="theme-menu-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M20 6 9 17l-5-5"/>
           </svg>

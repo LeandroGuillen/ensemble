@@ -1,11 +1,28 @@
+@use 'styles/fonts';
 @use 'styles/variables';
 @use 'styles/buttons';
 @use 'styles/forms';
 @use 'styles/modals';
 @use 'styles/icons';
-
-/* Import Google Fonts - Outfit for sans, Playfair Display for editorial serif headings */
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@use 'styles/skins/pixel';
+@use 'styles/skins/starcraft';
+@use 'styles/skins/warcraft';
+@use 'styles/skins/liquid';
+@use 'styles/skins/windows-xp';
+@use 'styles/skins/msdos';
+@use 'styles/skins/typewriter';
+@use 'styles/skins/notebook';
+@use 'styles/skins/manuscript';
+@use 'styles/skins/blueprint';
+@use 'styles/skins/windows-95';
+@use 'styles/skins/mac-classic';
+@use 'styles/skins/crt';
+@use 'styles/skins/jrpg';
+@use 'styles/skins/cyberpunk';
+@use 'styles/skins/brutalist';
+@use 'styles/skins/soft';
+@use 'styles/skins/art-deco';
+@use 'styles/skins/comic';
 
 /* Tailwind CSS */
 @tailwind base;

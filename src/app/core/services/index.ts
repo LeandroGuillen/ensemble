@@ -17,6 +17,7 @@ export { AiService } from "./ai.service";
 export { BackstageService } from "./backstage.service";
 export { PlotBoardService } from "./plot-board.service";
 export { ThemeService } from "./theme.service";
+export { SkinService } from "./skin.service";
 export { LoggingService } from "./logging.service";
 export { NotificationService } from "./notification.service";
 export { ModalService } from "./modal.service";

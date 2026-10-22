@@ -646,6 +646,21 @@
                   </select>
                   <small class="form-help">Choose the color theme for this project.</small>
                 </div>
+                <div class="form-group" [settingsSearchable]="['Skin', 'appearance', 'pixel', 'look', skinSearchLabel]">
+                  <label for="skin">Skin</label>
+                  <select
+                    id="skin"
+                    formControlName="skin"
+                    class="form-control"
+                    >
+                    @for (skin of availableSkins; track skin.id) {
+                      <option [value]="skin.id">
+                        {{ skin.name }}{{ skin.description ? ' - ' + skin.description : '' }}
+                      </option>
+                    }
+                  </select>
+                  <small class="form-help">Change the shape of the interface. Works with any theme.</small>
+                </div>
               </form>
               @if (zoomService.isElectron()) {
                 <div class="form-group" [settingsSearchable]="['Interface zoom', 'zoom', 'scale', zoomPercent + '%']">

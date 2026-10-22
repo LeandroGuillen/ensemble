@@ -1,0 +1,240 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Windows XP skin — Luna-style desktop chrome.
+
+   Active when SkinService sets html[data-skin='windows-xp']. Colors come from
+   the active theme; the accent plays the role of Luna blue. Glossy rounded
+   buttons with the orange hover rim, title-bar dialog headers with a red close
+   button, square inputs with tinted borders, Tahoma/Trebuchet type.
+
+   Shadow tokens use !important because ThemeService writes them inline on <html>.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+$xp-skin: "html[data-skin='windows-xp']";
+
+$button-face: linear-gradient(180deg, color-mix(in srgb, #fff 22%, var(--color-bg-elevated)) 0%, var(--color-bg-elevated) 86%, color-mix(in srgb, #000 18%, var(--color-bg-elevated)) 100%);
+$button-border: color-mix(in srgb, var(--color-accent-dark) 55%, #001a40);
+$hover-rim: inset 0 0 0 1px color-mix(in srgb, var(--color-warning) 70%, #fff), inset 0 -2px 0 1px color-mix(in srgb, var(--color-warning) 85%, transparent);
+$focus-rim: inset 0 0 0 1px color-mix(in srgb, var(--color-info) 70%, #fff), inset 0 -2px 0 1px color-mix(in srgb, var(--color-info) 80%, transparent);
+$title-bar: linear-gradient(180deg, color-mix(in srgb, #fff 35%, var(--color-accent-primary)) 0%, var(--color-accent-primary) 12%, var(--color-accent-dark) 88%, color-mix(in srgb, #000 25%, var(--color-accent-dark)) 100%);
+$field-border: color-mix(in srgb, var(--color-info) 55%, var(--color-border));
+
+#{$xp-skin} {
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+  --radius-md: 3px;
+  --radius-lg: 3px;
+  --radius-xl: 8px;
+  --radius-2xl: 8px;
+
+  --font-sans: Tahoma, 'Segoe UI', Verdana, 'DejaVu Sans', sans-serif;
+  --font-serif: 'Trebuchet MS', Tahoma, 'Segoe UI', sans-serif;
+  --font-mono: 'Lucida Console', 'Courier New', monospace;
+
+  /* Short, slightly soft XP drop shadows */
+  --shadow-sm: 1px 1px 2px rgba(0, 0, 0, 0.35) !important;
+  --shadow-md: 2px 2px 4px rgba(0, 0, 0, 0.4) !important;
+  --shadow-lg: 3px 3px 6px rgba(0, 0, 0, 0.45) !important;
+  --shadow-xl: 4px 4px 10px rgba(0, 0, 0, 0.5) !important;
+  --shadow-glow: 0 0 0 2px color-mix(in srgb, var(--color-warning) 70%, transparent) !important;
+  --shadow-card: 1px 1px 3px rgba(0, 0, 0, 0.35) !important;
+
+  --transition-fast: 0ms;
+  --transition-base: 80ms linear;
+  --transition-slow: 150ms linear;
+  --transition-spring: 150ms linear;
+
+  body {
+    font-family: var(--font-sans);
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    letter-spacing: 0;
+  }
+
+  ::selection {
+    background-color: var(--color-accent-dark);
+    color: #fff;
+  }
+
+  *:focus-visible {
+    outline: 1px dotted var(--color-text-primary);
+    outline-offset: -4px;
+  }
+
+  /* Luna scrollbars: pill thumbs with grip lines */
+  ::-webkit-scrollbar {
+    width: 17px;
+    height: 17px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: color-mix(in srgb, var(--color-bg-tertiary) 80%, var(--color-accent-subtle));
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background:
+      linear-gradient(90deg, color-mix(in srgb, #fff 25%, var(--color-accent-muted)) 0%, var(--color-accent-muted) 50%, color-mix(in srgb, #000 15%, var(--color-accent-muted)) 100%);
+    background-clip: padding-box;
+    border: 1px solid $button-border;
+    border-radius: 3px;
+
+    &:hover {
+      filter: brightness(1.12);
+    }
+  }
+
+  ::-webkit-scrollbar-thumb:horizontal {
+    background: linear-gradient(180deg, color-mix(in srgb, #fff 25%, var(--color-accent-muted)) 0%, var(--color-accent-muted) 50%, color-mix(in srgb, #000 15%, var(--color-accent-muted)) 100%);
+  }
+
+  /* ─── Buttons ──────────────────────────────────────────────────────────── */
+
+  .btn {
+    border: 1px solid $button-border;
+    font-weight: 400;
+
+    &:focus-visible {
+      box-shadow: $focus-rim;
+    }
+
+    &:active:not(:disabled) {
+      transform: none;
+      filter: brightness(0.92);
+      box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.35);
+    }
+  }
+
+  .btn-secondary,
+  .btn-danger {
+    background: $button-face;
+    border-color: $button-border;
+    color: var(--color-text-primary);
+
+    &:hover:not(:disabled) {
+      background: $button-face;
+      border-color: $button-border;
+      box-shadow: $hover-rim;
+    }
+  }
+
+  .btn-danger {
+    color: var(--color-error);
+  }
+
+  .btn-primary {
+    background: $title-bar;
+    border-color: color-mix(in srgb, #000 30%, var(--color-accent-dark));
+    color: var(--color-text-inverse);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+
+    &:hover:not(:disabled) {
+      filter: brightness(1.08);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), $hover-rim;
+    }
+  }
+
+  .btn-ghost {
+    border-color: transparent;
+
+    &:hover:not(:disabled) {
+      background: $button-face;
+      border-color: $button-border;
+    }
+  }
+
+  /* ─── Form controls ────────────────────────────────────────────────────── */
+
+  .form-label {
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 400;
+  }
+
+  .form-control {
+    border: 1px solid $field-border;
+    border-radius: 0;
+
+    &:hover {
+      border-color: $field-border;
+    }
+
+    &:focus {
+      border-color: var(--color-info);
+      box-shadow: none;
+    }
+  }
+
+  /* ─── Surfaces: dialog windows ─────────────────────────────────────────── */
+
+  .modal-overlay {
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: grayscale(0.6);
+  }
+
+  .modal-dialog {
+    border: 3px solid var(--color-accent-dark);
+    border-top: none;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    box-shadow: var(--shadow-xl);
+  }
+
+  /* Title bar */
+  .modal-header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: 6px 6px 6px 10px;
+    background: $title-bar;
+    border-bottom: none;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+
+    h3 {
+      font-size: 0.9375rem;
+      color: var(--color-text-inverse);
+    }
+
+    /* Red close box */
+    .close-btn {
+      width: 22px;
+      height: 22px;
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(180deg, #e9846a 0%, #d34120 45%, #b02a0c 100%);
+      border: 1px solid #fff;
+      border-radius: 3px;
+      box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+
+      &:hover {
+        color: #fff;
+        filter: brightness(1.12);
+      }
+    }
+  }
+
+  [popover],
+  .theme-menu {
+    border: 1px solid var(--color-border-light);
+    border-radius: 0;
+    box-shadow: var(--shadow-md);
+  }
+
+  .theme-menu-item {
+    border-radius: 0;
+
+    &:hover {
+      background: var(--color-accent-dark);
+      color: #fff;
+    }
+  }
+
+  hr {
+    border: none;
+    height: 2px;
+    background: linear-gradient(180deg, var(--color-border) 50%, color-mix(in srgb, #fff 12%, transparent) 50%);
+  }
+}

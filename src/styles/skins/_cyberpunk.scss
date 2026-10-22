@@ -1,0 +1,230 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Cyberpunk skin — neon street HUD.
+
+   Active when SkinService sets html[data-skin='cyberpunk']. Colors come from
+   the active theme; the accent is the neon, error/info drive the glitch
+   channels. Asymmetric slanted cuts, hazard-stripe headers, chromatic
+   aberration on titles, a split-second glitch on button hover and Chakra
+   Petch type.
+
+   Shadow tokens use !important because ThemeService writes them inline on <html>.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+$cyberpunk-skin: "html[data-skin='cyberpunk']";
+
+@function slant($size) {
+  @return polygon(0 0, calc(100% - #{$size}) 0, 100% $size, 100% 100%, $size 100%, 0 calc(100% - #{$size}));
+}
+
+$neon: var(--color-accent-primary);
+$neon-soft: color-mix(in srgb, var(--color-accent-primary) 45%, transparent);
+$aberration: -1px 0 color-mix(in srgb, var(--color-error) 80%, transparent), 1px 0 color-mix(in srgb, var(--color-info) 80%, transparent);
+$hazard: repeating-linear-gradient(-45deg, color-mix(in srgb, var(--color-accent-primary) 16%, transparent) 0 8px, transparent 8px 16px);
+
+#{$cyberpunk-skin} {
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-full: 0;
+
+  --font-sans: 'Chakra Petch', 'Rajdhani', system-ui, sans-serif;
+  --font-serif: 'Chakra Petch', system-ui, sans-serif;
+  --font-mono: 'Share Tech Mono', 'JetBrains Mono', monospace;
+
+  --shadow-sm: 0 0 0 1px rgba(0, 0, 0, 0.5) !important;
+  --shadow-md: 0 0 12px color-mix(in srgb, var(--color-accent-primary) 18%, transparent) !important;
+  --shadow-lg: 0 0 20px color-mix(in srgb, var(--color-accent-primary) 22%, transparent) !important;
+  --shadow-xl: 0 0 36px color-mix(in srgb, var(--color-accent-primary) 28%, transparent) !important;
+  --shadow-glow: 0 0 18px color-mix(in srgb, var(--color-accent-primary) 55%, transparent) !important;
+  --shadow-card: inset 3px 0 0 color-mix(in srgb, var(--color-accent-primary) 50%, transparent) !important;
+
+  --transition-fast: 90ms cubic-bezier(0.7, 0, 0.3, 1);
+  --transition-base: 150ms cubic-bezier(0.7, 0, 0.3, 1);
+  --transition-slow: 260ms cubic-bezier(0.7, 0, 0.3, 1);
+  --transition-spring: 200ms cubic-bezier(0.7, 0, 0.3, 1);
+
+  body {
+    font-family: var(--font-sans);
+    font-weight: 500;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  h1,
+  h2 {
+    text-shadow: $aberration;
+  }
+
+  code,
+  kbd,
+  pre {
+    font-family: var(--font-mono);
+  }
+
+  ::selection {
+    background-color: $neon;
+    color: var(--color-text-inverse);
+  }
+
+  *:focus-visible {
+    outline: 2px solid $neon;
+    outline-offset: 2px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: $neon;
+    border: none;
+  }
+
+  /* ─── Buttons ──────────────────────────────────────────────────────────── */
+
+  .btn {
+    clip-path: slant(9px);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border: none;
+    box-shadow: inset 2px 0 0 $neon;
+
+    &:hover:not(:disabled) {
+      animation: cyber-glitch 260ms steps(2, end) 1;
+    }
+
+    &:focus-visible {
+      outline-offset: -4px;
+    }
+
+    &:active:not(:disabled) {
+      transform: translateX(2px);
+    }
+  }
+
+  .btn-primary {
+    background: $neon;
+    color: var(--color-text-inverse);
+    box-shadow: inset -4px 0 0 color-mix(in srgb, #000 35%, var(--color-accent-primary));
+
+    &:hover:not(:disabled) {
+      box-shadow: inset -4px 0 0 color-mix(in srgb, #000 35%, var(--color-accent-primary));
+      filter: brightness(1.12);
+    }
+  }
+
+  .btn-secondary {
+    background: color-mix(in srgb, var(--color-accent-primary) 8%, var(--color-bg-tertiary));
+
+    &:hover:not(:disabled) {
+      background: color-mix(in srgb, var(--color-accent-primary) 16%, var(--color-bg-tertiary));
+      color: $neon;
+    }
+  }
+
+  .btn-ghost {
+    box-shadow: none;
+
+    &:hover:not(:disabled) {
+      color: $neon;
+      text-shadow: $aberration;
+    }
+  }
+
+  .icon-btn:hover,
+  .close-btn:hover {
+    color: $neon;
+    text-shadow: $aberration;
+  }
+
+  /* ─── Form controls ────────────────────────────────────────────────────── */
+
+  .form-label {
+    font-family: var(--font-mono);
+    letter-spacing: 0.12em;
+    color: $neon;
+  }
+
+  .form-control {
+    background: color-mix(in srgb, var(--color-bg-primary) 80%, var(--color-bg-tertiary));
+    border: none;
+    border-bottom: 2px solid $neon-soft;
+    box-shadow: none;
+
+    &:focus {
+      border-bottom-color: $neon;
+      box-shadow: 0 6px 12px -8px $neon;
+    }
+  }
+
+  /* ─── Surfaces ─────────────────────────────────────────────────────────── */
+
+  .modal-overlay {
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(3px) hue-rotate(-10deg);
+  }
+
+  .modal-dialog {
+    clip-path: slant(22px);
+    border: none;
+    border-left: 4px solid $neon;
+    box-shadow: none;
+  }
+
+  .modal-header {
+    background: $hazard;
+    border-bottom: 2px solid $neon;
+
+    h3 {
+      text-shadow: $aberration;
+    }
+  }
+
+  [popover],
+  .theme-menu {
+    clip-path: slant(10px);
+    border: none;
+    border-left: 3px solid $neon;
+  }
+
+  hr {
+    border: none;
+    height: 2px;
+    background: linear-gradient(90deg, $neon 0 40px, $neon-soft 40px 60%, transparent);
+  }
+}
+
+@keyframes cyber-glitch {
+  0% {
+    transform: translateX(-2px);
+    text-shadow: 2px 0 var(--color-error), -2px 0 var(--color-info);
+  }
+
+  50% {
+    transform: translateX(2px);
+    text-shadow: -2px 0 var(--color-error), 2px 0 var(--color-info);
+  }
+
+  100% {
+    transform: none;
+    text-shadow: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #{$cyberpunk-skin} .btn:hover {
+    animation: none !important;
+  }
+}

@@ -1,0 +1,176 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Typewriter skin — manuscript pages straight off the platen.
+
+   Active when SkinService sets html[data-skin='typewriter']. Colors come from
+   the active theme. Courier Prime body, Special Elite headings, grainy paper
+   sheets, form fields as typed lines, rubber-stamp primary buttons and
+   ink-ribbon focus.
+
+   Shadow tokens use !important because ThemeService writes them inline on <html>.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+$typewriter-skin: "html[data-skin='typewriter']";
+
+$ink: var(--color-text-primary);
+$ink-faint: color-mix(in srgb, var(--color-text-primary) 35%, transparent);
+$grain: radial-gradient(color-mix(in srgb, var(--color-text-primary) 4%, transparent) 1px, transparent 1px);
+
+#{$typewriter-skin} {
+  --radius-xs: 0;
+  --radius-sm: 1px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius-xl: 2px;
+  --radius-2xl: 2px;
+
+  --font-sans: 'Courier Prime', 'Courier New', monospace;
+  --font-serif: 'Special Elite', 'Courier Prime', monospace;
+  --font-mono: 'Courier Prime', 'Courier New', monospace;
+
+  /* Paper resting on a desk */
+  --shadow-sm: 0 1px 1px rgba(0, 0, 0, 0.2) !important;
+  --shadow-md: 0 2px 5px rgba(0, 0, 0, 0.22) !important;
+  --shadow-lg: 0 6px 14px rgba(0, 0, 0, 0.25), 0 1px 1px rgba(0, 0, 0, 0.2) !important;
+  --shadow-xl: 0 14px 32px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+  --shadow-glow: 0 0 0 2px color-mix(in srgb, var(--color-accent-primary) 40%, transparent) !important;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.18) !important;
+
+  --transition-fast: 90ms linear;
+  --transition-base: 160ms linear;
+  --transition-slow: 260ms linear;
+  --transition-spring: 200ms linear;
+
+  body {
+    font-family: var(--font-sans);
+    caret-color: var(--color-accent-primary);
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    letter-spacing: 0.02em;
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--color-accent-primary) 30%, transparent);
+    color: $ink;
+  }
+
+  *:focus-visible {
+    outline: 2px solid $ink;
+    outline-offset: 2px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: $ink-faint;
+    border: none;
+  }
+
+  /* ─── Buttons: typed labels and rubber stamps ──────────────────────────── */
+
+  .btn {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border: 1px solid $ink-faint;
+    box-shadow: none;
+
+    &:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+  }
+
+  .btn-primary {
+    background: color-mix(in srgb, var(--color-accent-primary) 8%, transparent);
+    color: var(--color-accent-primary);
+    border: 2px solid var(--color-accent-primary);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent-primary) 30%, transparent);
+
+    &:hover:not(:disabled) {
+      background: color-mix(in srgb, var(--color-accent-primary) 16%, transparent);
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent-primary) 45%, transparent);
+      filter: none;
+    }
+
+    &:active:not(:disabled) {
+      transform: rotate(-1.5deg) scale(0.97);
+    }
+  }
+
+  .btn-secondary {
+    background: transparent;
+
+    &:hover:not(:disabled) {
+      background: color-mix(in srgb, var(--color-text-primary) 6%, transparent);
+      border-color: $ink;
+    }
+  }
+
+  .btn-ghost:hover:not(:disabled) {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  /* ─── Form controls: typed onto a ruled line ───────────────────────────── */
+
+  .form-label {
+    font-family: var(--font-serif);
+    letter-spacing: 0.08em;
+  }
+
+  .form-control {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid $ink-faint;
+    box-shadow: none;
+
+    &:hover {
+      border-bottom-color: $ink;
+    }
+
+    &:focus {
+      border-bottom: 1px solid var(--color-accent-primary);
+      box-shadow: 0 1px 0 0 var(--color-accent-primary);
+    }
+  }
+
+  textarea.form-control {
+    border: 1px dashed $ink-faint;
+  }
+
+  /* ─── Surfaces: sheets of paper ────────────────────────────────────────── */
+
+  .modal-overlay {
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(1px) grayscale(0.4);
+  }
+
+  .modal-dialog {
+    border: none;
+    background-image: $grain;
+    background-size: 3px 3px;
+  }
+
+  .modal-header {
+    border-bottom: 3px double $ink-faint;
+  }
+
+  [popover],
+  .theme-menu {
+    background-image: $grain;
+    background-size: 3px 3px;
+  }
+
+  hr {
+    border: none;
+    border-top: 1px dashed $ink-faint;
+  }
+}

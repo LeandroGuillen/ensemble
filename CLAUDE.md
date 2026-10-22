@@ -35,6 +35,7 @@ Located in `src/app/core/services/`:
 - **PlotBoardService**: Discovers and manages `*.plotboard.md` files anywhere under the project
 - **MetadataService**: Validates characters against project metadata (categories/tags)
 - **FileWatcherService**: Monitors work folder for external file changes (using chokidar)
+- **SkinService**: Applies the UI skin (`settings.skin`, per project) by setting `html[data-skin]`. Skins change shape/type/motion independently of the color theme; registry in `src/app/core/skins/`, styles in `src/styles/skins/_<id>.scss` scoped to `html[data-skin='<id>']`
 
 ### Core Utilities
 

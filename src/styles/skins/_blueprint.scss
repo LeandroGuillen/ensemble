@@ -1,0 +1,193 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Blueprint skin — technical drawing sheet.
+
+   Active when SkinService sets html[data-skin='blueprint']. Colors come from
+   the active theme; the accent marks registration ticks. Graph-paper grids,
+   hairline and dashed construction lines, corner tick marks on controls,
+   drafting-hand lettering with stencil-style mono labels.
+
+   Shadow tokens use !important because ThemeService writes them inline on <html>.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+$blueprint-skin: "html[data-skin='blueprint']";
+
+$line: color-mix(in srgb, var(--color-text-primary) 55%, transparent);
+$line-faint: color-mix(in srgb, var(--color-text-primary) 25%, transparent);
+$grid-minor: color-mix(in srgb, var(--color-info) 9%, transparent);
+$grid-major: color-mix(in srgb, var(--color-info) 16%, transparent);
+
+@function grid() {
+  @return linear-gradient($grid-major 1px, transparent 1px) 0 0 / 100px 100px,
+    linear-gradient(90deg, $grid-major 1px, transparent 1px) 0 0 / 100px 100px,
+    linear-gradient($grid-minor 1px, transparent 1px) 0 0 / 20px 20px,
+    linear-gradient(90deg, $grid-minor 1px, transparent 1px) 0 0 / 20px 20px;
+}
+
+/* Registration ticks in all four corners */
+@function corner-ticks($color, $len: 7px, $weight: 2px) {
+  $g: linear-gradient($color, $color);
+  @return $g top left / #{$len} #{$weight} no-repeat, $g top left / #{$weight} #{$len} no-repeat,
+    $g top right / #{$len} #{$weight} no-repeat, $g top right / #{$weight} #{$len} no-repeat,
+    $g bottom left / #{$len} #{$weight} no-repeat, $g bottom left / #{$weight} #{$len} no-repeat,
+    $g bottom right / #{$len} #{$weight} no-repeat, $g bottom right / #{$weight} #{$len} no-repeat;
+}
+
+#{$blueprint-skin} {
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+
+  --font-sans: 'Architects Daughter', 'Patrick Hand', cursive;
+  --font-serif: 'Architects Daughter', cursive;
+  --font-mono: 'Share Tech Mono', 'JetBrains Mono', monospace;
+
+  /* Drawings have no shadows, only outlines */
+  --shadow-sm: none !important;
+  --shadow-md: 0 0 0 1px #{$line-faint} !important;
+  --shadow-lg: 0 0 0 1px #{$line} !important;
+  --shadow-xl: 0 0 0 1px #{$line} !important;
+  --shadow-glow: 0 0 0 1px var(--color-accent-primary) !important;
+  --shadow-card: 0 0 0 1px #{$line-faint} !important;
+
+  --transition-fast: 80ms linear;
+  --transition-base: 140ms linear;
+  --transition-slow: 220ms linear;
+  --transition-spring: 180ms linear;
+
+  body {
+    font-family: var(--font-sans);
+    background: grid(), var(--color-bg-primary);
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--color-info) 35%, transparent);
+    color: var(--color-text-primary);
+  }
+
+  *:focus-visible {
+    outline: 1px dashed var(--color-accent-primary);
+    outline-offset: 3px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: transparent;
+    border: 1px solid $line;
+  }
+
+  /* ─── Buttons: boxed callouts with registration ticks ──────────────────── */
+
+  .btn {
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    border: 1px solid $line-faint;
+    box-shadow: none;
+
+    &:active:not(:disabled) {
+      transform: translate(1px, 1px);
+    }
+  }
+
+  .btn-secondary,
+  .btn-danger {
+    background: corner-ticks($line), var(--color-bg-tertiary);
+
+    &:hover:not(:disabled) {
+      background: corner-ticks(var(--color-accent-primary)), var(--color-bg-elevated);
+      border-color: $line;
+    }
+  }
+
+  .btn-primary {
+    background: corner-ticks(var(--color-text-inverse)), var(--color-accent-primary);
+    box-shadow: none;
+
+    &:hover:not(:disabled) {
+      box-shadow: 0 0 0 1px var(--color-accent-primary), 0 0 0 4px var(--color-bg-primary), 0 0 0 5px var(--color-accent-muted);
+      filter: none;
+    }
+  }
+
+  .btn-ghost {
+    border-color: transparent;
+
+    &:hover:not(:disabled) {
+      border: 1px dashed $line;
+    }
+  }
+
+  /* ─── Form controls ────────────────────────────────────────────────────── */
+
+  .form-label {
+    font-family: var(--font-mono);
+    letter-spacing: 0.14em;
+  }
+
+  .form-control {
+    background: color-mix(in srgb, var(--color-bg-primary) 60%, transparent);
+    border: 1px dashed $line;
+
+    &:hover {
+      border-color: var(--color-text-primary);
+    }
+
+    &:focus {
+      border-style: solid;
+      border-color: var(--color-accent-primary);
+      box-shadow: none;
+    }
+  }
+
+  /* ─── Surfaces: drawing sheets ─────────────────────────────────────────── */
+
+  .modal-overlay {
+    backdrop-filter: blur(1px);
+  }
+
+  .modal-dialog {
+    border: 1px solid $line;
+    background: corner-ticks(var(--color-accent-primary), 14px, 2px), grid(), var(--color-bg-secondary);
+    box-shadow: 0 0 0 4px var(--color-bg-secondary), 0 0 0 5px $line-faint;
+  }
+
+  .modal-header {
+    border-bottom: 1px solid $line;
+
+    h3 {
+      font-size: 1rem;
+    }
+  }
+
+  [popover],
+  .theme-menu {
+    border: 1px solid $line;
+    background: grid(), var(--color-bg-elevated);
+  }
+
+  /* Dimension line */
+  hr {
+    border: none;
+    height: 9px;
+    background:
+      linear-gradient($line, $line) left center / 1px 9px no-repeat,
+      linear-gradient($line, $line) right center / 1px 9px no-repeat,
+      linear-gradient($line, $line) center / 100% 1px no-repeat;
+  }
+}

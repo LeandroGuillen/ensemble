@@ -10,6 +10,8 @@ import { CharacterEditDialogService } from '../../core/services/character-edit-d
 import { CommandPaletteService } from '../command-palette/command-palette.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { Theme } from '../../core/interfaces/theme.interface';
+import { SkinService } from '../../core/services/skin.service';
+import { Skin } from '../../core/interfaces/skin.interface';
 import { KeyboardShortcutsService } from '../keyboard-shortcuts-dialog/keyboard-shortcuts.service';
 import { filter } from 'rxjs/operators';
 
@@ -44,6 +46,8 @@ export class SidebarComponent implements OnInit {
   updateActionPending = false;
   themes: Theme[] = [];
   currentThemeId = '';
+  skins: Skin[] = [];
+  currentSkinId = '';
   themeMenuOpen = false;
   @ViewChild('themeMenu') private themeMenu?: ElementRef<HTMLElement>;
   themeMenuPosition = { left: 0, bottom: 0 };
@@ -80,7 +84,8 @@ export class SidebarComponent implements OnInit {
     private characterEditDialog: CharacterEditDialogService,
     private updateService: UpdateService,
     private notificationService: NotificationService,
-    private themeService: ThemeService
+    private themeService: ThemeService,
+    private skinService: SkinService
   ) {}
 
   ngOnInit(): void {
@@ -90,6 +95,10 @@ export class SidebarComponent implements OnInit {
     this.themeService.currentTheme$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(theme => this.currentThemeId = theme?.id ?? '');
+    this.skins = this.skinService.getAvailableSkins();
+    this.skinService.currentSkin$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(skin => this.currentSkinId = skin.id);
     this.updateService.updateStatus$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(status => { this.updateStatus = status; });
@@ -217,6 +226,18 @@ export class SidebarComponent implements OnInit {
       await this.themeService.setTheme(themeId);
     } catch (error) {
       this.notificationService.showError('Failed to switch theme');
+    }
+  }
+
+  async selectSkin(skinId: string): Promise<void> {
+    this.closeThemeMenu();
+    if (skinId === this.currentSkinId) {
+      return;
+    }
+    try {
+      await this.skinService.setSkin(skinId);
+    } catch (error) {
+      this.notificationService.showError('Failed to switch skin');
     }
   }
 

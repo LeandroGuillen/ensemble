@@ -1,0 +1,181 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Notebook skin — hand-drawn sketchbook.
+
+   Active when SkinService sets html[data-skin='notebook']. Colors come from
+   the active theme. Wobbly pencil-drawn outlines, ruled-paper dialogs with a
+   strip of tape, offset scribble shadows, Patrick Hand body and Caveat titles.
+
+   Shadow tokens use !important because ThemeService writes them inline on <html>.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+$notebook-skin: "html[data-skin='notebook']";
+
+$pencil: color-mix(in srgb, var(--color-text-primary) 70%, transparent);
+$scribble: 3px 4px 0 -1px color-mix(in srgb, var(--color-text-primary) 22%, transparent);
+/* Irregular radii make a box look drawn by hand */
+$wobbly: 255px 15px 225px 15px / 15px 225px 15px 255px;
+$wobbly-alt: 15px 255px 15px 225px / 225px 15px 255px 15px;
+$ruled: repeating-linear-gradient(180deg, transparent 0 27px, color-mix(in srgb, var(--color-info) 16%, transparent) 27px 28px);
+
+#{$notebook-skin} {
+  --radius-xs: 3px;
+  --radius-sm: 5px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+
+  --font-sans: 'Patrick Hand', 'Comic Neue', cursive;
+  --font-serif: 'Caveat', 'Patrick Hand', cursive;
+
+  --shadow-sm: 2px 2px 0 -1px color-mix(in srgb, var(--color-text-primary) 18%, transparent) !important;
+  --shadow-md: #{$scribble} !important;
+  --shadow-lg: 4px 6px 0 -1px color-mix(in srgb, var(--color-text-primary) 22%, transparent) !important;
+  --shadow-xl: 6px 9px 0 -2px color-mix(in srgb, var(--color-text-primary) 25%, transparent) !important;
+  --shadow-glow: 0 0 0 3px color-mix(in srgb, var(--color-accent-primary) 30%, transparent) !important;
+  --shadow-card: #{$scribble} !important;
+
+  --transition-fast: 120ms ease;
+  --transition-base: 200ms ease;
+  --transition-slow: 320ms ease;
+  --transition-spring: 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  body {
+    font-family: var(--font-sans);
+    font-size: 1.06em;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    letter-spacing: 0;
+  }
+
+  h1,
+  h2 {
+    font-size: 1.6em;
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--color-warning) 45%, transparent);
+    color: var(--color-text-primary);
+  }
+
+  *:focus-visible {
+    outline: 2px dashed var(--color-accent-primary);
+    outline-offset: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: $pencil;
+    border-radius: $wobbly;
+  }
+
+  /* ─── Buttons ──────────────────────────────────────────────────────────── */
+
+  .btn {
+    border: 2px solid $pencil;
+    border-radius: $wobbly;
+    box-shadow: var(--shadow-sm);
+    font-size: 1em;
+
+    &:hover:not(:disabled) {
+      transform: rotate(-1deg);
+      box-shadow: $scribble;
+    }
+
+    &:active:not(:disabled) {
+      transform: translate(1px, 2px);
+      box-shadow: none;
+    }
+  }
+
+  .btn-primary {
+    background: color-mix(in srgb, var(--color-accent-primary) 88%, transparent);
+    border-color: color-mix(in srgb, var(--color-accent-dark) 80%, #000);
+
+    &:hover:not(:disabled) {
+      filter: none;
+      box-shadow: $scribble;
+    }
+  }
+
+  .btn-secondary {
+    background: transparent;
+    border-radius: $wobbly-alt;
+  }
+
+  .btn-ghost {
+    border-color: transparent;
+    box-shadow: none;
+  }
+
+  .icon-btn,
+  .close-btn {
+    border-radius: $wobbly;
+  }
+
+  /* ─── Form controls ────────────────────────────────────────────────────── */
+
+  .form-label {
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 1em;
+  }
+
+  .form-control {
+    background: transparent;
+    border: 2px solid $pencil;
+    border-radius: $wobbly-alt;
+
+    &:focus {
+      border-color: var(--color-accent-primary);
+      box-shadow: $scribble;
+    }
+  }
+
+  /* ─── Surfaces: notebook pages with tape ───────────────────────────────── */
+
+  .modal-overlay {
+    backdrop-filter: blur(2px);
+  }
+
+  .modal-dialog {
+    border: 2px solid $pencil;
+    border-radius: 6px 4px 8px 5px / 5px 8px 4px 6px;
+    background-image: $ruled;
+    box-shadow: var(--shadow-xl);
+  }
+
+  .modal-header {
+    position: relative;
+    border-bottom: 2px solid color-mix(in srgb, var(--color-error) 45%, transparent);
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      width: 96px;
+      height: 18px;
+      background: color-mix(in srgb, var(--color-warning) 35%, transparent);
+      transform: translateX(-50%) rotate(-2deg);
+      pointer-events: none;
+    }
+  }
+
+  [popover],
+  .theme-menu {
+    border: 2px solid $pencil;
+    border-radius: $wobbly-alt;
+  }
+
+  hr {
+    border: none;
+    height: 2px;
+    background: $pencil;
+    border-radius: $wobbly;
+  }
+}

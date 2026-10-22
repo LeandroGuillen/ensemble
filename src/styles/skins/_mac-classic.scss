@@ -1,0 +1,225 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Mac OS Classic skin — System 7 desktop.
+
+   Active when SkinService sets html[data-skin='mac-classic']. Colors come from
+   the active theme; "black" is the theme's text color, "white" its surface.
+   One-pixel outlines, rounded-rectangle buttons with the thick default-button
+   ring, pinstriped title bars with a close box, inverted highlights, hard
+   one-pixel window shadows and no animation.
+
+   Chicago and Geneva are not redistributable; they are used when installed,
+   otherwise Pixelify Sans (bundled) stands in for the bitmap look.
+
+   Shadow tokens use !important because ThemeService writes them inline on <html>.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+$mac-skin: "html[data-skin='mac-classic']";
+
+$ink: var(--color-text-primary);
+$paper: var(--color-bg-secondary);
+$stripes: repeating-linear-gradient(180deg, $ink 0 1px, transparent 1px 2px);
+$dither: conic-gradient(var(--color-text-muted) 25%, transparent 0 50%, var(--color-text-muted) 0 75%, transparent 0);
+
+#{$mac-skin} {
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+
+  --font-sans: 'Geneva', 'Pixelify Sans', 'Chicago', sans-serif;
+  --font-serif: 'Chicago', 'Charcoal', 'Pixelify Sans', sans-serif;
+  --font-mono: 'Monaco', 'VT323', monospace;
+
+  --shadow-sm: none !important;
+  --shadow-md: 1px 1px 0 0 #{$ink} !important;
+  --shadow-lg: 2px 2px 0 0 #{$ink} !important;
+  --shadow-xl: 2px 2px 0 0 #{$ink} !important;
+  --shadow-glow: 0 0 0 1px #{$ink} !important;
+  --shadow-card: none !important;
+
+  --transition-fast: 0s;
+  --transition-base: 0s;
+  --transition-slow: 0s;
+  --transition-spring: 0s;
+  --theme-transition: none;
+
+  -webkit-font-smoothing: none;
+
+  body {
+    font-family: var(--font-sans);
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    letter-spacing: 0;
+  }
+
+  ::selection {
+    background-color: $ink;
+    color: $paper;
+  }
+
+  *:focus-visible {
+    outline: 2px solid $ink;
+    outline-offset: 1px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 16px;
+    height: 16px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: $dither, $paper;
+    background-size: 2px 2px;
+    box-shadow: inset 1px 0 0 $ink;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: $paper;
+    border: 1px solid $ink;
+  }
+
+  /* ─── Buttons: rounded rectangles ──────────────────────────────────────── */
+
+  .btn {
+    border: 1px solid $ink;
+    border-radius: 6px;
+    background: $paper;
+    color: $ink;
+    box-shadow: none;
+    font-family: var(--font-serif);
+    font-weight: 600;
+
+    &:hover:not(:disabled) {
+      background: $paper;
+      box-shadow: none;
+      filter: none;
+    }
+
+    /* Classic press: invert */
+    &:active:not(:disabled) {
+      transform: none;
+      background: $ink;
+      color: $paper;
+    }
+
+    &:disabled {
+      opacity: 1;
+      color: var(--color-text-muted);
+      border-color: var(--color-text-muted);
+    }
+  }
+
+  /* Default button: thick ring around the button */
+  .btn-primary {
+    outline: 3px solid $ink;
+    outline-offset: 1px;
+  }
+
+  .btn-secondary.active {
+    background: $ink;
+    color: $paper;
+  }
+
+  .btn-ghost {
+    border-color: transparent;
+  }
+
+  .icon-btn:active,
+  .close-btn:active {
+    transform: none;
+    background: $ink;
+    color: $paper;
+  }
+
+  /* ─── Form controls ────────────────────────────────────────────────────── */
+
+  .form-label {
+    text-transform: none;
+    letter-spacing: 0;
+    color: $ink;
+  }
+
+  .form-control {
+    background: $paper;
+    border: 1px solid $ink;
+    box-shadow: none;
+
+    &:focus {
+      border-color: $ink;
+      box-shadow: inset 0 0 0 1px $ink;
+    }
+  }
+
+  /* ─── Surfaces: windows ────────────────────────────────────────────────── */
+
+  .modal-overlay {
+    background: transparent;
+    backdrop-filter: none;
+  }
+
+  .modal-dialog {
+    border: 1px solid $ink;
+  }
+
+  /* Pinstriped title bar with close box on the left */
+  .modal-header {
+    position: relative;
+    justify-content: center;
+    padding: 3px 6px;
+    border-bottom: 1px solid $ink;
+    background: $stripes content-box;
+
+    h3 {
+      padding: 0 8px;
+      font-size: 0.875rem;
+      background: $paper;
+    }
+
+    .close-btn {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      width: 13px;
+      height: 13px;
+      font-size: 0;
+      background: $paper;
+      border: 1px solid $ink;
+      box-shadow: 0 0 0 2px $paper;
+      transform: translateY(-50%);
+
+      &:hover {
+        background: $paper;
+      }
+
+      &:active {
+        background: $ink;
+        transform: translateY(-50%);
+      }
+    }
+  }
+
+  [popover],
+  .theme-menu {
+    border: 1px solid $ink;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .theme-menu-item:hover {
+    background: $ink;
+    color: $paper;
+  }
+
+  hr {
+    border: none;
+    height: 1px;
+    background: $dither;
+    background-size: 2px 2px;
+  }
+}

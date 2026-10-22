@@ -12,6 +12,7 @@ import { CastService } from '../../core/services/cast.service';
 import { LocationService } from '../../core/services/location.service';
 import { BackstageService } from '../../core/services/backstage.service';
 import { ThemeService } from '../../core/services/theme.service';
+import { SkinService } from '../../core/services/skin.service';
 import { ColorPaletteService } from '../../core/services/color-palette.service';
 import { UpdateService, UpdateStatus } from '../../core/services/update.service';
 import { ElectronService } from '../../core/services/electron.service';
@@ -19,6 +20,8 @@ import { ZoomService } from '../../core/services/zoom.service';
 import { ModalService } from '../../core/services/modal.service';
 import { Category, Tag, ProjectSettings, CategoryFolderMode, CharacterStyle } from '../../core/interfaces/project.interface';
 import { Theme } from '../../core/interfaces/theme.interface';
+import { Skin } from '../../core/interfaces/skin.interface';
+import { DEFAULT_SKIN_ID } from '../../core/skins';
 import { ColorPaletteConfig } from '../../core/interfaces/color-palette.interface';
 import { BASE_COLOR_NAMES } from '../../core/interfaces/color-palette.interface';
 import { DEFAULT_BASE_COLORS } from '../../core/utils/color-palette.utils';
@@ -69,6 +72,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
   characterStyleNameDrafts: Record<string, string> = {};
   availableThemes: Theme[] = [];
   currentTheme: Theme | null = null;
+  availableSkins: Skin[] = [];
   
   // Color palette management
   colorPalette: ColorPaletteConfig | null = null;
@@ -118,6 +122,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
     private locationService: LocationService,
     private backstageService: BackstageService,
     private themeService: ThemeService,
+    private skinService: SkinService,
     private colorPaletteService: ColorPaletteService,
     private updateService: UpdateService,
     private electronService: ElectronService,
@@ -147,7 +152,8 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
       namesFile: ['', [Validators.maxLength(500)]],
       imagesFolder: ['', [Validators.maxLength(200)]],
       defaultCharacterStyle: [''],
-      theme: ['']
+      theme: [''],
+      skin: ['']
     });
   }
 
@@ -156,6 +162,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
 
     // Load available themes
     this.availableThemes = this.themeService.getAvailableThemes();
+    this.availableSkins = this.skinService.getAvailableSkins();
     
     // Subscribe to current theme changes
     this.themeService.currentTheme$
@@ -266,7 +273,8 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
             this.settings.defaultCharacterStyle ||
             this.characterStyles[0]?.id ||
             DEFAULT_CHARACTER_STYLE_ID,
-          theme: this.settings.theme || 'blue-gold'
+          theme: this.settings.theme || 'blue-gold',
+          skin: this.settings.skin || DEFAULT_SKIN_ID
         },
         { emitEvent: false }
       );
@@ -466,6 +474,9 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
 
         if (formData.theme && formData.theme !== previousSettings?.theme) {
           await this.themeService.setTheme(formData.theme);
+        }
+        if (formData.skin && formData.skin !== (previousSettings?.skin || DEFAULT_SKIN_ID)) {
+          await this.skinService.setSkin(formData.skin);
         }
 
         const previousCharactersFolder = previousSettings?.charactersFolder?.trim() || 'characters';
@@ -940,6 +951,11 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
   get themeSearchLabel(): string {
     const id = this.settingsForm.get('theme')?.value || this.currentTheme?.id;
     return this.availableThemes.find((t) => t.id === id)?.name || this.currentTheme?.name || '';
+  }
+
+  get skinSearchLabel(): string {
+    const id = this.settingsForm.get('skin')?.value || this.skinService.getCurrentSkin().id;
+    return this.availableSkins.find((s) => s.id === id)?.name || '';
   }
 
   get characterStylesLabel(): string {

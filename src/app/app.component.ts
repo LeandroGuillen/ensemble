@@ -5,7 +5,7 @@ import { Router, RouterOutlet, NavigationEnd } from "@angular/router";
 import { Title } from "@angular/platform-browser";
 import { HouseCommandService } from "./core/services/house-command.service";
 import { HouseService } from "./core/services/house.service";
-import { ProjectService, ElectronService, ThemeService, LoggingService, ZoomService, AddNameCommandService, AddConceptCommandService, CharacterCommandService, CharacterService, LocationCommandService, LocationService, FileWatcherService } from "./core/services";
+import { ProjectService, ElectronService, ThemeService, SkinService, LoggingService, ZoomService, AddNameCommandService, AddConceptCommandService, CharacterCommandService, CharacterService, LocationCommandService, LocationService, FileWatcherService } from "./core/services";
 import { filter } from "rxjs/operators";
 import { remapCharacterRoute } from "./core/utils/character-id.utils";
 import { CommandPaletteComponent } from "./shared/command-palette/command-palette.component";
@@ -44,6 +44,7 @@ export class AppComponent implements OnInit {
     private titleService: Title,
     private electronService: ElectronService,
     private themeService: ThemeService,
+    private skinService: SkinService,
     private logger: LoggingService,
     private modalService: ModalService,
     private zoomService: ZoomService,
@@ -127,10 +128,11 @@ export class AppComponent implements OnInit {
           this.houseCommandService.deactivate();
           this.router.navigate(["/project-selector"]);
         } else if (project) {
-          // Initialize theme when project loads
+          // Initialize theme and skin when project loads
           this.themeService.initialize();
-          // Register theme commands
-          this.registerThemeCommands();
+          this.skinService.initialize();
+          // Register theme and skin commands
+          this.registerAppearanceCommands();
           this.addNameCommandService.register();
           this.addConceptCommandService.register();
           this.characterCommandService.activate();
@@ -199,14 +201,14 @@ export class AppComponent implements OnInit {
   }
 
   /**
-   * Register theme switching commands in the command palette
+   * Register theme and skin switching commands in the command palette
    */
-  private registerThemeCommands(): void {
+  private registerAppearanceCommands(): void {
     const themes = this.themeService.getAvailableThemes();
+    const skins = this.skinService.getAvailableSkins();
 
-    this.commandPaletteService.replaceGroup(
-      'Appearance',
-      themes.map((theme) => ({
+    this.commandPaletteService.replaceGroup('Appearance', [
+      ...themes.map((theme) => ({
         id: `theme-${theme.id}`,
         label: `Switch to ${theme.name}`,
         keywords: ['theme', 'appearance', 'color', 'style', theme.name.toLowerCase(), theme.id],
@@ -216,8 +218,19 @@ export class AppComponent implements OnInit {
           });
         },
         group: 'Appearance',
-      }))
-    );
+      })),
+      ...skins.map((skin) => ({
+        id: `skin-${skin.id}`,
+        label: `Switch to ${skin.name} Skin`,
+        keywords: ['skin', 'appearance', 'style', 'look', skin.name.toLowerCase(), skin.id],
+        action: () => {
+          this.skinService.setSkin(skin.id).catch((error) => {
+            this.logger.error('Failed to set skin', error);
+          });
+        },
+        group: 'Appearance',
+      })),
+    ]);
 
     this.commandPaletteService.replaceGroup('Help', [
       {

@@ -1,0 +1,253 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Windows 95 skin — classic 3D bevelled chrome.
+
+   Active when SkinService sets html[data-skin='windows-95']. Colors come from
+   the active theme: bevel highlights and shades are mixed from the surface
+   color, and the accent fills title bars. Two-pixel raised and sunken bevels,
+   no rounded corners, no shadows, no animation, dotted focus rectangles.
+
+   MS Sans Serif is not redistributable, so the face comes from the system
+   when available (Windows) and falls back to Tahoma/Arial elsewhere.
+
+   Shadow tokens use !important because ThemeService writes them inline on <html>.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+$win95-skin: "html[data-skin='windows-95']";
+
+$face: var(--color-bg-elevated);
+$hilight: color-mix(in srgb, #fff 45%, var(--color-bg-elevated));
+$light: color-mix(in srgb, #fff 18%, var(--color-bg-elevated));
+$shadow: color-mix(in srgb, #000 35%, var(--color-bg-elevated));
+$dark: color-mix(in srgb, #000 75%, var(--color-bg-elevated));
+
+$raised: inset -1px -1px 0 0 $dark, inset 1px 1px 0 0 $hilight, inset -2px -2px 0 0 $shadow, inset 2px 2px 0 0 $light;
+$sunken: inset -1px -1px 0 0 $hilight, inset 1px 1px 0 0 $dark, inset -2px -2px 0 0 $light, inset 2px 2px 0 0 $shadow;
+$pressed: inset -1px -1px 0 0 $hilight, inset 1px 1px 0 0 $dark, inset -2px -2px 0 0 $face, inset 2px 2px 0 0 $shadow;
+$dither: conic-gradient($hilight 25%, $face 0 50%, $hilight 0 75%, $face 0);
+
+#{$win95-skin} {
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-full: 0;
+
+  --font-sans: 'Microsoft Sans Serif', 'MS Sans Serif', Tahoma, Arial, sans-serif;
+  --font-serif: var(--font-sans);
+  --font-mono: 'Fixedsys', 'Lucida Console', 'Courier New', monospace;
+
+  --shadow-sm: none !important;
+  --shadow-md: none !important;
+  --shadow-lg: none !important;
+  --shadow-xl: none !important;
+  --shadow-glow: 0 0 0 1px #{$dark} !important;
+  --shadow-card: #{$raised} !important;
+
+  --transition-fast: 0s;
+  --transition-base: 0s;
+  --transition-slow: 0s;
+  --transition-spring: 0s;
+  --theme-transition: none;
+
+  -webkit-font-smoothing: none;
+
+  *,
+  *::before,
+  *::after {
+    border-radius: 0 !important;
+  }
+
+  body {
+    font-family: var(--font-sans);
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    letter-spacing: 0;
+  }
+
+  ::selection {
+    background-color: var(--color-accent-dark);
+    color: #fff;
+  }
+
+  *:focus-visible {
+    outline: 1px dotted var(--color-text-primary);
+    outline-offset: -4px;
+  }
+
+  /* Bevelled scrollbars on a dithered track */
+  ::-webkit-scrollbar {
+    width: 16px;
+    height: 16px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: $dither;
+    background-size: 2px 2px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: $face;
+    border: none;
+    box-shadow: $raised;
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: $face;
+  }
+
+  /* ─── Buttons ──────────────────────────────────────────────────────────── */
+
+  .btn {
+    background: $face;
+    color: var(--color-text-primary);
+    border: none;
+    box-shadow: $raised;
+    font-weight: 400;
+
+    &:hover:not(:disabled) {
+      background: $face;
+      box-shadow: $raised;
+      filter: none;
+    }
+
+    &:active:not(:disabled) {
+      transform: none;
+      box-shadow: $pressed;
+    }
+
+    &:disabled {
+      opacity: 1;
+      color: $shadow;
+      text-shadow: 1px 1px 0 $hilight;
+    }
+  }
+
+  /* Default button: extra black frame */
+  .btn-primary,
+  .btn-primary:hover:not(:disabled) {
+    background: $face;
+    color: var(--color-text-primary);
+    font-weight: 700;
+    box-shadow: inset 0 0 0 1px $dark, inset -2px -2px 0 0 $dark, inset 2px 2px 0 0 $hilight, inset -3px -3px 0 0 $shadow, inset 3px 3px 0 0 $light;
+  }
+
+  .btn-secondary.active {
+    background: $dither;
+    background-size: 2px 2px;
+    color: var(--color-text-primary);
+    box-shadow: $pressed;
+  }
+
+  .btn-danger {
+    color: var(--color-error);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    box-shadow: none;
+
+    &:hover:not(:disabled) {
+      background: transparent;
+      box-shadow: $raised;
+    }
+  }
+
+  .icon-btn,
+  .close-btn {
+    &:hover {
+      background: $face;
+      box-shadow: $raised;
+    }
+
+    &:active {
+      transform: none;
+      box-shadow: $pressed;
+    }
+  }
+
+  /* ─── Form controls: sunken white fields ───────────────────────────────── */
+
+  .form-label {
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 400;
+    color: var(--color-text-primary);
+  }
+
+  .form-control {
+    background: var(--color-bg-primary);
+    border: none;
+    box-shadow: $sunken;
+
+    &:hover,
+    &:focus {
+      box-shadow: $sunken;
+    }
+  }
+
+  /* ─── Surfaces: windows ────────────────────────────────────────────────── */
+
+  .modal-overlay {
+    background: transparent;
+    backdrop-filter: none;
+  }
+
+  .modal-dialog {
+    background-color: var(--color-bg-secondary);
+    border: none;
+    padding: 3px;
+    box-shadow: $raised;
+  }
+
+  /* Title bar */
+  .modal-header {
+    padding: 3px 3px 3px 6px;
+    margin-bottom: var(--spacing-xs);
+    background: linear-gradient(90deg, var(--color-accent-dark), var(--color-accent-primary));
+    border-bottom: none;
+
+    h3 {
+      font-size: 0.8125rem;
+      font-weight: 700;
+      color: var(--color-text-inverse);
+    }
+
+    .close-btn {
+      width: 18px;
+      height: 16px;
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--color-text-primary);
+      background: $face;
+      box-shadow: $raised;
+    }
+  }
+
+  [popover],
+  .theme-menu {
+    background-color: $face;
+    border: none;
+    padding: 3px;
+    box-shadow: $raised;
+  }
+
+  .theme-menu-item:hover {
+    background: var(--color-accent-dark);
+    color: #fff;
+  }
+
+  /* Etched divider */
+  hr {
+    border: none;
+    height: 2px;
+    background: linear-gradient(180deg, $shadow 50%, $hilight 50%);
+  }
+}

@@ -1,0 +1,231 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Comic skin — inked comic-book panels.
+
+   Active when SkinService sets html[data-skin='comic']. Colors come from the
+   active theme; ink lines use the text color so they always contrast.
+   Thick inked outlines, halftone dot shading, yellow caption-box dialog
+   headers, bouncy "POW" pop-ins,
+   Bangers for shouting and Comic Neue for dialogue.
+
+   Shadow tokens use !important because ThemeService writes them inline on <html>.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+$comic-skin: "html[data-skin='comic']";
+
+$ink: var(--color-text-primary);
+$halftone: radial-gradient(color-mix(in srgb, var(--color-accent-primary) 20%, transparent) 1.3px, transparent 1.8px);
+$halftone-light: radial-gradient(rgba(255, 255, 255, 0.28) 1.2px, transparent 1.7px);
+$bounce: cubic-bezier(0.34, 1.8, 0.64, 1);
+
+#{$comic-skin} {
+  --radius-xs: 3px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 14px;
+  --radius-2xl: 18px;
+
+  --font-sans: 'Comic Neue', 'Patrick Hand', cursive;
+  --font-serif: 'Bangers', 'Comic Neue', cursive;
+
+  --shadow-sm: 2px 2px 0 0 #{$ink} !important;
+  --shadow-md: 3px 3px 0 0 #{$ink} !important;
+  --shadow-lg: 5px 5px 0 0 #{$ink} !important;
+  --shadow-xl: 8px 8px 0 0 #{$ink} !important;
+  --shadow-glow: 0 0 0 3px var(--color-warning) !important;
+  --shadow-card: 3px 3px 0 0 #{$ink} !important;
+
+  --transition-fast: 120ms ease;
+  --transition-base: 200ms ease;
+  --transition-slow: 320ms ease;
+  --transition-spring: 380ms #{$bounce};
+
+  body {
+    font-family: var(--font-sans);
+    font-weight: 700;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    letter-spacing: 0.04em;
+  }
+
+  h1,
+  h2 {
+    font-size: 1.5em;
+    text-shadow: 2px 2px 0 color-mix(in srgb, var(--color-accent-primary) 60%, transparent);
+  }
+
+  ::selection {
+    background-color: var(--color-warning);
+    color: #111;
+  }
+
+  *:focus-visible {
+    outline: 3px solid var(--color-warning);
+    outline-offset: 2px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-accent-primary);
+    border: 2px solid $ink;
+    border-radius: 6px;
+  }
+
+  /* ─── Buttons ──────────────────────────────────────────────────────────── */
+
+  .btn {
+    font-family: var(--font-serif);
+    font-size: 1.05rem;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    border: 3px solid $ink;
+    border-radius: 12px 4px 12px 4px;
+    box-shadow: 3px 3px 0 0 $ink;
+    transition: transform 260ms $bounce, box-shadow var(--transition-fast), background var(--transition-fast);
+
+    &:hover:not(:disabled) {
+      transform: rotate(-2deg) scale(1.05);
+    }
+
+    &:active:not(:disabled) {
+      transform: scale(0.94) rotate(1deg);
+      box-shadow: 1px 1px 0 0 $ink;
+    }
+  }
+
+  .btn-primary {
+    background: $halftone-light, var(--color-accent-primary);
+    background-size: 6px 6px, auto;
+
+    &:hover:not(:disabled) {
+      box-shadow: 4px 4px 0 0 $ink;
+      filter: none;
+    }
+  }
+
+  .btn-secondary {
+    background: var(--color-bg-secondary);
+    border-color: $ink;
+
+    &:hover:not(:disabled) {
+      background: $halftone, var(--color-bg-secondary);
+      background-size: 6px 6px, auto;
+      border-color: $ink;
+    }
+  }
+
+  .btn-ghost {
+    border-color: transparent;
+    box-shadow: none;
+
+    &:hover:not(:disabled) {
+      border-color: $ink;
+      box-shadow: 3px 3px 0 0 $ink;
+    }
+  }
+
+  .icon-btn,
+  .close-btn {
+    transition: transform 260ms $bounce;
+
+    &:hover {
+      transform: scale(1.15) rotate(-6deg);
+    }
+  }
+
+  /* ─── Form controls ────────────────────────────────────────────────────── */
+
+  .form-label {
+    font-family: var(--font-serif);
+    font-size: 0.95rem;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+  }
+
+  .form-control {
+    border: 3px solid $ink;
+    border-radius: 10px 3px 10px 3px;
+    font-weight: 700;
+
+    &:hover {
+      border-color: $ink;
+    }
+
+    &:focus {
+      border-color: $ink;
+      box-shadow: 3px 3px 0 0 var(--color-accent-primary);
+    }
+  }
+
+  /* ─── Surfaces: comic panels ───────────────────────────────────────────── */
+
+  .modal-overlay {
+    background: $halftone, rgba(0, 0, 0, 0.6);
+    background-size: 8px 8px, auto;
+    backdrop-filter: none;
+  }
+
+  .modal-dialog {
+    border: 4px solid $ink;
+    border-radius: 4px;
+    box-shadow: var(--shadow-xl);
+    animation: comic-pow 420ms $bounce;
+  }
+
+  /* Yellow caption box */
+  .modal-header {
+    background: color-mix(in srgb, var(--color-warning) 85%, #fff);
+    border-bottom: 4px solid $ink;
+
+    h3 {
+      color: #111;
+      font-size: 1.5rem;
+      text-shadow: none;
+    }
+
+    .close-btn {
+      color: #111;
+    }
+  }
+
+  [popover],
+  .theme-menu {
+    border: 3px solid $ink;
+    border-radius: 14px;
+    box-shadow: var(--shadow-lg);
+  }
+
+  hr {
+    border: none;
+    height: 3px;
+    background: $ink;
+    border-radius: 2px;
+  }
+}
+
+@keyframes comic-pow {
+  0% {
+    opacity: 0;
+    transform: scale(0.6) rotate(-4deg);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #{$comic-skin} .modal-dialog {
+    animation: none;
+  }
+}

@@ -7,6 +7,7 @@ export * from "./backstage.interface";
 export * from "./plot-board.interface";
 export * from "./image-generation.interface";
 export * from "./theme.interface";
+export * from "./skin.interface";
 export * from "./color-palette.interface";
 export * from "./legacy.interface";
 

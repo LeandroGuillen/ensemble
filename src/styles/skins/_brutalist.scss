@@ -1,0 +1,212 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Brutalist skin — raw neo-brutalism.
+
+   Active when SkinService sets html[data-skin='brutalist']. Colors come from
+   the active theme; outlines and shadows use the text color so they always
+   contrast. Thick borders, hard offset shadows that collapse on press,
+   square everything, loud uppercase Space Grotesk and Space Mono.
+
+   Shadow tokens use !important because ThemeService writes them inline on <html>.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+$brutalist-skin: "html[data-skin='brutalist']";
+
+$ink: var(--color-text-primary);
+
+#{$brutalist-skin} {
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-full: 0;
+
+  --font-sans: 'Space Grotesk', system-ui, sans-serif;
+  --font-serif: 'Space Grotesk', system-ui, sans-serif;
+  --font-mono: 'Space Mono', monospace;
+
+  --shadow-sm: 2px 2px 0 0 #{$ink} !important;
+  --shadow-md: 4px 4px 0 0 #{$ink} !important;
+  --shadow-lg: 6px 6px 0 0 #{$ink} !important;
+  --shadow-xl: 10px 10px 0 0 #{$ink} !important;
+  --shadow-glow: 0 0 0 3px var(--color-accent-primary) !important;
+  --shadow-card: 4px 4px 0 0 #{$ink} !important;
+
+  --transition-fast: 70ms linear;
+  --transition-base: 110ms linear;
+  --transition-slow: 180ms linear;
+  --transition-spring: 140ms linear;
+
+  *,
+  *::before,
+  *::after {
+    border-radius: 0 !important;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    font-weight: 500;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+  }
+
+  a {
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+  }
+
+  ::selection {
+    background-color: var(--color-accent-primary);
+    color: var(--color-text-inverse);
+  }
+
+  *:focus-visible {
+    outline: 3px solid var(--color-accent-primary);
+    outline-offset: 3px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 14px;
+    height: 14px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--color-bg-primary);
+    box-shadow: inset 3px 0 0 $ink;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-accent-primary);
+    border: 3px solid $ink;
+  }
+
+  /* ─── Buttons ──────────────────────────────────────────────────────────── */
+
+  .btn {
+    border: 3px solid $ink;
+    box-shadow: 4px 4px 0 0 $ink;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    text-transform: uppercase;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+
+    &:hover:not(:disabled) {
+      transform: translate(-2px, -2px);
+      box-shadow: 6px 6px 0 0 $ink;
+    }
+
+    &:active:not(:disabled) {
+      transform: translate(4px, 4px);
+      box-shadow: none;
+    }
+  }
+
+  .btn-primary {
+    background: var(--color-accent-primary);
+
+    &:hover:not(:disabled) {
+      box-shadow: 6px 6px 0 0 $ink;
+      filter: none;
+    }
+  }
+
+  .btn-secondary {
+    background: var(--color-bg-secondary);
+    border-color: $ink;
+
+    &:hover:not(:disabled) {
+      border-color: $ink;
+    }
+  }
+
+  .btn-danger {
+    background: var(--color-error);
+    color: var(--color-text-inverse);
+    border-color: $ink;
+
+    &:hover:not(:disabled) {
+      background: var(--color-error);
+      border-color: $ink;
+    }
+  }
+
+  .btn-ghost {
+    border-color: transparent;
+    box-shadow: none;
+
+    &:hover:not(:disabled) {
+      border-color: $ink;
+      box-shadow: 4px 4px 0 0 $ink;
+    }
+  }
+
+  /* ─── Form controls ────────────────────────────────────────────────────── */
+
+  .form-label {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: $ink;
+  }
+
+  .form-control {
+    background: var(--color-bg-primary);
+    border: 3px solid $ink;
+    font-weight: 500;
+
+    &:hover {
+      border-color: $ink;
+    }
+
+    &:focus {
+      border-color: $ink;
+      box-shadow: 4px 4px 0 0 var(--color-accent-primary);
+    }
+  }
+
+  /* ─── Surfaces ─────────────────────────────────────────────────────────── */
+
+  .modal-overlay {
+    background: color-mix(in srgb, var(--color-accent-primary) 25%, rgba(0, 0, 0, 0.6));
+    backdrop-filter: none;
+  }
+
+  .modal-dialog {
+    border: 3px solid $ink;
+    box-shadow: var(--shadow-xl);
+  }
+
+  .modal-header {
+    background: var(--color-accent-primary);
+    border-bottom: 3px solid $ink;
+
+    h3 {
+      color: var(--color-text-inverse);
+      text-transform: uppercase;
+    }
+
+    .close-btn {
+      color: var(--color-text-inverse);
+    }
+  }
+
+  [popover],
+  .theme-menu {
+    border: 3px solid $ink;
+    box-shadow: var(--shadow-lg);
+  }
+
+  hr {
+    border: none;
+    height: 3px;
+    background: $ink;
+  }
+}

@@ -74,6 +74,13 @@ export const SETTINGS_FIELD_INDEX: SettingsFieldIndex[] = [
     valueKeys: ['theme', 'themeName'],
   },
   {
+    id: 'skin',
+    section: 'appearance',
+    label: 'Skin',
+    keywords: ['skin', 'appearance', 'pixel', 'look', 'style'],
+    valueKeys: ['skin'],
+  },
+  {
     id: 'color-palette',
     section: 'appearance',
     label: 'Color Palette',

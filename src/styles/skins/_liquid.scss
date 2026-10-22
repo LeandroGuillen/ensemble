@@ -1,0 +1,219 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Liquid skin — Apple-style liquid glass.
+
+   Active when SkinService sets html[data-skin='liquid']. Colors come from the
+   active theme. Generous continuous radii, pill buttons, translucent frosted
+   surfaces with specular top highlights, soft diffuse shadows, SF-style type
+   and springy motion.
+
+   Shadow tokens use !important because ThemeService writes them inline on <html>.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+$liquid-skin: "html[data-skin='liquid']";
+
+$glass-edge: color-mix(in srgb, var(--color-text-primary) 14%, transparent);
+$specular: inset 0 1px 0 color-mix(in srgb, #fff 28%, transparent), inset 0 -1px 0 rgba(0, 0, 0, 0.12);
+$spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+
+@mixin glass($tint, $amount: 62%, $blur: 24px) {
+  background-color: color-mix(in srgb, #{$tint} #{$amount}, transparent);
+  backdrop-filter: blur($blur) saturate(180%);
+}
+
+#{$liquid-skin} {
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 28px;
+  --radius-2xl: 36px;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', system-ui, sans-serif;
+  --font-serif: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', monospace;
+
+  /* Large, soft, low-opacity shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12) !important;
+  --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.16) !important;
+  --shadow-lg: 0 14px 36px rgba(0, 0, 0, 0.2) !important;
+  --shadow-xl: 0 28px 72px rgba(0, 0, 0, 0.28) !important;
+  --shadow-glow: 0 0 0 4px color-mix(in srgb, var(--color-accent-primary) 25%, transparent) !important;
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.12), inset 0 1px 0 color-mix(in srgb, #fff 10%, transparent) !important;
+
+  --transition-fast: 180ms cubic-bezier(0.25, 1, 0.5, 1);
+  --transition-base: 280ms cubic-bezier(0.25, 1, 0.5, 1);
+  --transition-slow: 450ms cubic-bezier(0.25, 1, 0.5, 1);
+  --transition-spring: 420ms #{$spring};
+
+  body {
+    font-family: var(--font-sans);
+    letter-spacing: -0.01em;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--color-accent-primary) 35%, transparent);
+  }
+
+  *:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent-primary) 45%, transparent);
+  }
+
+  /* Thin overlay-style scrollbars */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: color-mix(in srgb, var(--color-text-primary) 22%, transparent);
+    border: 3px solid transparent;
+    background-clip: content-box;
+
+    &:hover {
+      background-color: color-mix(in srgb, var(--color-text-primary) 38%, transparent);
+    }
+  }
+
+  /* ─── Buttons: glass pills ─────────────────────────────────────────────── */
+
+  .btn,
+  .btn-icon {
+    border-radius: var(--radius-full);
+  }
+
+  .btn {
+    font-weight: 600;
+    transition: background var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast), transform 320ms $spring;
+
+    &:hover:not(:disabled) {
+      transform: scale(1.02);
+    }
+
+    &:active:not(:disabled) {
+      transform: scale(0.95);
+    }
+  }
+
+  .btn-primary {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 55%),
+      color-mix(in srgb, var(--color-accent-primary) 88%, transparent);
+    box-shadow: $specular, 0 4px 14px color-mix(in srgb, var(--color-accent-primary) 35%, transparent);
+
+    &:hover:not(:disabled) {
+      filter: brightness(1.06);
+      box-shadow: $specular, 0 8px 22px color-mix(in srgb, var(--color-accent-primary) 40%, transparent);
+    }
+  }
+
+  .btn-secondary {
+    @include glass(var(--color-bg-elevated), 55%, 20px);
+    border-color: $glass-edge;
+    box-shadow: $specular, var(--shadow-sm);
+
+    &:hover:not(:disabled) {
+      @include glass(var(--color-bg-hover), 70%, 20px);
+      border-color: color-mix(in srgb, var(--color-text-primary) 22%, transparent);
+    }
+  }
+
+  .btn-ghost:hover:not(:disabled),
+  .icon-btn:hover,
+  .close-btn:hover {
+    background: color-mix(in srgb, var(--color-text-primary) 9%, transparent);
+  }
+
+  .icon-btn,
+  .close-btn {
+    border-radius: var(--radius-full);
+    transition: background var(--transition-fast), color var(--transition-fast), transform 320ms $spring;
+
+    &:active {
+      transform: scale(0.88);
+    }
+  }
+
+  /* ─── Form controls ────────────────────────────────────────────────────── */
+
+  .form-label {
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 600;
+  }
+
+  .form-control {
+    @include glass(var(--color-bg-tertiary), 60%, 16px);
+    border-color: $glass-edge;
+    border-radius: var(--radius-md);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+
+    &:focus {
+      border-color: color-mix(in srgb, var(--color-accent-primary) 70%, transparent);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent-primary) 25%, transparent);
+    }
+  }
+
+  /* ─── Surfaces: frosted glass ──────────────────────────────────────────── */
+
+  .modal-overlay {
+    background: color-mix(in srgb, #000 28%, transparent);
+    backdrop-filter: blur(10px) saturate(120%);
+  }
+
+  .modal-dialog {
+    @include glass(var(--color-bg-secondary), 74%, 40px);
+    border-color: $glass-edge;
+    border-radius: var(--radius-xl);
+    box-shadow: $specular, var(--shadow-xl);
+    animation: liquid-pop 420ms $spring;
+  }
+
+  .modal-header {
+    border-bottom-color: color-mix(in srgb, var(--color-text-primary) 8%, transparent);
+  }
+
+  [popover],
+  .theme-menu {
+    @include glass(var(--color-bg-elevated), 72%, 30px);
+    border-color: $glass-edge;
+    border-radius: var(--radius-lg);
+    box-shadow: $specular, var(--shadow-lg);
+  }
+
+  .theme-menu-item {
+    border-radius: var(--radius-sm);
+  }
+
+  hr {
+    border: none;
+    height: 1px;
+    background: color-mix(in srgb, var(--color-text-primary) 10%, transparent);
+  }
+}
+
+@keyframes liquid-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #{$liquid-skin} .modal-dialog {
+    animation: none;
+  }
+}

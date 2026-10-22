@@ -1,0 +1,190 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Manuscript skin — illuminated medieval codex.
+
+   Active when SkinService sets html[data-skin='manuscript']. Colors come from
+   the active theme; the accent is the gilding and rubric ink. Blackletter
+   titles with illuminated initials, IM Fell body text, vellum dialogs in
+   double-ruled frames, small-caps rubric buttons and fleuron dividers.
+
+   Shadow tokens use !important because ThemeService writes them inline on <html>.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+$manuscript-skin: "html[data-skin='manuscript']";
+
+$gilt: var(--color-accent-muted);
+$vellum: radial-gradient(ellipse at center, color-mix(in srgb, var(--color-accent-primary) 6%, var(--color-bg-secondary)) 0%, var(--color-bg-secondary) 75%);
+
+#{$manuscript-skin} {
+  --radius-xs: 1px;
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 3px;
+  --radius-xl: 3px;
+  --radius-2xl: 4px;
+
+  --font-sans: 'IM Fell English', Georgia, serif;
+  --font-serif: 'UnifrakturMaguntia', 'IM Fell English', Georgia, serif;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+  --shadow-md: 0 3px 8px rgba(0, 0, 0, 0.32) !important;
+  --shadow-lg: 0 6px 18px rgba(0, 0, 0, 0.38) !important;
+  --shadow-xl: 0 14px 40px rgba(0, 0, 0, 0.45) !important;
+  --shadow-glow: 0 0 12px color-mix(in srgb, var(--color-accent-primary) 40%, transparent) !important;
+  --shadow-card: 0 2px 6px rgba(0, 0, 0, 0.28), inset 0 0 0 1px color-mix(in srgb, var(--color-accent-muted) 25%, transparent) !important;
+
+  --transition-fast: 160ms ease;
+  --transition-base: 260ms ease;
+  --transition-slow: 420ms ease;
+  --transition-spring: 360ms ease;
+
+  body {
+    font-family: var(--font-sans);
+    font-size: 1.04em;
+  }
+
+  /* Blackletter only for the largest titles; it is too dense for small text */
+  h1,
+  h2 {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    letter-spacing: 0.01em;
+
+    &::first-letter {
+      color: var(--color-accent-primary);
+      font-size: 1.35em;
+      text-shadow: 0 0 1px var(--color-accent-dark), 0 1px 0 rgba(0, 0, 0, 0.4);
+    }
+  }
+
+  h3,
+  h4 {
+    font-weight: 400;
+    font-variant: small-caps;
+    letter-spacing: 0.04em;
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--color-accent-primary) 30%, transparent);
+    color: var(--color-text-primary);
+  }
+
+  *:focus-visible {
+    outline: 1px solid var(--color-accent-primary);
+    outline-offset: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: $gilt;
+  }
+
+  /* ─── Buttons: rubricated small caps ───────────────────────────────────── */
+
+  .btn {
+    font-variant: small-caps;
+    font-size: 0.95rem;
+    letter-spacing: 0.05em;
+    border: 1px solid $gilt;
+
+    &:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+  }
+
+  .btn-primary {
+    background: linear-gradient(180deg, var(--color-accent-primary), var(--color-accent-dark));
+    border-color: var(--color-accent-dark);
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--color-bg-primary) 25%, transparent), 0 1px 3px rgba(0, 0, 0, 0.35);
+
+    &:hover:not(:disabled) {
+      filter: brightness(1.08);
+      box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--color-bg-primary) 25%, transparent), var(--shadow-glow);
+    }
+  }
+
+  .btn-secondary {
+    background: color-mix(in srgb, var(--color-accent-primary) 6%, var(--color-bg-tertiary));
+    border-color: $gilt;
+
+    &:hover:not(:disabled) {
+      border-color: var(--color-accent-primary);
+      color: var(--color-accent-secondary);
+    }
+  }
+
+  .btn-ghost {
+    border-color: transparent;
+
+    &:hover:not(:disabled) {
+      color: var(--color-accent-primary);
+    }
+  }
+
+  /* ─── Form controls ────────────────────────────────────────────────────── */
+
+  .form-label {
+    text-transform: none;
+    font-variant: small-caps;
+    font-size: 0.9375rem;
+    color: var(--color-accent-muted);
+  }
+
+  .form-control {
+    background: color-mix(in srgb, var(--color-accent-primary) 3%, var(--color-bg-tertiary));
+    border-color: color-mix(in srgb, var(--color-accent-muted) 55%, var(--color-border));
+
+    &:focus {
+      border-color: var(--color-accent-primary);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent-primary) 20%, transparent);
+    }
+  }
+
+  /* ─── Surfaces: vellum leaves ──────────────────────────────────────────── */
+
+  .modal-overlay {
+    background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.82));
+    backdrop-filter: blur(2px) sepia(0.3);
+  }
+
+  .modal-dialog {
+    border: 6px double $gilt;
+    background-image: $vellum;
+    outline: 1px solid color-mix(in srgb, var(--color-accent-muted) 60%, transparent);
+    outline-offset: -12px;
+  }
+
+  .modal-header {
+    justify-content: center;
+    position: relative;
+    border-bottom: 1px solid $gilt;
+
+    h3 {
+      font-size: 1.35rem;
+      color: var(--color-accent-secondary);
+    }
+
+    .close-btn {
+      position: absolute;
+      right: var(--spacing-md);
+    }
+  }
+
+  [popover],
+  .theme-menu {
+    border: 3px double $gilt;
+    background-image: $vellum;
+  }
+
+  /* Fleuron divider */
+  hr {
+    border: none;
+    height: auto;
+    overflow: visible;
+    text-align: center;
+    color: $gilt;
+
+    &::before {
+      content: '— ❦ —';
+      font-size: 1.1rem;
+    }
+  }
+}
