@@ -247,21 +247,21 @@ export class PinboardService {
   /**
    * Count how many pinboards reference a character (for deletion confirmation)
    */
-  countCharacterReferences(characterId: string): number {
+  countCharacterReferences(characterId: string): { id: string; name: string }[] {
     const project = this.projectService.getCurrentProject();
-    if (!project?.metadata?.pinboards) return 0;
+    if (!project?.metadata?.pinboards) return [];
 
-    let count = 0;
+    const referencedPinboards: { id: string; name: string }[] = [];
     for (const pinboard of project.metadata.pinboards) {
       const hasNode = pinboard.nodes?.some(node => node.id === characterId);
       const hasEdge = pinboard.edges?.some(edge => 
         edge.source === characterId || edge.target === characterId
       );
       if (hasNode || hasEdge) {
-        count++;
+        referencedPinboards.push({ id: pinboard.id, name: pinboard.name });
       }
     }
-    return count;
+    return referencedPinboards;
   }
 
   /**

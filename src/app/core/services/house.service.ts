@@ -185,23 +185,21 @@ export class HouseService {
   /**
    * Count how many houses reference a character (for deletion confirmation)
    */
-  countCharacterReferences(characterId: string): number {
+  countCharacterReferences(characterId: string): { id: string; name: string }[] {
     const houses = this.subject.value;
-    let count = 0;
+    const referencedHouses: { id: string; name: string }[] = [];
+    
     for (const house of houses) {
-      // Count if character is a member
-      if (house.characterIds.includes(characterId)) {
-        count++;
-      }
-      // Also count if character appears in any leadership entry
-      for (const reign of house.leadership) {
-        if (reign.characterIds.includes(characterId)) {
-          count++;
-          break; // Count each house only once for leadership
-        }
+      // Check if character is a member or in any leadership entry
+      const isMember = house.characterIds.includes(characterId);
+      const inLeadership = house.leadership.some(reign => reign.characterIds.includes(characterId));
+      
+      if (isMember || inLeadership) {
+        referencedHouses.push({ id: house.id, name: house.name });
       }
     }
-    return count;
+    
+    return referencedHouses;
   }
 
   /**

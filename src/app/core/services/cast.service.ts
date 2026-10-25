@@ -801,8 +801,10 @@ export class CastService {
     }
   }
 
-  countCharacterInCasts(characterId: string): number {
-    return this.castsSubject.value.filter(cast => cast.characterIds.includes(characterId)).length;
+  countCharacterInCasts(characterId: string): { id: string; name: string }[] {
+    return this.castsSubject.value
+      .filter(cast => cast.characterIds.includes(characterId))
+      .map(cast => ({ id: cast.id, name: cast.name }));
   }
 
   async removeCharacterFromCasts(characterId: string): Promise<void> {

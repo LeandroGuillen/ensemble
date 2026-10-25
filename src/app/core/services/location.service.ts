@@ -254,8 +254,12 @@ export class LocationService {
       this.thumbnailDataUrls.delete(location.id);
       this.locationsSubject.next(locations.filter((loc) => loc.id !== location.id));
 
-      // Cleanup: clear seatId from any houses that reference this location
-      await this.referenceCleanup.clearLocationReferences(location.id);
+      // Cleanup: clear seatId from any houses that reference this location (non-blocking)
+      try {
+        await this.referenceCleanup.clearLocationReferences(location.id);
+      } catch (cleanupError) {
+        this.logger.warn('Failed to cleanup location references in houses, continuing', cleanupError);
+      }
 
       return true;
     } catch (error) {

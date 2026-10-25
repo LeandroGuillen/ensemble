@@ -497,9 +497,9 @@ export class PlotBoardService {
   /**
    * Count how many plot boards reference a character (for deletion confirmation)
    */
-  async countCharacterReferences(characterId: string): Promise<number> {
+  async countCharacterReferences(characterId: string): Promise<{ id: string; name: string }[]> {
     const paths = await this.discoverPlotboardFiles();
-    let count = 0;
+    const referencedBoards: { id: string; name: string }[] = [];
 
     for (const relativePath of paths) {
       const filePath = this.getAbsolutePath(relativePath);
@@ -511,11 +511,13 @@ export class PlotBoardService {
       const board = this.parseFile(result.content);
       const hasChar = board.threads.some(thread => thread.characters.includes(characterId));
       if (hasChar) {
-        count++;
+        // Use relative path as id and derive name from it
+        const name = relativePath.replace('.plotboard.md', '').replace(/^.*\//, '');
+        referencedBoards.push({ id: relativePath, name });
       }
     }
 
-    return count;
+    return referencedBoards;
   }
 
   /**

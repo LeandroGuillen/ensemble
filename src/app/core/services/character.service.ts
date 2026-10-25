@@ -1132,19 +1132,19 @@ export class CharacterService {
    * Count affected resources for a character deletion (for confirmation dialog)
    */
   async countCharacterReferences(id: string): Promise<{
-    houses: number;
-    casts: number;
-    pinboards: number;
-    plotBoards: number;
+    houses: { id: string; name: string }[];
+    casts: { id: string; name: string }[];
+    pinboards: { id: string; name: string }[];
+    plotBoards: { id: string; name: string }[];
   }> {
     const character = this.findRecord(id);
     if (!character) {
-      return { houses: 0, casts: 0, pinboards: 0, plotBoards: 0 };
+      return { houses: [], casts: [], pinboards: [], plotBoards: [] };
     }
 
     const isDraft = !!this.getDraftById(id);
     if (isDraft) {
-      return { houses: 0, casts: 0, pinboards: 0, plotBoards: 0 };
+      return { houses: [], casts: [], pinboards: [], plotBoards: [] };
     }
 
     return this.referenceCleanup.countCharacterReferences(id);

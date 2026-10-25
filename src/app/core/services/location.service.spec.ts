@@ -237,5 +237,40 @@ A foggy port.`,
       expect(service.getLocationsSnapshot()).toEqual([]);
       expect(electronService.deleteFile).toHaveBeenCalledWith(created.filePath);
     });
+
+    it('calls house seatId cleanup when deleting a location', async () => {
+      const project = createValidProject();
+      projectService.getCurrentProject.and.returnValue(project);
+      electronService.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));
+      electronService.deleteFile.and.returnValue(Promise.resolve({ success: true }));
+
+      const created = await service.createLocation(createFormData());
+      
+      // We need to spy on the cleanup service that's injected
+      const cleanupSpy = spyOn((service as any).referenceCleanup, 'clearLocationReferences').and.returnValue(Promise.resolve());
+
+      await service.deleteLocation(created.id);
+
+      expect(cleanupSpy).toHaveBeenCalledWith(created.id);
+    });
+
+    it('still succeeds when house cleanup throws an error', async () => {
+      const project = createValidProject();
+      projectService.getCurrentProject.and.returnValue(project);
+      electronService.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));
+      electronService.deleteFile.and.returnValue(Promise.resolve({ success: true }));
+
+      const created = await service.createLocation(createFormData());
+      
+      // Simulate cleanup failure
+      spyOn((service as any).referenceCleanup, 'clearLocationReferences').and.returnValue(Promise.reject(new Error('Cleanup failed')));
+
+      const deleted = await service.deleteLocation(created.id);
+
+      // Should still succeed despite cleanup error
+      expect(deleted).toBeTrue();
+      expect(service.getLocationsSnapshot()).toEqual([]);
+      expect(electronService.deleteFile).toHaveBeenCalledWith(created.filePath);
+    });
   });
 });

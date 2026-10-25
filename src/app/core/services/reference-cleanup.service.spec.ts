@@ -62,28 +62,38 @@ describe('ReferenceCleanupService', () => {
 
   describe('countCharacterReferences', () => {
     it('should count references across all services including pinboards', async () => {
-      houseService.countCharacterReferences.and.returnValue(2);
-      castService.countCharacterInCasts.and.returnValue(1);
-      pinboardService.countCharacterReferences.and.returnValue(3);
-      plotBoardService.countCharacterReferences.and.returnValue(Promise.resolve(1));
+      houseService.countCharacterReferences.and.returnValue([
+        { id: 'house-1', name: 'House Stark' },
+        { id: 'house-2', name: 'House Tully' }
+      ]);
+      castService.countCharacterInCasts.and.returnValue([{ id: 'cast-1', name: 'Cast 1' }]);
+      pinboardService.countCharacterReferences.and.returnValue([
+        { id: 'pb-1', name: 'Pinboard 1' },
+        { id: 'pb-2', name: 'Pinboard 2' },
+        { id: 'pb-3', name: 'Pinboard 3' }
+      ]);
+      plotBoardService.countCharacterReferences.and.returnValue(Promise.resolve([
+        { id: 'plot.plotboard.md', name: 'plot' }
+      ]));
 
       const result = await service.countCharacterReferences('char-1');
 
-      expect(result.houses).toBe(2);
-      expect(result.casts).toBe(1);
-      expect(result.pinboards).toBe(3);
-      expect(result.plotBoards).toBe(1);
+      expect(result.houses.length).toBe(2);
+      expect(result.casts.length).toBe(1);
+      expect(result.pinboards.length).toBe(3);
+      expect(result.plotBoards.length).toBe(1);
+      expect(result.houses[0].name).toBe('House Stark');
     });
 
-    it('should return zeros if counting fails', async () => {
+    it('should return empty arrays if counting fails', async () => {
       houseService.countCharacterReferences.and.throwError('Database error');
 
       const result = await service.countCharacterReferences('char-1');
 
-      expect(result.houses).toBe(0);
-      expect(result.casts).toBe(0);
-      expect(result.pinboards).toBe(0);
-      expect(result.plotBoards).toBe(0);
+      expect(result.houses.length).toBe(0);
+      expect(result.casts.length).toBe(0);
+      expect(result.pinboards.length).toBe(0);
+      expect(result.plotBoards.length).toBe(0);
       expect(loggingService.error).toHaveBeenCalled();
     });
   });
@@ -171,6 +181,47 @@ describe('ReferenceCleanupService', () => {
       await service.clearLocationReferences('loc-1');
 
       expect(loggingService.error).toHaveBeenCalled();
+    });
+  });
+
+  describe('Plot thread cleanup', () => {
+    beforeEach(() => {
+      plotBoardService.removeCharacterFromThreads.and.returnValue(Promise.resolve());
+      plotBoardService.countCharacterReferences.and.returnValue(Promise.resolve([
+        { id: 'board1.plotboard.md', name: 'board1' }
+      ]));
+    });
+
+    it('should count character references in plot threads', async () => {
+      const result = await service.countCharacterReferences('char-1');
+
+      expect(plotBoardService.countCharacterReferences).toHaveBeenCalledWith('char-1');
+      expect(result.plotBoards.length).toBe(1);
+      expect(result.plotBoards[0].name).toBe('board1');
+    });
+
+    it('should remove character from plot threads', async () => {
+      await service.removeCharacterReferences('char-1');
+
+      expect(plotBoardService.removeCharacterFromThreads).toHaveBeenCalledWith('char-1');
+    });
+
+    it('should continue cleanup if plot thread removal fails', async () => {
+      plotBoardService.removeCharacterFromThreads.and.returnValue(Promise.reject(new Error('Plot error')));
+      metadataService.removeCharacterFromBookPovs.and.returnValue(Promise.resolve());
+      castService.removeCharacterFromCasts.and.returnValue(Promise.resolve());
+      houseService.removeCharacterFromHouses.and.returnValue(Promise.resolve());
+      pinboardService.removeCharacterConnections.and.returnValue(Promise.resolve());
+
+      await service.removeCharacterReferences('char-1');
+
+      // All other cleanup methods should still be called
+      expect(metadataService.removeCharacterFromBookPovs).toHaveBeenCalledWith('char-1');
+      expect(castService.removeCharacterFromCasts).toHaveBeenCalledWith('char-1');
+      expect(houseService.removeCharacterFromHouses).toHaveBeenCalledWith('char-1');
+      expect(pinboardService.removeCharacterConnections).toHaveBeenCalledWith('char-1');
+      expect(loggingService.error).toHaveBeenCalled();
+      expect(loggingService.warn).toHaveBeenCalled();
     });
   });
 });

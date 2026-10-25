@@ -166,7 +166,8 @@ describe('Character Cleanup Integration (Real DI)', () => {
     const counts = await characterService.countCharacterReferences('char-1');
 
     // Should find the character in the pinboard
-    expect(counts.pinboards).toBe(1);
+    expect(counts.pinboards.length).toBe(1);
+    expect(counts.pinboards[0].name).toBe('Test Pinboard');
   });
 
   it('should remove character nodes and edges from pinboards through real services', async () => {
@@ -202,4 +203,96 @@ describe('Character Cleanup Integration (Real DI)', () => {
     expect(updatedPinboard.nodes.find((n: any) => n.id === 'char-2')).toBeDefined();
   });
 
+});
+
+describe('Delete Confirmation Message Formatting', () => {
+  it('should format reference list with counts and names', () => {
+    const formatList = (items: { id: string; name: string }[], singularLabel: string, pluralLabel: string, maxShow: number = 3): string => {
+      if (items.length === 0) return '';
+      const count = items.length;
+      const names = items.slice(0, maxShow).map(item => item.name).join(', ');
+      const more = count > maxShow ? ` +${count - maxShow} more` : '';
+      const label = count === 1 ? singularLabel : pluralLabel;
+      return `${count} ${label}: ${names}${more}`;
+    };
+
+    const singleHouse = [{ id: 'h1', name: 'House Stark' }];
+    expect(formatList(singleHouse, 'house', 'houses')).toBe('1 house: House Stark');
+
+    const twoHouses = [{ id: 'h1', name: 'House Stark' }, { id: 'h2', name: 'House Tully' }];
+    expect(formatList(twoHouses, 'house', 'houses')).toBe('2 houses: House Stark, House Tully');
+
+    const fiveHouses = [
+      { id: 'h1', name: 'House Stark' },
+      { id: 'h2', name: 'House Tully' },
+      { id: 'h3', name: 'House Lannister' },
+      { id: 'h4', name: 'House Baratheon' },
+      { id: 'h5', name: 'House Targaryen' }
+    ];
+    expect(formatList(fiveHouses, 'house', 'houses')).toBe('5 houses: House Stark, House Tully, House Lannister +2 more');
+
+    const empty: { id: string; name: string }[] = [];
+    expect(formatList(empty, 'house', 'houses')).toBe('');
+  });
+
+  it('should build complete confirmation message with all reference types', () => {
+    const refs = {
+      houses: [{ id: 'h1', name: 'House Stark' }],
+      casts: [{ id: 'c1', name: 'Main Cast' }, { id: 'c2', name: 'Supporting Cast' }],
+      pinboards: [{ id: 'pb1', name: 'Relationships' }],
+      plotBoards: []
+    };
+
+    const formatList = (items: { id: string; name: string }[], singularLabel: string, pluralLabel: string, maxShow: number = 3): string => {
+      if (items.length === 0) return '';
+      const count = items.length;
+      const names = items.slice(0, maxShow).map(item => item.name).join(', ');
+      const more = count > maxShow ? ` +${count - maxShow} more` : '';
+      const label = count === 1 ? singularLabel : pluralLabel;
+      return `${count} ${label}: ${names}${more}`;
+    };
+
+    const refParts: string[] = [];
+    if (refs.houses.length > 0) refParts.push(formatList(refs.houses, 'house', 'houses'));
+    if (refs.casts.length > 0) refParts.push(formatList(refs.casts, 'cast', 'casts'));
+    if (refs.pinboards.length > 0) refParts.push(formatList(refs.pinboards, 'pinboard', 'pinboards'));
+    if (refs.plotBoards.length > 0) refParts.push(formatList(refs.plotBoards, 'plot board', 'plot boards'));
+
+    expect(refParts).toEqual([
+      '1 house: House Stark',
+      '2 casts: Main Cast, Supporting Cast',
+      '1 pinboard: Relationships'
+    ]);
+
+    const message = `This character will be removed from:\n• ${refParts.join('\n• ')}`;
+    expect(message).toContain('1 house: House Stark');
+    expect(message).toContain('2 casts: Main Cast, Supporting Cast');
+    expect(message).toContain('1 pinboard: Relationships');
+  });
+
+  it('should handle case where character has no references', () => {
+    const refs = {
+      houses: [],
+      casts: [],
+      pinboards: [],
+      plotBoards: []
+    };
+
+    const formatList = (items: { id: string; name: string }[], singularLabel: string, pluralLabel: string, maxShow: number = 3): string => {
+      if (items.length === 0) return '';
+      const count = items.length;
+      const names = items.slice(0, maxShow).map(item => item.name).join(', ');
+      const more = count > maxShow ? ` +${count - maxShow} more` : '';
+      const label = count === 1 ? singularLabel : pluralLabel;
+      return `${count} ${label}: ${names}${more}`;
+    };
+
+    const refParts: string[] = [];
+    if (refs.houses.length > 0) refParts.push(formatList(refs.houses, 'house', 'houses'));
+    if (refs.casts.length > 0) refParts.push(formatList(refs.casts, 'cast', 'casts'));
+    if (refs.pinboards.length > 0) refParts.push(formatList(refs.pinboards, 'pinboard', 'pinboards'));
+    if (refs.plotBoards.length > 0) refParts.push(formatList(refs.plotBoards, 'plot board', 'plot boards'));
+
+    expect(refParts.length).toBe(0);
+  });
 });

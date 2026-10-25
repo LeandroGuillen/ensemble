@@ -208,10 +208,10 @@ describe('HouseService', () => {
       const house2 = await service.createHouse({ ...data('House Tully'), characterIds: ['char-1', 'char-3'] });
       const house3 = await service.createHouse({ ...data('House Lannister'), characterIds: ['char-4'] });
 
-      expect(service.countCharacterReferences('char-1')).toBe(2);
-      expect(service.countCharacterReferences('char-2')).toBe(1);
-      expect(service.countCharacterReferences('char-4')).toBe(1);
-      expect(service.countCharacterReferences('non-existent')).toBe(0);
+      expect(service.countCharacterReferences('char-1').length).toBe(2);
+      expect(service.countCharacterReferences('char-2').length).toBe(1);
+      expect(service.countCharacterReferences('char-4').length).toBe(1);
+      expect(service.countCharacterReferences('non-existent').length).toBe(0);
     });
 
     it('counts character references in leadership entries', async () => {
@@ -225,9 +225,18 @@ describe('HouseService', () => {
         currentLeadershipId: 'reign-1',
       });
 
-      expect(service.countCharacterReferences('char-1')).toBe(2);
-      expect(service.countCharacterReferences('char-2')).toBe(1);
-      expect(service.countCharacterReferences('char-3')).toBe(1);
+      // char-1 is in membership AND leadership of the same house -> count once
+      const char1Refs = service.countCharacterReferences('char-1');
+      expect(char1Refs.length).toBe(1);
+      expect(char1Refs[0].name).toBe('House Stark');
+      
+      const char2Refs = service.countCharacterReferences('char-2');
+      expect(char2Refs.length).toBe(1);
+      expect(char2Refs[0].name).toBe('House Stark');
+      
+      const char3Refs = service.countCharacterReferences('char-3');
+      expect(char3Refs.length).toBe(1);
+      expect(char3Refs[0].name).toBe('House Stark');
     });
 
     it('removes character from house membership', async () => {

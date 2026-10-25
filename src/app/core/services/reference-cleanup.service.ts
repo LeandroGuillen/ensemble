@@ -30,17 +30,17 @@ export class ReferenceCleanupService {
    * Uses lazy injection for PinboardService to avoid circular dependency.
    */
   async countCharacterReferences(characterId: string): Promise<{
-    houses: number;
-    casts: number;
-    pinboards: number;
-    plotBoards: number;
+    houses: { id: string; name: string }[];
+    casts: { id: string; name: string }[];
+    pinboards: { id: string; name: string }[];
+    plotBoards: { id: string; name: string }[];
   }> {
     try {
       // Lazy-load PinboardService to break circular dependency
       const PinboardService = (await import('./pinboard.service')).PinboardService;
       const pinboardService = this.injector.get(PinboardService);
 
-      const [houseCount, castCount, pinboardCount, plotBoardCount] = await Promise.all([
+      const [houses, casts, pinboards, plotBoards] = await Promise.all([
         this.houseService.countCharacterReferences(characterId),
         this.castService.countCharacterInCasts(characterId),
         pinboardService.countCharacterReferences(characterId),
@@ -48,14 +48,14 @@ export class ReferenceCleanupService {
       ]);
 
       return {
-        houses: houseCount,
-        casts: castCount,
-        pinboards: pinboardCount,
-        plotBoards: plotBoardCount,
+        houses,
+        casts,
+        pinboards,
+        plotBoards,
       };
     } catch (error) {
       this.logger.error('Failed to count character references', error);
-      return { houses: 0, casts: 0, pinboards: 0, plotBoards: 0 };
+      return { houses: [], casts: [], pinboards: [], plotBoards: [] };
     }
   }
 

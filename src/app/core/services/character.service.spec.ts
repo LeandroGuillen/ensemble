@@ -103,7 +103,7 @@ describe('CharacterService', () => {
       'removeCharacterReferences',
       'clearLocationReferences'
     ]);
-    referenceCleanupSpy.countCharacterReferences.and.returnValue(Promise.resolve({ houses: 0, casts: 0, pinboards: 0, plotBoards: 0 }));
+    referenceCleanupSpy.countCharacterReferences.and.returnValue(Promise.resolve({ houses: [], casts: [], pinboards: [], plotBoards: [] }));
     referenceCleanupSpy.removeCharacterReferences.and.returnValue(Promise.resolve());
     referenceCleanupSpy.clearLocationReferences.and.returnValue(Promise.resolve());
     projectSpy.remapCharacterIds.and.returnValue(Promise.resolve(false));
@@ -870,18 +870,18 @@ describe('CharacterService', () => {
 
       (service as any).charactersSubject.next([character]);
       referenceCleanupService.countCharacterReferences.and.returnValue(Promise.resolve({
-        houses: 2,
-        casts: 1,
-        pinboards: 3,
-        plotBoards: 1
+        houses: [{ id: 'h1', name: 'House Stark' }, { id: 'h2', name: 'House Tully' }],
+        casts: [{ id: 'c1', name: 'Cast 1' }],
+        pinboards: [{ id: 'pb1', name: 'Pinboard 1' }, { id: 'pb2', name: 'Pinboard 2' }, { id: 'pb3', name: 'Pinboard 3' }],
+        plotBoards: [{ id: 'plot.plotboard.md', name: 'plot' }]
       }));
 
       const counts = await service.countCharacterReferences('char-1');
 
-      expect(counts.houses).toBe(2);
-      expect(counts.casts).toBe(1);
-      expect(counts.pinboards).toBe(3);
-      expect(counts.plotBoards).toBe(1);
+      expect(counts.houses.length).toBe(2);
+      expect(counts.casts.length).toBe(1);
+      expect(counts.pinboards.length).toBe(3);
+      expect(counts.plotBoards.length).toBe(1);
       expect(referenceCleanupService.countCharacterReferences).toHaveBeenCalledWith('char-1');
     });
 
@@ -905,10 +905,10 @@ describe('CharacterService', () => {
 
       const counts = await service.countCharacterReferences('draft-1');
 
-      expect(counts.houses).toBe(0);
-      expect(counts.casts).toBe(0);
-      expect(counts.pinboards).toBe(0);
-      expect(counts.plotBoards).toBe(0);
+      expect(counts.houses.length).toBe(0);
+      expect(counts.casts.length).toBe(0);
+      expect(counts.pinboards.length).toBe(0);
+      expect(counts.plotBoards.length).toBe(0);
       expect(referenceCleanupService.countCharacterReferences).not.toHaveBeenCalled();
     });
 
@@ -917,10 +917,10 @@ describe('CharacterService', () => {
 
       const counts = await service.countCharacterReferences('non-existent');
 
-      expect(counts.houses).toBe(0);
-      expect(counts.casts).toBe(0);
-      expect(counts.pinboards).toBe(0);
-      expect(counts.plotBoards).toBe(0);
+      expect(counts.houses.length).toBe(0);
+      expect(counts.casts.length).toBe(0);
+      expect(counts.pinboards.length).toBe(0);
+      expect(counts.plotBoards.length).toBe(0);
     });
   });
 
