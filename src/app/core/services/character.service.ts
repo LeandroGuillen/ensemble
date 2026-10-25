@@ -30,6 +30,8 @@ import { LoggingService } from './logging.service';
 import { MetadataService } from './metadata.service';
 import { PlotBoardService } from './plot-board.service';
 import { CastService } from './cast.service';
+import { ReferenceCleanupService } from './reference-cleanup.service';
+import { PinboardService } from './pinboard.service';
 
 /** Coerces a raw frontmatter `prompts` value into a clean CharacterPrompt[]. */
 function normalizePrompts(raw: unknown): CharacterPrompt[] {
@@ -61,11 +63,6 @@ export class CharacterService {
   private thumbnailDataUrls: Map<string, string> = new Map();
   private thumbnailModificationTimes: Map<string, string> = new Map();
 
-  // Optional services for cleanup - will be set by Angular if available
-  // Note: These create circular dependencies, so they remain null in tests
-  houseService: any = null;
-  pinboardService: any = null;
-
   constructor(
     private electronService: ElectronService,
     private projectService: ProjectService,
@@ -73,7 +70,9 @@ export class CharacterService {
     private logger: LoggingService,
     private metadataService: MetadataService,
     private plotBoardService: PlotBoardService,
-    private castService: CastService
+    private castService: CastService,
+    private referenceCleanup: ReferenceCleanupService,
+    private pinboardService: PinboardService
   ) {
     // Subscribe to file changes to auto-reload characters
     this.fileWatcherService.fileChanges$.pipe(takeUntilDestroyed()).subscribe((event) => {
@@ -1150,24 +1149,15 @@ export class CharacterService {
       return { houses: 0, casts: 0, pinboards: 0, plotBoards: 0 };
     }
 
-    try {
-      const [houseCount, castCount, pinboardCount, plotBoardCount] = await Promise.all([
-        this.houseService ? this.houseService.countCharacterReferences(id) : 0,
-        this.castService.countCharacterInCasts(id),
-        this.pinboardService ? this.pinboardService.countCharacterReferences(id) : 0,
-        this.plotBoardService ? this.plotBoardService.countCharacterReferences(id) : 0,
-      ]);
+    const nonPinboardCounts = await this.referenceCleanup.countNonPinboardReferences(id);
+    const pinboardCount = this.pinboardService.countCharacterReferences(id);
 
-      return {
-        houses: houseCount,
-        casts: castCount,
-        pinboards: pinboardCount,
-        plotBoards: plotBoardCount,
-      };
-    } catch (error) {
-      this.logger.error('Failed to count character references', error);
-      return { houses: 0, casts: 0, pinboards: 0, plotBoards: 0 };
-    }
+    return {
+      houses: nonPinboardCounts.houses,
+      casts: nonPinboardCounts.casts,
+      pinboards: pinboardCount,
+      plotBoards: nonPinboardCounts.plotBoards,
+    };
   }
 
   /**
@@ -1199,56 +1189,13 @@ export class CharacterService {
 
       if (!isDraft) {
         // Cleanup all references to this character across the project
-        const cleanupErrors: string[] = [];
-
+        await this.referenceCleanup.removeNonPinboardReferences(character.id);
+        
+        // Pinboard cleanup is called separately to avoid circular dependency
         try {
-          await this.metadataService.removeCharacterFromBookPovs(character.id);
+          await this.pinboardService.removeCharacterConnections(character.id);
         } catch (cleanupError) {
-          const msg = 'Failed to remove character from book PoVs';
-          this.logger.error(msg, cleanupError);
-          cleanupErrors.push(msg);
-        }
-
-        try {
-          await this.castService.removeCharacterFromCasts(character.id);
-        } catch (cleanupError) {
-          const msg = 'Failed to remove character from casts';
-          this.logger.error(msg, cleanupError);
-          cleanupErrors.push(msg);
-        }
-
-        if (this.houseService) {
-          try {
-            await this.houseService.removeCharacterFromHouses(character.id);
-          } catch (cleanupError) {
-            const msg = 'Failed to remove character from houses';
-            this.logger.error(msg, cleanupError);
-            cleanupErrors.push(msg);
-          }
-        }
-
-        if (this.pinboardService) {
-          try {
-            await this.pinboardService.removeCharacterConnections(character.id);
-          } catch (cleanupError) {
-            const msg = 'Failed to remove character from pinboards';
-            this.logger.error(msg, cleanupError);
-            cleanupErrors.push(msg);
-          }
-        }
-
-        if (this.plotBoardService) {
-          try {
-            await this.plotBoardService.removeCharacterFromThreads(character.id);
-          } catch (cleanupError) {
-            const msg = 'Failed to remove character from plot threads';
-            this.logger.error(msg, cleanupError);
-            cleanupErrors.push(msg);
-          }
-        }
-
-        if (cleanupErrors.length > 0) {
-          this.logger.warn(`Character deleted but some cleanup steps failed: ${cleanupErrors.join(', ')}`);
+          this.logger.error('Failed to remove character from pinboards', cleanupError);
         }
       }
 

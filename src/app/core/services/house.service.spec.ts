@@ -202,4 +202,158 @@ describe('HouseService', () => {
     expect(service.getById(house.id)).toBeUndefined();
   });
 
+  describe('Character reference cleanup', () => {
+    it('counts character references across all houses', async () => {
+      const house1 = await service.createHouse({ ...data(), characterIds: ['char-1', 'char-2'] });
+      const house2 = await service.createHouse({ ...data('House Tully'), characterIds: ['char-1', 'char-3'] });
+      const house3 = await service.createHouse({ ...data('House Lannister'), characterIds: ['char-4'] });
+
+      expect(service.countCharacterReferences('char-1')).toBe(2);
+      expect(service.countCharacterReferences('char-2')).toBe(1);
+      expect(service.countCharacterReferences('char-4')).toBe(1);
+      expect(service.countCharacterReferences('non-existent')).toBe(0);
+    });
+
+    it('counts character references in leadership entries', async () => {
+      const house = await service.createHouse({
+        ...data(),
+        characterIds: ['char-1'],
+        leadership: [
+          { id: 'reign-1', characterIds: ['char-2'], period: 'Year 1', books: [], notes: '' },
+          { id: 'reign-2', characterIds: ['char-1', 'char-3'], period: 'Year 2', books: [], notes: '' },
+        ],
+        currentLeadershipId: 'reign-1',
+      });
+
+      expect(service.countCharacterReferences('char-1')).toBe(2);
+      expect(service.countCharacterReferences('char-2')).toBe(1);
+      expect(service.countCharacterReferences('char-3')).toBe(1);
+    });
+
+    it('removes character from house membership', async () => {
+      const house = await service.createHouse({ ...data(), characterIds: ['char-1', 'char-2', 'char-3'] });
+      await service.removeCharacterFromHouses('char-2');
+      await service.loadHouses(true);
+      expect(service.getById(house.id)!.characterIds).toEqual(['char-1', 'char-3']);
+    });
+
+    it('removes character from leadership entries', async () => {
+      const house = await service.createHouse({
+        ...data(),
+        characterIds: ['char-1'],
+        leadership: [
+          { id: 'reign-1', characterIds: ['char-2', 'char-3'], period: 'Year 1', books: [], notes: '' },
+          { id: 'reign-2', characterIds: ['char-1'], period: 'Year 2', books: [], notes: '' },
+        ],
+        currentLeadershipId: 'reign-1',
+      });
+
+      await service.removeCharacterFromHouses('char-2');
+      await service.loadHouses(true);
+
+      const updated = service.getById(house.id)!;
+      expect(updated.leadership[0].characterIds).toEqual(['char-3']);
+      expect(updated.leadership[1].characterIds).toEqual(['char-1']);
+    });
+
+    it('removes empty leadership reigns after character removal', async () => {
+      const house = await service.createHouse({
+        ...data(),
+        characterIds: ['char-1'],
+        leadership: [
+          { id: 'reign-1', characterIds: ['char-2'], period: 'Year 1', books: [], notes: '' },
+          { id: 'reign-2', characterIds: ['char-1'], period: 'Year 2', books: [], notes: '' },
+        ],
+        currentLeadershipId: 'reign-1',
+      });
+
+      await service.removeCharacterFromHouses('char-2');
+      await service.loadHouses(true);
+
+      const updated = service.getById(house.id)!;
+      expect(updated.leadership.length).toBe(1);
+      expect(updated.leadership[0].id).toBe('reign-2');
+    });
+
+    it('clears currentLeadershipId when the current reign becomes empty', async () => {
+      const house = await service.createHouse({
+        ...data(),
+        characterIds: ['char-1'],
+        leadership: [
+          { id: 'reign-1', characterIds: ['char-2'], period: 'Year 1', books: [], notes: '' },
+          { id: 'reign-2', characterIds: ['char-1'], period: 'Year 2', books: [], notes: '' },
+        ],
+        currentLeadershipId: 'reign-1',
+      });
+
+      await service.removeCharacterFromHouses('char-2');
+      await service.loadHouses(true);
+
+      const updated = service.getById(house.id)!;
+      expect(updated.currentLeadershipId).toBeUndefined();
+    });
+
+    it('preserves currentLeadershipId when it refers to a surviving reign', async () => {
+      const house = await service.createHouse({
+        ...data(),
+        characterIds: ['char-1'],
+        leadership: [
+          { id: 'reign-1', characterIds: ['char-2', 'char-3'], period: 'Year 1', books: [], notes: '' },
+          { id: 'reign-2', characterIds: ['char-1'], period: 'Year 2', books: [], notes: '' },
+        ],
+        currentLeadershipId: 'reign-1',
+      });
+
+      await service.removeCharacterFromHouses('char-2');
+      await service.loadHouses(true);
+
+      const updated = service.getById(house.id)!;
+      expect(updated.currentLeadershipId).toBe('reign-1');
+    });
+
+    it('removes character from multiple houses in one call', async () => {
+      const house1 = await service.createHouse({ ...data(), characterIds: ['char-1', 'char-2'] });
+      const house2 = await service.createHouse({ ...data('House Tully'), characterIds: ['char-1', 'char-3'] });
+
+      await service.removeCharacterFromHouses('char-1');
+      await service.loadHouses(true);
+
+      expect(service.getById(house1.id)!.characterIds).toEqual(['char-2']);
+      expect(service.getById(house2.id)!.characterIds).toEqual(['char-3']);
+    });
+  });
+
+  describe('Location reference cleanup', () => {
+    it('clears seatId references to a deleted location', async () => {
+      const house = await service.createHouse({ ...data(), seatId: 'location-1' });
+
+      await service.clearLocationReferences('location-1');
+      await service.loadHouses(true);
+
+      expect(service.getById(house.id)!.seatId).toBeUndefined();
+    });
+
+    it('clears seatId from multiple houses referencing the same location', async () => {
+      const house1 = await service.createHouse({ ...data(), seatId: 'location-1' });
+      const house2 = await service.createHouse({ ...data('House Tully'), seatId: 'location-1' });
+
+      await service.clearLocationReferences('location-1');
+      await service.loadHouses(true);
+
+      expect(service.getById(house1.id)!.seatId).toBeUndefined();
+      expect(service.getById(house2.id)!.seatId).toBeUndefined();
+    });
+
+    it('leaves other houses unaffected when clearing location references', async () => {
+      const house1 = await service.createHouse({ ...data(), seatId: 'location-1' });
+      const house2 = await service.createHouse({ ...data('House Tully'), seatId: 'location-2' });
+
+      await service.clearLocationReferences('location-1');
+      await service.loadHouses(true);
+
+      expect(service.getById(house1.id)!.seatId).toBeUndefined();
+      expect(service.getById(house2.id)!.seatId).toBe('location-2');
+    });
+  });
+
 });

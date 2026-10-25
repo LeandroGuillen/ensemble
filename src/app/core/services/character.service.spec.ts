@@ -9,6 +9,8 @@ import { NotificationService } from './notification.service';
 import { MetadataService } from './metadata.service';
 import { PlotBoardService } from './plot-board.service';
 import { CastService } from './cast.service';
+import { ReferenceCleanupService } from './reference-cleanup.service';
+import { PinboardService } from './pinboard.service';
 import { Project, ProjectMetadata } from '../interfaces/project.interface';
 import { Character, CharacterFormData } from '../interfaces/character.interface';
 
@@ -22,6 +24,8 @@ describe('CharacterService', () => {
   let metadataService: jasmine.SpyObj<MetadataService>;
   let plotBoardService: jasmine.SpyObj<PlotBoardService>;
   let castService: jasmine.SpyObj<CastService>;
+  let referenceCleanupService: jasmine.SpyObj<ReferenceCleanupService>;
+  let pinboardService: jasmine.SpyObj<PinboardService>;
 
   const createValidProject = (): Project => ({
     path: '/test/project',
@@ -96,6 +100,17 @@ describe('CharacterService', () => {
     castSpy.forceReloadCasts.and.returnValue(Promise.resolve());
     castSpy.countCharacterInCasts.and.returnValue(0);
     castSpy.removeCharacterFromCasts.and.returnValue(Promise.resolve());
+    const referenceCleanupSpy = jasmine.createSpyObj('ReferenceCleanupService', [
+      'countNonPinboardReferences',
+      'removeNonPinboardReferences',
+      'clearLocationReferences'
+    ]);
+    referenceCleanupSpy.countNonPinboardReferences.and.returnValue(Promise.resolve({ houses: 0, casts: 0, plotBoards: 0 }));
+    referenceCleanupSpy.removeNonPinboardReferences.and.returnValue(Promise.resolve());
+    referenceCleanupSpy.clearLocationReferences.and.returnValue(Promise.resolve());
+    const pinboardSpy = jasmine.createSpyObj('PinboardService', ['countCharacterReferences', 'removeCharacterConnections']);
+    pinboardSpy.countCharacterReferences.and.returnValue(0);
+    pinboardSpy.removeCharacterConnections.and.returnValue(Promise.resolve());
     projectSpy.remapCharacterIds.and.returnValue(Promise.resolve(false));
 
     TestBed.configureTestingModule({
@@ -108,7 +123,9 @@ describe('CharacterService', () => {
         { provide: NotificationService, useValue: notificationSpy },
         { provide: MetadataService, useValue: metadataSpy },
         { provide: PlotBoardService, useValue: plotBoardSpy },
-        { provide: CastService, useValue: castSpy }
+        { provide: CastService, useValue: castSpy },
+        { provide: ReferenceCleanupService, useValue: referenceCleanupSpy },
+        { provide: PinboardService, useValue: pinboardSpy }
       ]
     });
 
@@ -121,6 +138,8 @@ describe('CharacterService', () => {
     metadataService = TestBed.inject(MetadataService) as jasmine.SpyObj<MetadataService>;
     plotBoardService = TestBed.inject(PlotBoardService) as jasmine.SpyObj<PlotBoardService>;
     castService = TestBed.inject(CastService) as jasmine.SpyObj<CastService>;
+    referenceCleanupService = TestBed.inject(ReferenceCleanupService) as jasmine.SpyObj<ReferenceCleanupService>;
+    pinboardService = TestBed.inject(PinboardService) as jasmine.SpyObj<PinboardService>;
 
     electronService.isElectron.and.returnValue(true);
     electronService.createDirectory.and.returnValue(Promise.resolve({ success: true }));
@@ -840,6 +859,80 @@ describe('CharacterService', () => {
     });
   });
 
+  describe('countCharacterReferences', () => {
+    it('should return reference counts for active characters', async () => {
+      const character: Character = {
+        id: 'char-1',
+        name: 'Test Character',
+        category: 'main-character',
+        tags: [],
+        books: [],
+        prompts: [],
+        content: '',
+        created: new Date(),
+        modified: new Date(),
+        relativePath: 'test-character/test-character.md',
+        filePath: '/test/project/characters/test-character/test-character.md',
+      };
+
+      (service as any).charactersSubject.next([character]);
+      referenceCleanupService.countNonPinboardReferences.and.returnValue(Promise.resolve({
+        houses: 2,
+        casts: 1,
+        plotBoards: 1
+      }));
+      pinboardService.countCharacterReferences.and.returnValue(3);
+
+      const counts = await service.countCharacterReferences('char-1');
+
+      expect(counts.houses).toBe(2);
+      expect(counts.casts).toBe(1);
+      expect(counts.pinboards).toBe(3);
+      expect(counts.plotBoards).toBe(1);
+      expect(referenceCleanupService.countNonPinboardReferences).toHaveBeenCalledWith('char-1');
+      expect(pinboardService.countCharacterReferences).toHaveBeenCalledWith('char-1');
+    });
+
+    it('should return zero counts for drafts', async () => {
+      const draft: Character = {
+        id: 'draft-1',
+        name: 'Draft Character',
+        category: '',
+        tags: [],
+        books: [],
+        prompts: [],
+        content: '',
+        draft: true,
+        created: new Date(),
+        modified: new Date(),
+        relativePath: '@drafts/draft/draft.md',
+        filePath: '/test/project/characters/@drafts/draft/draft.md',
+      };
+
+      (service as any).draftsSubject.next([draft]);
+
+      const counts = await service.countCharacterReferences('draft-1');
+
+      expect(counts.houses).toBe(0);
+      expect(counts.casts).toBe(0);
+      expect(counts.pinboards).toBe(0);
+      expect(counts.plotBoards).toBe(0);
+      expect(referenceCleanupService.countNonPinboardReferences).not.toHaveBeenCalled();
+      expect(pinboardService.countCharacterReferences).not.toHaveBeenCalled();
+    });
+
+    it('should return zero counts for non-existent characters', async () => {
+      (service as any).charactersSubject.next([]);
+
+      const counts = await service.countCharacterReferences('non-existent');
+
+      expect(counts.houses).toBe(0);
+      expect(counts.casts).toBe(0);
+      expect(counts.pinboards).toBe(0);
+      expect(counts.plotBoards).toBe(0);
+    });
+  });
+
   describe('deleteCharacter', () => {
     it('should delete a character', async () => {
       const project = createValidProject();
@@ -869,7 +962,65 @@ describe('CharacterService', () => {
       const characters = (service as any).charactersSubject.value;
       expect(characters.find((c: Character) => c.id === 'main-character/_test-character.md')).toBeUndefined();
       expect(electronService.deleteFile).toHaveBeenCalled();
-      expect(metadataService.removeCharacterFromBookPovs).toHaveBeenCalledWith('main-character/_test-character.md');
+      expect(referenceCleanupService.removeNonPinboardReferences).toHaveBeenCalledWith('main-character/_test-character.md');
+      expect(pinboardService.removeCharacterConnections).toHaveBeenCalledWith('main-character/_test-character.md');
+    });
+
+    it('should invoke reference cleanup for non-draft characters', async () => {
+      const project = createValidProject();
+      projectService.getCurrentProject.and.returnValue(project);
+      (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
+
+      const character: Character = {
+        id: 'char-id-1',
+        name: 'Test Character',
+        category: 'main-character',
+        tags: [],
+        books: [],
+        prompts: [],
+        content: '',
+        created: new Date(),
+        modified: new Date(),
+        relativePath: 'test-character/test-character.md',
+        filePath: '/test/project/characters/test-character/test-character.md',
+      };
+
+      (service as any).charactersSubject.next([character]);
+      electronService.deleteDirectoryRecursive.and.returnValue(Promise.resolve({ success: true }));
+
+      await service.deleteCharacter('char-id-1');
+
+      expect(referenceCleanupService.removeNonPinboardReferences).toHaveBeenCalledWith('char-id-1');
+      expect(pinboardService.removeCharacterConnections).toHaveBeenCalledWith('char-id-1');
+    });
+
+    it('should not invoke reference cleanup for draft characters', async () => {
+      const project = createValidProject();
+      projectService.getCurrentProject.and.returnValue(project);
+      (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
+
+      const draft: Character = {
+        id: 'draft-id-1',
+        name: 'Draft Character',
+        category: '',
+        tags: [],
+        books: [],
+        prompts: [],
+        content: '',
+        draft: true,
+        created: new Date(),
+        modified: new Date(),
+        relativePath: '@drafts/draft-character/draft-character.md',
+        filePath: '/test/project/characters/@drafts/draft-character/draft-character.md',
+      };
+
+      (service as any).draftsSubject.next([draft]);
+      electronService.deleteDirectoryRecursive.and.returnValue(Promise.resolve({ success: true }));
+
+      await service.deleteCharacter('draft-id-1');
+
+      expect(referenceCleanupService.removeNonPinboardReferences).not.toHaveBeenCalled();
+      expect(pinboardService.removeCharacterConnections).not.toHaveBeenCalled();
     });
 
     it('should return false when character does not exist', async () => {

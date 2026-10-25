@@ -13,6 +13,7 @@ import { ElectronService } from './electron.service';
 import { FileWatcherService } from './file-watcher.service';
 import { ProjectService } from './project.service';
 import { LoggingService } from './logging.service';
+import { ReferenceCleanupService } from './reference-cleanup.service';
 
 function normalizeLocationRelativePath(relativePath: string): string {
   return relativePath.replace(/\\/g, '/').replace(/^\/+/, '');
@@ -28,14 +29,13 @@ export class LocationService {
   private currentProjectPath: string | null = null;
 
   private thumbnailDataUrls: Map<string, string> = new Map();
-  // Optional service for cleanup - will be set by Angular if available
-  houseService: any = null;
 
   constructor(
     private electronService: ElectronService,
     private projectService: ProjectService,
     private fileWatcherService: FileWatcherService,
-    private logger: LoggingService
+    private logger: LoggingService,
+    private referenceCleanup: ReferenceCleanupService
   ) {
     this.fileWatcherService.fileChanges$.pipe(takeUntilDestroyed()).subscribe((event) => {
       this.handleFileChange(event);
@@ -255,13 +255,7 @@ export class LocationService {
       this.locationsSubject.next(locations.filter((loc) => loc.id !== location.id));
 
       // Cleanup: clear seatId from any houses that reference this location
-      if (this.houseService) {
-        try {
-          await this.houseService.clearLocationReferences(location.id);
-        } catch (cleanupError) {
-          this.logger.error('Failed to clear location references from houses', cleanupError);
-        }
-      }
+      await this.referenceCleanup.clearLocationReferences(location.id);
 
       return true;
     } catch (error) {

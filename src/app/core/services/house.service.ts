@@ -189,14 +189,15 @@ export class HouseService {
     const houses = this.subject.value;
     let count = 0;
     for (const house of houses) {
+      // Count if character is a member
       if (house.characterIds.includes(characterId)) {
         count++;
-      } else {
-        for (const reign of house.leadership) {
-          if (reign.characterIds.includes(characterId)) {
-            count++;
-            break;
-          }
+      }
+      // Also count if character appears in any leadership entry
+      for (const reign of house.leadership) {
+        if (reign.characterIds.includes(characterId)) {
+          count++;
+          break; // Count each house only once for leadership
         }
       }
     }
