@@ -181,4 +181,103 @@ export class HouseService {
   }
 
   private publish(houses: House[]): void { this.subject.next([...houses].sort((a, b) => a.name.localeCompare(b.name))); }
+
+  /**
+   * Count how many houses reference a character (for deletion confirmation)
+   */
+  countCharacterReferences(characterId: string): number {
+    const houses = this.subject.value;
+    let count = 0;
+    for (const house of houses) {
+      if (house.characterIds.includes(characterId)) {
+        count++;
+      } else {
+        for (const reign of house.leadership) {
+          if (reign.characterIds.includes(characterId)) {
+            count++;
+            break;
+          }
+        }
+      }
+    }
+    return count;
+  }
+
+  /**
+   * Remove a character from all house memberships and leadership (for deletion cleanup)
+   */
+  async removeCharacterFromHouses(characterId: string): Promise<void> {
+    const projectPath = this.projects.getCurrentProject()?.path;
+    if (!projectPath) return;
+
+    return this.serial(async () => {
+      if (projectPath !== this.projects.getCurrentProject()?.path) return;
+      await this.load(projectPath, true);
+
+      const houses = this.subject.value;
+      const affectedHouses: House[] = [];
+
+      for (const house of houses) {
+        let changed = false;
+        const updatedHouse = { ...house };
+
+        // Remove from characterIds
+        if (updatedHouse.characterIds.includes(characterId)) {
+          updatedHouse.characterIds = updatedHouse.characterIds.filter(id => id !== characterId);
+          changed = true;
+        }
+
+        // Remove from leadership entries
+        const updatedLeadership = updatedHouse.leadership.map(reign => {
+          if (reign.characterIds.includes(characterId)) {
+            changed = true;
+            return {
+              ...reign,
+              characterIds: reign.characterIds.filter(id => id !== characterId)
+            };
+          }
+          return reign;
+        });
+
+        // Drop leadership entries that are now empty
+        updatedHouse.leadership = updatedLeadership.filter(reign => reign.characterIds.length > 0);
+
+        // Clear currentLeadershipId if that reign is now gone
+        if (updatedHouse.currentLeadershipId && !updatedHouse.leadership.some(r => r.id === updatedHouse.currentLeadershipId)) {
+          updatedHouse.currentLeadershipId = undefined;
+          changed = true;
+        }
+
+        if (changed) {
+          affectedHouses.push(updatedHouse);
+        }
+      }
+
+      // Save all affected houses
+      for (const house of affectedHouses) {
+        await this.update(house.id, house, house.raw);
+      }
+    });
+  }
+
+  /**
+   * Clear seatId from any houses that reference a deleted location
+   */
+  async clearLocationReferences(locationId: string): Promise<void> {
+    const projectPath = this.projects.getCurrentProject()?.path;
+    if (!projectPath) return;
+
+    return this.serial(async () => {
+      if (projectPath !== this.projects.getCurrentProject()?.path) return;
+      await this.load(projectPath, true);
+
+      const houses = this.subject.value;
+      const affectedHouses = houses.filter(house => house.seatId === locationId);
+
+      for (const house of affectedHouses) {
+        const updatedHouse = { ...house, seatId: undefined };
+        await this.update(house.id, updatedHouse, house.raw);
+      }
+    });
+  }
 }

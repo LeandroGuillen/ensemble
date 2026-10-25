@@ -1743,9 +1743,29 @@ export class CharacterDetailComponent
       return;
     }
 
-    const confirmed = await this.modalService.confirm(
-      `Are you sure you want to delete "${this.character.name || 'Unnamed draft'}"?\n\nThis action cannot be undone.`
-    );
+    // Count references before showing confirmation
+    let confirmMessage = `Are you sure you want to delete "${this.character.name || 'Unnamed draft'}"?`;
+    
+    if (!this.isDraftMode) {
+      try {
+        const refs = await this.characterService.countCharacterReferences(this.character.id);
+        const refParts: string[] = [];
+        if (refs.houses > 0) refParts.push(`${refs.houses} house${refs.houses !== 1 ? 's' : ''}`);
+        if (refs.casts > 0) refParts.push(`${refs.casts} cast${refs.casts !== 1 ? 's' : ''}`);
+        if (refs.pinboards > 0) refParts.push(`${refs.pinboards} pinboard${refs.pinboards !== 1 ? 's' : ''}`);
+        if (refs.plotBoards > 0) refParts.push(`${refs.plotBoards} plot board${refs.plotBoards !== 1 ? 's' : ''}`);
+        
+        if (refParts.length > 0) {
+          confirmMessage += `\n\nThis character will be removed from:\n• ${refParts.join('\n• ')}`;
+        }
+      } catch (error) {
+        this.logger.error('Failed to count character references', error);
+      }
+    }
+    
+    confirmMessage += '\n\nThis action cannot be undone.';
+
+    const confirmed = await this.modalService.confirm(confirmMessage);
 
     if (!confirmed) {
       return;

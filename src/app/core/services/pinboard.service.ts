@@ -245,28 +245,69 @@ export class PinboardService {
   }
 
   /**
-   * Removes all connections for a specific character (for referential integrity)
+   * Count how many pinboards reference a character (for deletion confirmation)
+   */
+  countCharacterReferences(characterId: string): number {
+    const project = this.projectService.getCurrentProject();
+    if (!project?.metadata?.pinboards) return 0;
+
+    let count = 0;
+    for (const pinboard of project.metadata.pinboards) {
+      const hasNode = pinboard.nodes?.some(node => node.id === characterId);
+      const hasEdge = pinboard.edges?.some(edge => 
+        edge.source === characterId || edge.target === characterId
+      );
+      if (hasNode || hasEdge) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  /**
+   * Removes all connections for a specific character from ALL pinboards (for referential integrity)
    */
   async removeCharacterConnections(characterId: string): Promise<void> {
-    requireProject(this.projectService.getCurrentProject());
+    const project = this.projectService.getCurrentProject();
+    if (!project?.metadata?.pinboards) return;
 
+    // Clean up all pinboards in the project
+    for (const pinboard of project.metadata.pinboards) {
+      if (!pinboard.nodes || !pinboard.edges) continue;
+
+      const hadNode = pinboard.nodes.some(node => node.id === characterId);
+      const hadEdge = pinboard.edges.some(edge => 
+        edge.source === characterId || edge.target === characterId
+      );
+
+      if (hadNode || hadEdge) {
+        const cleanedNodes = pinboard.nodes.filter(node => node.id !== characterId);
+        const cleanedEdges = pinboard.edges.filter(edge =>
+          edge.source !== characterId && edge.target !== characterId
+        );
+        
+        // Update this specific pinboard
+        await this.projectService.updatePinboardById(pinboard.id, {
+          nodes: cleanedNodes,
+          edges: cleanedEdges
+        });
+      }
+    }
+
+    // Update current pinboard view if it's affected
     const currentData = this.pinboardDataSubject.value;
-
-    // Remove the pin
     const updatedNodes = currentData.nodes.filter(node => node.id !== characterId);
-
-    // Remove all edges involving this character
     const updatedEdges = currentData.edges.filter(edge =>
       edge.source !== characterId && edge.target !== characterId
     );
 
-    const updatedData = {
-      nodes: updatedNodes,
-      edges: updatedEdges
-    };
-
-    await this.saveData(updatedData);
-    this.pinboardDataSubject.next(updatedData);
+    if (updatedNodes.length !== currentData.nodes.length || 
+        updatedEdges.length !== currentData.edges.length) {
+      this.pinboardDataSubject.next({
+        nodes: updatedNodes,
+        edges: updatedEdges
+      });
+    }
   }
 
   /**

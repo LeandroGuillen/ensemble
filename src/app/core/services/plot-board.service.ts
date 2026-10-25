@@ -494,6 +494,69 @@ export class PlotBoardService {
     return id;
   }
 
+  /**
+   * Count how many plot boards reference a character (for deletion confirmation)
+   */
+  async countCharacterReferences(characterId: string): Promise<number> {
+    const paths = await this.discoverPlotboardFiles();
+    let count = 0;
+
+    for (const relativePath of paths) {
+      const filePath = this.getAbsolutePath(relativePath);
+      if (!filePath) continue;
+
+      const result = await this.electronService.readFile(filePath);
+      if (!result.success || !result.content) continue;
+
+      const board = this.parseFile(result.content);
+      const hasChar = board.threads.some(thread => thread.characters.includes(characterId));
+      if (hasChar) {
+        count++;
+      }
+    }
+
+    return count;
+  }
+
+  /**
+   * Remove a character from all plot board threads (for deletion cleanup)
+   */
+  async removeCharacterFromThreads(characterId: string): Promise<void> {
+    const paths = await this.discoverPlotboardFiles();
+    const current = this.getCurrentRelativePath();
+
+    for (const relativePath of paths) {
+      const filePath = this.getAbsolutePath(relativePath);
+      if (!filePath) continue;
+
+      const result = await this.electronService.readFile(filePath);
+      if (!result.success || !result.content) continue;
+
+      const board = this.parseFile(result.content);
+      let changed = false;
+
+      for (const thread of board.threads) {
+        if (thread.characters.includes(characterId)) {
+          thread.characters = thread.characters.filter(id => id !== characterId);
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        const writeResult = await this.electronService.writeFileAtomic(filePath, this.generateFile(board));
+        if (!writeResult.success) {
+          this.logger.error(`Failed to remove character from ${relativePath}`, writeResult.error);
+          continue;
+        }
+
+        // Update in-memory board if this is the currently open one
+        if (current && this.normalizeRelativePath(current) === this.normalizeRelativePath(relativePath)) {
+          this.plotBoardSubject.next(board);
+        }
+      }
+    }
+  }
+
   renameThreadId(
     board: PlotBoard,
     oldId: string,

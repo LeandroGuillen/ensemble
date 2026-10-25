@@ -84,14 +84,18 @@ describe('CharacterService', () => {
     const fileWatcherSpy = jasmine.createSpyObj('FileWatcherService', [], {
       fileChanges$: new BehaviorSubject<any>(null)
     });
-    const loggingSpy = jasmine.createSpyObj('LoggingService', ['log', 'error']);
+    const loggingSpy = jasmine.createSpyObj('LoggingService', ['log', 'error', 'warn']);
     const notificationSpy = jasmine.createSpyObj('NotificationService', ['showError']);
     const metadataSpy = jasmine.createSpyObj('MetadataService', ['removeCharacterFromBookPovs']);
     metadataSpy.removeCharacterFromBookPovs.and.returnValue(Promise.resolve());
-    const plotBoardSpy = jasmine.createSpyObj('PlotBoardService', ['remapCharacterIdsAcrossProject']);
+    const plotBoardSpy = jasmine.createSpyObj('PlotBoardService', ['remapCharacterIdsAcrossProject', 'countCharacterReferences', 'removeCharacterFromThreads']);
     plotBoardSpy.remapCharacterIdsAcrossProject.and.returnValue(Promise.resolve());
-    const castSpy = jasmine.createSpyObj('CastService', ['forceReloadCasts']);
+    plotBoardSpy.countCharacterReferences.and.returnValue(Promise.resolve(0));
+    plotBoardSpy.removeCharacterFromThreads.and.returnValue(Promise.resolve());
+    const castSpy = jasmine.createSpyObj('CastService', ['forceReloadCasts', 'countCharacterInCasts', 'removeCharacterFromCasts']);
     castSpy.forceReloadCasts.and.returnValue(Promise.resolve());
+    castSpy.countCharacterInCasts.and.returnValue(0);
+    castSpy.removeCharacterFromCasts.and.returnValue(Promise.resolve());
     projectSpy.remapCharacterIds.and.returnValue(Promise.resolve(false));
 
     TestBed.configureTestingModule({

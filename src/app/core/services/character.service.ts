@@ -61,6 +61,11 @@ export class CharacterService {
   private thumbnailDataUrls: Map<string, string> = new Map();
   private thumbnailModificationTimes: Map<string, string> = new Map();
 
+  // Optional services for cleanup - will be set by Angular if available
+  // Note: These create circular dependencies, so they remain null in tests
+  houseService: any = null;
+  pinboardService: any = null;
+
   constructor(
     private electronService: ElectronService,
     private projectService: ProjectService,
@@ -1127,6 +1132,45 @@ export class CharacterService {
   }
 
   /**
+   * Count affected resources for a character deletion (for confirmation dialog)
+   */
+  async countCharacterReferences(id: string): Promise<{
+    houses: number;
+    casts: number;
+    pinboards: number;
+    plotBoards: number;
+  }> {
+    const character = this.findRecord(id);
+    if (!character) {
+      return { houses: 0, casts: 0, pinboards: 0, plotBoards: 0 };
+    }
+
+    const isDraft = !!this.getDraftById(id);
+    if (isDraft) {
+      return { houses: 0, casts: 0, pinboards: 0, plotBoards: 0 };
+    }
+
+    try {
+      const [houseCount, castCount, pinboardCount, plotBoardCount] = await Promise.all([
+        this.houseService ? this.houseService.countCharacterReferences(id) : 0,
+        this.castService.countCharacterInCasts(id),
+        this.pinboardService ? this.pinboardService.countCharacterReferences(id) : 0,
+        this.plotBoardService ? this.plotBoardService.countCharacterReferences(id) : 0,
+      ]);
+
+      return {
+        houses: houseCount,
+        casts: castCount,
+        pinboards: pinboardCount,
+        plotBoards: plotBoardCount,
+      };
+    } catch (error) {
+      this.logger.error('Failed to count character references', error);
+      return { houses: 0, casts: 0, pinboards: 0, plotBoards: 0 };
+    }
+  }
+
+  /**
    * Permanently deletes a character file
    */
   async deleteCharacter(id: string): Promise<boolean> {
@@ -1154,11 +1198,57 @@ export class CharacterService {
       sourceSubject.next(filteredCharacters);
 
       if (!isDraft) {
+        // Cleanup all references to this character across the project
+        const cleanupErrors: string[] = [];
+
         try {
           await this.metadataService.removeCharacterFromBookPovs(character.id);
+        } catch (cleanupError) {
+          const msg = 'Failed to remove character from book PoVs';
+          this.logger.error(msg, cleanupError);
+          cleanupErrors.push(msg);
+        }
+
+        try {
           await this.castService.removeCharacterFromCasts(character.id);
         } catch (cleanupError) {
-          this.logger.error('Failed to remove deleted character from book PoV lists', cleanupError);
+          const msg = 'Failed to remove character from casts';
+          this.logger.error(msg, cleanupError);
+          cleanupErrors.push(msg);
+        }
+
+        if (this.houseService) {
+          try {
+            await this.houseService.removeCharacterFromHouses(character.id);
+          } catch (cleanupError) {
+            const msg = 'Failed to remove character from houses';
+            this.logger.error(msg, cleanupError);
+            cleanupErrors.push(msg);
+          }
+        }
+
+        if (this.pinboardService) {
+          try {
+            await this.pinboardService.removeCharacterConnections(character.id);
+          } catch (cleanupError) {
+            const msg = 'Failed to remove character from pinboards';
+            this.logger.error(msg, cleanupError);
+            cleanupErrors.push(msg);
+          }
+        }
+
+        if (this.plotBoardService) {
+          try {
+            await this.plotBoardService.removeCharacterFromThreads(character.id);
+          } catch (cleanupError) {
+            const msg = 'Failed to remove character from plot threads';
+            this.logger.error(msg, cleanupError);
+            cleanupErrors.push(msg);
+          }
+        }
+
+        if (cleanupErrors.length > 0) {
+          this.logger.warn(`Character deleted but some cleanup steps failed: ${cleanupErrors.join(', ')}`);
         }
       }
 

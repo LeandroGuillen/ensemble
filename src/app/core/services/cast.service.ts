@@ -801,6 +801,10 @@ export class CastService {
     }
   }
 
+  countCharacterInCasts(characterId: string): number {
+    return this.castsSubject.value.filter(cast => cast.characterIds.includes(characterId)).length;
+  }
+
   async removeCharacterFromCasts(characterId: string): Promise<void> {
     const project = this.projectService.getCurrentProject();
     if (!project) return;
