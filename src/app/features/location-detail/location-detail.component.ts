@@ -9,6 +9,7 @@ import {
   ElementRef,
   ViewChild,
   NgZone,
+  HostListener,
 } from '@angular/core';
 import { combineLatest, debounceTime } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -438,5 +439,16 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
       return 'Value is too long';
     }
     return 'Invalid value';
+  }
+
+  canLeave(): boolean {
+    return !this.isSaving && this.imagePickerService.handleNavigationAway() && (!this.locationForm.dirty || window.confirm('Discard your unsaved Location changes?'));
+  }
+
+  @HostListener('window:beforeunload', ['$event'])
+  beforeUnload(event: BeforeUnloadEvent): void {
+    if (this.locationForm.dirty) {
+      event.preventDefault();
+    }
   }
 }

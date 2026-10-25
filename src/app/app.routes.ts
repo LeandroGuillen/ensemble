@@ -1,4 +1,5 @@
 import { houseEditorGuard } from "./core/guards/house-editor.guard";
+import { locationEditorGuard } from "./core/guards/location-editor.guard";
 import { Routes } from "@angular/router";
 import { projectGuard } from "./core/guards/project.guard";
 import { characterPickerGuard } from "./core/guards/character-picker.guard";
@@ -169,6 +170,7 @@ export const routes: Routes = [
         (m) => m.LocationDetailComponent
       ),
     canActivate: [projectGuard],
+    canDeactivate: [locationEditorGuard],
   },
   {
     path: "location",
@@ -177,6 +179,7 @@ export const routes: Routes = [
         (m) => m.LocationDetailComponent
       ),
     canActivate: [projectGuard],
+    canDeactivate: [locationEditorGuard],
   },
   {
     path: "houses",

@@ -1765,4 +1765,15 @@ export class CharacterDetailComponent
       this.cdr.markForCheck();
     }
   }
+
+  canLeave(): boolean {
+    return !this.isSaving && this.imagePickerService.handleNavigationAway() && (!this.characterForm.dirty && !this.hasAnyBookPageDirty() || window.confirm('Discard your unsaved Character changes?'));
+  }
+
+  @HostListener('window:beforeunload', ['$event'])
+  beforeUnload(event: BeforeUnloadEvent): void {
+    if (this.characterForm.dirty || this.hasAnyBookPageDirty()) {
+      event.preventDefault();
+    }
+  }
 }
