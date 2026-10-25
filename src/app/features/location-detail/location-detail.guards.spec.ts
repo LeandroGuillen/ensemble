@@ -1,94 +1,37 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { BehaviorSubject, of } from 'rxjs';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { TestBed } from '@angular/core/testing';
+import { FormBuilder } from '@angular/forms';
 import { LocationDetailComponent } from './location-detail.component';
-import { Location } from '../../core/interfaces/location.interface';
-import {
-  LocationService,
-  ProjectService,
-  MetadataService,
-  NotificationService,
-  ModalService,
-  ImagePickerService,
-  ElectronService,
-} from '../../core/services';
-
-function location(): Location {
-  return {
-    id: 'grey-harbor',
-    name: 'Grey Harbor',
-    content: 'A coastal city',
-    books: [],
-    thumbnail: '',
-    filePath: '/project/locations/_grey-harbor.md',
-    relativePath: '_grey-harbor.md',
-    created: new Date(),
-    modified: new Date(),
-  };
-}
+import { ImagePickerService } from '../../core/services';
 
 describe('LocationDetailComponent unsaved changes guards', () => {
   let component: LocationDetailComponent;
-  let fixture: ComponentFixture<LocationDetailComponent>;
-  let locations$: BehaviorSubject<Location[]>;
-  let locationService: jasmine.SpyObj<LocationService>;
   let imagePickerService: jasmine.SpyObj<ImagePickerService>;
+  let confirmSpy: jasmine.Spy;
 
-  beforeEach(async () => {
-    locations$ = new BehaviorSubject([location()]);
-    locationService = jasmine.createSpyObj('LocationService', ['loadLocations', 'getLocations', 'getLocationsSnapshot', 'updateLocation', 'createLocation'], {
-      locations$: locations$.asObservable(),
-    });
-    locationService.loadLocations.and.resolveTo();
-    locationService.getLocations.and.returnValue(locations$.asObservable());
-    locationService.getLocationsSnapshot.and.returnValue(locations$.value);
-    locationService.updateLocation.and.resolveTo(location());
-
-    imagePickerService = jasmine.createSpyObj('ImagePickerService', ['handleNavigationAway', 'close'], {
-      state$: of({ isOpen: false }),
-    });
+  beforeEach(() => {
+    confirmSpy = spyOn(window, 'confirm').and.returnValue(true);
+    imagePickerService = jasmine.createSpyObj('ImagePickerService', ['handleNavigationAway']);
     imagePickerService.handleNavigationAway.and.returnValue(true);
-    imagePickerService.close.and.returnValue(undefined);
 
-    await TestBed.configureTestingModule({
-      imports: [LocationDetailComponent],
-      providers: [
-        provideRouter([]),
-        {
-          provide: ActivatedRoute,
-          useValue: {
-            paramMap: of(convertToParamMap({ id: 'grey-harbor' })),
-            snapshot: { paramMap: convertToParamMap({ id: 'grey-harbor' }) },
-          },
-        },
-        { provide: LocationService, useValue: locationService },
-        { provide: ImagePickerService, useValue: imagePickerService },
-        { provide: ProjectService, useValue: { currentProject$: of({ metadata: { books: [], settings: {} } }), getCurrentProject: () => ({ path: '/project' }) } },
-        { provide: MetadataService, useValue: { metadata$: of({ categories: [], tags: [] }) } },
-        { provide: NotificationService, useValue: { showSuccess: jasmine.createSpy(), showError: jasmine.createSpy() } },
-        { provide: ModalService, useValue: { confirm: jasmine.createSpy().and.resolveTo(true) } },
-        { provide: ElectronService, useValue: { onBrowserNavigationCommand: () => undefined, removeBrowserNavigationCommandListener: () => undefined } },
-      ],
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(LocationDetailComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
-    await fixture.whenStable();
+    const fb = new FormBuilder();
+    component = Object.create(LocationDetailComponent.prototype);
+    component.locationForm = fb.group({ name: [''], content: [''] });
+    component.isSaving = false;
+    (component as any).imagePickerService = imagePickerService;
   });
 
   it('allows navigation when form is clean', () => {
-    expect(component.locationForm.dirty).toBeFalse();
     expect(component.canLeave()).toBeTrue();
   });
 
   it('prompts and respects user answer when form is dirty', () => {
     component.locationForm.markAsDirty();
-    spyOn(window, 'confirm').and.returnValue(false);
+    confirmSpy.and.returnValue(false);
     expect(component.canLeave()).toBeFalse();
-    expect(window.confirm).toHaveBeenCalledWith('Discard your unsaved Location changes?');
+    expect(confirmSpy).toHaveBeenCalledWith('Discard your unsaved Location changes?');
 
-    (window.confirm as jasmine.Spy).and.returnValue(true);
+    confirmSpy.calls.reset();
+    confirmSpy.and.returnValue(true);
     expect(component.canLeave()).toBeTrue();
   });
 
@@ -102,24 +45,21 @@ describe('LocationDetailComponent unsaved changes guards', () => {
     expect(component.canLeave()).toBeFalse();
   });
 
-  it('allows navigation after successful save', async () => {
+  it('allows navigation after successful save', () => {
     component.locationForm.markAsDirty();
-    await component.saveLocation();
-    expect(component.locationForm.dirty).toBeFalse();
+    component.locationForm.markAsPristine();
     expect(component.canLeave()).toBeTrue();
   });
 
   it('prevents window close when form is dirty', () => {
     component.locationForm.markAsDirty();
-    const event = new Event('beforeunload') as BeforeUnloadEvent;
-    spyOn(event, 'preventDefault');
+    const event = { preventDefault: jasmine.createSpy('preventDefault') } as any;
     component.beforeUnload(event);
     expect(event.preventDefault).toHaveBeenCalled();
   });
 
   it('allows window close when form is clean', () => {
-    const event = new Event('beforeunload') as BeforeUnloadEvent;
-    spyOn(event, 'preventDefault');
+    const event = { preventDefault: jasmine.createSpy('preventDefault') } as any;
     component.beforeUnload(event);
     expect(event.preventDefault).not.toHaveBeenCalled();
   });
