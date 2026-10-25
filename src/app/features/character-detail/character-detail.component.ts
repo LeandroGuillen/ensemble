@@ -27,6 +27,7 @@ import { HouseService } from '../../core/services/house.service';
 import { LocationService } from '../../core/services/location.service';
 import { WikiLinkCollection } from '../../core/utils/wiki-links.utils';
 import { renderCharacterMarkdown } from "../../core/utils/character-links.utils";
+import { buildDeleteReferencesMessage } from '../../shared/utils/reference-message.utils';
 import {
   Book,
   Category,
@@ -1749,25 +1750,7 @@ export class CharacterDetailComponent
     if (!this.isDraftMode) {
       try {
         const refs = await this.characterService.countCharacterReferences(this.character.id);
-        const refParts: string[] = [];
-        
-        const formatList = (items: { id: string; name: string }[], singularLabel: string, pluralLabel: string, maxShow: number = 3): string => {
-          if (items.length === 0) return '';
-          const count = items.length;
-          const names = items.slice(0, maxShow).map(item => item.name).join(', ');
-          const more = count > maxShow ? ` +${count - maxShow} more` : '';
-          const label = count === 1 ? singularLabel : pluralLabel;
-          return `${count} ${label}: ${names}${more}`;
-        };
-
-        if (refs.houses.length > 0) refParts.push(formatList(refs.houses, 'house', 'houses'));
-        if (refs.casts.length > 0) refParts.push(formatList(refs.casts, 'cast', 'casts'));
-        if (refs.pinboards.length > 0) refParts.push(formatList(refs.pinboards, 'pinboard', 'pinboards'));
-        if (refs.plotBoards.length > 0) refParts.push(formatList(refs.plotBoards, 'plot board', 'plot boards'));
-        
-        if (refParts.length > 0) {
-          confirmMessage += `\n\nThis character will be removed from:\n• ${refParts.join('\n• ')}`;
-        }
+        confirmMessage += buildDeleteReferencesMessage(refs);
       } catch (error) {
         this.logger.error('Failed to count character references', error);
       }
