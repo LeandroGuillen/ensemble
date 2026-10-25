@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Injector } from '@angular/core';
 import { HouseService } from './house.service';
 import { PlotBoardService } from './plot-board.service';
 import { CastService } from './cast.service';
@@ -9,9 +9,8 @@ import { LoggingService } from './logging.service';
  * Centralized service for cleaning up cross-references when entities are deleted.
  * This avoids circular dependencies between services.
  * 
- * NOTE: PinboardService is excluded because it depends on CharacterService,
- * which would create a circular dependency. Character deletion calls
- * PinboardService.removeCharacterConnections directly instead.
+ * NOTE: PinboardService is resolved lazily via Injector to break the circular
+ * dependency (PinboardService -> CharacterService -> ReferenceCleanupService).
  */
 @Injectable({
   providedIn: 'root'
@@ -22,43 +21,49 @@ export class ReferenceCleanupService {
     private plotBoardService: PlotBoardService,
     private castService: CastService,
     private metadataService: MetadataService,
-    private logger: LoggingService
+    private logger: LoggingService,
+    private injector: Injector
   ) {}
 
   /**
    * Count how many resources reference a character.
-   * NOTE: Pinboard count must be provided by the caller since PinboardService
-   * creates a circular dependency.
+   * Uses lazy injection for PinboardService to avoid circular dependency.
    */
-  async countNonPinboardReferences(characterId: string): Promise<{
+  async countCharacterReferences(characterId: string): Promise<{
     houses: number;
     casts: number;
+    pinboards: number;
     plotBoards: number;
   }> {
     try {
-      const [houseCount, castCount, plotBoardCount] = await Promise.all([
+      // Lazy-load PinboardService to break circular dependency
+      const PinboardService = (await import('./pinboard.service')).PinboardService;
+      const pinboardService = this.injector.get(PinboardService);
+
+      const [houseCount, castCount, pinboardCount, plotBoardCount] = await Promise.all([
         this.houseService.countCharacterReferences(characterId),
         this.castService.countCharacterInCasts(characterId),
+        pinboardService.countCharacterReferences(characterId),
         this.plotBoardService.countCharacterReferences(characterId),
       ]);
 
       return {
         houses: houseCount,
         casts: castCount,
+        pinboards: pinboardCount,
         plotBoards: plotBoardCount,
       };
     } catch (error) {
       this.logger.error('Failed to count character references', error);
-      return { houses: 0, casts: 0, plotBoards: 0 };
+      return { houses: 0, casts: 0, pinboards: 0, plotBoards: 0 };
     }
   }
 
   /**
-   * Remove all references to a character from non-pinboard resources.
-   * NOTE: Pinboard cleanup must be called separately by the caller since
-   * PinboardService creates a circular dependency.
+   * Remove all references to a character across the project.
+   * Uses lazy injection for PinboardService to avoid circular dependency.
    */
-  async removeNonPinboardReferences(characterId: string): Promise<void> {
+  async removeCharacterReferences(characterId: string): Promise<void> {
     const cleanupErrors: string[] = [];
 
     try {
@@ -81,6 +86,17 @@ export class ReferenceCleanupService {
       await this.houseService.removeCharacterFromHouses(characterId);
     } catch (cleanupError) {
       const msg = 'Failed to remove character from houses';
+      this.logger.error(msg, cleanupError);
+      cleanupErrors.push(msg);
+    }
+
+    try {
+      // Lazy-load PinboardService to break circular dependency
+      const PinboardService = (await import('./pinboard.service')).PinboardService;
+      const pinboardService = this.injector.get(PinboardService);
+      await pinboardService.removeCharacterConnections(characterId);
+    } catch (cleanupError) {
+      const msg = 'Failed to remove character from pinboards';
       this.logger.error(msg, cleanupError);
       cleanupErrors.push(msg);
     }

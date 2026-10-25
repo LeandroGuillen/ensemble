@@ -31,7 +31,6 @@ import { MetadataService } from './metadata.service';
 import { PlotBoardService } from './plot-board.service';
 import { CastService } from './cast.service';
 import { ReferenceCleanupService } from './reference-cleanup.service';
-import { PinboardService } from './pinboard.service';
 
 /** Coerces a raw frontmatter `prompts` value into a clean CharacterPrompt[]. */
 function normalizePrompts(raw: unknown): CharacterPrompt[] {
@@ -71,8 +70,7 @@ export class CharacterService {
     private metadataService: MetadataService,
     private plotBoardService: PlotBoardService,
     private castService: CastService,
-    private referenceCleanup: ReferenceCleanupService,
-    private pinboardService: PinboardService
+    private referenceCleanup: ReferenceCleanupService
   ) {
     // Subscribe to file changes to auto-reload characters
     this.fileWatcherService.fileChanges$.pipe(takeUntilDestroyed()).subscribe((event) => {
@@ -1149,15 +1147,7 @@ export class CharacterService {
       return { houses: 0, casts: 0, pinboards: 0, plotBoards: 0 };
     }
 
-    const nonPinboardCounts = await this.referenceCleanup.countNonPinboardReferences(id);
-    const pinboardCount = this.pinboardService.countCharacterReferences(id);
-
-    return {
-      houses: nonPinboardCounts.houses,
-      casts: nonPinboardCounts.casts,
-      pinboards: pinboardCount,
-      plotBoards: nonPinboardCounts.plotBoards,
-    };
+    return this.referenceCleanup.countCharacterReferences(id);
   }
 
   /**
@@ -1189,14 +1179,7 @@ export class CharacterService {
 
       if (!isDraft) {
         // Cleanup all references to this character across the project
-        await this.referenceCleanup.removeNonPinboardReferences(character.id);
-        
-        // Pinboard cleanup is called separately to avoid circular dependency
-        try {
-          await this.pinboardService.removeCharacterConnections(character.id);
-        } catch (cleanupError) {
-          this.logger.error('Failed to remove character from pinboards', cleanupError);
-        }
+        await this.referenceCleanup.removeCharacterReferences(character.id);
       }
 
       return true;

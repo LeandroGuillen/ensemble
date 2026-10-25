@@ -10,7 +10,6 @@ import { MetadataService } from './metadata.service';
 import { PlotBoardService } from './plot-board.service';
 import { CastService } from './cast.service';
 import { ReferenceCleanupService } from './reference-cleanup.service';
-import { PinboardService } from './pinboard.service';
 import { Project, ProjectMetadata } from '../interfaces/project.interface';
 import { Character, CharacterFormData } from '../interfaces/character.interface';
 
@@ -25,7 +24,6 @@ describe('CharacterService', () => {
   let plotBoardService: jasmine.SpyObj<PlotBoardService>;
   let castService: jasmine.SpyObj<CastService>;
   let referenceCleanupService: jasmine.SpyObj<ReferenceCleanupService>;
-  let pinboardService: jasmine.SpyObj<PinboardService>;
 
   const createValidProject = (): Project => ({
     path: '/test/project',
@@ -101,16 +99,13 @@ describe('CharacterService', () => {
     castSpy.countCharacterInCasts.and.returnValue(0);
     castSpy.removeCharacterFromCasts.and.returnValue(Promise.resolve());
     const referenceCleanupSpy = jasmine.createSpyObj('ReferenceCleanupService', [
-      'countNonPinboardReferences',
-      'removeNonPinboardReferences',
+      'countCharacterReferences',
+      'removeCharacterReferences',
       'clearLocationReferences'
     ]);
-    referenceCleanupSpy.countNonPinboardReferences.and.returnValue(Promise.resolve({ houses: 0, casts: 0, plotBoards: 0 }));
-    referenceCleanupSpy.removeNonPinboardReferences.and.returnValue(Promise.resolve());
+    referenceCleanupSpy.countCharacterReferences.and.returnValue(Promise.resolve({ houses: 0, casts: 0, pinboards: 0, plotBoards: 0 }));
+    referenceCleanupSpy.removeCharacterReferences.and.returnValue(Promise.resolve());
     referenceCleanupSpy.clearLocationReferences.and.returnValue(Promise.resolve());
-    const pinboardSpy = jasmine.createSpyObj('PinboardService', ['countCharacterReferences', 'removeCharacterConnections']);
-    pinboardSpy.countCharacterReferences.and.returnValue(0);
-    pinboardSpy.removeCharacterConnections.and.returnValue(Promise.resolve());
     projectSpy.remapCharacterIds.and.returnValue(Promise.resolve(false));
 
     TestBed.configureTestingModule({
@@ -124,8 +119,7 @@ describe('CharacterService', () => {
         { provide: MetadataService, useValue: metadataSpy },
         { provide: PlotBoardService, useValue: plotBoardSpy },
         { provide: CastService, useValue: castSpy },
-        { provide: ReferenceCleanupService, useValue: referenceCleanupSpy },
-        { provide: PinboardService, useValue: pinboardSpy }
+        { provide: ReferenceCleanupService, useValue: referenceCleanupSpy }
       ]
     });
 
@@ -139,7 +133,6 @@ describe('CharacterService', () => {
     plotBoardService = TestBed.inject(PlotBoardService) as jasmine.SpyObj<PlotBoardService>;
     castService = TestBed.inject(CastService) as jasmine.SpyObj<CastService>;
     referenceCleanupService = TestBed.inject(ReferenceCleanupService) as jasmine.SpyObj<ReferenceCleanupService>;
-    pinboardService = TestBed.inject(PinboardService) as jasmine.SpyObj<PinboardService>;
 
     electronService.isElectron.and.returnValue(true);
     electronService.createDirectory.and.returnValue(Promise.resolve({ success: true }));
@@ -876,12 +869,12 @@ describe('CharacterService', () => {
       };
 
       (service as any).charactersSubject.next([character]);
-      referenceCleanupService.countNonPinboardReferences.and.returnValue(Promise.resolve({
+      referenceCleanupService.countCharacterReferences.and.returnValue(Promise.resolve({
         houses: 2,
         casts: 1,
+        pinboards: 3,
         plotBoards: 1
       }));
-      pinboardService.countCharacterReferences.and.returnValue(3);
 
       const counts = await service.countCharacterReferences('char-1');
 
@@ -889,8 +882,7 @@ describe('CharacterService', () => {
       expect(counts.casts).toBe(1);
       expect(counts.pinboards).toBe(3);
       expect(counts.plotBoards).toBe(1);
-      expect(referenceCleanupService.countNonPinboardReferences).toHaveBeenCalledWith('char-1');
-      expect(pinboardService.countCharacterReferences).toHaveBeenCalledWith('char-1');
+      expect(referenceCleanupService.countCharacterReferences).toHaveBeenCalledWith('char-1');
     });
 
     it('should return zero counts for drafts', async () => {
@@ -917,8 +909,7 @@ describe('CharacterService', () => {
       expect(counts.casts).toBe(0);
       expect(counts.pinboards).toBe(0);
       expect(counts.plotBoards).toBe(0);
-      expect(referenceCleanupService.countNonPinboardReferences).not.toHaveBeenCalled();
-      expect(pinboardService.countCharacterReferences).not.toHaveBeenCalled();
+      expect(referenceCleanupService.countCharacterReferences).not.toHaveBeenCalled();
     });
 
     it('should return zero counts for non-existent characters', async () => {
@@ -962,8 +953,7 @@ describe('CharacterService', () => {
       const characters = (service as any).charactersSubject.value;
       expect(characters.find((c: Character) => c.id === 'main-character/_test-character.md')).toBeUndefined();
       expect(electronService.deleteFile).toHaveBeenCalled();
-      expect(referenceCleanupService.removeNonPinboardReferences).toHaveBeenCalledWith('main-character/_test-character.md');
-      expect(pinboardService.removeCharacterConnections).toHaveBeenCalledWith('main-character/_test-character.md');
+      expect(referenceCleanupService.removeCharacterReferences).toHaveBeenCalledWith('main-character/_test-character.md');
     });
 
     it('should invoke reference cleanup for non-draft characters', async () => {
@@ -990,8 +980,7 @@ describe('CharacterService', () => {
 
       await service.deleteCharacter('char-id-1');
 
-      expect(referenceCleanupService.removeNonPinboardReferences).toHaveBeenCalledWith('char-id-1');
-      expect(pinboardService.removeCharacterConnections).toHaveBeenCalledWith('char-id-1');
+      expect(referenceCleanupService.removeCharacterReferences).toHaveBeenCalledWith('char-id-1');
     });
 
     it('should not invoke reference cleanup for draft characters', async () => {
@@ -1019,8 +1008,7 @@ describe('CharacterService', () => {
 
       await service.deleteCharacter('draft-id-1');
 
-      expect(referenceCleanupService.removeNonPinboardReferences).not.toHaveBeenCalled();
-      expect(pinboardService.removeCharacterConnections).not.toHaveBeenCalled();
+      expect(referenceCleanupService.removeCharacterReferences).not.toHaveBeenCalled();
     });
 
     it('should return false when character does not exist', async () => {
