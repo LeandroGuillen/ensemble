@@ -15,6 +15,7 @@ import { ImagePickerDialogComponent } from '../../shared/image-picker-dialog/ima
 import { ConfirmButtonDirective } from '../../shared/confirm-button/confirm-button.directive';
 import { MarkdownEditorComponent } from '../../shared/markdown-editor/markdown-editor.component';
 import { WikiLinkTargetsService } from '../../core/services/wiki-link-targets.service';
+import { ModalService } from '../../core/services/modal.service';
 import { ResolvedWikiLink, WikiLinkSuggestion } from '../../core/utils/wiki-links.utils';
 
 @Component({ selector: 'app-house-detail', imports: [FormsModule, RouterLink, DragDropModule, PageHeaderComponent, ImagePickerDialogComponent, ConfirmButtonDirective, MarkdownEditorComponent], templateUrl: './house-detail.component.html', styleUrls: ['./house-detail.component.scss'] })
@@ -30,6 +31,8 @@ export class HouseDetailComponent implements OnInit, OnDestroy {
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
   private readonly wikiLinkTargets = inject(WikiLinkTargetsService);
+  private readonly modal = inject(ModalService);
+  private leavePrompt: Promise<boolean> | null = null;
   /** Resolves [[wikilinks]] in the history editor. */
   linkResolver: (target: string) => ResolvedWikiLink | null = () => null;
   /** `[[` completion entries: Houses, characters (with aliases) and locations. */
@@ -209,7 +212,8 @@ export class HouseDetailComponent implements OnInit, OnDestroy {
     } finally { this.saving = false; this.cdr.markForCheck(); }
   }
   async reload(): Promise<void> {
-    if (this.dirty && !window.confirm('Discard your unsaved House changes and reload from disk?')) return;
+    if (this.dirty && !(await this.modal.confirm('Discard your unsaved House changes and reload from disk?', 'Reload House',
+      { confirmText: 'Discard and reload', cancelText: 'Keep Editing' }))) return;
     const id = this.house?.id || this.route.snapshot.paramMap.get('id');
     try { await this.houses.loadHouses(true); await this.open(id); } catch (error) { this.error = String(error); }
   }
@@ -232,7 +236,19 @@ export class HouseDetailComponent implements OnInit, OnDestroy {
     if (this.house && destination === `/house/${encodeURIComponent(this.house.id)}`) return;
     await this.router.navigateByUrl(destination);
   }
-  canLeave(): boolean { return !this.saving && this.picker.handleNavigationAway() && (!this.dirty || window.confirm('Discard your unsaved House changes?')); }
+  /**
+   * Route leave guard. Uses the in-app modal: a native window.confirm() leaves the Electron
+   * window unable to take keyboard focus. A prompt already on screen is reused.
+   */
+  canLeave(): boolean | Promise<boolean> {
+    if (this.saving || !this.picker.handleNavigationAway()) return false;
+    if (!this.dirty) return true;
+    this.leavePrompt ??= this.modal.confirm(
+      'You have unsaved changes. Are you sure you want to leave?', 'Discard Changes',
+      { confirmText: 'Discard', cancelText: 'Keep Editing', danger: false }
+    ).finally(() => { this.leavePrompt = null; });
+    return this.leavePrompt;
+  }
   @HostListener('window:beforeunload', ['$event']) beforeUnload(event: BeforeUnloadEvent): void { if (this.dirty) event.preventDefault(); }
   @HostListener('document:keydown', ['$event']) onKey(event: KeyboardEvent): void {
     if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && !this.showPicker && !this.pickingMember) { event.preventDefault(); void this.save(); }

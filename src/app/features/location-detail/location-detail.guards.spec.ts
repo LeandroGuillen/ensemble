@@ -9,7 +9,7 @@ describe('LocationDetailComponent unsaved changes guards', () => {
   let confirmSpy: jasmine.Spy;
 
   beforeEach(() => {
-    confirmSpy = spyOn(window, 'confirm').and.returnValue(true);
+    confirmSpy = jasmine.createSpy('confirm').and.resolveTo(true);
     imagePickerService = jasmine.createSpyObj('ImagePickerService', ['handleNavigationAway']);
     imagePickerService.handleNavigationAway.and.returnValue(true);
 
@@ -18,21 +18,24 @@ describe('LocationDetailComponent unsaved changes guards', () => {
     component.locationForm = fb.group({ name: [''], content: [''] });
     component.isSaving = false;
     (component as any).imagePickerService = imagePickerService;
+    (component as any).modalService = { confirm: confirmSpy };
+    (component as any).leavePrompt = null;
   });
 
   it('allows navigation when form is clean', () => {
     expect(component.canLeave()).toBeTrue();
   });
 
-  it('prompts and respects user answer when form is dirty', () => {
+  it('prompts and respects user answer when form is dirty', async () => {
     component.locationForm.markAsDirty();
-    confirmSpy.and.returnValue(false);
-    expect(component.canLeave()).toBeFalse();
-    expect(confirmSpy).toHaveBeenCalledWith('Discard your unsaved Location changes?');
+    confirmSpy.and.resolveTo(false);
+    expect(await component.canLeave()).toBeFalse();
+    expect(confirmSpy).toHaveBeenCalledWith(
+      'You have unsaved changes. Are you sure you want to leave?', 'Discard Changes', jasmine.any(Object));
 
     confirmSpy.calls.reset();
-    confirmSpy.and.returnValue(true);
-    expect(component.canLeave()).toBeTrue();
+    confirmSpy.and.resolveTo(true);
+    expect(await component.canLeave()).toBeTrue();
   });
 
   it('blocks navigation when image picker is open', () => {
@@ -62,5 +65,20 @@ describe('LocationDetailComponent unsaved changes guards', () => {
     const event = { preventDefault: jasmine.createSpy('preventDefault') } as any;
     component.beforeUnload(event);
     expect(event.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it('never uses the native confirm (it breaks keyboard focus in Electron)', async () => {
+    const native = spyOn(window, 'confirm');
+    component.locationForm.markAsDirty();
+    await component.canLeave();
+    expect(native).not.toHaveBeenCalled();
+  });
+
+  it('reuses a prompt that is already open', () => {
+    component.locationForm.markAsDirty();
+    confirmSpy.and.returnValue(new Promise(() => {}));
+    const first = component.canLeave();
+    expect(component.canLeave()).toBe(first);
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
   });
 });

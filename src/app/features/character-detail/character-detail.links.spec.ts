@@ -28,28 +28,13 @@ describe('Character description links', () => {
     expect(modal.confirm).not.toHaveBeenCalled();
   });
 
-  it('routes House and location links through the unsaved-change prompt', async () => {
+  it('routes character, House and location links through the router (the leave guard confirms)', async () => {
     component.characterForm.markAsDirty();
-    for (const href of ['#/house/house-id', '#/location/location-id', '#/house?name=New&fromLink=1']) {
+    for (const href of ['#/character/ben', '#/house/house-id', '#/location/location-id', '#/house?name=New&fromLink=1']) {
       await component.openDescriptionLink(href);
       expect(router.navigateByUrl).toHaveBeenCalledWith(href.slice(1));
     }
-    expect(modal.confirm).toHaveBeenCalledTimes(3);
-  });
-
-  it('keeps unsaved book edits when discarding is declined', async () => {
-    component.setBookPageContent('book', 'unsaved');
-    modal.confirm.and.resolveTo(false);
-    await component.openDescriptionLink('#/character/ben');
-    expect(modal.confirm).toHaveBeenCalledWith('Discard unsaved changes?');
-    expect(router.navigateByUrl).not.toHaveBeenCalled();
-  });
-
-  it('asks before leaving unsaved main edits and allows confirmed navigation', async () => {
-    component.characterForm.markAsDirty();
-    await component.openDescriptionLink('#/character/ben');
-    expect(modal.confirm).toHaveBeenCalled();
-    expect(router.navigateByUrl).toHaveBeenCalledWith('/character/ben');
+    expect(modal.confirm).not.toHaveBeenCalled();
   });
 
   it('stays on the page for self links and ignores other hrefs', async () => {

@@ -91,6 +91,7 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
   /** `[[` completion entries: locations, characters (with aliases) and Houses. */
   linkSuggestions: WikiLinkSuggestion[] = [];
   private readonly wikiLinkTargets = inject(WikiLinkTargetsService);
+  private leavePrompt: Promise<boolean> | null = null;
 
   isLoading = false;
   isSaving = false;
@@ -409,12 +410,8 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
     }
   }
 
+  /** Unsaved changes are confirmed once, by the route's leave guard (`canLeave`). */
   async cancel(): Promise<void> {
-    if (this.locationForm.dirty) {
-      if (!(await this.modalService.confirm('Discard unsaved changes?'))) {
-        return;
-      }
-    }
     await this.router.navigate(['/locations']);
   }
 
@@ -432,8 +429,18 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
     return 'Invalid value';
   }
 
-  canLeave(): boolean {
-    return !this.isSaving && this.imagePickerService.handleNavigationAway() && (!this.locationForm.dirty || window.confirm('Discard your unsaved Location changes?'));
+  /**
+   * Route leave guard. Uses the in-app modal: a native window.confirm() leaves the Electron
+   * window unable to take keyboard focus. A prompt already on screen is reused.
+   */
+  canLeave(): boolean | Promise<boolean> {
+    if (this.isSaving || !this.imagePickerService.handleNavigationAway()) return false;
+    if (!this.locationForm.dirty) return true;
+    this.leavePrompt ??= this.modalService.confirm(
+      'You have unsaved changes. Are you sure you want to leave?', 'Discard Changes',
+      { confirmText: 'Discard', cancelText: 'Keep Editing', danger: false }
+    ).finally(() => { this.leavePrompt = null; });
+    return this.leavePrompt;
   }
 
   @HostListener('window:beforeunload', ['$event'])

@@ -143,6 +143,7 @@ export class CharacterDetailComponent
   bookPageOriginalContent: Record<string, string> = {};
   newCharacterFromLink: string | null = null;
   private readonly wikiLinkTargets = inject(WikiLinkTargetsService);
+  private leavePrompt: Promise<boolean> | null = null;
   /** Resolves [[wikilinks]] in the description editors; replaced when link targets change. */
   linkResolver: (target: string) => ResolvedWikiLink | null = () => null;
   /** `[[` completion entries: characters (names and aliases), locations and Houses. */
@@ -657,8 +658,7 @@ export class CharacterDetailComponent
     if (!/^#\/(character|location|house)(?:\/|\?)/.test(href)) return;
     const destination = href.slice(1);
     if (destination === `/character/${encodeURIComponent(this.character?.id || '')}` && !this.isDraftMode) return;
-    if ((this.characterForm.dirty || this.hasAnyBookPageDirty()) &&
-        !(await this.modalService.confirm('Discard unsaved changes?'))) return;
+    // Unsaved changes are confirmed by the route's leave guard (`canLeave`).
     await this.router.navigateByUrl(destination);
   }
 
@@ -963,25 +963,9 @@ export class CharacterDetailComponent
     this.characterForm.markAsDirty();
   }
 
+  /** Unsaved changes are confirmed once, by the route's leave guard (`canLeave`). */
   async onCancel(): Promise<void> {
-    const mainDirty = this.characterForm.dirty;
-    const bookDirty = this.hasAnyBookPageDirty();
-    if (mainDirty || bookDirty) {
-      const confirmed = await this.modalService.confirm(
-        "You have unsaved changes. Are you sure you want to leave?",
-        "Discard Changes",
-        {
-          confirmText: "Discard",
-          cancelText: "Keep Editing",
-          danger: false
-        }
-      );
-      if (confirmed) {
-        this.navigateBack();
-      }
-    } else {
-      this.navigateBack();
-    }
+    this.navigateBack();
   }
 
   private navigateBack(): void {
@@ -1709,8 +1693,19 @@ export class CharacterDetailComponent
     }
   }
 
-  canLeave(): boolean {
-    return !this.isSaving && this.imagePickerService.handleNavigationAway() && (!this.characterForm.dirty && !this.hasAnyBookPageDirty() || window.confirm('Discard your unsaved Character changes?'));
+  /**
+   * Route leave guard. Uses the in-app modal: a native window.confirm() leaves the Electron
+   * window unable to take keyboard focus (editors stop accepting input until reload).
+   * A prompt already on screen is reused so repeated navigations don't stack dialogs.
+   */
+  canLeave(): boolean | Promise<boolean> {
+    if (this.isSaving || !this.imagePickerService.handleNavigationAway()) return false;
+    if (!this.characterForm.dirty && !this.hasAnyBookPageDirty()) return true;
+    this.leavePrompt ??= this.modalService.confirm(
+      'You have unsaved changes. Are you sure you want to leave?', 'Discard Changes',
+      { confirmText: 'Discard', cancelText: 'Keep Editing', danger: false }
+    ).finally(() => { this.leavePrompt = null; });
+    return this.leavePrompt;
   }
 
   @HostListener('window:beforeunload', ['$event'])

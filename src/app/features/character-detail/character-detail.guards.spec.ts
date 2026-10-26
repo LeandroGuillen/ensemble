@@ -9,7 +9,7 @@ describe('CharacterDetailComponent unsaved changes guards', () => {
   let confirmSpy: jasmine.Spy;
 
   beforeEach(() => {
-    confirmSpy = spyOn(window, 'confirm').and.returnValue(true);
+    confirmSpy = jasmine.createSpy('confirm').and.resolveTo(true);
     imagePickerService = jasmine.createSpyObj('ImagePickerService', ['handleNavigationAway']);
     imagePickerService.handleNavigationAway.and.returnValue(true);
 
@@ -20,6 +20,8 @@ describe('CharacterDetailComponent unsaved changes guards', () => {
     component.bookPageOriginalContent = {};
     component.isSaving = false;
     (component as any).imagePickerService = imagePickerService;
+    (component as any).modalService = { confirm: confirmSpy };
+    (component as any).leavePrompt = null;
   });
 
   it('allows navigation when form is clean and no book pages are dirty', () => {
@@ -27,24 +29,26 @@ describe('CharacterDetailComponent unsaved changes guards', () => {
     expect(component.canLeave()).toBeTrue();
   });
 
-  it('prompts and respects user answer when main form is dirty', () => {
+  it('prompts and respects user answer when main form is dirty', async () => {
     component.characterForm.markAsDirty();
     component.hasAnyBookPageDirty = jasmine.createSpy().and.returnValue(false);
     
-    confirmSpy.and.returnValue(false);
-    expect(component.canLeave()).toBeFalse();
-    expect(confirmSpy).toHaveBeenCalledWith('Discard your unsaved Character changes?');
+    confirmSpy.and.resolveTo(false);
+    expect(await component.canLeave()).toBeFalse();
+    expect(confirmSpy).toHaveBeenCalledWith(
+      'You have unsaved changes. Are you sure you want to leave?', 'Discard Changes', jasmine.any(Object));
 
     confirmSpy.calls.reset();
-    confirmSpy.and.returnValue(true);
-    expect(component.canLeave()).toBeTrue();
+    confirmSpy.and.resolveTo(true);
+    expect(await component.canLeave()).toBeTrue();
   });
 
-  it('prompts when any book page is dirty', () => {
+  it('prompts when any book page is dirty', async () => {
     component.hasAnyBookPageDirty = jasmine.createSpy().and.returnValue(true);
-    confirmSpy.and.returnValue(false);
-    expect(component.canLeave()).toBeFalse();
-    expect(confirmSpy).toHaveBeenCalledWith('Discard your unsaved Character changes?');
+    confirmSpy.and.resolveTo(false);
+    expect(await component.canLeave()).toBeFalse();
+    expect(confirmSpy).toHaveBeenCalledWith(
+      'You have unsaved changes. Are you sure you want to leave?', 'Discard Changes', jasmine.any(Object));
   });
 
   it('blocks navigation when image picker is open', () => {
@@ -86,5 +90,22 @@ describe('CharacterDetailComponent unsaved changes guards', () => {
     const event = { preventDefault: jasmine.createSpy('preventDefault') } as any;
     component.beforeUnload(event);
     expect(event.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it('never uses the native confirm (it breaks keyboard focus in Electron)', async () => {
+    component.hasAnyBookPageDirty = jasmine.createSpy().and.returnValue(false);
+    const native = spyOn(window, 'confirm');
+    component.characterForm.markAsDirty();
+    await component.canLeave();
+    expect(native).not.toHaveBeenCalled();
+  });
+
+  it('reuses a prompt that is already open', () => {
+    component.hasAnyBookPageDirty = jasmine.createSpy().and.returnValue(false);
+    component.characterForm.markAsDirty();
+    confirmSpy.and.returnValue(new Promise(() => {}));
+    const first = component.canLeave();
+    expect(component.canLeave()).toBe(first);
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
   });
 });
