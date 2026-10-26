@@ -1,5 +1,3 @@
-@use 'styles/markdown-preview' as markdown;
-
 .location-detail {
   display: flex;
   flex-direction: column;
@@ -212,10 +210,8 @@
   }
 }
 
-.textarea-large {
-  resize: vertical;
-  min-height: 220px;
-  line-height: 1.5;
+.description-editor {
+  min-height: 260px;
 }
 
 .field-error {
@@ -279,22 +275,6 @@
   margin-bottom: var(--spacing-sm);
 
   .section-title { margin: 0; }
-}
-
-.description-preview {
-  min-height: 220px;
-  line-height: 1.6;
-  overflow-wrap: anywhere;
-}
-
-:host ::ng-deep .description-preview {
-  @include markdown.typography;
-  a { color: var(--color-accent-primary); text-decoration: underline; }
-  .unresolved-location-link {
-    color: var(--color-text-muted);
-    text-decoration: underline dashed;
-    cursor: pointer;
-  }
 }
 
 .link-warning {

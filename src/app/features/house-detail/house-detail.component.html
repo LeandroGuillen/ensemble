@@ -68,8 +68,18 @@
         </section>
         <section class="panel">
           <h2>History &amp; description</h2>
-          <label class="hint" for="house-content">Origins, traditions, branches, and the story of this House. Markdown supported.</label>
-          <textarea id="house-content" class="form-control history" [(ngModel)]="model.content" (ngModelChange)="changed()" placeholder="## Origins&#10;&#10;Founded centuries before the story begins…"></textarea>
+          <p class="hint" id="house-content-hint">Origins, traditions, branches, and the story of this House. Type [[ to link a House, character, or location; Ctrl+click a link to open it.</p>
+          <app-markdown-editor
+            id="house-content"
+            class="history"
+            [(ngModel)]="model.content"
+            (ngModelChange)="changed()"
+            placeholder="Founded centuries before the story begins…"
+            [linkResolver]="linkResolver"
+            [linkSuggestions]="linkSuggestions"
+            (linkOpen)="openDescriptionLink($event)"
+            aria-describedby="house-content-hint"
+          ></app-markdown-editor>
         </section>
         <section class="panel members-panel">
           <div class="section-heading">

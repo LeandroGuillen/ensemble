@@ -1,0 +1,9 @@
+:host {
+  display: block;
+  min-height: 220px;
+  cursor: text;
+}
+
+:host ::ng-deep .cm-editor {
+  min-height: inherit;
+}

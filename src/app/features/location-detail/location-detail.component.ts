@@ -39,7 +39,9 @@ import { PageHeaderComponent } from '../../shared/page-header/page-header.compon
 import { MultiSelectButtonsComponent, SelectableItem } from '../../shared/multi-select-buttons/multi-select-buttons.component';
 import { ImagePickerDialogComponent } from '../../shared/image-picker-dialog/image-picker-dialog.component';
 import { formatThumbnailWikiLink, parseThumbnailReference, resolveThumbnailPath } from '../../core/utils/thumbnail.utils';
-import { renderLocationMarkdown } from '../../core/utils/location-links.utils';
+import { ResolvedWikiLink, WikiLinkSuggestion } from '../../core/utils/wiki-links.utils';
+import { WikiLinkTargetsService } from '../../core/services/wiki-link-targets.service';
+import { MarkdownEditorComponent } from '../../shared/markdown-editor/markdown-editor.component';
 import { getBookDisplayName } from '../../core/utils/book-display.utils';
 import { LocationTypeSelectComponent } from '../../shared/location-type-select/location-type-select.component';
 
@@ -52,6 +54,7 @@ import { LocationTypeSelectComponent } from '../../shared/location-type-select/l
     MultiSelectButtonsComponent,
     ImagePickerDialogComponent,
     LocationTypeSelectComponent,
+    MarkdownEditorComponent,
   ],
   templateUrl: './location-detail.component.html',
   styleUrls: ['./location-detail.component.scss'],
@@ -82,10 +85,12 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
   thumbnailPreviewUrl: string | null = null;
   showImagePickerDialog = false;
 
-  showDescriptionPreview = false;
-  missingLocationLinks: string[] = [];
   newLocationFromLink: string | null = null;
-  descriptionPreviewHtml = '';
+  /** Resolves [[wikilinks]] in the description editor. */
+  linkResolver: (target: string) => ResolvedWikiLink | null = () => null;
+  /** `[[` completion entries: locations, characters (with aliases) and Houses. */
+  linkSuggestions: WikiLinkSuggestion[] = [];
+  private readonly wikiLinkTargets = inject(WikiLinkTargetsService);
 
   isLoading = false;
   isSaving = false;
@@ -117,12 +122,13 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   ngOnInit(): void {
-    this.locationForm.get('content')!.valueChanges
+    this.wikiLinkTargets.targets$('location')
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.refreshDescriptionPreview());
-    this.locationService.getLocations()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.refreshDescriptionPreview());
+      .subscribe(({ resolve, suggestions }) => {
+        this.linkResolver = resolve;
+        this.linkSuggestions = suggestions;
+        this.cdr.markForCheck();
+      });
     void this.ensureLocationsLoaded();
 
     combineLatest([this.route.paramMap, this.route.queryParamMap])
@@ -168,7 +174,8 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private keydownListener = (event: KeyboardEvent) => {
-    if (event.key === 'Escape') {
+    // The description editor uses Escape itself (closing completion/search).
+    if (event.key === 'Escape' && !event.defaultPrevented) {
       event.preventDefault();
       this.ngZone.run(() => {
         if (this.showImagePickerDialog || this.imagePickerService.isOpen) {
@@ -200,7 +207,6 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private async loadLocation(): Promise<void> {
-    this.showDescriptionPreview = false;
     this.error = null;
     if (this.isNewLocation) {
       this.location = null;
@@ -236,7 +242,6 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
         thumbnail: location.thumbnail || '',
         content: location.content || '',
       });
-      this.showDescriptionPreview = !!location.content?.trim();
       this.locationForm.markAsPristine();
       await this.refreshThumbnailPreview();
     } catch (error) {
@@ -248,25 +253,11 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
     }
   }
 
-  private refreshDescriptionPreview(): void {
-    const preview = renderLocationMarkdown(
-      this.locationForm.get('content')?.value || '',
-      this.locationService.getLocationsSnapshot(),
-      this.projectService.getCurrentProject()?.metadata?.settings?.locationsFolder || 'locations'
-    );
-    this.descriptionPreviewHtml = preview.html;
-    this.missingLocationLinks = preview.missingLinks;
-    this.cdr.markForCheck();
-  }
-
-  async onDescriptionLinkClick(event: MouseEvent): Promise<void> {
-    const link = (event.target as HTMLElement).closest('a');
-    const href = link?.getAttribute('href');
-    if (!href?.startsWith('#/location/') && !href?.startsWith('#/location?')) return;
-    event.preventDefault();
+  /** Unsaved changes are confirmed by the route's leave guard (`canLeave`). */
+  async openDescriptionLink(href: string): Promise<void> {
+    if (!/^#\/(character|location|house)(?:\/|\?)/.test(href)) return;
     const destination = href.slice(1);
     if (destination === `/location/${encodeURIComponent(this.locationId || '')}`) return;
-    if (this.locationForm.dirty && !(await this.modalService.confirm('Discard unsaved changes?'))) return;
     await this.router.navigateByUrl(destination);
   }
 

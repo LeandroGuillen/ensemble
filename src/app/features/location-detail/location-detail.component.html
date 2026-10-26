@@ -144,33 +144,19 @@
           <div class="form-section">
             <div class="description-heading">
               <h2 class="section-title">Description</h2>
-              <button type="button" class="btn btn-ghost" [attr.aria-pressed]="showDescriptionPreview"
-                (click)="showDescriptionPreview = !showDescriptionPreview">
-                {{ showDescriptionPreview ? 'Edit description' : 'Preview description' }}
-              </button>
             </div>
             <div class="form-group">
-              <p class="field-hint" id="locationLinkHint">Link to another location with [[Location Name]] or [[Location Name|display text]]. File paths such as [[locations/_grey-harbor.md]] also work.</p>
-              @if (showDescriptionPreview) {
-                @if (missingLocationLinks.length) {
-                  <p class="link-warning" role="status">Missing locations: {{ missingLocationLinks.join(', ') }}. These links open New Location with the linked name filled in.</p>
-                }
-                <div class="description-preview" (click)="onDescriptionLinkClick($event)"
-                  [innerHTML]="descriptionPreviewHtml"></div>
-                @if (!locationForm.get('content')?.value) {
-                  <p class="field-hint">No description yet.</p>
-                }
-              }
-              <textarea
-                [hidden]="showDescriptionPreview"
-                aria-label="Description"
-                aria-describedby="locationLinkHint"
+              <p class="field-hint" id="locationLinkHint">Type [[ to link a location, character, or House ([[Name]] or [[Name|display text]]); file paths such as [[locations/_grey-harbor.md]] also work. Ctrl+click a link to open it. Shortcuts: Ctrl+B bold, Ctrl+I italic, Ctrl+K link, Ctrl+F find.</p>
+              <app-markdown-editor
                 id="locationContent"
+                class="description-editor"
                 formControlName="content"
-                class="form-control textarea-large"
-                rows="12"
-                placeholder="Describe this place… (Markdown supported)"
-              ></textarea>
+                placeholder="Describe this place…"
+                [linkResolver]="linkResolver"
+                [linkSuggestions]="linkSuggestions"
+                (linkOpen)="openDescriptionLink($event)"
+                aria-describedby="locationLinkHint"
+              ></app-markdown-editor>
             </div>
           </div>
 

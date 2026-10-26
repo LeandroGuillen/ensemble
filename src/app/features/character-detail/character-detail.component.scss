@@ -1,11 +1,12 @@
-@use 'styles/markdown-preview' as markdown;
-
 // ===========================================================================
 // Character Detail — full-page editor
 // ===========================================================================
 
 .writing-workspace {
-  display: contents;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl);
+  min-width: 0;
 }
 
 .external-change-notice {
@@ -105,7 +106,8 @@
 }
 
 .detail-shell {
-  max-width: 1080px;
+  container: detail-shell / inline-size;
+  max-width: 1160px;
   margin: 0 auto;
   padding: var(--spacing-xl) var(--spacing-2xl) var(--spacing-3xl);
 }
@@ -133,15 +135,117 @@
 }
 
 // ---------------------------------------------------------------------------
-// Hero card — thumbnail + name + category
+// Article layout — title + text with an infobox (portrait, category, tags).
+// Wide: the infobox sits in a sticky right column beside the text.
+// Narrow: the infobox is flattened into a hero card above the text.
 // ---------------------------------------------------------------------------
 
 .hero-card {
   position: relative;
   display: grid;
   grid-template-columns: 240px minmax(0, 1fr);
-  gap: var(--spacing-xl);
-  overflow: hidden;
+  grid-template-rows: auto 1fr auto auto;
+  grid-template-areas:
+    'thumb  head'
+    'thumb  fields'
+    'scope  scope'
+    'body   body';
+  column-gap: var(--spacing-xl);
+  row-gap: var(--spacing-md);
+}
+
+.infobox {
+  display: contents;
+}
+
+.article-head { grid-area: head; }
+.hero-thumb-column { grid-area: thumb; }
+.writing-workspace { grid-area: body; }
+
+.infobox-fields {
+  grid-area: fields;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  min-width: 0;
+}
+
+.hero-card > .infobox > .portrait-scope,
+.hero-card > .writing-workspace {
+  margin-top: calc(var(--spacing-xl) - var(--spacing-md));
+}
+
+.infobox > .portrait-scope { grid-area: scope; }
+
+@container detail-shell (max-width: 640px) {
+  .hero-card {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-template-areas:
+      'thumb'
+      'head'
+      'fields'
+      'scope'
+      'body';
+  }
+}
+
+@container detail-shell (min-width: 900px) {
+  .hero-card {
+    grid-template-columns: minmax(0, 1fr) 280px;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      'head  info'
+      'body  info';
+    column-gap: var(--spacing-2xl);
+    row-gap: var(--spacing-lg);
+  }
+
+  .hero-card > .writing-workspace {
+    margin-top: 0;
+  }
+
+  .infobox {
+    grid-area: info;
+    align-self: start;
+    position: sticky;
+    top: var(--spacing-lg);
+    max-height: calc(100vh - 64px - 2 * var(--spacing-lg));
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+    padding: var(--spacing-md);
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    scrollbar-width: thin;
+  }
+
+  .infobox .hero-thumb-column {
+    align-self: stretch;
+  }
+
+  .infobox .hero-thumb,
+  .infobox .portrait-change-btn {
+    max-width: none;
+  }
+
+  .hero-card > .infobox > .portrait-scope {
+    margin-top: 0;
+    padding: var(--spacing-md) 0 0;
+    border: none;
+    border-top: 1px solid var(--color-border);
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .article-head .form-control.form-control-hero {
+    font-family: var(--font-serif);
+    font-size: 2.25rem;
+    font-weight: 600;
+  }
 }
 
 .hero-thumb-column {
@@ -910,18 +1014,13 @@
   letter-spacing: 0.04em;
 }
 
-// Content editor textarea
+// Description editor (CodeMirror live preview)
 .content-editor {
   min-height: 460px;
-  line-height: 1.75;
-  font-size: 1.0625rem;
-  font-family: var(--font-serif);
-  resize: vertical;
-  background: var(--color-bg-primary);
+  padding-bottom: var(--spacing-xl);
 
-  &[readonly] {
-    cursor: default;
-    resize: none;
+  &.error {
+    box-shadow: -3px 0 0 var(--color-error);
   }
 }
 
@@ -1075,28 +1174,8 @@
     padding: var(--spacing-lg) var(--spacing-md) var(--spacing-2xl);
   }
 
-  .hero-card {
-    grid-template-columns: 1fr;
-  }
-
   .file-path-chip .file-path-chip-text {
     max-width: 180px;
-  }
-}
-
-.description-preview {
-  min-height: 220px;
-  line-height: 1.6;
-  overflow-wrap: anywhere;
-}
-
-:host ::ng-deep .description-preview {
-  @include markdown.typography;
-  a { color: var(--color-accent-primary); text-decoration: underline; }
-  .unresolved-character-link, .unresolved-location-link, .unresolved-house-link {
-    color: var(--color-text-muted);
-    text-decoration: underline dashed;
-    cursor: pointer;
   }
 }
 

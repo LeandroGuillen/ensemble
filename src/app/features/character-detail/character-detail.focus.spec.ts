@@ -10,6 +10,7 @@ import {
 } from '../../core/services';
 import { ModalService } from '../../core/services/modal.service';
 import { HouseService } from '../../core/services/house.service';
+import { MarkdownEditorComponent } from '../../shared/markdown-editor/markdown-editor.component';
 
 describe('Character detail focused loading', () => {
   it('renders asynchronously loaded details while the name keeps focus', async () => {
@@ -25,7 +26,7 @@ describe('Character detail focused loading', () => {
         { provide: ImagePickerService, useValue: { close: () => undefined } },
       ],
     }).overrideComponent(CharacterDetailComponent, {
-      set: { imports: [FormsModule, ReactiveFormsModule, RouterLink], schemas: [NO_ERRORS_SCHEMA] },
+      set: { imports: [FormsModule, ReactiveFormsModule, RouterLink, MarkdownEditorComponent], schemas: [NO_ERRORS_SCHEMA] },
     }).compileComponents();
     // Isolate the focus/rendering behavior from project and file I/O.
     spyOn(CharacterDetailComponent.prototype, 'ngOnInit').and.stub();
@@ -44,7 +45,6 @@ describe('Character detail focused loading', () => {
       component.tags = [{ id: 'brave', name: 'Brave', color: '#3498db' }];
       component.selectedStyleId = 'portrait';
       component.thumbnailPreviewUrls.set('portrait', 'data:image/png;base64,iVBORw0KGgo=');
-      component.descriptionEditingTabs.clear();
       (component as any).cdr.markForCheck();
       resolve();
     }, 0));
@@ -55,8 +55,7 @@ describe('Character detail focused loading', () => {
     expect(fixture.nativeElement.querySelector('.hero-thumb img')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('.form-group-category')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('.tags-select')).not.toBeNull();
-    expect(fixture.nativeElement.querySelector('.description-preview').textContent).toContain('Loaded description');
-    expect((fixture.nativeElement.querySelector('#content') as HTMLTextAreaElement).hidden).toBeTrue();
+    expect(fixture.nativeElement.querySelector('#content .cm-content').textContent).toContain('Loaded description');
 
     // The book context sits above the portrait and exposes a visible reset.
     component.books = [{ id: 'first', name: 'First book', color: '#3498db' }] as any;

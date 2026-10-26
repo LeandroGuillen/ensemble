@@ -31,3 +31,4 @@ export { ZoomService } from "./zoom.service";
 export { ImageGenerationService } from "./image-generation/image-generation.service";
 
 export { HouseService } from "./house.service";
+export { WikiLinkTargetsService } from "./wiki-link-targets.service";

@@ -33,7 +33,7 @@ label { display: block; color: var(--color-text-secondary); font-size: 13px; mar
   &:focus-visible { outline: 2px solid var(--color-accent-primary); outline-offset: 3px; }
 }
 @media (hover: none) { .color-remove { opacity: 1; pointer-events: auto; } }
-.history { min-height: 210px; font-family: var(--font-mono); font-size: 13px; line-height: 1.7; }
+.history { min-height: 260px; }
 .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; h2 { margin: 0; } }
 .count { font-size: 16px; color: var(--color-text-muted); margin-left: 5px; }
 .members { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: 14px; }

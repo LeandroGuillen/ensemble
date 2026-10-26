@@ -35,6 +35,7 @@ Located in `src/app/core/services/`:
 - **PlotBoardService**: Discovers and manages `*.plotboard.md` files anywhere under the project
 - **MetadataService**: Validates characters against project metadata (categories/tags)
 - **FileWatcherService**: Monitors work folder for external file changes (using chokidar)
+- **WikiLinkTargetsService**: `[[wikilink]]` resolver and completion entries (characters, locations, Houses) for the Markdown description editors
 - **SkinService**: Applies the UI skin (`settings.skin`, per project) by setting `html[data-skin]`. Skins change shape/type/motion independently of the color theme; registry in `src/app/core/skins/`, styles in `src/styles/skins/_<id>.scss` scoped to `html[data-skin='<id>']`
 
 ### Core Utilities
@@ -201,6 +202,7 @@ Location ID is stable in frontmatter. Locations use project books and a single `
 - Uses `unified/remark` ecosystem for parsing/generating markdown with YAML frontmatter
 - See `src/app/core/utils/markdown.utils.ts` for frontmatter extraction/injection
 - Character service handles conversion between markdown files and `Character` interface
+- Character, location, and House descriptions are edited with `MarkdownEditorComponent` (`src/app/shared/markdown-editor/`): CodeMirror 6 with Obsidian-style live preview (syntax hidden except on the cursor line), `[[` completion for characters/aliases/locations/Houses, Ctrl/Cmd+click to open links, and Ctrl+B/I/K formatting. It is a form control (`formControlName`/`ngModel`); Ctrl+Enter is left to the page (save). Pages get the link resolver and suggestions from `WikiLinkTargetsService.targets$(primary)` (characters, locations and Houses; `primary` decides which "New …" page a missing link opens), built by `buildWikiLinkTargets()` / `resolveWikiLinkTarget()` in `wiki-links.utils.ts`
 
 ### Pinboard Visualization
 

@@ -13,8 +13,11 @@ import { getBookDisplayName } from '../../core/utils/book-display.utils';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { ImagePickerDialogComponent } from '../../shared/image-picker-dialog/image-picker-dialog.component';
 import { ConfirmButtonDirective } from '../../shared/confirm-button/confirm-button.directive';
+import { MarkdownEditorComponent } from '../../shared/markdown-editor/markdown-editor.component';
+import { WikiLinkTargetsService } from '../../core/services/wiki-link-targets.service';
+import { ResolvedWikiLink, WikiLinkSuggestion } from '../../core/utils/wiki-links.utils';
 
-@Component({ selector: 'app-house-detail', imports: [FormsModule, RouterLink, DragDropModule, PageHeaderComponent, ImagePickerDialogComponent, ConfirmButtonDirective], templateUrl: './house-detail.component.html', styleUrls: ['./house-detail.component.scss'] })
+@Component({ selector: 'app-house-detail', imports: [FormsModule, RouterLink, DragDropModule, PageHeaderComponent, ImagePickerDialogComponent, ConfirmButtonDirective, MarkdownEditorComponent], templateUrl: './house-detail.component.html', styleUrls: ['./house-detail.component.scss'] })
 export class HouseDetailComponent implements OnInit, OnDestroy {
   readonly houses = inject(HouseService);
   readonly charactersService = inject(CharacterService);
@@ -26,6 +29,11 @@ export class HouseDetailComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly wikiLinkTargets = inject(WikiLinkTargetsService);
+  /** Resolves [[wikilinks]] in the history editor. */
+  linkResolver: (target: string) => ResolvedWikiLink | null = () => null;
+  /** `[[` completion entries: Houses, characters (with aliases) and locations. */
+  linkSuggestions: WikiLinkSuggestion[] = [];
   house: House | null = null;
   model: HouseFormData = { name: '', motto: '', colors: [], characterIds: [], leadership: [], content: '' };
   characters: Character[] = [];
@@ -46,6 +54,11 @@ export class HouseDetailComponent implements OnInit, OnDestroy {
   private request = 0;
 
   ngOnInit(): void {
+    this.wikiLinkTargets.targets$('house').pipe(takeUntilDestroyed(this.destroyRef)).subscribe(({ resolve, suggestions }) => {
+      this.linkResolver = resolve;
+      this.linkSuggestions = suggestions;
+      this.cdr.markForCheck();
+    });
     this.charactersService.getReferenceCharacters().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(characters => {
       this.characters = characters;
       this.loadMemberThumbnails();
@@ -211,6 +224,13 @@ export class HouseDetailComponent implements OnInit, OnDestroy {
     }
     catch (error) { this.error = String(error); }
     finally { this.saving = false; this.cdr.markForCheck(); }
+  }
+  /** Unsaved changes are confirmed by the route's leave guard (`canLeave`). */
+  async openDescriptionLink(href: string): Promise<void> {
+    if (!/^#\/(character|location|house)(?:\/|\?)/.test(href)) return;
+    const destination = href.slice(1);
+    if (this.house && destination === `/house/${encodeURIComponent(this.house.id)}`) return;
+    await this.router.navigateByUrl(destination);
   }
   canLeave(): boolean { return !this.saving && this.picker.handleNavigationAway() && (!this.dirty || window.confirm('Discard your unsaved House changes?')); }
   @HostListener('window:beforeunload', ['$event']) beforeUnload(event: BeforeUnloadEvent): void { if (this.dirty) event.preventDefault(); }

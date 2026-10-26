@@ -23,10 +23,9 @@ import { ActivatedRoute, Router, RouterLink } from "@angular/router";
 import { Location } from "@angular/common";
 import { debounceTime } from "rxjs/operators";
 import { combineLatest, merge } from "rxjs";
-import { HouseService } from '../../core/services/house.service';
-import { LocationService } from '../../core/services/location.service';
-import { WikiLinkCollection } from '../../core/utils/wiki-links.utils';
-import { renderCharacterMarkdown } from "../../core/utils/character-links.utils";
+import { ResolvedWikiLink } from '../../core/utils/wiki-links.utils';
+import { WikiLinkTargetsService } from '../../core/services/wiki-link-targets.service';
+import { MarkdownEditorComponent, WikiLinkSuggestion } from '../../shared/markdown-editor/markdown-editor.component';
 import { buildCharacterDeleteMessage } from './character-delete-message.utils';
 import {
   Book,
@@ -91,6 +90,7 @@ import { GeneratePortraitDialogComponent } from "./components/generate-portrait-
     CharacterPromptsEditorComponent,
     GeneratePortraitDialogComponent,
     CharacterHousesComponent,
+    MarkdownEditorComponent,
 ],
     templateUrl: "./character-detail.component.html",
     styleUrls: ["./character-detail.component.scss"]
@@ -141,17 +141,12 @@ export class CharacterDetailComponent
   bookPageData: Record<string, { exists: boolean; content: string }> = {};
   /** Last saved content per book (for dirty check). Key = bookId. */
   bookPageOriginalContent: Record<string, string> = {};
-  /** Description tabs currently unlocked for editing. New characters start unlocked. */
-  descriptionEditingTabs = new Set<string>(['main']);
   newCharacterFromLink: string | null = null;
-  private linkCharacters: Character[] = [];
-  private readonly linkLocationsService = inject(LocationService);
-  private readonly linkHousesService = inject(HouseService);
-  private otherLinkCollections: WikiLinkCollection[] = [];
-  private descriptionPreviews = new Map<string, {
-    content: string; characters: Character[]; folder: string; otherCollections: WikiLinkCollection[];
-    preview: { html: string; missingLinks: string[] };
-  }>();
+  private readonly wikiLinkTargets = inject(WikiLinkTargetsService);
+  /** Resolves [[wikilinks]] in the description editors; replaced when link targets change. */
+  linkResolver: (target: string) => ResolvedWikiLink | null = () => null;
+  /** `[[` completion entries: characters (names and aliases), locations and Houses. */
+  linkSuggestions: WikiLinkSuggestion[] = [];
   /** Per-book category overrides for the form. Key = bookId. */
   bookCategoriesMap: Record<string, string> = {};
   /** Per-book tag overrides. Keys are bookId → selected tag ids. */
@@ -217,19 +212,11 @@ export class CharacterDetailComponent
   }
 
   ngOnInit(): void {
-    combineLatest([this.linkLocationsService.getLocations(), this.linkHousesService.houses$, this.projectService.currentProject$])
+    this.wikiLinkTargets.targets$('character')
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(([locations, houses, project]) => {
-        this.otherLinkCollections = [
-          { targets: locations, folder: project?.metadata.settings.locationsFolder || 'locations', route: 'location', singular: 'Location' },
-          { targets: houses, folder: 'houses', route: 'house', singular: 'House' },
-        ];
-        this.cdr.markForCheck();
-      });
-    this.characterService.getReferenceCharacters()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((characters) => {
-        this.linkCharacters = characters;
+      .subscribe(({ resolve, suggestions }) => {
+        this.linkResolver = resolve;
+        this.linkSuggestions = suggestions;
         this.cdr.markForCheck();
       });
     this.fileWatcherService.fileChanges$
@@ -244,10 +231,6 @@ export class CharacterDetailComponent
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((project) => {
         this.currentProject = project;
-        if (project) {
-          void Promise.all([this.linkLocationsService.loadLocations(project.path), this.linkHousesService.loadHouses()])
-            .catch(error => this.logger.error('Failed to load link targets', error));
-        }
         this.categories = this.projectService.getCategories();
         this.tags = this.projectService.getTags();
         this.books = this.metadataService.getBooks();
@@ -311,12 +294,10 @@ export class CharacterDetailComponent
           ? queryParams.get('name') : null;
         if (characterId && characterId !== "new") {
           this.isEditing = true;
-          this.descriptionEditingTabs.clear();
           this.loadCharacter(decodeURIComponent(characterId));
         } else {
           this.isEditing = false;
           if (!this.isDraftMode) this.setLoreMode(queryParams.get('lore') === 'true', false);
-          this.descriptionEditingTabs = new Set<string>(['main']);
           this.character = null;
           this.activeContentTab = 'main';
           this.bookPageData = {};
@@ -337,7 +318,6 @@ export class CharacterDetailComponent
             books: [],
             content: this.isDraftMode ? history.state?.initialContent || '' : '',
           });
-          if (this.characterForm.get('content')?.value?.trim()) this.descriptionEditingTabs.delete('main');
           this.thumbnailsMap = {};
           this.bookCategoriesMap = {};
           this.bookTagsMap = {};
@@ -383,7 +363,8 @@ export class CharacterDetailComponent
   }
 
   private keydownListener = (event: KeyboardEvent) => {
-    if (event.key === "Escape") {
+    // The description editor uses Escape itself (closing completion/search).
+    if (event.key === "Escape" && !event.defaultPrevented) {
       event.preventDefault();
       this.ngZone.run(() => {
         if (this.addBookMenu?.nativeElement.open) {
@@ -469,7 +450,8 @@ export class CharacterDetailComponent
         "",
         {
           validators: [Validators.maxLength(100000)],
-          updateOn: 'blur'
+          // The Markdown editor reports every edit; keep dirty state and the count live.
+          updateOn: 'change'
         }
       ],
     });
@@ -524,8 +506,6 @@ export class CharacterDetailComponent
           books: this.character.books,
           content: this.character.content || '',
         });
-
-        this.descriptionEditingTabs = new Set<string>(this.character.content?.trim() ? [] : ['main']);
 
         this.thumbnailsMap = { ...(this.character.thumbnails || {}) };
         this.bookCategoriesMap = { ...(this.character.bookCategories || {}) };
@@ -622,8 +602,6 @@ export class CharacterDetailComponent
       const text = content ?? '';
       this.bookPageData[bookId] = { exists, content: text };
       this.bookPageOriginalContent[bookId] = text;
-      if (!text.trim()) this.descriptionEditingTabs.add(bookId);
-      else this.descriptionEditingTabs.delete(bookId);
     }
     this.cdr.markForCheck();
   }
@@ -640,8 +618,6 @@ export class CharacterDetailComponent
     const text = content ?? '';
     this.bookPageData[bookId] = { exists, content: text };
     this.bookPageOriginalContent[bookId] = text;
-    if (!text.trim()) this.descriptionEditingTabs.add(bookId);
-    else this.descriptionEditingTabs.delete(bookId);
     this.cdr.markForCheck();
   }
 
@@ -677,50 +653,13 @@ export class CharacterDetailComponent
     }
   }
 
-  isDescriptionEditing(tabId: string): boolean {
-    return this.descriptionEditingTabs.has(tabId);
-  }
-
-  getDescriptionPreview(tabId: string): { html: string; missingLinks: string[] } {
-    const content = tabId === 'main'
-      ? this.characterForm.get('content')?.value || '' : this.getBookPageContent(tabId);
-    const folder = this.currentProject?.metadata.settings.charactersFolder || 'characters';
-    const cached = this.descriptionPreviews.get(tabId);
-    if (cached && cached.content === content && cached.characters === this.linkCharacters && cached.folder === folder && cached.otherCollections === this.otherLinkCollections) {
-      return cached.preview;
-    }
-    const preview = renderCharacterMarkdown(content, this.linkCharacters, folder, this.otherLinkCollections);
-    this.descriptionPreviews.set(tabId, { content, characters: this.linkCharacters, folder, otherCollections: this.otherLinkCollections, preview });
-    return preview;
-  }
-
-  toggleDescriptionPreview(tabId: string): void {
-    if (this.isDescriptionEditing(tabId)) {
-      // Apply values pending on blur before rendering the preview.
-      if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
-      this.descriptionEditingTabs.delete(tabId);
-    } else {
-      this.enableDescriptionEditing(tabId);
-    }
-  }
-
-  async onDescriptionLinkClick(event: MouseEvent): Promise<void> {
-    const href = (event.target as HTMLElement).closest('a')?.getAttribute('href');
-    if (!href || !/^#\/(character|location|house)(?:\/|\?)/.test(href)) return;
-    event.preventDefault();
+  async openDescriptionLink(href: string): Promise<void> {
+    if (!/^#\/(character|location|house)(?:\/|\?)/.test(href)) return;
     const destination = href.slice(1);
     if (destination === `/character/${encodeURIComponent(this.character?.id || '')}` && !this.isDraftMode) return;
     if ((this.characterForm.dirty || this.hasAnyBookPageDirty()) &&
         !(await this.modalService.confirm('Discard unsaved changes?'))) return;
     await this.router.navigateByUrl(destination);
-  }
-
-  enableDescriptionEditing(tabId: string): void {
-    this.descriptionEditingTabs.add(tabId);
-    this.cdr.detectChanges();
-
-    const elementId = tabId === 'main' ? 'content' : `book-content-${tabId}`;
-    document.getElementById(elementId)?.focus();
   }
 
   setActiveContentTab(tabId: string): void {
@@ -766,7 +705,6 @@ export class CharacterDetailComponent
       books: currentBooks.filter((id) => id !== bookId),
     });
     this.characterForm.markAsDirty();
-    this.descriptionEditingTabs.delete(bookId);
 
     if (this.activeContentTab === bookId) {
       this.activeContentTab = 'main';
@@ -793,7 +731,6 @@ export class CharacterDetailComponent
       await this.characterService.createBookPage(this.character.id, bookId);
       this.bookPageData[bookId] = { exists: true, content: '' };
       this.bookPageOriginalContent[bookId] = '';
-      this.descriptionEditingTabs.add(bookId);
       this.activeContentTab = bookId;
       this.notificationService.showSuccess('Book page created');
       this.cdr.markForCheck();
@@ -814,7 +751,7 @@ export class CharacterDetailComponent
     const active = document.activeElement;
     if (
       active instanceof HTMLElement &&
-      (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')
+      (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)
     ) {
       active.blur();
     }
