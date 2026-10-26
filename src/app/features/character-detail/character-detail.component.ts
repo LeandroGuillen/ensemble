@@ -27,7 +27,7 @@ import { HouseService } from '../../core/services/house.service';
 import { LocationService } from '../../core/services/location.service';
 import { WikiLinkCollection } from '../../core/utils/wiki-links.utils';
 import { renderCharacterMarkdown } from "../../core/utils/character-links.utils";
-import { buildDeleteReferencesMessage } from '../../shared/utils/reference-message.utils';
+import { buildCharacterDeleteMessage } from './character-delete-message.utils';
 import {
   Book,
   Category,
@@ -1744,19 +1744,12 @@ export class CharacterDetailComponent
       return;
     }
 
-    // Count references before showing confirmation
-    let confirmMessage = `Are you sure you want to delete "${this.character.name || 'Unnamed draft'}"?`;
-    
-    if (!this.isDraftMode) {
-      try {
-        const refs = await this.characterService.countCharacterReferences(this.character.id);
-        confirmMessage += buildDeleteReferencesMessage(refs);
-      } catch (error) {
-        this.logger.error('Failed to count character references', error);
-      }
-    }
-    
-    confirmMessage += '\n\nThis action cannot be undone.';
+    const confirmMessage = await buildCharacterDeleteMessage(
+      this.character.name,
+      this.character.id,
+      this.isDraftMode,
+      { characterService: this.characterService, logger: this.logger }
+    );
 
     const confirmed = await this.modalService.confirm(confirmMessage);
 
