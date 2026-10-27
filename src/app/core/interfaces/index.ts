@@ -12,3 +12,4 @@ export * from "./color-palette.interface";
 export * from "./legacy.interface";
 
 export * from "./house.interface";
+export * from "./book-plan.interface";

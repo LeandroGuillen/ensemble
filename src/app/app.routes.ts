@@ -92,6 +92,14 @@ export const routes: Routes = [
     canActivate: [projectGuard],
   },
   {
+    path: "book/:id",
+    loadComponent: () =>
+      import("./features/book-plan/book-plan.component").then(
+        (m) => m.BookPlanComponent
+      ),
+    canActivate: [projectGuard],
+  },
+  {
     path: "concepts",
     loadComponent: () =>
       import("./features/backstage/backstage.component").then(

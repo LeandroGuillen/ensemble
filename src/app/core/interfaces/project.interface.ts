@@ -1,3 +1,5 @@
+import { BookPlanSettings } from "./book-plan.interface";
+
 export interface Pinboard {
   id: string;
   name: string;
@@ -129,6 +131,8 @@ export interface Book {
   seriesId?: string;
   /** Optional saga membership; when set, seriesId must match the saga's series. */
   sagaId?: string;
+  /** Optional plan file (chapter outline) for this book. */
+  plan?: BookPlanSettings;
 }
 
 export interface AiSettings {

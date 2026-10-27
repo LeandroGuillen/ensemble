@@ -113,6 +113,15 @@ export class PreferencesService {
     }
   }
 
+  /** Book page: which side the plan outline sits on. */
+  getPlanOutlineSide(): 'left' | 'right' {
+    return localStorage.getItem('planOutlineSide') === 'right' ? 'right' : 'left';
+  }
+
+  setPlanOutlineSide(side: 'left' | 'right'): void {
+    localStorage.setItem('planOutlineSide', side);
+  }
+
   set<T>(key: string, value: T): void {
     localStorage.setItem(key, JSON.stringify(value));
   }

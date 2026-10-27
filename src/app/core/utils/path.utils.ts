@@ -135,3 +135,22 @@ export function pathExtname(path: string): string {
   const lastDot = basename.lastIndexOf('.');
   return lastDot === -1 ? '' : basename.slice(lastDot);
 }
+
+/**
+ * Path of `target` relative to `root`, with forward slashes.
+ * Returns null when `target` is not inside `root`.
+ *
+ * @example
+ * ```typescript
+ * projectRelativePath('/vault', '/vault/libros/b2/b2.plan.md') // "libros/b2/b2.plan.md"
+ * projectRelativePath('/vault', '/elsewhere/x.md')             // null
+ * ```
+ */
+export function projectRelativePath(root: string, target: string): string | null {
+  const base = root.replace(/\\/g, '/').replace(/\/+$/, '');
+  const full = target.replace(/\\/g, '/');
+  if (!full.startsWith(base + '/')) {
+    return null;
+  }
+  return full.slice(base.length + 1);
+}

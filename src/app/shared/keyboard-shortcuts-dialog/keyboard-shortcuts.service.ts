@@ -120,6 +120,33 @@ export class KeyboardShortcutsService {
         category: 'Location Detail'
       },
 
+      // Book Plan
+      {
+        keys: ['Ctrl', 'J'],
+        description: 'Search plan (2180, @character, !todo, !oculto…)',
+        category: 'Book Plan'
+      },
+      {
+        keys: ['PgUp/PgDn'],
+        description: 'Previous / next chapter (focus mode)',
+        category: 'Book Plan'
+      },
+      {
+        keys: ['Alt', 'Shift', 'PgUp/PgDn'],
+        description: 'Previous / next heading (scenes included)',
+        category: 'Book Plan'
+      },
+      {
+        keys: ['Ctrl', '.'],
+        description: 'Toggle focus on the current chapter',
+        category: 'Book Plan'
+      },
+      {
+        keys: ['Ctrl', 'Alt', '←/→'],
+        description: 'Back / forward through jumps',
+        category: 'Book Plan'
+      },
+
       // Concepts
       {
         keys: ['Ctrl', 'N'],

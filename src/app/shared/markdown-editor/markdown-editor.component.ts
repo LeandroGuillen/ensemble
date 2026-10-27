@@ -24,10 +24,13 @@ import { EditorView, drawSelection, dropCursor, keymap, placeholder } from '@cod
 import { tags } from '@lezer/highlight';
 import { toggleInlineMarker, wrapWikiLink } from './formatting-commands';
 import { WikiLinkResolver, livePreview } from './live-preview';
+import { markdownTables } from './tables';
 import { WikiLinkSuggestion, wikiLinkCompletion } from './wikilink-completion';
+import { FocusRange, focusRange, hiddenLines as hiddenLinesExtension, setFocusRange, setHiddenLines } from './focus-range';
 
 export type { WikiLinkSuggestion } from './wikilink-completion';
 export type { WikiLinkResolver } from './live-preview';
+export type { FocusRange } from './focus-range';
 
 /** Forces a decoration rebuild when link targets change outside the document. */
 const refreshLinks = StateEffect.define<null>();
@@ -109,6 +112,20 @@ const editorTheme = EditorView.theme({
   '.cm-panels.cm-panels-top': { borderBottom: '1px solid var(--color-border)', position: 'sticky', top: '0' },
   '.cm-searchMatch': { backgroundColor: 'color-mix(in srgb, var(--color-warning) 30%, transparent)' },
   '.cm-searchMatch-selected': { backgroundColor: 'color-mix(in srgb, var(--color-accent-primary) 45%, transparent)' },
+  '.cm-md-table-wrap': { overflowX: 'auto', padding: '0.4em 0', cursor: 'text' },
+  '.cm-md-table': {
+    borderCollapse: 'collapse',
+    fontSize: '0.9375em',
+    lineHeight: '1.45',
+  },
+  '.cm-md-table th, .cm-md-table td': {
+    border: '1px solid var(--color-border)',
+    padding: '0.3em 0.75em',
+    textAlign: 'left',
+    verticalAlign: 'top',
+  },
+  '.cm-md-table th': { fontWeight: '600', backgroundColor: 'var(--color-bg-secondary)' },
+  '.cm-md-table code': { fontFamily: 'var(--font-mono)', fontSize: '0.875em' },
   '.cm-selectionMatch': { backgroundColor: 'color-mix(in srgb, var(--color-accent-primary) 14%, transparent)' },
 });
 
@@ -128,9 +145,20 @@ export class MarkdownEditorComponent implements ControlValueAccessor, OnInit, On
   @Input() placeholder = '';
   @Input() linkResolver: WikiLinkResolver | null = null;
   @Input() linkSuggestions: WikiLinkSuggestion[] = [];
+  /** Keep only this character range visible (e.g. one chapter); null shows the whole document. */
+  @Input() focusRange: FocusRange | null = null;
+  /**
+   * Handles plain PageUp (-1) / PageDown (1) before the editor does; return false to keep the
+   * default page movement.
+   */
+  @Input() pageNavigation: ((direction: 1 | -1) => boolean) | null = null;
+  /** Lines to hide (whole lines covering these ranges); the cursor skips them. */
+  @Input() hiddenLines: FocusRange[] = [];
   /** Hash route of a Ctrl/Cmd+clicked wikilink. */
   @Output() linkOpen = new EventEmitter<string>();
   @Output() editorBlur = new EventEmitter<void>();
+  /** 0-based line of the main cursor, emitted when it moves. */
+  @Output() cursorLineChange = new EventEmitter<number>();
 
   private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
   private readonly zone = inject(NgZone);
@@ -139,6 +167,7 @@ export class MarkdownEditorComponent implements ControlValueAccessor, OnInit, On
   private disabled = false;
   private readonly placeholderCompartment = new Compartment();
   private pendingValue = '';
+  private lastCursorLine = -1;
   private onChange: (value: string) => void = () => {};
   private onTouched: () => void = () => {};
 
@@ -159,6 +188,13 @@ export class MarkdownEditorComponent implements ControlValueAccessor, OnInit, On
     if (changes['linkResolver']) {
       this.view.dispatch({ effects: refreshLinks.of(null) });
     }
+    if (changes['focusRange']) {
+      // Hosts often change the range in response to `cursorLineChange`, i.e. during an editor update.
+      queueMicrotask(() => this.view?.dispatch({ effects: setFocusRange.of(this.focusRange) }));
+    }
+    if (changes['hiddenLines']) {
+      queueMicrotask(() => this.view?.dispatch({ effects: setHiddenLines.of(this.hiddenLines) }));
+    }
   }
 
   ngOnDestroy(): void {
@@ -168,6 +204,43 @@ export class MarkdownEditorComponent implements ControlValueAccessor, OnInit, On
 
   focus(): void {
     this.view?.focus();
+  }
+
+  /** Document position of the line shown at a viewport y coordinate (e.g. the top of a scroll container). */
+  posAtClientY(clientY: number): number | null {
+    const view = this.view;
+    if (!view) return null;
+    return view.lineBlockAtHeight(clientY - view.documentTop).from;
+  }
+
+  /** Replace a range of the document as a user edit (undoable, emits a change). */
+  replaceRange(from: number, to: number, insert: string): void {
+    this.view?.dispatch({ changes: { from, to, insert }, userEvent: 'input' });
+  }
+
+  /**
+   * Put the cursor at the start of a 0-based line and scroll it into view.
+   * Pass `focusRange` to change the visible range in the same step (so the line is never hidden),
+   * and `topPos` to scroll that document position to the top instead of the cursor line.
+   */
+  revealLine(line: number, focusRange?: FocusRange | null, topPos?: number): void {
+    const view = this.view;
+    if (!view) return;
+    const { doc } = view.state;
+    const pos = doc.line(Math.max(1, Math.min(line + 1, doc.lines))).from;
+    const scrollTarget =
+      topPos === undefined
+        ? EditorView.scrollIntoView(pos, { y: 'start', yMargin: 80 })
+        : EditorView.scrollIntoView(Math.min(topPos, doc.length), { y: 'start', yMargin: 0 });
+    if (focusRange !== undefined) this.focusRange = focusRange;
+    view.dispatch({
+      selection: { anchor: pos },
+      effects: [
+        ...(focusRange !== undefined ? [setFocusRange.of(focusRange)] : []),
+        scrollTarget,
+      ],
+    });
+    view.focus();
   }
 
   writeValue(value: string | null): void {
@@ -218,11 +291,20 @@ export class MarkdownEditorComponent implements ControlValueAccessor, OnInit, On
       autocompletion({ override: [wikiLinkCompletion(() => this.linkSuggestions)], icons: false }),
       search({ top: true }),
       highlightSelectionMatches(),
+      Prec.highest(
+        keymap.of([
+          { key: 'PageDown', run: () => this.zone.run(() => this.pageNavigation?.(1) ?? false) },
+          { key: 'PageUp', run: () => this.zone.run(() => this.pageNavigation?.(-1) ?? false) },
+        ])
+      ),
       Prec.high(formattingKeymap),
       keymap.of([...closeBracketsKeymap, ...completionKeymap, ...searchKeymap, ...historyKeymap, ...baseKeymap, indentWithTab]),
       this.editable.of(EditorView.editable.of(!this.disabled)),
       this.placeholderCompartment.of(placeholder(this.placeholder)),
       livePreview(() => this.linkResolver),
+      markdownTables(),
+      focusRange(() => this.focusRange),
+      hiddenLinesExtension(() => this.hiddenLines),
       editorTheme,
       EditorView.domEventHandlers({
         mousedown: (event) => {
@@ -252,9 +334,17 @@ export class MarkdownEditorComponent implements ControlValueAccessor, OnInit, On
         },
       }),
       EditorView.updateListener.of((update) => {
-        if (!update.docChanged) return;
-        const value = update.state.doc.toString();
-        this.zone.run(() => this.onChange(value));
+        if (update.docChanged) {
+          const value = update.state.doc.toString();
+          this.zone.run(() => this.onChange(value));
+        }
+        if ((update.selectionSet || update.docChanged) && this.cursorLineChange.observed) {
+          const line = update.state.doc.lineAt(update.state.selection.main.head).number - 1;
+          if (line !== this.lastCursorLine) {
+            this.lastCursorLine = line;
+            this.zone.run(() => this.cursorLineChange.emit(line));
+          }
+        }
       }),
     ];
   }

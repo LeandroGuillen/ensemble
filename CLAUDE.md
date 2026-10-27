@@ -33,6 +33,8 @@ Located in `src/app/core/services/`:
 - **CastService**: CRUD operations for cast folders under the casts folder
 - **PinboardService**: Manages pinboard data (nodes/edges) across multiple pinboards stored in `ensemble.json`
 - **PlotBoardService**: Discovers and manages `*.plotboard.md` files anywhere under the project
+- **BookPlanService**: Loads, autosaves (1s idle) and watches a book's plan file (`Book.plan.path`); external edits reload when there are no unsaved changes, otherwise they surface as a conflict
+- **BookEditActionsService**: Create/update/delete books from the Edit Book modal; shared by the Library and the book page
 - **MetadataService**: Validates characters against project metadata (categories/tags)
 - **FileWatcherService**: Monitors work folder for external file changes (using chokidar)
 - **WikiLinkTargetsService**: `[[wikilink]]` resolver and completion entries (characters, locations, Houses) for the Markdown description editors
@@ -45,6 +47,7 @@ Located in `src/app/core/utils/`:
 - **slug.utils.ts**: Slug generation for folder names, filename-to-field-name conversion, plot-board duplicate stem utilities
 - **markdown.utils.ts**: Markdown parsing and frontmatter handling
 - **character-alias.utils.ts**: Normalize and search character alternative names (a.k.a.'s)
+- **book-plan.utils.ts** / **plan-search.utils.ts**: Book plan parser (outline, PoV lines, markers, focus targets) and plan search (`2180`, `@name`, `!todo`…)
 
 ### Data Flow
 
@@ -166,6 +169,20 @@ Character ID is a stable value stored in frontmatter (`id`). The file path under
 
 **Character styles**: Project settings define `characterStyles` (seeded with a single `Default` style) and `defaultCharacterStyle`. When more than one style exists, the character list shows a Character Style dropdown. With only one style, the list selector is hidden and character detail offers a subtle link to Settings to add another. Missing style portraits show a placeholder. Pinboard/casts use `defaultCharacterStyle`.
 
+### Book Plan File Format
+
+A book's plan is any Markdown file in the project, set per book in the Edit Book modal (`books[].plan.path`, plus optional `plan.manuscriptDir`). The book page shows it as an outline with a focus editor:
+
+```markdown
+# Fase 1: El Prodigio            ← section (phase); intro text below it
+## 2010 - Llegando (T)           ← chapter: `<code> - <title>`; a trailing `(…)` is hidden in the outline
+PoV: m0k3r5abc123 Terom Bardez   ← optional, one or more, directly below the chapter heading
+- Lugar: …
+### 1. Escena                    ← scene
+```
+
+Lines are tagged with markers `TODO`, `OJO`, `RE-LECTURA`, `Información oculta` (nested items inherit it), `Lugar:` and `Objetivo principal:`. A chapter counts as drafted when `manuscriptDir` contains a file named `<code>-*`.
+
 ### Location File Format
 
 Location files match the pattern `_*.md` under `locations/` (recursively scanned; create writes to the folder root):
@@ -229,7 +246,8 @@ All routes defined in `src/app/app.routes.ts`:
 - `/pinboard` - Pinboard visualization (vis.js)
 - `/metadata` - Manage categories/tags
 - `/ai-settings` - AI provider configuration
-- `/library` - Library management
+- `/library` - Library management (clicking a book opens `/book/:id`)
+- `/book/:id` - Book page: the book's plan (outline + focused Markdown editor, `?line=` jumps); "Edit book…" opens the Edit Book modal
 - `/backstage` - Backstage (concept/name generation)
 - `/plot-board` - Plot boards (with optional path param)
 - `/casts` - Cast list

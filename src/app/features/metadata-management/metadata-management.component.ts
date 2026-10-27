@@ -17,6 +17,7 @@ import { ColorPaletteService } from '../../core/services/color-palette.service';
 import { UpdateService, UpdateStatus } from '../../core/services/update.service';
 import { ElectronService } from '../../core/services/electron.service';
 import { ZoomService } from '../../core/services/zoom.service';
+import { PreferencesService } from '../../core/services/preferences.service';
 import { ModalService } from '../../core/services/modal.service';
 import { Category, Tag, ProjectSettings, CategoryFolderMode, CharacterStyle } from '../../core/interfaces/project.interface';
 import { Theme } from '../../core/interfaces/theme.interface';
@@ -110,6 +111,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
   currentVersion = '—';
 
   zoomPercent = 100;
+  planOutlineSide: 'left' | 'right' = 'left';
 
   // Color presets - uses the shared color palette
   colorPresets: string[] = [];
@@ -129,7 +131,8 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
     public zoomService: ZoomService,
     private fb: FormBuilder,
     private logger: LoggingService
-    , private modalService: ModalService
+    , private modalService: ModalService,
+    private preferences: PreferencesService
   ) {
     this.categoryForm = this.fb.group({
       name: ['', [Validators.required, Validators.maxLength(100)]],
@@ -155,6 +158,11 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
       theme: [''],
       skin: ['']
     });
+  }
+
+  setPlanOutlineSide(side: 'left' | 'right'): void {
+    this.planOutlineSide = side;
+    this.preferences.setPlanOutlineSide(side);
   }
 
   ngOnInit(): void {
@@ -188,6 +196,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
         this.zoomPercent = this.zoomService.getZoomPercent();
       });
     this.zoomPercent = this.zoomService.getZoomPercent();
+    this.planOutlineSide = this.preferences.getPlanOutlineSide();
 
     // Subscribe to update status changes
     this.updateService.updateStatus$

@@ -23,6 +23,7 @@ export interface IpcChannels {
   readonly selectImage: string;
   readonly selectImages: string;
   readonly selectJson: string;
+  readonly selectPath: string;
   readonly getVersion: string;
 
   readonly getRecentProjects: string;

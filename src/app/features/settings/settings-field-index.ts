@@ -19,6 +19,12 @@ export const SETTINGS_FIELD_INDEX: SettingsFieldIndex[] = [
     valueKeys: ['defaultCategory', 'defaultCategoryName'],
   },
   {
+    id: 'plan-outline-side',
+    section: 'appearance',
+    label: 'Plan outline side',
+    keywords: ['outline', 'sidebar', 'book plan', 'left', 'right'],
+  },
+  {
     id: 'zoom',
     section: 'appearance',
     label: 'Interface zoom',

@@ -1,0 +1,65 @@
+<div class="plan-search-backdrop" (click)="dismiss.emit()">
+  <div class="plan-search" (click)="$event.stopPropagation()" role="dialog" aria-label="Search plan">
+    <div class="plan-search-input-row">
+      <span class="plan-search-prompt" aria-hidden="true">›</span>
+      <input
+        #input
+        class="plan-search-input"
+        type="text"
+        [(ngModel)]="query"
+        (input)="run()"
+        placeholder="Chapter code, words, @character, !todo…"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <span class="plan-search-count">{{ flat.length }}</span>
+    </div>
+
+    <div class="plan-search-lenses">
+      @for (lens of lenses; track lens.query) {
+        <button type="button" class="plan-search-lens" (click)="applyLens(lens.query)">
+          <code>{{ lens.query }}</code> {{ lens.label }}
+        </button>
+      }
+    </div>
+
+    <div class="plan-search-list" #list>
+      @for (group of groups; track group) {
+        <div class="plan-search-group">
+          @if (group.code) { <span class="plan-search-code">{{ group.code }}</span> }
+          {{ group.title }}
+          @for (pov of group.pov; track pov.characterId) {
+            <app-pov-chip [characterId]="pov.characterId" [name]="pov.name" [thumbnail]="thumbnails.get(pov.characterId) ?? null" [title]="pov.name"></app-pov-chip>
+          }
+        </div>
+        @for (item of group.items; track item.line) {
+          <div
+            class="plan-search-item"
+            [class.selected]="isSelected(item)"
+            [class.heading]="item.kind === 'heading'"
+            (click)="choose(item)"
+          >
+            <span class="plan-search-line">{{ item.line + 1 }}</span>
+            <span class="plan-search-text">
+              @for (seg of segments(item); track $index) {
+                @if (seg.hit) { <mark>{{ seg.text }}</mark> } @else { {{ seg.text }} }
+              }
+            </span>
+            @for (marker of item.markers; track marker) {
+              <span class="marker-badge" [attr.data-marker]="marker">{{ markerLabels[marker] }}</span>
+            }
+          </div>
+        }
+      } @empty {
+        <div class="plan-search-empty">No matches</div>
+      }
+    </div>
+
+    <div class="plan-search-footer">
+      <span><kbd>↑</kbd><kbd>↓</kbd> move</span>
+      <span><kbd>Tab</kbd> next chapter</span>
+      <span><kbd>Enter</kbd> jump</span>
+      <span><kbd>Esc</kbd> close</span>
+    </div>
+  </div>
+</div>

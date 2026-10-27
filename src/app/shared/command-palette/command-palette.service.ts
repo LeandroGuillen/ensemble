@@ -21,6 +21,7 @@ const GROUP_ORDER = [
   'Concepts',
   'Names',
   'characters',
+  'Plan',
   'view',
   'Appearance',
   'Help',

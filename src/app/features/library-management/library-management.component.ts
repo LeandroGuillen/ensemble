@@ -29,26 +29,11 @@ import { requireProject } from "../../core/utils/project.utils";
 import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
 import { BookEditorComponent } from "./components/book-editor/book-editor.component";
 import { BookItemComponent } from "./components/book-item/book-item.component";
-
-interface BookFormData {
-  name: string;
-  code?: string;
-  color: string;
-  description?: string;
-  status?:
-    | "draft"
-    | "in-progress"
-    | "complete"
-    | "published"
-    | "on-hold"
-    | "archived";
-  publicationDate?: string;
-  isbn?: string;
-  coverImage?: string;
-  povCharacterIds?: string[];
-  seriesId?: string;
-  sagaId?: string;
-}
+import {
+  BookEditActionsService,
+  BookFormData,
+} from "../../core/services/book-edit-actions.service";
+import { Router } from "@angular/router";
 
 type DragKind = "book" | "series" | "saga";
 
@@ -138,7 +123,9 @@ export class LibraryManagementComponent implements OnInit {
     private fb: FormBuilder,
     private logger: LoggingService,
     private notificationService: NotificationService,
-    private modalService: ModalService
+    private modalService: ModalService,
+    private bookEditActions: BookEditActionsService,
+    private router: Router
   ) {
     this.bookForm = this.fb.group({
       code: ["", [Validators.maxLength(50)]],
@@ -238,10 +225,9 @@ export class LibraryManagementComponent implements OnInit {
     this.selectedBook = null;
   }
 
+  /** A book opens its page (the plan); editing happens from there via "Edit book…". */
   onBookClick(book: Book): void {
-    this.selectedBook = book;
-    this.editingBook = book;
-    this.showBookForm = true;
+    this.router.navigate(["/book", book.id]);
   }
 
   onEditorSave(formData: BookFormData): void {
@@ -270,50 +256,10 @@ export class LibraryManagementComponent implements OnInit {
     try {
       this.saving = true;
       this.error = null;
-
-      const statusMap: Record<string, Book["status"]> = {
-        draft: "draft",
-        "in-progress": "in-progress",
-        published: "published",
-        archived: "archived",
-        complete: "published",
-        "on-hold": "archived",
-      };
-
-      const seriesId = editorData.seriesId || undefined;
-      const sagaId = seriesId ? editorData.sagaId || undefined : undefined;
-
-      const bookPayload: Omit<Book, "id"> = {
-        name: editorData.name,
-        code: editorData.code,
-        color: editorData.color,
-        description: editorData.description,
-        status: editorData.status ? statusMap[editorData.status] : undefined,
-        publicationDate: editorData.publicationDate,
-        isbn: editorData.isbn,
-        coverImage: editorData.coverImage,
-        povCharacterIds: editorData.povCharacterIds ?? [],
-        seriesId,
-        sagaId,
-      };
-
-      if (this.editingBook) {
-        const prevSeries = this.editingBook.seriesId || undefined;
-        const prevSaga = this.editingBook.sagaId || undefined;
-        await this.metadataService.updateBook(this.editingBook.id, bookPayload);
-        if (prevSeries !== seriesId || prevSaga !== sagaId) {
-          await this.metadataService.moveBook(
-            this.editingBook.id,
-            { seriesId, sagaId },
-            undefined
-          );
-        }
-        this.notificationService.showSuccess("Book updated successfully");
-      } else {
-        await this.metadataService.addBook(bookPayload);
-        this.notificationService.showSuccess("Book created successfully");
-      }
-
+      await this.bookEditActions.save(this.editingBook, editorData);
+      this.notificationService.showSuccess(
+        this.editingBook ? "Book updated successfully" : "Book created successfully"
+      );
       this.cancelBookForm();
     } catch (error) {
       this.logger.error("Failed to save book:", error);
@@ -324,19 +270,12 @@ export class LibraryManagementComponent implements OnInit {
   }
 
   async deleteBook(book: Book): Promise<void> {
-    if (
-      !(await this.modalService.confirm(
-        `Are you sure you want to delete the book "${getBookDisplayName(book)}"?\n\nThis will remove the book from all characters that reference it. Characters themselves will not be deleted.`
-      ))
-    ) {
-      return;
-    }
-
     try {
       this.saving = true;
       this.error = null;
-
-      await this.metadataService.removeBook(book.id);
+      if (!(await this.bookEditActions.confirmAndDelete(book))) {
+        return;
+      }
       this.notificationService.showSuccess(
         `Book "${getBookDisplayName(book)}" deleted successfully`
       );

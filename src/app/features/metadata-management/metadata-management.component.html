@@ -662,6 +662,19 @@
                   <small class="form-help">Change the shape of the interface. Works with any theme.</small>
                 </div>
               </form>
+              <div class="form-group" [settingsSearchable]="['Plan outline side', 'outline', 'sidebar', 'book plan', 'left', 'right']">
+                <label for="planOutlineSide">Plan outline side</label>
+                <select
+                  id="planOutlineSide"
+                  class="form-control"
+                  [value]="planOutlineSide"
+                  (change)="setPlanOutlineSide($any($event.target).value)"
+                  >
+                  <option value="left">Left</option>
+                  <option value="right">Right</option>
+                </select>
+                <small class="form-help">Where the chapter outline sits on a book's page. Saved on this computer.</small>
+              </div>
               @if (zoomService.isElectron()) {
                 <div class="form-group" [settingsSearchable]="['Interface zoom', 'zoom', 'scale', zoomPercent + '%']">
                   <label>Interface zoom</label>

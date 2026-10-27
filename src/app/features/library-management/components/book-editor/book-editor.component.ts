@@ -8,20 +8,9 @@ import { CharacterService } from '../../../../core/services/character.service';
 import { ModalService } from '../../../../core/services/modal.service';
 import { ProjectService } from '../../../../core/services/project.service';
 import { getBookDisplayName } from '../../../../core/utils/book-display.utils';
-
-interface BookFormData {
-  name: string;
-  code?: string;
-  color: string;
-  description?: string;
-  status?: 'draft' | 'in-progress' | 'complete' | 'published' | 'on-hold';
-  publicationDate?: string;
-  isbn?: string;
-  coverImage?: string;
-  povCharacterIds?: string[];
-  seriesId?: string;
-  sagaId?: string;
-}
+import { BookFormData } from '../../../../core/services/book-edit-actions.service';
+import { ElectronService } from '../../../../core/services/electron.service';
+import { projectRelativePath } from '../../../../core/utils/path.utils';
 
 interface PovCharacterDisplay {
   id: string;
@@ -59,6 +48,7 @@ export class BookEditorComponent implements OnInit, OnChanges {
   povCharacterIds: string[] = [];
   povCharacters: PovCharacterDisplay[] = [];
   pickingPov = false;
+  planPathError: string | null = null;
 
   colorPresets = [
     '#e74c3c',
@@ -91,7 +81,8 @@ export class BookEditorComponent implements OnInit, OnChanges {
     private characterPicker: CharacterPickerService,
     private characterService: CharacterService,
     private projectService: ProjectService,
-    private modalService: ModalService
+    private modalService: ModalService,
+    private electronService: ElectronService
   ) {
     this.bookForm = this.fb.group({
       code: ['', [Validators.maxLength(50)]],
@@ -103,7 +94,9 @@ export class BookEditorComponent implements OnInit, OnChanges {
       isbn: ['', [Validators.maxLength(50)]],
       coverImage: ['', []],
       seriesId: [''],
-      sagaId: ['']
+      sagaId: [''],
+      planPath: [''],
+      manuscriptDir: ['']
     }, { validators: codeOrTitleRequired() });
   }
 
@@ -160,7 +153,9 @@ export class BookEditorComponent implements OnInit, OnChanges {
         isbn: this.book.isbn || '',
         coverImage: this.book.coverImage || '',
         seriesId: this.book.seriesId || '',
-        sagaId: this.book.sagaId || ''
+        sagaId: this.book.sagaId || '',
+        planPath: this.book.plan?.path || '',
+        manuscriptDir: this.book.plan?.manuscriptDir || ''
       });
       this.povCharacterIds = [...(this.book.povCharacterIds || [])];
     } else {
@@ -174,7 +169,9 @@ export class BookEditorComponent implements OnInit, OnChanges {
         isbn: '',
         coverImage: '',
         seriesId: '',
-        sagaId: ''
+        sagaId: '',
+        planPath: '',
+        manuscriptDir: ''
       });
       this.povCharacterIds = [];
     }
@@ -267,6 +264,27 @@ export class BookEditorComponent implements OnInit, OnChanges {
       povCharacterIds: [...this.povCharacterIds],
     };
     this.save.emit(formData);
+  }
+
+  /** Pick the plan file or manuscript folder; stored relative to the project root. */
+  async browsePlanPath(control: 'planPath' | 'manuscriptDir'): Promise<void> {
+    const projectPath = this.projectService.getCurrentProject()?.path;
+    if (!projectPath) return;
+    const current = (this.bookForm.get(control)?.value || '').trim();
+    const picked = await this.electronService.selectPath({
+      kind: control === 'planPath' ? 'markdown' : 'folder',
+      title: control === 'planPath' ? 'Select plan file' : 'Select manuscript chapters folder',
+      defaultPath: current ? `${projectPath}/${current}` : projectPath,
+    });
+    if (!picked) return;
+    const relative = projectRelativePath(projectPath, picked);
+    if (relative === null) {
+      this.planPathError = 'Choose a location inside the project folder.';
+      return;
+    }
+    this.planPathError = null;
+    this.bookForm.patchValue({ [control]: relative });
+    this.bookForm.get(control)?.markAsDirty();
   }
 
   onCancel(): void {

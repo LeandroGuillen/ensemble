@@ -114,6 +114,13 @@ export class ElectronService {
     return await this.ipcRenderer.invoke(IpcChannels.selectJson);
   }
 
+  async selectPath(options: { kind: 'markdown' | 'folder'; title?: string; defaultPath?: string }): Promise<string | null> {
+    if (!this.isElectron()) {
+      return null;
+    }
+    return await this.ipcRenderer.invoke(IpcChannels.selectPath, options);
+  }
+
   async getVersion(): Promise<string> {
     if (!this.isElectron()) {
       return '1.0.0';

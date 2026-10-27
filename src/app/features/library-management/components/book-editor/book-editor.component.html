@@ -260,6 +260,39 @@
               }
             </div>
 
+            <!-- Plan -->
+            <div class="form-group">
+              <label for="bookPlanPath">Plan file</label>
+              <div class="path-input">
+                <input
+                  id="bookPlanPath"
+                  type="text"
+                  formControlName="planPath"
+                  placeholder="e.g. books/b2/b2.plan.md"
+                  class="form-control"
+                  />
+                <button type="button" class="btn btn-secondary" (click)="browsePlanPath('planPath')">Browse…</button>
+              </div>
+              <div class="field-hint">Markdown outline that opens when you click the book.</div>
+            </div>
+            <div class="form-group">
+              <label for="bookManuscriptDir">Manuscript chapters folder</label>
+              <div class="path-input">
+                <input
+                  id="bookManuscriptDir"
+                  type="text"
+                  formControlName="manuscriptDir"
+                  placeholder="e.g. books/b2/content"
+                  class="form-control"
+                  />
+                <button type="button" class="btn btn-secondary" (click)="browsePlanPath('manuscriptDir')">Browse…</button>
+              </div>
+              <div class="field-hint">Files named like <code>2180-title.*</code> mark chapter 2180 as drafted.</div>
+            </div>
+            @if (planPathError) {
+              <div class="field-error">{{ planPathError }}</div>
+            }
+
           </section>
         </div>
         @if (isEditMode) {

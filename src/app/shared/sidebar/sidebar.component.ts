@@ -133,6 +133,8 @@ export class SidebarComponent implements OnInit {
   }
 
   isActive(route: string): boolean {
+    // A book page belongs to the Library.
+    if (route === '/library' && this.currentRoute.startsWith('/book/')) return true;
     return this.currentRoute.startsWith(route);
   }
 

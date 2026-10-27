@@ -16,6 +16,7 @@ import { ConfirmationDialogComponent } from "./shared/confirmation-dialog/confir
 import { KeyboardShortcutsDialogComponent } from "./shared/keyboard-shortcuts-dialog/keyboard-shortcuts-dialog.component";
 import { KeyboardShortcutsService } from "./shared/keyboard-shortcuts-dialog/keyboard-shortcuts.service";
 import { ModalService, ConfirmationRequest } from "./core/services/modal.service";
+import { Book } from "./core/interfaces/project.interface";
 
 @Component({
     selector: "app-root",
@@ -105,6 +106,10 @@ export class AppComponent implements OnInit {
           project.metadata.settings?.charactersFolder?.trim() || 'characters',
           project.metadata.settings?.locationsFolder?.trim() || 'locations',
           'houses',
+          // Book plan files can live anywhere in the project; watch each file directly.
+          ...(project.metadata.books || [])
+            .map((book: Book) => book.plan?.path?.trim())
+            .filter((path: string | undefined): path is string => !!path),
         ] : [];
         const watchKey = project ? JSON.stringify([project.path, folders]) : null;
         if (watchKey !== this.watchedProjectKey) {

@@ -9,6 +9,7 @@
   "selectImage": "select-image",
   "selectImages": "select-images",
   "selectJson": "select-json",
+  "selectPath": "select-path",
   "getVersion": "get-version",
 
   "getRecentProjects": "get-recent-projects",

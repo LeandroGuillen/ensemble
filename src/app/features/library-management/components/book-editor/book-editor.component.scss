@@ -252,6 +252,30 @@
   font-family: inherit;
 }
 
+.path-input {
+  display: flex;
+  gap: 8px;
+
+  .form-control {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .btn {
+    flex: none;
+  }
+}
+
+.field-hint {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  margin-top: 4px;
+
+  code {
+    font-family: var(--font-mono, monospace);
+  }
+}
+
 .field-error {
   color: var(--color-error);
   font-size: 12px;

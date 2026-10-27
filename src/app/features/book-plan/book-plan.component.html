@@ -1,0 +1,225 @@
+<div class="book-plan" [style.--book-color]="book?.color">
+  <app-page-header [title]="bookTitle">
+    @if (book?.code) {
+      <span pageHeaderPrefix class="book-code">{{ book?.code }}</span>
+    }
+    <div class="header-actions">
+      @if (state) {
+        <span class="save-status" [class.warn]="state.conflict !== null || state.error">{{ saveStatus }}</span>
+        <button type="button" class="btn btn-ghost btn-sm" (click)="openSearch()" title="Search plan (Ctrl+J)">
+          Search <kbd>Ctrl J</kbd>
+        </button>
+        <button
+          type="button"
+          class="btn btn-ghost btn-sm"
+          [class.active]="focusMode"
+          (click)="toggleFocus()"
+          title="Show only the current chapter (Ctrl+.)"
+        >
+          Focus
+        </button>
+      }
+      @if (book) {
+        <button type="button" class="edit-book-link" (click)="openBookEditor()">Edit book…</button>
+      }
+    </div>
+  </app-page-header>
+
+  @if (loading && !state) {
+    <div class="plan-empty">Loading…</div>
+  } @else if (!book) {
+    <div class="plan-empty">
+      <p>This book doesn't exist anymore.</p>
+      <button type="button" class="btn btn-secondary" (click)="backToLibrary()">Back to Library</button>
+    </div>
+  } @else if (!state) {
+    <div class="plan-empty">
+      <h2>No plan yet</h2>
+      <p>
+        A plan is a Markdown file with <code>#</code> phases, <code>## 2180 - Title</code> chapters and
+        <code>###</code> scenes. Add <code>PoV: &lt;character id&gt; &lt;name&gt;</code> below a chapter heading
+        to set its point of view.
+      </p>
+      <div class="plan-empty-actions">
+        <button type="button" class="btn btn-primary" (click)="createPlanFile()">
+          Create {{ book.code || book.id }}.plan.md
+        </button>
+        <button type="button" class="btn btn-secondary" (click)="openBookEditor()">Choose an existing file…</button>
+      </div>
+    </div>
+  } @else {
+    <div class="plan-layout" [class.outline-right]="outlineSide === 'right'">
+      <nav class="plan-outline" aria-label="Plan outline">
+        @for (section of state.parsed.outline; track section.line) {
+          <button
+            type="button"
+            class="outline-section"
+            [class.current]="isCurrent(section)"
+            (click)="openHeading(section)"
+          >
+            {{ section.title }}
+          </button>
+          @for (item of section.children; track item.line) {
+            <button
+              type="button"
+              class="outline-row"
+              [class.chapter]="item.kind === 'chapter'"
+              [class.current]="isCurrent(item)"
+              (click)="openHeading(item)"
+              [title]="item.heading"
+            >
+              @if (item.kind === 'chapter') {
+                <span
+                  class="draft-dot"
+                  [class.drafted]="isDrafted(item)"
+                  [title]="isDrafted(item) ? 'Drafted: ' + draftPath(item) + ' (click to open)' : 'Not drafted'"
+                  (click)="isDrafted(item) && openDraft(item, $event)"
+                ></span>
+                <span class="outline-code">{{ item.code }}</span>
+              }
+              <span class="outline-title">{{ item.title }}</span>
+              @for (marker of outlineMarkers; track marker) {
+                @if (markerCount(item, marker); as count) {
+                  <span class="marker-badge" [attr.data-marker]="marker" [title]="count + ' × ' + markerLabels[marker]">
+                    {{ count }}
+                  </span>
+                }
+              }
+              @for (pov of item.pov; track pov.characterId) {
+                <app-pov-chip
+                  class="outline-pov"
+                  [characterId]="pov.characterId"
+                  [name]="povName(pov.characterId, pov.name)"
+                  [thumbnail]="povThumbnail(pov.characterId)"
+                  [title]="'PoV: ' + povName(pov.characterId, pov.name)"
+                ></app-pov-chip>
+              }
+            </button>
+            @if (isInTrail(item)) {
+              @for (scene of item.children; track scene.line) {
+                <button
+                  type="button"
+                  class="outline-row outline-scene"
+                  [class.current]="isInTrail(scene)"
+                  (click)="openHeading(scene)"
+                >
+                  <span class="outline-title">{{ scene.title }}</span>
+                </button>
+              }
+            }
+          }
+        }
+      </nav>
+
+      <section class="plan-main">
+        @if (state.conflict !== null) {
+          <div class="plan-banner warn">
+            <span>{{ state.relativePath }} changed on disk while you had unsaved edits.</span>
+            <button type="button" class="btn btn-secondary btn-sm" (click)="resolveConflict('disk')">Reload from disk</button>
+            <button type="button" class="btn btn-primary btn-sm" (click)="resolveConflict('mine')">Keep mine</button>
+          </div>
+        } @else if (state.error) {
+          <div class="plan-banner warn">{{ state.error }}</div>
+        }
+
+        <div class="plan-crumbs">
+          <span class="crumb-file">{{ state.relativePath }}</span>
+          @for (heading of trail; track heading.line) {
+            <span class="crumb-sep">›</span>
+            <button type="button" class="crumb" (click)="openHeading(heading)">
+              {{ heading.code ? heading.code + ' ' + heading.title : heading.title }}
+            </button>
+          }
+          @if (current?.heading?.kind === 'chapter') {
+            <span class="crumb-pov">
+              @for (pov of current!.heading.pov; track pov.line) {
+                <button type="button" class="pov-button" (click)="changePov(pov)" title="Change point of view">
+                  <app-pov-chip
+                    class="crumb-pov-chip"
+                    [characterId]="pov.characterId"
+                    [name]="povName(pov.characterId, pov.name)"
+                    [thumbnail]="povThumbnail(pov.characterId)"
+                  ></app-pov-chip>
+                  {{ povName(pov.characterId, pov.name) }}
+                </button>
+              } @empty {
+                <button type="button" class="pov-button pov-unset" (click)="changePov()">Set PoV…</button>
+              }
+            </span>
+          }
+        </div>
+
+        @if (overscroll.direction === -1 && neighbor(-1); as prev) {
+          <div class="overscroll-top" [style.--progress]="overscroll.progress">
+            <span class="overscroll-label">↑ {{ prev.heading.code ? prev.heading.code + ' ' : '' }}{{ prev.heading.title }}</span>
+            <span class="overscroll-bar"><span></span></span>
+          </div>
+        }
+
+        <div class="plan-editor-scroll" #scroller (wheel)="onWheel($event)" (scroll)="onScroll($event)">
+          <app-markdown-editor
+            class="plan-editor"
+            [ngModel]="editorText"
+            (ngModelChange)="onTextChange($event)"
+            [focusRange]="focusRange"
+            [hiddenLines]="hiddenLines"
+            [pageNavigation]="pageNavigation"
+            [linkResolver]="linkResolver"
+            [linkSuggestions]="linkSuggestions"
+            (linkOpen)="openLink($event)"
+            (cursorLineChange)="onCursorLine($event)"
+            (editorBlur)="onEditorBlur()"
+          ></app-markdown-editor>
+
+          @if (focusMode && neighbor(1); as next) {
+            <button
+              type="button"
+              class="next-section"
+              [class.pushing]="overscroll.direction === 1"
+              [style.--progress]="overscroll.direction === 1 ? overscroll.progress : 0"
+              (click)="slideTo(1)"
+              title="Keep scrolling, or click, to continue"
+            >
+              <span class="next-section-hint">Keep scrolling for</span>
+              <span class="next-section-title">
+                @if (next.heading.code) { <span class="next-section-code">{{ next.heading.code }}</span> }
+                {{ next.heading.title }}
+              </span>
+              <span class="overscroll-bar"><span></span></span>
+            </button>
+          }
+        </div>
+
+        <div class="plan-keys">
+          <span><kbd>Ctrl</kbd><kbd>J</kbd> search</span>
+          <span><kbd>PgUp</kbd>/<kbd>PgDn</kbd> chapter</span>
+          <span><kbd>Alt</kbd><kbd>Shift</kbd><kbd>PgUp</kbd>/<kbd>PgDn</kbd> heading</span>
+          <span><kbd>Ctrl</kbd><kbd>.</kbd> focus</span>
+          <span><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>←</kbd>/<kbd>→</kbd> back/forward</span>
+        </div>
+      </section>
+    </div>
+  }
+
+  @if (searchOpen && state) {
+    <app-plan-search
+      [plan]="state.parsed"
+      [characters]="characters"
+      [thumbnails]="povThumbnails"
+      [initialQuery]="searchQuery"
+      (pick)="onSearchPick($event)"
+      (dismiss)="onSearchDismiss()"
+    ></app-plan-search>
+  }
+
+  <app-book-editor
+    [book]="book"
+    [seriesList]="seriesList"
+    [sagasList]="sagasList"
+    [isVisible]="showEditor"
+    [saving]="savingBook"
+    (save)="onBookSave($event)"
+    (cancel)="closeBookEditor()"
+    (delete)="onBookDelete($event)"
+  ></app-book-editor>
+</div>
