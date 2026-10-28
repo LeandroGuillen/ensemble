@@ -35,18 +35,9 @@ describe('BookPlanComponent leave guards', () => {
     expect(bookPlan.prepareToLeave).toHaveBeenCalled();
   });
 
-  it('prevents window close when there is pending work', () => {
-    bookPlan.hasPendingWork.and.returnValue(true);
-    const event = { preventDefault: jasmine.createSpy('preventDefault') } as any;
-    component.beforeUnload(event);
-    expect(event.preventDefault).toHaveBeenCalled();
-  });
-
-  it('allows window close when there is no pending work', () => {
-    bookPlan.hasPendingWork.and.returnValue(false);
-    const event = { preventDefault: jasmine.createSpy('preventDefault') } as any;
-    component.beforeUnload(event);
-    expect(event.preventDefault).not.toHaveBeenCalled();
+  it('does not use a beforeunload preventDefault (Electron would silently block quit)', () => {
+    expect((component as any).beforeUnload).toBeUndefined();
+    expect(BookPlanComponent.prototype.hasOwnProperty('beforeUnload')).toBeFalse();
   });
 
   it('never uses the native confirm (it breaks keyboard focus in Electron)', async () => {

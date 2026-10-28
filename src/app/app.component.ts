@@ -1,4 +1,4 @@
-import { DestroyRef, inject, Component, OnInit, HostListener } from "@angular/core";
+import { DestroyRef, Injector, inject, Component, OnInit, HostListener } from "@angular/core";
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterOutlet, NavigationEnd } from "@angular/router";
 
@@ -32,6 +32,9 @@ export class AppComponent implements OnInit {
   private watchedProjectKey: string | null = null;
   private watcherTransition: Promise<void> = Promise.resolve();
   private readonly destroyRef = inject(DestroyRef);
+  private readonly prepareToLeaveHandler = () => {
+    void this.handlePrepareToLeaveRequest();
+  };
 
   // Confirmation dialog state
   confirmationVisible = false;
@@ -58,9 +61,16 @@ export class AppComponent implements OnInit {
     private houseService: HouseService,
     private houseCommandService: HouseCommandService,
     private fileWatcherService: FileWatcherService,
+    private injector: Injector,
   ) {}
 
   async ngOnInit() {
+    // Main process close/quit/reload asks us to flush book-plan leave first.
+    this.electronService.onPrepareToLeaveRequest(this.prepareToLeaveHandler);
+    this.destroyRef.onDestroy(() => {
+      this.electronService.removePrepareToLeaveRequestListener(this.prepareToLeaveHandler);
+    });
+
     // Set the app title with version
     try {
       const version = await this.electronService.getVersion();
@@ -271,6 +281,24 @@ export class AppComponent implements OnInit {
       this.currentConfirmation.resolve(false);
       this.currentConfirmation = null;
       this.confirmationVisible = false;
+    }
+  }
+
+  /**
+   * Respond to main-process prepare-to-leave (close / quit / reload).
+   * Ack first so a conflict modal is not raced by the unresponsive timeout.
+   */
+  private async handlePrepareToLeaveRequest(): Promise<void> {
+    this.electronService.replyPrepareToLeaveAck();
+    try {
+      const { BookPlanService } = await import('./core/services/book-plan.service');
+      const bookPlan = this.injector.get(BookPlanService);
+      const allowed = await Promise.resolve(bookPlan.prepareToLeave());
+      this.electronService.replyPrepareToLeaveResult(allowed);
+    } catch (error) {
+      this.logger.error('prepareToLeave for window lifecycle failed', error);
+      // Fail open so a broken renderer cannot pin the window forever.
+      this.electronService.replyPrepareToLeaveResult(true);
     }
   }
 }

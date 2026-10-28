@@ -16,6 +16,9 @@ export interface IpcChannels {
   readonly setBrowserNavigationInterception: string;
   readonly browserNavigationCommand: string;
 
+  readonly prepareToLeaveRequest: string;
+  readonly prepareToLeaveReply: string;
+
   readonly fileChanged: string;
   readonly updateStatus: string;
 

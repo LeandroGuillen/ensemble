@@ -203,16 +203,13 @@ export class BookPlanComponent implements OnInit, OnDestroy {
   /**
    * Route leave guard. Dirty plans are flushed; unresolved disk conflicts use the
    * in-app modal (Keep mine / Reload from disk / Cancel) — never window.confirm.
+   *
+   * Window close / quit / reload are handled by the main-process lifecycle
+   * (IPC prepareToLeave). Do not preventDefault on beforeunload: in Electron that
+   * silently cancels close with no dialog.
    */
   canLeave(): boolean | Promise<boolean> {
     return this.bookPlan.prepareToLeave();
-  }
-
-  @HostListener('window:beforeunload', ['$event'])
-  beforeUnload(event: BeforeUnloadEvent): void {
-    if (this.bookPlan.hasPendingWork()) {
-      event.preventDefault();
-    }
   }
 
   get bookTitle(): string {

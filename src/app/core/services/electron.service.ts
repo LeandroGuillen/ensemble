@@ -295,6 +295,39 @@ export class ElectronService {
     }
   }
 
+  /**
+   * Main process asks the renderer to flush / resolve leave (book plan) before
+   * close, quit, or reload. Reply with {@link replyPrepareToLeaveAck} then
+   * {@link replyPrepareToLeaveResult}.
+   */
+  onPrepareToLeaveRequest(callback: () => void): void {
+    if (this.isElectron()) {
+      this.ipcRenderer.on(IpcChannels.prepareToLeaveRequest, callback);
+    }
+  }
+
+  removePrepareToLeaveRequestListener(callback: () => void): void {
+    if (this.isElectron()) {
+      this.ipcRenderer.removeListener(IpcChannels.prepareToLeaveRequest, callback);
+    }
+  }
+
+  /** Ack so main stops the unresponsive fail-open timer while a modal is open. */
+  replyPrepareToLeaveAck(): void {
+    if (this.isElectron()) {
+      this.ipcRenderer.send(IpcChannels.prepareToLeaveReply, { type: 'ack' });
+    }
+  }
+
+  replyPrepareToLeaveResult(allowed: boolean): void {
+    if (this.isElectron()) {
+      this.ipcRenderer.send(IpcChannels.prepareToLeaveReply, {
+        type: 'result',
+        allowed: Boolean(allowed),
+      });
+    }
+  }
+
   // Recent projects storage (file-based, persists across restarts)
   async getRecentProjects(): Promise<Array<{ path: string; lastAccessed: string }>> {
     if (!this.isElectron()) {

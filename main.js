@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, shell, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
 const chokidar = require('chokidar');
@@ -8,6 +8,7 @@ const { ok, err } = require('./lib/ipc-result');
 const { guard } = require('./lib/path-guard');
 const { normalizeRelativeFolder } = require('./lib/normalize-relative-folder');
 const { createWindow, registerNavigationIpc } = require('./lib/window');
+const { createLifecycleController } = require('./lib/window-lifecycle');
 const dialogHandlers = require('./lib/dialog-handlers');
 const fsHandlers = require('./lib/fs-handlers');
 const fileWatcher = require('./lib/file-watcher');
@@ -40,6 +41,14 @@ function setInterceptBrowserNavigation(enabled) {
 
 const assertPath = (filePath) => guard(filePath, app);
 
+const lifecycle = createLifecycleController({
+  app,
+  ipcMain,
+  IPC,
+  getMainWindow,
+  Menu,
+});
+
 const windowDeps = {
   BrowserWindow,
   path,
@@ -49,6 +58,7 @@ const windowDeps = {
   getInterceptBrowserNavigation,
   setInterceptBrowserNavigation,
   setMainWindow,
+  lifecycle,
 };
 
 const sharedDeps = {
@@ -99,7 +109,12 @@ app.on('activate', () => {
   }
 });
 
-app.on('before-quit', async () => {
+app.on('before-quit', async (event) => {
+  // Defer quit until the renderer has flushed / resolved book-plan leave.
+  // Cleanup must not run when the user cancels a conflict prompt.
+  if (!lifecycle.handleBeforeQuit(event)) {
+    return;
+  }
   await fileWatcher.closeWatcher();
   updater.clearUpdateInterval();
 });

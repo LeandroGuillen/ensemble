@@ -2,6 +2,9 @@
   "setBrowserNavigationInterception": "set-browser-navigation-interception",
   "browserNavigationCommand": "browser-navigation-command",
 
+  "prepareToLeaveRequest": "prepare-to-leave-request",
+  "prepareToLeaveReply": "prepare-to-leave-reply",
+
   "fileChanged": "file-changed",
   "updateStatus": "update-status",
 
