@@ -1,14 +1,18 @@
 import { Injectable } from '@angular/core';
-import { Subject, Observable } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
+
+export type ChoiceResult = 'primary' | 'secondary' | 'cancel';
 
 export interface ConfirmationRequest {
   id: string;
   message: string;
-  title?: string;
+  title: string;
   confirmText?: string;
   cancelText?: string;
+  /** Optional middle action (e.g. "Reload from disk"). When set, Cancel / Secondary / Confirm are shown. */
+  secondaryText?: string;
   danger?: boolean;
-  resolve: (value: boolean) => void;
+  resolve: (value: boolean | 'secondary') => void;
 }
 
 /**
@@ -40,17 +44,51 @@ export class ModalService {
       danger?: boolean;
     }
   ): Promise<boolean> {
-    return new Promise<boolean>((resolve) => {
-      const request: ConfirmationRequest = {
+    const result = await this.open({
+      message,
+      title,
+      confirmText: options?.confirmText,
+      cancelText: options?.cancelText,
+      danger: options?.danger ?? false,
+    });
+    return result === 'primary';
+  }
+
+  /**
+   * Three-way choice: primary, secondary, or cancel (Escape / dismiss).
+   * Used when leaving a book plan with an unresolved disk conflict.
+   */
+  async choose(
+    message: string,
+    title: string,
+    options: {
+      confirmText: string;
+      secondaryText: string;
+      cancelText?: string;
+      danger?: boolean;
+    }
+  ): Promise<ChoiceResult> {
+    return this.open({
+      message,
+      title,
+      confirmText: options.confirmText,
+      secondaryText: options.secondaryText,
+      cancelText: options.cancelText,
+      danger: options.danger ?? false,
+    });
+  }
+
+  private open(request: Omit<ConfirmationRequest, 'id' | 'resolve'>): Promise<ChoiceResult> {
+    return new Promise<ChoiceResult>((resolve) => {
+      this.confirmationSubject.next({
         id: `confirmation-${Date.now()}-${Math.random()}`,
-        message,
-        title,
-        confirmText: options?.confirmText,
-        cancelText: options?.cancelText,
-        danger: options?.danger ?? false,
-        resolve
-      };
-      this.confirmationSubject.next(request);
+        ...request,
+        resolve: (value) => {
+          if (value === true) resolve('primary');
+          else if (value === 'secondary') resolve('secondary');
+          else resolve('cancel');
+        },
+      });
     });
   }
 

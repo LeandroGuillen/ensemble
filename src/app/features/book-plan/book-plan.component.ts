@@ -197,7 +197,22 @@ export class BookPlanComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     if (this.overscrollDrainTimer) clearTimeout(this.overscrollDrainTimer);
     this.saveViewState();
-    void this.bookPlan.flush();
+    // Pending writes are awaited by canLeave / prepareToLeave before navigation.
+  }
+
+  /**
+   * Route leave guard. Dirty plans are flushed; unresolved disk conflicts use the
+   * in-app modal (Keep mine / Reload from disk / Cancel) — never window.confirm.
+   */
+  canLeave(): boolean | Promise<boolean> {
+    return this.bookPlan.prepareToLeave();
+  }
+
+  @HostListener('window:beforeunload', ['$event'])
+  beforeUnload(event: BeforeUnloadEvent): void {
+    if (this.bookPlan.hasPendingWork()) {
+      event.preventDefault();
+    }
   }
 
   get bookTitle(): string {

@@ -258,6 +258,14 @@ export class AppComponent implements OnInit {
     }
   }
 
+  onConfirmationSecondary(): void {
+    if (this.currentConfirmation) {
+      this.currentConfirmation.resolve('secondary');
+      this.currentConfirmation = null;
+      this.confirmationVisible = false;
+    }
+  }
+
   onConfirmationCancel(): void {
     if (this.currentConfirmation) {
       this.currentConfirmation.resolve(false);

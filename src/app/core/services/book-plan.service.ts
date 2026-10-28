@@ -8,6 +8,7 @@ import { pathJoin } from '../utils/path.utils';
 import { ElectronService } from './electron.service';
 import { FileChangeEvent, FileWatcherService } from './file-watcher.service';
 import { LoggingService } from './logging.service';
+import { ModalService } from './modal.service';
 import { ProjectService } from './project.service';
 
 /** Where the reader was in a plan, kept for the session so returning to the book page restores it. */
@@ -55,17 +56,20 @@ export class BookPlanService {
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private saving: Promise<void> = Promise.resolve();
   private viewStates = new Map<string, BookPlanViewState>();
+  /** Reused while a leave/conflict prompt is open (route leave or project switch). */
+  private leavePrompt: Promise<boolean> | null = null;
 
   constructor(
     private electronService: ElectronService,
     private projectService: ProjectService,
     private fileWatcherService: FileWatcherService,
-    private logger: LoggingService
+    private logger: LoggingService,
+    private modalService: ModalService
   ) {
     this.projectService.currentProject$.pipe(takeUntilDestroyed()).subscribe((project) => {
       const path = project?.path ?? null;
       if (path !== this.projectPath) {
-        this.writeOrphanedEdits();
+        // Pending edits are persisted by prepareToLeave() before ProjectService switches.
         this.viewStates.clear();
         this.projectPath = path;
         this.reset();
@@ -75,6 +79,51 @@ export class BookPlanService {
     this.fileWatcherService.fileChanges$.pipe(takeUntilDestroyed()).subscribe((event) => {
       void this.handleFileChange(event);
     });
+  }
+
+  /** True when there are unsaved edits or an unresolved disk conflict. */
+  hasPendingWork(): boolean {
+    const state = this.stateSubject.value;
+    return !!state && (state.dirty || state.conflict !== null);
+  }
+
+  /**
+   * Persist or resolve pending plan edits before leaving the page or switching project.
+   * Dirty (no conflict): await a write. Conflict: Keep mine / Reload from disk / Cancel.
+   * Clean: no prompt. Returns false if the user cancelled.
+   */
+  prepareToLeave(): boolean | Promise<boolean> {
+    const state = this.stateSubject.value;
+    if (!state) {
+      return true;
+    }
+    if (state.conflict !== null) {
+      this.leavePrompt ??= this.promptConflictResolution().finally(() => {
+        this.leavePrompt = null;
+      });
+      return this.leavePrompt;
+    }
+    if (state.dirty) {
+      return this.flush().then(() => true);
+    }
+    return true;
+  }
+
+  private async promptConflictResolution(): Promise<boolean> {
+    const choice = await this.modalService.choose(
+      'This plan changed on disk while you had unsaved edits. What do you want to do with your version?',
+      'Plan changed on disk',
+      {
+        confirmText: 'Keep mine',
+        secondaryText: 'Reload from disk',
+        cancelText: 'Cancel',
+      }
+    );
+    if (choice === 'cancel') {
+      return false;
+    }
+    await this.resolveConflict(choice === 'primary' ? 'mine' : 'disk');
+    return true;
   }
 
   getViewState(bookId: string): BookPlanViewState | null {
@@ -295,17 +344,6 @@ export class BookPlanService {
 
   private absolutePath(relativePath: string): string | null {
     return this.projectPath ? pathJoin(this.projectPath, normalizePath(relativePath)) : null;
-  }
-
-  /** The project is switching: write unsaved edits to the old project's file before dropping them. */
-  private writeOrphanedEdits(): void {
-    const state = this.stateSubject.value;
-    const absolutePath = state && this.absolutePath(state.relativePath);
-    if (state?.dirty && state.conflict === null && absolutePath) {
-      void this.electronService
-        .writeFileAtomic(absolutePath, state.text)
-        .catch((error) => this.logger.error('Failed to save book plan', error));
-    }
   }
 
   private patch(changes: Partial<BookPlanState>): void {

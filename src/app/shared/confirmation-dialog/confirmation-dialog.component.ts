@@ -13,15 +13,23 @@ export class ConfirmationDialogComponent {
   @Input() message = 'Are you sure?';
   @Input() confirmText = 'Confirm';
   @Input() cancelText = 'Cancel';
+  /** Optional third action between Cancel and Confirm (e.g. "Reload from disk"). */
+  @Input() secondaryText = '';
   @Input() confirmButtonClass = 'btn-primary';
   @Input() danger = false;
 
   @Output() visibleChange = new EventEmitter<boolean>();
   @Output() confirm = new EventEmitter<void>();
+  @Output() secondary = new EventEmitter<void>();
   @Output() cancel = new EventEmitter<void>();
 
   onConfirm(): void {
     this.confirm.emit();
+    this.close();
+  }
+
+  onSecondary(): void {
+    this.secondary.emit();
     this.close();
   }
 

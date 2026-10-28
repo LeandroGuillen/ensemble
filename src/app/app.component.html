@@ -16,8 +16,10 @@
     [message]="currentConfirmation?.message || ''"
     [confirmText]="currentConfirmation?.confirmText || 'Confirm'"
     [cancelText]="currentConfirmation?.cancelText || 'Cancel'"
+    [secondaryText]="currentConfirmation?.secondaryText || ''"
     [danger]="currentConfirmation?.danger || false"
     (confirm)="onConfirmationConfirm()"
+    (secondary)="onConfirmationSecondary()"
     (cancel)="onConfirmationCancel()"
     (visibleChange)="confirmationVisible = $event"
   ></app-confirmation-dialog>

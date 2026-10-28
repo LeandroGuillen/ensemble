@@ -4,6 +4,7 @@ import { BOOK_PLAN_AUTOSAVE_MS, BookPlanService } from './book-plan.service';
 import { ElectronService } from './electron.service';
 import { FileChangeEvent, FileWatcherService } from './file-watcher.service';
 import { LoggingService } from './logging.service';
+import { ModalService } from './modal.service';
 import { ProjectService } from './project.service';
 import { Book } from '../interfaces/project.interface';
 
@@ -15,6 +16,8 @@ describe('BookPlanService', () => {
   let service: BookPlanService;
   let electron: jasmine.SpyObj<ElectronService>;
   let fileChanges: Subject<FileChangeEvent>;
+  let project$: BehaviorSubject<any>;
+  let modal: jasmine.SpyObj<ModalService>;
   let disk: string;
 
   const books: Book[] = [
@@ -48,10 +51,13 @@ describe('BookPlanService', () => {
     });
 
     const project = { path: PROJECT, metadata: { books } };
+    project$ = new BehaviorSubject<any>(project);
     const projectService = {
-      currentProject$: new BehaviorSubject<any>(project),
+      currentProject$: project$,
       getBooks: () => books,
     };
+    modal = jasmine.createSpyObj('ModalService', ['confirm', 'choose']);
+    modal.choose.and.resolveTo('primary');
 
     TestBed.configureTestingModule({
       providers: [
@@ -60,6 +66,7 @@ describe('BookPlanService', () => {
         { provide: ProjectService, useValue: projectService },
         { provide: FileWatcherService, useValue: { fileChanges$: fileChanges.asObservable() } },
         { provide: LoggingService, useValue: jasmine.createSpyObj('LoggingService', ['error']) },
+        { provide: ModalService, useValue: modal },
       ],
     });
     service = TestBed.inject(BookPlanService);
@@ -176,5 +183,91 @@ describe('BookPlanService', () => {
     await service.flush();
     expect(service.snapshot?.dirty).toBeTrue();
     expect(service.snapshot?.error).toBe('disk full');
+  });
+
+  describe('prepareToLeave / project switch', () => {
+    it('writes a dirty plan when preparing to leave (project switch)', async () => {
+      await service.open('n26');
+      service.update('# Pending\n');
+      expect(service.snapshot?.dirty).toBeTrue();
+
+      const allowed = await service.prepareToLeave();
+
+      expect(allowed).toBeTrue();
+      expect(disk).toBe('# Pending\n');
+      expect(service.snapshot?.dirty).toBeFalse();
+      expect(modal.choose).not.toHaveBeenCalled();
+    });
+
+    it('does not silently drop a conflict when preparing to leave', async () => {
+      await service.open('n26');
+      service.update('# Mío\n');
+      disk = '# Desde Obsidian\n';
+      changed();
+      await new Promise((resolve) => setTimeout(resolve));
+      expect(service.snapshot?.conflict).toBe('# Desde Obsidian\n');
+
+      modal.choose.and.resolveTo('cancel');
+      const allowed = await service.prepareToLeave();
+
+      expect(allowed).toBeFalse();
+      expect(service.snapshot?.conflict).toBe('# Desde Obsidian\n');
+      expect(service.snapshot?.text).toBe('# Mío\n');
+      expect(electron.writeFileAtomic).not.toHaveBeenCalled();
+    });
+
+    it('Keep mine writes the user text and clears the conflict', async () => {
+      await service.open('n26');
+      service.update('# Mío\n');
+      disk = '# Desde Obsidian\n';
+      changed();
+      await new Promise((resolve) => setTimeout(resolve));
+
+      modal.choose.and.resolveTo('primary');
+      expect(await service.prepareToLeave()).toBeTrue();
+
+      expect(disk).toBe('# Mío\n');
+      expect(service.snapshot?.conflict).toBeNull();
+      expect(service.snapshot?.dirty).toBeFalse();
+      expect(modal.choose).toHaveBeenCalled();
+    });
+
+    it('Reload from disk loads disk text and clears the conflict', async () => {
+      await service.open('n26');
+      service.update('# Mío\n');
+      disk = '# Desde Obsidian\n';
+      changed();
+      await new Promise((resolve) => setTimeout(resolve));
+
+      modal.choose.and.resolveTo('secondary');
+      expect(await service.prepareToLeave()).toBeTrue();
+
+      expect(service.snapshot?.text).toBe('# Desde Obsidian\n');
+      expect(service.snapshot?.conflict).toBeNull();
+      expect(service.snapshot?.dirty).toBeFalse();
+      expect(electron.writeFileAtomic).not.toHaveBeenCalled();
+    });
+
+    it('allows leave with nothing dirty and no conflict without prompting', async () => {
+      await service.open('n26');
+      expect(await service.prepareToLeave()).toBeTrue();
+      expect(modal.choose).not.toHaveBeenCalled();
+      expect(electron.writeFileAtomic).not.toHaveBeenCalled();
+    });
+
+    it('hasPendingWork is true for dirty or conflict, false when clean', async () => {
+      await service.open('n26');
+      expect(service.hasPendingWork()).toBeFalse();
+      service.update('# x\n');
+      expect(service.hasPendingWork()).toBeTrue();
+      await service.flush();
+      expect(service.hasPendingWork()).toBeFalse();
+
+      service.update('# y\n');
+      disk = '# z\n';
+      changed();
+      await new Promise((resolve) => setTimeout(resolve));
+      expect(service.hasPendingWork()).toBeTrue();
+    });
   });
 });

@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Injector } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import {
   Book,
@@ -49,8 +49,20 @@ export class ProjectService {
     private electronService: ElectronService,
     private logger: LoggingService,
     private pinboardStore: PinboardStoreService,
-    private recentProjects: RecentProjectsService
+    private recentProjects: RecentProjectsService,
+    private injector: Injector
   ) {}
+
+  /**
+   * Persist or resolve a pending book plan before switching projects.
+   * Lazy-resolves BookPlanService to avoid a circular DI with ProjectService.
+   * Returns false if the user cancelled an unresolved conflict.
+   */
+  private async persistBookPlanBeforeSwitch(): Promise<boolean> {
+    const { BookPlanService } = await import('./book-plan.service');
+    const bookPlan = this.injector.get(BookPlanService);
+    return bookPlan.prepareToLeave();
+  }
 
   getCurrentProject(): Project | null {
     return this.currentProjectSubject.value;
@@ -155,6 +167,9 @@ export class ProjectService {
    */
   async loadProject(projectPath: string): Promise<Project | null> {
     try {
+      if (!(await this.persistBookPlanBeforeSwitch())) {
+        return this.currentProjectSubject.value;
+      }
       await this.electronService.setWorkFolder(projectPath);
 
       // Check if directory exists
@@ -256,6 +271,9 @@ export class ProjectService {
    */
   async createProject(projectPath: string, projectName: string): Promise<Project | null> {
     try {
+      if (!(await this.persistBookPlanBeforeSwitch())) {
+        return this.currentProjectSubject.value;
+      }
       await this.electronService.setWorkFolder(projectPath);
 
       // Check if directory already exists
