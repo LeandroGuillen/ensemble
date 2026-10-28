@@ -386,7 +386,8 @@ export class ProjectSelectorComponent implements OnInit {
         this.error = 'Failed to duplicate project.';
       }
     } catch (error) {
-      this.error = `Failed to duplicate project: ${error}`;
+      const raw = error instanceof Error ? error.message : String(error);
+      this.error = raw;
       this.logger.error('Project duplication error:', error);
     } finally {
       this.isLoading = false;

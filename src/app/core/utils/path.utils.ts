@@ -154,3 +154,24 @@ export function projectRelativePath(root: string, target: string): string | null
   }
   return full.slice(base.length + 1);
 }
+
+/**
+ * True when `candidate` is the same path as `root`, or a path inside `root`.
+ * Uses a separator boundary so sibling-prefix names are not treated as nested
+ * (e.g. `/vault/mybook` does not contain `/vault/mybook-copy`).
+ */
+export function isSameOrInsidePath(root: string, candidate: string): boolean {
+  const normalize = (p: string): string => {
+    const withSlashes = p.replace(/\\/g, '/');
+    if (withSlashes.length > 1 && withSlashes.endsWith('/')) {
+      return withSlashes.replace(/\/+$/, '');
+    }
+    return withSlashes;
+  };
+  const base = normalize(root);
+  const full = normalize(candidate);
+  if (base === full) {
+    return true;
+  }
+  return full.startsWith(base + '/');
+}

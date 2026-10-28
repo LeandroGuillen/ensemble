@@ -16,7 +16,7 @@ import {
 import { LegacyProjectMetadataFields } from '../interfaces/legacy.interface';
 import { generateId } from '../utils/id.utils';
 import { remapProjectCharacterIds } from '../utils/character-id.utils';
-import { pathBasename, pathJoin } from '../utils/path.utils';
+import { isSameOrInsidePath, pathBasename, pathJoin } from '../utils/path.utils';
 import { sanitizeFilename } from '../utils/slug.utils';
 import { assertIpcSuccess } from '../utils/ipc.utils';
 import {
@@ -345,6 +345,14 @@ export class ProjectService {
       // Validate destination path doesn't already contain a project
       const sanitizedName = sanitizeFilename(newProjectName);
       const destProjectPath = pathJoin(destinationPath, sanitizedName);
+
+      // Refuse equal/nested destinations before any destination filesystem work.
+      // Separator-boundary check allows sibling prefixes (mybook vs mybook-copy).
+      if (isSameOrInsidePath(sourceProjectPath, destProjectPath)) {
+        throw new Error(
+          `Cannot duplicate a project into itself: destination "${destProjectPath}" is equal to or inside source "${sourceProjectPath}"`
+        );
+      }
 
       await this.electronService.setWorkFolder(destProjectPath);
 

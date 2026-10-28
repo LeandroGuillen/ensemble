@@ -40,7 +40,8 @@ describe('ProjectService', () => {
       'getRecentProjects',
       'saveRecentProjects',
       'deleteFile',
-      'readDirectoryFiles'
+      'readDirectoryFiles',
+      'copyDirectoryRecursive',
     ]);
     electronSpy.saveRecentProjects.and.returnValue(Promise.resolve({ success: true }));
     const loggingSpy = jasmine.createSpyObj('LoggingService', ['log', 'error']);
@@ -457,6 +458,81 @@ describe('ProjectService', () => {
       const categories = service.getCategories();
       expect(categories.find(c => c.id === 'supporting')).toBeUndefined();
       expect(electronService.writeFileAtomic).toHaveBeenCalled();
+    });
+  });
+
+  describe('duplicateProject', () => {
+    function stubValidSource(sourcePath: string): void {
+      electronService.isDirectory.and.callFake((p: string) =>
+        Promise.resolve(p === sourcePath)
+      );
+      electronService.fileExists.and.callFake((p: string) => {
+        if (p === sourcePath) return Promise.resolve(true);
+        if (p === `${sourcePath}/ensemble.json`) return Promise.resolve(true);
+        return Promise.resolve(false);
+      });
+    }
+
+    it('refuses when destination equals the source before copying', async () => {
+      const sourcePath = '/vault/mybook';
+      stubValidSource(sourcePath);
+      electronService.copyDirectoryRecursive.and.returnValue(Promise.resolve({ success: true }));
+
+      await expectAsync(
+        service.duplicateProject(sourcePath, '/vault', 'mybook')
+      ).toBeRejectedWithError(/into itself/i);
+
+      expect(electronService.copyDirectoryRecursive).not.toHaveBeenCalled();
+      expect(electronService.setWorkFolder).toHaveBeenCalledTimes(1);
+      expect(electronService.setWorkFolder).toHaveBeenCalledWith(sourcePath);
+    });
+
+    it('refuses when destination is inside the source before copying', async () => {
+      const sourcePath = '/vault/mybook';
+      stubValidSource(sourcePath);
+      electronService.copyDirectoryRecursive.and.returnValue(Promise.resolve({ success: true }));
+
+      await expectAsync(
+        service.duplicateProject(sourcePath, sourcePath, 'nested-copy')
+      ).toBeRejectedWithError(/into itself/i);
+
+      expect(electronService.copyDirectoryRecursive).not.toHaveBeenCalled();
+    });
+
+    it('allows a sibling destination that only shares a name prefix', async () => {
+      const sourcePath = '/vault/mybook';
+      const destPath = '/vault/mybook-copy';
+      let copied = false;
+      electronService.copyDirectoryRecursive.and.callFake(() => {
+        copied = true;
+        return Promise.resolve({ success: true });
+      });
+      electronService.fileExists.and.callFake((p: string) => {
+        if (p === sourcePath || p === `${sourcePath}/ensemble.json`) return Promise.resolve(true);
+        if (p === destPath) return Promise.resolve(copied);
+        if (p === `${destPath}/ensemble.json`) return Promise.resolve(copied);
+        return Promise.resolve(false);
+      });
+      electronService.isDirectory.and.callFake((p: string) =>
+        Promise.resolve(p === sourcePath || (copied && p === destPath))
+      );
+      electronService.readFile.and.returnValue(Promise.resolve({
+        success: true,
+        content: JSON.stringify(createValidMetadata())
+      }));
+      electronService.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));
+      electronService.createDirectory.and.returnValue(Promise.resolve({ success: true }));
+      electronService.readDirectoryFiles.and.returnValue(Promise.resolve({
+        success: true,
+        files: [],
+        directories: []
+      }));
+
+      const project = await service.duplicateProject(sourcePath, '/vault', 'mybook-copy');
+
+      expect(electronService.copyDirectoryRecursive).toHaveBeenCalledWith(sourcePath, destPath);
+      expect(project).toBeTruthy();
+      expect(project?.path).toBe(destPath);
     });
   });
 
