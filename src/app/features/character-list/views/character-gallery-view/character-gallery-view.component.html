@@ -1,7 +1,7 @@
 <div class="character-gallery-view" [class.size-medium]="thumbnailSize === 'medium'" [class.size-small]="thumbnailSize === 'small'">
   @for (character of characters; track character; let i = $index) {
     <div
-      class="gallery-item"
+      class="gallery-item character-item"
       cdkDrag
       [cdkDragData]="character"
       [cdkDragDisabled]="!dndEnabled"
@@ -9,6 +9,8 @@
       (cdkDragStarted)="onDragStarted()"
       (cdkDragEnded)="onDragEnded()"
       [class.dnd-enabled]="dndEnabled"
+      [class.selected]="selectedCharacterIndex === i"
+      [attr.data-index]="i"
       (click)="onCharacterClick(character)"
       role="button"
       tabindex="0"

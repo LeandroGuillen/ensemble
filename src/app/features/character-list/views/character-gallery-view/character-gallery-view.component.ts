@@ -16,6 +16,7 @@ export class CharacterGalleryViewComponent {
   @Input() tags: Tag[] = [];
   @Input() thumbnailDataUrls: Map<string, string> = new Map();
   @Input() thumbnailSize: 'big' | 'medium' | 'small' = 'big';
+  @Input() selectedCharacterIndex = -1;
   @Input() dndEnabled = false;
   /** Character IDs that are PoV under the current book filter context. */
   @Input() povCharacterIds: Set<string> = new Set();

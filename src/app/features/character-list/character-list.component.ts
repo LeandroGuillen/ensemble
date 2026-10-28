@@ -20,6 +20,11 @@ import {
 import { contrastTextColor } from '../../core/utils/color-contrast.utils';
 import { aliasesMatchSearch } from '../../core/utils/character-alias.utils';
 import { getCharacterDisplayName } from '../../core/utils/character-display.utils';
+import {
+  isEditableKeyboardTarget,
+  moveListSelection,
+  plainLetterKey,
+} from '../../core/utils/list-keyboard.utils';
 import { resolveThumbnailForBookStyle } from '../../core/utils/thumbnail.utils';
 import { CharacterFilterComponent } from '../../shared/character-filter/character-filter.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
@@ -381,13 +386,24 @@ export class CharacterListComponent implements OnInit {
 
   @HostListener('document:keydown', ['$event'])
   handleKeyboardEvent(event: KeyboardEvent): void {
-    // Ignore if user is typing in an input, textarea, or select
-    const target = event.target as HTMLElement;
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+    if (isEditableKeyboardTarget(event.target)) {
       return;
     }
 
-    // Enter to open selected character
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (this.filteredCharacters.length === 0) {
+        return;
+      }
+      this.selectedCharacterIndex = moveListSelection(
+        this.selectedCharacterIndex,
+        event.key === 'ArrowDown' ? 'down' : 'up',
+        this.filteredCharacters.length
+      );
+      this.scrollToSelectedCharacter();
+      return;
+    }
+
     if (event.key === 'Enter' && this.selectedCharacterIndex >= 0) {
       event.preventDefault();
       const selectedCharacter = this.filteredCharacters[this.selectedCharacterIndex];
@@ -397,15 +413,13 @@ export class CharacterListComponent implements OnInit {
       return;
     }
 
-    // N to create new character
-    if (event.key === 'n' || event.key === 'N') {
+    const letter = plainLetterKey(event);
+    if (letter === 'n') {
       event.preventDefault();
       this.createNewCharacter();
       return;
     }
-
-    // L to toggle list/grid view
-    if (event.key === 'l' || event.key === 'L') {
+    if (letter === 'l') {
       event.preventDefault();
       this.toggleViewMode();
       return;

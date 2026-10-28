@@ -3,7 +3,8 @@
     <div class="actions">
       <input class="form-control" type="search" aria-label="Search houses" placeholder="Search houses…" [(ngModel)]="search" />
       <button class="btn btn-secondary" (click)="refresh()" [disabled]="loading">Refresh</button>
-      <a class="btn btn-primary" routerLink="/house">New House</a>
+      <button type="button" class="btn btn-primary" (click)="createNewHouse()">New House</button>
+      <kbd class="shortcut-hint">N</kbd>
     </div>
   </app-page-header>
   <main>
@@ -14,12 +15,17 @@
         <svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="assets/ui-icons.svg#shield" /></svg>
         <h2>{{ search ? 'No houses found' : 'Your world’s dynasties start here' }}</h2>
         <p>{{ search ? 'Try another name or motto.' : 'Record their identity, members, and generations of leadership.' }}</p>
-        @if (!search) { <a class="btn btn-primary" routerLink="/house">Create First House</a> }
+        @if (!search) { <button type="button" class="btn btn-primary" (click)="createNewHouse()">Create First House</button> }
       </div>
     } @else {
       <div class="house-grid">
-        @for (house of filtered; track house.id) {
-          <a class="house-card" [routerLink]="['/house', house.id]">
+        @for (house of filtered; track house.id; let i = $index) {
+          <a
+            class="house-card house-item"
+            [class.selected]="selectedHouseIndex === i"
+            [attr.data-index]="i"
+            [routerLink]="['/house', house.id]"
+            (click)="selectedHouseIndex = i">
             <div class="crest">
               @if (crests.get(house.id); as crest) { <img [src]="crest" [alt]="house.name + ' crest'" /> }
               @else { <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#shield" /></svg> }

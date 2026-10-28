@@ -14,6 +14,11 @@ import {
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { contrastTextColor } from '../../core/utils/color-contrast.utils';
 import { getBookDisplayName } from '../../core/utils/book-display.utils';
+import {
+  isEditableKeyboardTarget,
+  moveListSelection,
+  plainLetterKey,
+} from '../../core/utils/list-keyboard.utils';
 
 @Component({
   selector: 'app-location-list',
@@ -112,8 +117,7 @@ export class LocationListComponent implements OnInit {
 
   @HostListener('document:keydown', ['$event'])
   handleKeyboardEvent(event: KeyboardEvent): void {
-    const target = event.target as HTMLElement;
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+    if (isEditableKeyboardTarget(event.target)) {
       return;
     }
 
@@ -122,17 +126,11 @@ export class LocationListComponent implements OnInit {
       if (this.filteredLocations.length === 0) {
         return;
       }
-      if (event.key === 'ArrowDown') {
-        this.selectedLocationIndex =
-          this.selectedLocationIndex < this.filteredLocations.length - 1
-            ? this.selectedLocationIndex + 1
-            : 0;
-      } else {
-        this.selectedLocationIndex =
-          this.selectedLocationIndex > 0
-            ? this.selectedLocationIndex - 1
-            : this.filteredLocations.length - 1;
-      }
+      this.selectedLocationIndex = moveListSelection(
+        this.selectedLocationIndex,
+        event.key === 'ArrowDown' ? 'down' : 'up',
+        this.filteredLocations.length
+      );
       this.scrollToSelectedLocation();
       return;
     }
@@ -146,13 +144,13 @@ export class LocationListComponent implements OnInit {
       return;
     }
 
-    if (event.key === 'n' || event.key === 'N') {
+    const letter = plainLetterKey(event);
+    if (letter === 'n') {
       event.preventDefault();
       this.createNewLocation();
       return;
     }
-
-    if (event.key === 'l' || event.key === 'L') {
+    if (letter === 'l') {
       event.preventDefault();
       this.toggleViewMode();
       return;

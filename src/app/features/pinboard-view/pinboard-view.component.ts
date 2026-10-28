@@ -166,11 +166,20 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
   @HostListener('document:keydown.p', ['$event'])
   handlePKey(event: Event): void {
     const keyboardEvent = event as KeyboardEvent;
+    if (
+      keyboardEvent.ctrlKey ||
+      keyboardEvent.altKey ||
+      keyboardEvent.metaKey
+    ) {
+      return;
+    }
     const target = keyboardEvent.target as HTMLElement;
     const isInput =
       target.tagName === 'INPUT' ||
       target.tagName === 'TEXTAREA' ||
-      target.isContentEditable;
+      target.tagName === 'SELECT' ||
+      target.isContentEditable ||
+      !!target.closest('[contenteditable="true"]');
 
     if (
       !isInput &&

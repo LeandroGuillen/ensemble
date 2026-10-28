@@ -504,6 +504,7 @@
                       @if (viewMode === 'gallery') {
                         <app-character-gallery-view
                           [characters]="group.characters"
+                          [selectedCharacterIndex]="selectedCharacterIndex"
                           [tags]="tags"
                           [dndEnabled]="isCategoryDragDropEnabled()"
                           [thumbnailDataUrls]="thumbnailDataUrls"
@@ -595,6 +596,7 @@
                       @if (viewMode === 'gallery') {
                         <app-character-gallery-view
                           [characters]="group.characters"
+                          [selectedCharacterIndex]="selectedCharacterIndex"
                           [tags]="tags"
                           [thumbnailDataUrls]="thumbnailDataUrls"
                           [povCharacterIds]="povCharacterIdSet"
@@ -673,6 +675,7 @@
                       @if (viewMode === 'gallery') {
                         <app-character-gallery-view
                           [characters]="group.characters"
+                          [selectedCharacterIndex]="selectedCharacterIndex"
                           [tags]="tags"
                           [thumbnailDataUrls]="thumbnailDataUrls"
                           [povCharacterIds]="povCharacterIdSet"
@@ -751,6 +754,7 @@
                       @if (viewMode === 'gallery') {
                         <app-character-gallery-view
                           [characters]="group.characters"
+                          [selectedCharacterIndex]="selectedCharacterIndex"
                           [tags]="tags"
                           [thumbnailDataUrls]="thumbnailDataUrls"
                           [povCharacterIds]="povCharacterIdSet"
@@ -833,6 +837,7 @@
                 @if (filteredCharacters.length > 0 && viewMode === 'gallery') {
                   <app-character-gallery-view
                     [characters]="filteredCharacters"
+                    [selectedCharacterIndex]="selectedCharacterIndex"
                     [dndEnabled]="!drawerMode"
                     [tags]="tags"
                     [thumbnailDataUrls]="thumbnailDataUrls"
