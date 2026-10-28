@@ -34,6 +34,36 @@ describe('LocationService', () => {
     content: 'A foggy port city.',
   });
 
+  /** Simulated on-disk paths for collision tests (fileExists / write / move / delete). */
+  let existingFiles: Set<string>;
+
+  const installFilesystemSpies = (spy: jasmine.SpyObj<ElectronService>) => {
+    existingFiles = new Set<string>();
+    spy.fileExists.and.callFake(async (p: string) => existingFiles.has(p.replace(/\\/g, '/')));
+    spy.writeFileAtomic.and.callFake(async (p: string) => {
+      existingFiles.add(p.replace(/\\/g, '/'));
+      return { success: true };
+    });
+    spy.moveDirectory.and.callFake(async (from: string, to: string) => {
+      const src = from.replace(/\\/g, '/');
+      const dest = to.replace(/\\/g, '/');
+      if (src === dest) return { success: true };
+      if (existingFiles.has(dest)) {
+        return { success: false, error: `Destination already exists: ${to}` };
+      }
+      if (!existingFiles.has(src)) {
+        return { success: false, error: 'Source missing' };
+      }
+      existingFiles.delete(src);
+      existingFiles.add(dest);
+      return { success: true };
+    });
+    spy.deleteFile.and.callFake(async (p: string) => {
+      existingFiles.delete(p.replace(/\\/g, '/'));
+      return { success: true };
+    });
+  };
+
   beforeEach(() => {
     const electronSpy = jasmine.createSpyObj('ElectronService', [
       'fileExists',
@@ -55,6 +85,7 @@ describe('LocationService', () => {
         },
       })
     );
+    installFilesystemSpies(electronSpy);
 
     const projectSpy = jasmine.createSpyObj('ProjectService', [
       'getCurrentProject',
@@ -140,8 +171,12 @@ A foggy port.`,
 
   it('round-trips every location type through Markdown storage', async () => {
     projectService.getCurrentProject.and.returnValue(createValidProject());
-    electronService.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));
-    electronService.fileExists.and.returnValue(Promise.resolve(true));
+    // Locations folder exists; individual location files tracked by installFilesystemSpies.
+    electronService.fileExists.and.callFake(async (p: string) => {
+      const normalized = p.replace(/\\/g, '/');
+      if (normalized === '/test/project/locations') return true;
+      return existingFiles.has(normalized);
+    });
 
     for (const type of LOCATION_TYPES) {
       const created = await service.createLocation({ ...createFormData(), type: type.value });
@@ -205,14 +240,47 @@ A foggy port.`,
         })
       ).toBeRejected();
     });
+
+    it('picks a free filename when the slug file already exists', async () => {
+      projectService.getCurrentProject.and.returnValue(createValidProject());
+
+      const first = await service.createLocation({ ...createFormData(), name: 'The Castle' });
+      const second = await service.createLocation({ ...createFormData(), name: 'the castle!' });
+
+      expect(first.relativePath).toBe('_the-castle.md');
+      expect(second.relativePath).toMatch(/^_the-castle-[a-z0-9]+\.md$/);
+      expect(second.filePath).not.toBe(first.filePath);
+      expect(service.getLocationsSnapshot().length).toBe(2);
+    });
+
+    it('picks a free filename for accent-only name differences', async () => {
+      projectService.getCurrentProject.and.returnValue(createValidProject());
+
+      const first = await service.createLocation({ ...createFormData(), name: 'Café Real' });
+      const second = await service.createLocation({ ...createFormData(), name: 'Cafe Real' });
+
+      expect(first.relativePath).toBe('_cafe-real.md');
+      expect(second.relativePath).toMatch(/^_cafe-real-[a-z0-9]+\.md$/);
+      expect(second.filePath).not.toBe(first.filePath);
+    });
+
+    it('keeps two non-ASCII names on distinct files', async () => {
+      projectService.getCurrentProject.and.returnValue(createValidProject());
+
+      const tokyo = await service.createLocation({ ...createFormData(), name: '東京' });
+      const moscow = await service.createLocation({ ...createFormData(), name: 'Москва' });
+
+      expect(tokyo.relativePath).toBe('_location.md');
+      expect(moscow.relativePath).toMatch(/^_location-[a-z0-9]+\.md$/);
+      expect(tokyo.filePath).not.toBe(moscow.filePath);
+      expect(service.getLocationsSnapshot().length).toBe(2);
+    });
   });
 
   describe('updateLocation', () => {
     it('renames the file when the name changes', async () => {
       const project = createValidProject();
       projectService.getCurrentProject.and.returnValue(project);
-      electronService.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));
-      electronService.moveDirectory.and.returnValue(Promise.resolve({ success: true }));
 
       const created = await service.createLocation(createFormData());
       const updated = await service.updateLocation(created.id, { name: 'Black Harbor' });
@@ -220,6 +288,57 @@ A foggy port.`,
       expect(updated?.name).toBe('Black Harbor');
       expect(updated?.relativePath).toBe('_black-harbor.md');
       expect(electronService.moveDirectory).toHaveBeenCalled();
+    });
+
+    it('picks a free filename when renaming onto an existing slug', async () => {
+      projectService.getCurrentProject.and.returnValue(createValidProject());
+
+      const harbor = await service.createLocation({ ...createFormData(), name: 'Grey Harbor' });
+      const castle = await service.createLocation({ ...createFormData(), name: 'The Castle' });
+
+      const renamed = await service.updateLocation(castle.id, { name: 'Grey Harbor!' });
+
+      expect(harbor.relativePath).toBe('_grey-harbor.md');
+      expect(renamed?.relativePath).toMatch(/^_grey-harbor-[a-z0-9]+\.md$/);
+      expect(renamed?.filePath).not.toBe(harbor.filePath);
+
+      const snapshot = service.getLocationsSnapshot();
+      expect(snapshot.find((l) => l.id === harbor.id)?.filePath).toBe(harbor.filePath);
+      expect(snapshot.find((l) => l.id === castle.id)?.filePath).toBe(renamed?.filePath);
+      expect(new Set(snapshot.map((l) => l.filePath)).size).toBe(2);
+    });
+
+    it('keeps the same file on a case-only rename', async () => {
+      projectService.getCurrentProject.and.returnValue(createValidProject());
+
+      const created = await service.createLocation({ ...createFormData(), name: 'castle a' });
+      electronService.moveDirectory.calls.reset();
+
+      const updated = await service.updateLocation(created.id, { name: 'Castle A' });
+
+      expect(updated?.name).toBe('Castle A');
+      expect(updated?.relativePath).toBe('_castle-a.md');
+      expect(updated?.filePath).toBe(created.filePath);
+      expect(electronService.moveDirectory).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('deleteLocation with distinct collision files', () => {
+    it('deleting one colliding location does not delete the other file', async () => {
+      projectService.getCurrentProject.and.returnValue(createValidProject());
+
+      const first = await service.createLocation({ ...createFormData(), name: 'The Castle' });
+      const second = await service.createLocation({ ...createFormData(), name: 'the castle!' });
+
+      expect(first.filePath).not.toBe(second.filePath);
+
+      await service.deleteLocation(first.id);
+
+      expect(electronService.deleteFile).toHaveBeenCalledWith(first.filePath);
+      expect(electronService.deleteFile).not.toHaveBeenCalledWith(second.filePath);
+      expect(existingFiles.has(second.filePath)).toBeTrue();
+      expect(existingFiles.has(first.filePath)).toBeFalse();
+      expect(service.getLocationById(second.id)?.filePath).toBe(second.filePath);
     });
   });
 

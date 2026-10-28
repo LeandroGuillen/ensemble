@@ -130,20 +130,55 @@ export class LocationService {
     }
   }
 
+  /**
+   * Find an available filename for a location, avoiding collisions.
+   * Pattern: _<slug>.md, or _<slug>-<id-suffix>.md if that exists.
+   */
+  private async findAvailableFilename(
+    parentPath: string,
+    name: string,
+    id: string,
+    currentFilePath?: string
+  ): Promise<string> {
+    const base = asciiSlugify(name) || 'location';
+    const normalizedCurrent = currentFilePath?.replace(/\\/g, '/');
+
+    const isAvailable = async (filename: string): Promise<boolean> => {
+      const candidate = pathJoin(parentPath, filename);
+      if (candidate === normalizedCurrent) return true;
+      return !(await this.electronService.fileExists(candidate));
+    };
+
+    const baseFilename = `_${base}.md`;
+    if (await isAvailable(baseFilename)) return baseFilename;
+
+    // Add id suffix (last 8 chars of id)
+    const idPart = asciiSlugify(id).slice(-8) || 'location';
+    const withId = `_${base}-${idPart}.md`;
+    if (await isAvailable(withId)) return withId;
+
+    // If still colliding, add numeric suffix
+    let suffix = 2;
+    while (!(await isAvailable(`_${base}-${idPart}-${suffix}.md`))) {
+      suffix += 1;
+    }
+    return `_${base}-${idPart}-${suffix}.md`;
+  }
+
   async createLocation(data: LocationFormData): Promise<Location> {
     try {
       const books = data.books || [];
       await this.validateBookReferences(books);
 
-      const slug = asciiSlugify(data.name) || 'location';
-      const filename = `_${slug}.md`;
+      const id = generateId();
       const locationsPath = this.projectService.getLocationsFolderPath();
+      const filename = await this.findAvailableFilename(locationsPath, data.name, id);
       const filePath = pathJoin(locationsPath, filename);
       const relativePath = filename;
 
       const now = new Date();
       const location: Location = {
-        id: generateId(),
+        id,
         name: data.name,
         type: isLocationType(data.type) ? data.type : undefined,
         books,
@@ -189,15 +224,26 @@ export class LocationService {
 
       if (nameChanged) {
         const newName = data.name || existing.name;
-        const newFilename = `_${asciiSlugify(newName) || 'location'}.md`;
+        const parentDir = pathDirname(existing.filePath);
+        const newFilename = await this.findAvailableFilename(
+          parentDir,
+          newName,
+          existing.id,
+          existing.filePath
+        );
+        
         const lastSlash = existing.relativePath.lastIndexOf('/');
         const oldRelDir = lastSlash === -1 ? '' : existing.relativePath.slice(0, lastSlash);
         newRelativePath = oldRelDir ? pathJoin(oldRelDir, newFilename) : newFilename;
 
-        const destFilePath = pathJoin(pathDirname(existing.filePath), newFilename);
-        const moveResult = await this.electronService.moveDirectory(existing.filePath, destFilePath);
-        if (!moveResult.success) {
-          throw new Error(`Failed to move location file: ${moveResult.error}`);
+        const destFilePath = pathJoin(parentDir, newFilename);
+        
+        // Only move if the path actually changed (handles case-only renames on case-insensitive filesystems)
+        if (existing.filePath !== destFilePath) {
+          const moveResult = await this.electronService.moveDirectory(existing.filePath, destFilePath);
+          if (!moveResult.success) {
+            throw new Error(`Failed to move location file: ${moveResult.error}`);
+          }
         }
         newFilePath = destFilePath;
       }
