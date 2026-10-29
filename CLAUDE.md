@@ -107,7 +107,10 @@ npm run dist
 ### Testing
 
 ```bash
-# Run Angular tests
+# Main-process Node tests (lib/*.test.js)
+npm run test:main
+
+# Runs test:main first, then Angular/Karma tests
 npm test
 
 # Verify project setup
