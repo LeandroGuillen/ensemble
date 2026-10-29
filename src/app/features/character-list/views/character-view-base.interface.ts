@@ -4,7 +4,7 @@ export interface CharacterViewData {
   characters: Character[];
   categories: Category[];
   tags: Tag[];
-  selectedCharacterIndex?: number;
+  selectedCharacterId?: string | null;
   selectedCharacterIds: string[];
   thumbnailDataUrls: Map<string, string>;
 }

@@ -20,7 +20,7 @@ export class CharacterCompactViewComponent {
   @Input() categories: Category[] = [];
   @Input() tags: Tag[] = [];
   @Input() columns: 1 | 2 = 2;
-  @Input() selectedCharacterIndex = -1;
+  @Input() selectedCharacterId: string | null = null;
   @Input() dndEnabled = false;
   @Input() selectedCharacterIds: string[] = [];
   @Input() thumbnailDataUrls: Map<string, string> = new Map();

@@ -17,7 +17,7 @@ export class CharacterGridViewComponent {
   @Input() characters: Character[] = [];
   @Input() categories: Category[] = [];
   @Input() tags: Tag[] = [];
-  @Input() selectedCharacterIndex = -1;
+  @Input() selectedCharacterId: string | null = null;
   @Input() dndEnabled = false;
   @Input() thumbnailDataUrls: Map<string, string> = new Map();
   /** When set, category labels use the book-specific override if present. */

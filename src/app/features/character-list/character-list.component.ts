@@ -384,21 +384,56 @@ export class CharacterListComponent implements OnInit {
     this.recomputePovBadgeState();
   }
 
+  /**
+   * Characters in on-screen order for keyboard navigation.
+   * When grouped, walks groups top-to-bottom so Up/Down match the layout
+   * (not the flat filteredCharacters index each group wrongly compared before).
+   */
+  getNavigationCharacters(): Character[] {
+    if (this.groupBy === 'none') {
+      return this.filteredCharacters;
+    }
+    if (this.groupBy === 'category') {
+      return this.groupedCharacters.flatMap((group) => group.characters);
+    }
+    if (this.groupBy === 'tag') {
+      return this.groupedByTag.flatMap((group) => group.characters);
+    }
+    if (this.groupBy === 'cast') {
+      return this.groupedByCast.flatMap((group) => group.characters);
+    }
+    if (this.groupBy === 'book') {
+      return this.groupedByBook.flatMap((group) => group.characters);
+    }
+    return this.filteredCharacters;
+  }
+
+  /** Id of the keyboard-highlighted character, for views that compare by id. */
+  get selectedCharacterId(): string | null {
+    const list = this.getNavigationCharacters();
+    if (this.selectedCharacterIndex < 0 || this.selectedCharacterIndex >= list.length) {
+      return null;
+    }
+    return list[this.selectedCharacterIndex]?.id ?? null;
+  }
+
   @HostListener('document:keydown', ['$event'])
   handleKeyboardEvent(event: KeyboardEvent): void {
     if (isEditableKeyboardTarget(event.target)) {
       return;
     }
 
+    const navList = this.getNavigationCharacters();
+
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
-      if (this.filteredCharacters.length === 0) {
+      if (navList.length === 0) {
         return;
       }
       this.selectedCharacterIndex = moveListSelection(
         this.selectedCharacterIndex,
         event.key === 'ArrowDown' ? 'down' : 'up',
-        this.filteredCharacters.length
+        navList.length
       );
       this.scrollToSelectedCharacter();
       return;
@@ -406,7 +441,7 @@ export class CharacterListComponent implements OnInit {
 
     if (event.key === 'Enter' && this.selectedCharacterIndex >= 0) {
       event.preventDefault();
-      const selectedCharacter = this.filteredCharacters[this.selectedCharacterIndex];
+      const selectedCharacter = navList[this.selectedCharacterIndex];
       if (selectedCharacter) {
         this.editCharacter(selectedCharacter);
       }
@@ -463,13 +498,14 @@ export class CharacterListComponent implements OnInit {
   }
 
   private scrollToSelectedCharacter(): void {
-    if (this.selectedCharacterIndex < 0) return;
+    const id = this.selectedCharacterId;
+    if (!id) return;
 
     // Use setTimeout to ensure DOM is updated
     setTimeout(() => {
       const selectedElement = document.querySelector(
-        `.character-item[data-index="${this.selectedCharacterIndex}"]`
-      ) as HTMLElement;
+        `.character-item[data-character-id="${CSS.escape(id)}"]`
+      ) as HTMLElement | null;
 
       if (selectedElement) {
         selectedElement.scrollIntoView({
