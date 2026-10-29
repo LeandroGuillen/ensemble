@@ -9,6 +9,7 @@ const { guard } = require('./lib/path-guard');
 const { normalizeRelativeFolder } = require('./lib/normalize-relative-folder');
 const { createWindow, registerNavigationIpc } = require('./lib/window');
 const { createLifecycleController } = require('./lib/window-lifecycle');
+const { createTrashManager, createQuitFlushGuard } = require('./lib/trash-manager');
 const dialogHandlers = require('./lib/dialog-handlers');
 const fsHandlers = require('./lib/fs-handlers');
 const fileWatcher = require('./lib/file-watcher');
@@ -49,6 +50,25 @@ const lifecycle = createLifecycleController({
   Menu,
 });
 
+const trashManager = createTrashManager({
+  fs,
+  path,
+  shell,
+  timers: { setTimeout, clearTimeout },
+  assertPath,
+  emitCommitFailed: (payload) => {
+    const win = getMainWindow();
+    if (win && !win.isDestroyed()) {
+      win.webContents.send(IPC.trashCommitFailed, payload);
+    }
+  },
+});
+
+const trashQuitFlush = createQuitFlushGuard({
+  flush: () => trashManager.flushPending(),
+  quit: () => app.quit(),
+});
+
 const windowDeps = {
   BrowserWindow,
   path,
@@ -76,6 +96,7 @@ const sharedDeps = {
   chokidar,
   recentProjectsPath,
   dialog,
+  trashManager,
 };
 
 registerNavigationIpc(ipcMain, {
@@ -115,6 +136,14 @@ app.on('before-quit', async (event) => {
   if (!lifecycle.handleBeforeQuit(event)) {
     return;
   }
+
+  // Commit all pending trash entries before exit (failed ones stay staged).
+  // Guard prevents a quit loop when we re-issue app.quit() after flush.
+  const shouldContinue = await trashQuitFlush.run(event);
+  if (!shouldContinue) {
+    return;
+  }
+
   await fileWatcher.closeWatcher();
   updater.clearUpdateInterval();
 });

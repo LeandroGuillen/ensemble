@@ -219,6 +219,49 @@ export class ElectronService {
     return await this.ipcRenderer.invoke(IpcChannels.deleteDirectoryRecursive, dirPath);
   }
 
+  /**
+   * Stage a path for recoverable delete (main-process trash manager).
+   * Unused by the UI in Part 1 — wired for Parts 2/3.
+   */
+  async stageForTrash(
+    projectPath: string,
+    targetPath: string,
+    meta: { kind: string; recordId: string; name: string }
+  ): Promise<{ success: boolean; token?: string; stagedPath?: string; expiresAt?: number; error?: string }> {
+    if (!this.isElectron()) {
+      return { success: false, error: 'Not running in Electron' };
+    }
+    return await this.ipcRenderer.invoke(IpcChannels.trashStage, projectPath, targetPath, meta);
+  }
+
+  /** Restore a staged trash entry within the undo window. Unused by the UI in Part 1. */
+  async restoreFromTrash(token: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.isElectron()) {
+      return { success: false, error: 'Not running in Electron' };
+    }
+    return await this.ipcRenderer.invoke(IpcChannels.trashRestore, token);
+  }
+
+  /** Commit a staged trash entry to the OS trash immediately. Unused by the UI in Part 1. */
+  async commitTrash(token: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.isElectron()) {
+      return { success: false, error: 'Not running in Electron' };
+    }
+    return await this.ipcRenderer.invoke(IpcChannels.trashCommit, token);
+  }
+
+  /** Listen for trash-commit-failed events from main. Unused by the UI in Part 1. */
+  onTrashCommitFailed(
+    callback: (
+      event: any,
+      data: { token: string; name: string; stagedPath: string; error: string }
+    ) => void
+  ): void {
+    if (this.isElectron()) {
+      this.ipcRenderer.on(IpcChannels.trashCommitFailed, callback);
+    }
+  }
+
   async copyDirectoryRecursive(sourcePath: string, destPath: string): Promise<{ success: boolean; error?: string }> {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };

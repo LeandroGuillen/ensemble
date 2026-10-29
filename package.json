@@ -25,7 +25,8 @@
     "dist": "npm run build-electron-all",
     "build-icons": "node scripts/build-icons.js",
     "prebuild-electron": "npm run build-icons",
-    "test": "CHROME_BIN=/usr/bin/chromium ng test --watch=false",
+    "test:main": "node --test lib/*.test.js",
+    "test": "npm run test:main && CHROME_BIN=/usr/bin/chromium ng test --watch=false",
     "verify": "node verify-setup.js",
     "lint": "ng lint",
     "e2e": "ng e2e"
@@ -144,6 +145,7 @@
       "main.js",
       "lib/**/*",
       "ipc-channels.json",
+      "trash-constants.json",
       "package.json",
       "node_modules/**/*",
       "!node_modules/.cache",

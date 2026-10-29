@@ -38,6 +38,11 @@
   "readDirectoryFiles": "read-directory-files",
   "readDirectoryRecursive": "read-directory-recursive",
 
+  "trashStage": "trash-stage",
+  "trashRestore": "trash-restore",
+  "trashCommit": "trash-commit",
+  "trashCommitFailed": "trash-commit-failed",
+
   "startFileWatcher": "start-file-watcher",
   "stopFileWatcher": "stop-file-watcher",
 

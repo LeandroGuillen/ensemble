@@ -52,6 +52,11 @@ export interface IpcChannels {
   readonly readDirectoryFiles: string;
   readonly readDirectoryRecursive: string;
 
+  readonly trashStage: string;
+  readonly trashRestore: string;
+  readonly trashCommit: string;
+  readonly trashCommitFailed: string;
+
   readonly startFileWatcher: string;
   readonly stopFileWatcher: string;
 
