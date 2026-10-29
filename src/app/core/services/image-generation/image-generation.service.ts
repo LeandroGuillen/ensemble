@@ -363,12 +363,15 @@ function isSupportedImageName(name: string): boolean {
   return /\.(png|jpe?g|webp|gif)$/i.test(name);
 }
 
+/** Standard local InvokeAI default (no private / tailnet hostnames). */
+export const DEFAULT_INVOKEAI_BASE_URL = 'http://localhost:9090';
+
 export function defaultImageGenerationSettings(): ImageGenerationSettings {
   return {
     enabled: false,
     provider: 'invokeai',
     invokeai: {
-      baseUrl: 'http://invoke.yak-toad.ts.net',
+      baseUrl: DEFAULT_INVOKEAI_BASE_URL,
     },
     comfyui: {
       baseUrl: 'http://127.0.0.1:8188',

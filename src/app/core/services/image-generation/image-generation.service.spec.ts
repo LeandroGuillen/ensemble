@@ -1,7 +1,13 @@
+import { TestBed } from '@angular/core/testing';
 import {
   buildGeneratedImagePath,
+  defaultImageGenerationSettings,
+  ImageGenerationService,
   normalizeRelativeDirectory,
 } from './image-generation.service';
+import { ElectronService } from '../electron.service';
+import { ProjectService } from '../project.service';
+import { ImageGenerationSettings } from '../../interfaces/project.interface';
 
 describe('ImageGenerationService path helpers', () => {
   it('builds a project-relative generated portrait path', () => {
@@ -50,5 +56,50 @@ describe('ImageGenerationService path helpers', () => {
     expect(() => normalizeRelativeDirectory('../outside')).toThrowError(
       'Invalid image directory'
     );
+  });
+});
+
+describe('ImageGenerationService InvokeAI default baseUrl', () => {
+  let service: ImageGenerationService;
+  let projectService: { getCurrentProject: jasmine.Spy };
+
+  beforeEach(() => {
+    projectService = {
+      getCurrentProject: jasmine.createSpy('getCurrentProject').and.returnValue(null),
+    };
+    TestBed.configureTestingModule({
+      providers: [
+        ImageGenerationService,
+        { provide: ElectronService, useValue: {} },
+        { provide: ProjectService, useValue: projectService },
+      ],
+    });
+    service = TestBed.inject(ImageGenerationService);
+  });
+
+  it('uses http://localhost:9090 when there are no saved AI settings', () => {
+    projectService.getCurrentProject.and.returnValue(null);
+    expect(defaultImageGenerationSettings().invokeai.baseUrl).toBe('http://localhost:9090');
+    expect(service.getSettings().invokeai.baseUrl).toBe('http://localhost:9090');
+  });
+
+  it('keeps a saved InvokeAI baseUrl after load (no migration)', () => {
+    const saved: ImageGenerationSettings = {
+      enabled: true,
+      provider: 'invokeai',
+      invokeai: { baseUrl: 'http://my-invoke.lan:9090', defaultWorkflowId: 'wf-1' },
+      comfyui: { baseUrl: 'http://127.0.0.1:8188' },
+      openai: { apiKey: '' },
+      gemini: { apiKey: '' },
+    };
+    projectService.getCurrentProject.and.returnValue({
+      path: '/project',
+      metadata: {
+        settings: { imageGeneration: saved },
+      },
+    });
+
+    expect(service.getSettings().invokeai.baseUrl).toBe('http://my-invoke.lan:9090');
+    expect(service.getSettings().invokeai.defaultWorkflowId).toBe('wf-1');
   });
 });
