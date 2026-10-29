@@ -81,7 +81,7 @@ ENSEMBLE_DEV_PORT=4301 npm start
 npm run electron-prod
 ```
 
-`ENSEMBLE_DEV_PORT` defaults to `4200`. For a second Electron instance, also pass a separate `--user-data-dir` (or set `XDG_CONFIG_HOME` on Linux); there is no Ensemble-specific user-data env var.
+`ENSEMBLE_DEV_PORT` defaults to `4200`. For a second Electron instance, also pass a separate `--user-data-dir` after `--` (e.g. `npm start -- --user-data-dir=/tmp/x`) or set `XDG_CONFIG_HOME` on Linux; there is no Ensemble-specific user-data env var. `"start"` is `node scripts/electron-dev.js` so npm forwards those flags.
 
 When testing your code, do not try to bring up the app. Do only the build to check for compilation errors. App may be already running and may error out on port conflicts.
 

@@ -40,10 +40,10 @@ ENSEMBLE_DEV_PORT=4301 npm start
 
 `ENSEMBLE_DEV_PORT` (default `4200`) is shared by `ng serve`, `wait-on`, and the Electron window URL so they cannot drift. Invalid values fall back to 4200.
 
-To run two Electron instances side by side without sharing recent-projects / settings, give the second a separate Chromium user-data directory. Ensemble has no app-specific user-data env; it uses Electron’s `app.getPath('userData')`. Electron accepts `--user-data-dir` (forwarded by `npm start -- …`), and on Linux `XDG_CONFIG_HOME` also isolates config (same approach as the headless run-app skill):
+To run two Electron instances side by side without sharing recent-projects / settings, give the second a separate Chromium user-data directory. Ensemble has no app-specific user-data env; it uses Electron’s `app.getPath('userData')`. Extra flags after `--` go straight to `scripts/electron-dev.js` (`"start": "node scripts/electron-dev.js"`), then to Electron via `ENSEMBLE_ELECTRON_EXTRA_ARGS` (not through a shell). On Linux `XDG_CONFIG_HOME` also isolates config (same approach as the headless run-app skill):
 
 ```bash
-# Different port + isolated userData
+# Different port + isolated userData (flags after -- reach Electron literally)
 ENSEMBLE_DEV_PORT=4301 npm start -- --user-data-dir=/tmp/ensemble-dev-4301
 
 # Linux alternative

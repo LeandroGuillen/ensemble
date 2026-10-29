@@ -1,12 +1,12 @@
 {
   "name": "ensemble",
-  "version": "1.20.14",
+  "version": "1.20.15",
   "description": "Character management application for writers and worldbuilders",
   "main": "main.js",
   "scripts": {
     "ng": "ng",
     "serve": "node scripts/ng-serve.js",
-    "start": "npm run electron-dev",
+    "start": "node scripts/electron-dev.js",
     "build": "ng build",
     "electron": "electron .",
     "electron-dev": "node scripts/electron-dev.js",
