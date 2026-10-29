@@ -71,12 +71,17 @@ npm start
 # Same as npm start (explicit name)
 npm run electron-dev
 
-# Angular dev server only (http://localhost:4200), no Electron window
+# Angular dev server only (default http://localhost:4200), no Electron window
 npm run serve
+
+# Alternate port when 4200 is taken (ng serve, wait-on, and Electron share ENSEMBLE_DEV_PORT)
+ENSEMBLE_DEV_PORT=4301 npm start
 
 # Build and run in production mode
 npm run electron-prod
 ```
+
+`ENSEMBLE_DEV_PORT` defaults to `4200`. For a second Electron instance, also pass a separate `--user-data-dir` (or set `XDG_CONFIG_HOME` on Linux); there is no Ensemble-specific user-data env var.
 
 When testing your code, do not try to bring up the app. Do only the build to check for compilation errors. App may be already running and may error out on port conflicts.
 
@@ -288,7 +293,7 @@ main.js                 # Electron main process (IPC handlers, window management
 
 ### Electron Integration
 
-- Development: `main.js` loads `http://localhost:4200`
+- Development: `lib/window.js` loads `http://localhost:${ENSEMBLE_DEV_PORT||4200}` (see `lib/dev-server.js`)
 - Production: Loads from `dist/index.html`
 - `nodeIntegration: true` and `contextIsolation: false` for direct Node.js access
 

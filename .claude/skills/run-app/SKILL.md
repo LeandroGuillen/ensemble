@@ -6,13 +6,14 @@ description: Launch the Ensemble Electron app headlessly (Xvfb + Playwright) aga
 # Run and visually test Ensemble
 
 CLAUDE.md says not to bring the app up for routine checks (`npm start` would fight
-an already-running dev server on port 4200). Use this skill only when the user
-asks to open/run/visually test the app. It is safe alongside a running dev
-session:
+an already-running dev server — default port 4200, or whatever `ENSEMBLE_DEV_PORT`
+is set to). Use this skill only when the user asks to open/run/visually test the
+app. It is safe alongside a running dev session:
 
 - Serves `dist/browser` on a **random free port** and loads it with
-  `BrowserWindow.loadURL` (an unpackaged Electron otherwise always loads
-  `localhost:4200`, see `lib/window.js`).
+  `BrowserWindow.loadURL` (unpackaged Electron otherwise loads
+  `http://localhost:${ENSEMBLE_DEV_PORT||4200}`, see `lib/window.js` /
+  `lib/dev-server.js`).
 - Sets `XDG_CONFIG_HOME` to a sandbox, so Electron `userData`
   (`recent-projects.json`, settings) is separate from the user's.
 - Seeds and opens a sample project with 3 characters, 1 location and 1 book.

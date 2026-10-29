@@ -974,9 +974,10 @@ export class CharacterDetailComponent
     // Solution: check referrer to see if we came from within the app
     const referrer = document.referrer;
     const currentOrigin = window.location.origin;
+    // Honour any localhost port (ENSEMBLE_DEV_PORT); production Electron uses file://.
     const isFromApp = referrer && (
       referrer.startsWith(currentOrigin) ||
-      referrer.includes('localhost:4200') ||
+      /localhost:\d+/.test(referrer) ||
       referrer.startsWith('file://')
     );
     if (isFromApp && window.history.length > 1) {
