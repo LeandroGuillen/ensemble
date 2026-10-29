@@ -534,6 +534,21 @@ describe('ProjectService', () => {
       expect(project).toBeTruthy();
       expect(project?.path).toBe(destPath);
     });
+
+    it('surfaces a short duplicate error without Error: or Failed to copy project: prefixes', async () => {
+      const sourcePath = '/vault/mybook';
+      stubValidSource(sourcePath);
+      electronService.copyDirectoryRecursive.and.returnValue(
+        Promise.resolve({
+          success: false,
+          error: 'Destination is not empty: /vault/other/mybook-copy',
+        })
+      );
+
+      await expectAsync(service.duplicateProject(sourcePath, '/vault/other', 'mybook-copy')).toBeRejectedWithError(
+        'Failed to duplicate project: Destination is not empty: /vault/other/mybook-copy'
+      );
+    });
   });
 
   describe('recent projects', () => {

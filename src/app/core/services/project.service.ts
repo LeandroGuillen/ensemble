@@ -371,7 +371,9 @@ export class ProjectService {
       // Recursively copy entire project directory to destination
       const copyResult = await this.electronService.copyDirectoryRecursive(sourceProjectPath, destProjectPath);
       if (!copyResult.success) {
-        throw new Error(`Failed to copy project: ${copyResult.error}`);
+        // Pass through the short IPC error (no "Failed to copy project:" prefix)
+        // so the outer catch yields e.g. "Failed to duplicate project: Destination is not empty: ..."
+        throw new Error(copyResult.error || 'Copy failed');
       }
 
       // Load the duplicated project's ensemble.json (or metadata.json for legacy)
@@ -413,7 +415,11 @@ export class ProjectService {
       return project;
     } catch (error) {
       this.logger.error('Failed to duplicate project', error);
-      throw new Error(`Failed to duplicate project: ${error}`);
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.startsWith('Failed to duplicate project:')) {
+        throw new Error(message);
+      }
+      throw new Error(`Failed to duplicate project: ${message}`);
     }
   }
 
