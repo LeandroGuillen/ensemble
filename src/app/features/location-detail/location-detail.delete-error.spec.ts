@@ -24,11 +24,13 @@ describe('LocationDetailComponent delete error display', () => {
   });
 
   it('sets error for an ordinary delete failure', async () => {
-    locationService.deleteLocation.and.rejectWith(new Error('no project loaded'));
+    locationService.deleteLocation.and.rejectWith(
+      new Error('Failed to delete location: no project loaded')
+    );
 
     await component.deleteLocation();
 
-    expect(component.error).toBe('Failed to delete location: Error: no project loaded');
+    expect(component.error).toBe('Failed to delete location: no project loaded');
     expect(router.navigate).not.toHaveBeenCalled();
   });
 

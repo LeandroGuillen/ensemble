@@ -37,7 +37,9 @@ describe('CharacterListComponent delete error display', () => {
   });
 
   it('toasts an ordinary delete failure', async () => {
-    characterService.deleteCharacter.and.rejectWith(new Error('no project loaded'));
+    characterService.deleteCharacter.and.rejectWith(
+      new Error('Failed to delete character: no project loaded')
+    );
     const event = { stopPropagation: jasmine.createSpy('stopPropagation') } as any;
 
     await component.deleteCharacter(character, event);
@@ -45,7 +47,7 @@ describe('CharacterListComponent delete error display', () => {
     expect(event.stopPropagation).toHaveBeenCalled();
     expect(notification.showError).toHaveBeenCalledTimes(1);
     expect(notification.showError).toHaveBeenCalledWith(
-      'Failed to delete character: Error: no project loaded'
+      'Failed to delete character: no project loaded'
     );
   });
 

@@ -407,7 +407,7 @@ export class LocationService {
         throw error;
       }
       this.logger.error('Failed to delete location', error);
-      throw new Error(`Failed to delete location: ${error}`);
+      throw new Error(`Failed to delete location: ${errorMessage(error)}`);
     }
   }
 

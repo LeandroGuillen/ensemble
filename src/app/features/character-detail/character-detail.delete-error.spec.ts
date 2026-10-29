@@ -39,13 +39,15 @@ describe('CharacterDetailComponent delete error display', () => {
   });
 
   it('shows a toast for an ordinary delete failure', async () => {
-    characterService.deleteCharacter.and.rejectWith(new Error('no project loaded'));
+    characterService.deleteCharacter.and.rejectWith(
+      new Error('Failed to delete character: no project loaded')
+    );
 
     await component.deleteCharacter();
 
     expect(notification.showError).toHaveBeenCalledTimes(1);
     expect(notification.showError).toHaveBeenCalledWith(
-      'Failed to delete character: Error: no project loaded'
+      'Failed to delete character: no project loaded'
     );
     expect(router.navigate).not.toHaveBeenCalled();
   });

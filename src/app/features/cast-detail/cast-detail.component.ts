@@ -473,8 +473,10 @@ export class CastDetailComponent implements OnInit, OnDestroy {
       } catch (error) {
         this.logger.error("Failed to delete cast:", error);
         // Staging/rollback toasts come from the service (TrashStagingError).
+        // Service already prefixes "Failed to delete cast:"; use its message once.
         if (!isTrashStagingError(error)) {
-          this.error = `Failed to delete cast: ${error}`;
+          this.error =
+            error instanceof Error ? error.message : `Failed to delete cast: ${error}`;
         }
       }
     }

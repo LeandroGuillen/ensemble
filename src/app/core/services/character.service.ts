@@ -1288,7 +1288,7 @@ export class CharacterService {
         throw error;
       }
       this.logger.error('Failed to delete character', error);
-      throw new Error(`Failed to delete character: ${error}`);
+      throw new Error(`Failed to delete character: ${errorMessage(error)}`);
     }
   }
 

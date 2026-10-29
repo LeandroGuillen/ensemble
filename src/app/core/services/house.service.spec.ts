@@ -58,7 +58,7 @@ describe('HouseService', () => {
       return { success: true };
     });
     electron.getImageAsDataUrl.and.resolveTo(null);
-    notifications = jasmine.createSpyObj('NotificationService', ['showError']);
+    notifications = jasmine.createSpyObj('NotificationService', ['showError', 'showWarning']);
     undoDelete = jasmine.createSpyObj('UndoDeleteService', ['register', 'dismissAll']);
     TestBed.configureTestingModule({ providers: [HouseService,
       { provide: ElectronService, useValue: electron },
@@ -407,6 +407,74 @@ describe('HouseService', () => {
       expect(service.getById(house1.id)!.characterIds).toEqual(['char-2']);
       expect(service.getById(house2.id)!.characterIds).toEqual(['char-3']);
     });
+
+    it('on mid-loop write failure keeps a partial Undo snapshot and toasts the failed House', async () => {
+      // Names sort Alpha → Beta → Gamma so Beta is the 2nd write.
+      const alpha = await service.createHouse({
+        ...data('House Alpha'),
+        characterIds: ['hero', 'other'],
+        leadership: [
+          { id: 'reign-a', characterIds: ['hero'], period: 'Now', books: [], notes: '' },
+        ],
+        currentLeadershipId: 'reign-a',
+      });
+      const beta = await service.createHouse({
+        ...data('House Beta'),
+        characterIds: ['hero'],
+        leadership: [
+          { id: 'reign-b', characterIds: ['hero', 'peer'], period: 'Now', books: [], notes: '' },
+        ],
+        currentLeadershipId: 'reign-b',
+      });
+      const gamma = await service.createHouse({
+        ...data('House Gamma'),
+        characterIds: ['hero', 'peer'],
+        leadership: [
+          { id: 'reign-g', characterIds: ['hero'], period: 'Now', books: [], notes: '' },
+        ],
+        currentLeadershipId: 'reign-g',
+      });
+      const alphaBefore = structuredClone(service.getById(alpha.id)!);
+      const betaBefore = structuredClone(service.getById(beta.id)!);
+      const gammaBefore = structuredClone(service.getById(gamma.id)!);
+
+      electron.writeFileAtomic.and.callFake(async (path, raw) => {
+        if (String(path).includes('house-beta')) {
+          return { success: false, error: 'disk full' };
+        }
+        disk.set(path, raw);
+        return { success: true };
+      });
+
+      const snapshot = await service.removeCharacterFromHouses('hero');
+
+      expect(notifications.showWarning).toHaveBeenCalledWith(
+        `Couldn't update the House "House Beta", so this link was left in place.`
+      );
+      // Successful writes recorded; failed House omitted from snapshot.
+      expect(snapshot.removals.map((r) => r.houseId).sort()).toEqual(
+        [alpha.id, gamma.id].sort()
+      );
+      expect(snapshot.removals.find((r) => r.houseId === beta.id)).toBeUndefined();
+
+      expect(service.getById(alpha.id)!.characterIds).not.toContain('hero');
+      expect(service.getById(beta.id)!.characterIds).toEqual(betaBefore.characterIds);
+      expect(service.getById(beta.id)!.leadership).toEqual(betaBefore.leadership);
+      expect(service.getById(beta.id)!.currentLeadershipId).toBe(betaBefore.currentLeadershipId);
+      expect(service.getById(gamma.id)!.characterIds).not.toContain('hero');
+
+      await service.restoreCharacterToHouses(snapshot);
+      expect(service.getById(alpha.id)!.characterIds).toEqual(alphaBefore.characterIds);
+      expect(service.getById(alpha.id)!.leadership).toEqual(alphaBefore.leadership);
+      expect(service.getById(alpha.id)!.currentLeadershipId).toBe(alphaBefore.currentLeadershipId);
+      expect(service.getById(gamma.id)!.characterIds).toEqual(gammaBefore.characterIds);
+      expect(service.getById(gamma.id)!.leadership).toEqual(gammaBefore.leadership);
+      expect(service.getById(gamma.id)!.currentLeadershipId).toBe(gammaBefore.currentLeadershipId);
+      // Failed House was never changed.
+      expect(service.getById(beta.id)!.characterIds).toEqual(betaBefore.characterIds);
+      expect(service.getById(beta.id)!.leadership).toEqual(betaBefore.leadership);
+      expect(service.getById(beta.id)!.currentLeadershipId).toBe(betaBefore.currentLeadershipId);
+    });
   });
 
   describe('Location reference cleanup', () => {
@@ -439,6 +507,36 @@ describe('HouseService', () => {
 
       expect(service.getById(house1.id)!.seatId).toBeUndefined();
       expect(service.getById(house2.id)!.seatId).toBe('location-2');
+    });
+
+    it('on mid-loop write failure keeps a partial seat snapshot and toasts the failed House', async () => {
+      const alpha = await service.createHouse({ ...data('House Alpha'), seatId: 'loc-harbour' });
+      const beta = await service.createHouse({ ...data('House Beta'), seatId: 'loc-harbour' });
+      const gamma = await service.createHouse({ ...data('House Gamma'), seatId: 'loc-harbour' });
+
+      electron.writeFileAtomic.and.callFake(async (path, raw) => {
+        if (String(path).includes('house-beta')) {
+          return { success: false, error: 'disk full' };
+        }
+        disk.set(path, raw);
+        return { success: true };
+      });
+
+      const snapshot = await service.clearLocationReferences('loc-harbour');
+
+      expect(notifications.showWarning).toHaveBeenCalledWith(
+        `Couldn't update the House "House Beta", so this link was left in place.`
+      );
+      expect(snapshot.seats.map((s) => s.houseId).sort()).toEqual([alpha.id, gamma.id].sort());
+      expect(snapshot.seats.find((s) => s.houseId === beta.id)).toBeUndefined();
+      expect(service.getById(alpha.id)!.seatId).toBeUndefined();
+      expect(service.getById(beta.id)!.seatId).toBe('loc-harbour');
+      expect(service.getById(gamma.id)!.seatId).toBeUndefined();
+
+      await service.restoreLocationReferences(snapshot);
+      expect(service.getById(alpha.id)!.seatId).toBe('loc-harbour');
+      expect(service.getById(gamma.id)!.seatId).toBe('loc-harbour');
+      expect(service.getById(beta.id)!.seatId).toBe('loc-harbour');
     });
   });
 

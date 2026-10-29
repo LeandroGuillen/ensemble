@@ -6,6 +6,7 @@ import { PlotBoardService } from './plot-board.service';
 import { CastService } from './cast.service';
 import { MetadataService } from './metadata.service';
 import { LoggingService } from './logging.service';
+import { NotificationService } from './notification.service';
 
 describe('ReferenceCleanupService', () => {
   let service: ReferenceCleanupService;
@@ -15,6 +16,7 @@ describe('ReferenceCleanupService', () => {
   let castService: jasmine.SpyObj<CastService>;
   let metadataService: jasmine.SpyObj<MetadataService>;
   let loggingService: jasmine.SpyObj<LoggingService>;
+  let notificationService: jasmine.SpyObj<NotificationService>;
 
   beforeEach(() => {
     const houseSpy = jasmine.createSpyObj('HouseService', [
@@ -44,6 +46,10 @@ describe('ReferenceCleanupService', () => {
       'restoreCharacterToBookPovs',
     ]);
     const loggingSpy = jasmine.createSpyObj('LoggingService', ['error', 'warn']);
+    const notificationSpy = jasmine.createSpyObj('NotificationService', [
+      'showError',
+      'showWarning',
+    ]);
 
     TestBed.configureTestingModule({
       providers: [
@@ -53,7 +59,8 @@ describe('ReferenceCleanupService', () => {
         { provide: PlotBoardService, useValue: plotBoardSpy },
         { provide: CastService, useValue: castSpy },
         { provide: MetadataService, useValue: metadataSpy },
-        { provide: LoggingService, useValue: loggingSpy }
+        { provide: LoggingService, useValue: loggingSpy },
+        { provide: NotificationService, useValue: notificationSpy },
       ]
     });
 
@@ -64,6 +71,9 @@ describe('ReferenceCleanupService', () => {
     castService = TestBed.inject(CastService) as jasmine.SpyObj<CastService>;
     metadataService = TestBed.inject(MetadataService) as jasmine.SpyObj<MetadataService>;
     loggingService = TestBed.inject(LoggingService) as jasmine.SpyObj<LoggingService>;
+    notificationService = TestBed.inject(
+      NotificationService
+    ) as jasmine.SpyObj<NotificationService>;
   });
 
   describe('countCharacterReferences', () => {
@@ -181,6 +191,51 @@ describe('ReferenceCleanupService', () => {
       expect(loggingService.error).toHaveBeenCalledTimes(2);
       expect(loggingService.warn).toHaveBeenCalled();
     });
+
+    it('keeps cast/pinboard/plot snapshots when the House step fails with a partial snapshot', async () => {
+      const castSnap = {
+        characterId: 'char-1',
+        removals: [{ castId: 'c1', castName: 'Main', index: 0, characterIds: ['char-1'] }],
+      };
+      const pinSnap = {
+        characterId: 'char-1',
+        removals: [{ pinboardId: 'p1', pinboardName: 'Board', nodes: [], edges: [] }],
+      };
+      const plotSnap = {
+        characterId: 'char-1',
+        removals: [{ boardPath: 'a.plotboard.md', boardName: 'a', threadId: 't1', index: 0 }],
+      };
+      const housePartial = {
+        characterId: 'char-1',
+        removals: [
+          {
+            houseId: 'h-ok',
+            houseName: 'House Ok',
+            characterIds: ['char-1'],
+            leadership: [],
+            currentLeadershipId: undefined,
+            prunedReigns: [],
+          },
+        ],
+      };
+      castService.removeCharacterFromCasts.and.returnValue(Promise.resolve(castSnap as any));
+      pinboardService.removeCharacterConnections.and.returnValue(Promise.resolve(pinSnap as any));
+      plotBoardService.removeCharacterFromThreads.and.returnValue(Promise.resolve(plotSnap as any));
+      const houseError: any = new Error('mid-loop');
+      houseError.partialSnapshot = housePartial;
+      houseError.failedHouseNames = ['House Fail'];
+      houseService.removeCharacterFromHouses.and.returnValue(Promise.reject(houseError));
+
+      const snapshot = await service.removeCharacterReferences('char-1');
+
+      expect(snapshot.houses).toEqual(housePartial as any);
+      expect(snapshot.casts).toEqual(castSnap as any);
+      expect(snapshot.pinboards).toEqual(pinSnap as any);
+      expect(snapshot.plotThreads).toEqual(plotSnap as any);
+      expect(notificationService.showWarning).toHaveBeenCalledWith(
+        `Couldn't update the House "House Fail", so this link was left in place.`
+      );
+    });
   });
 
   describe('clearLocationReferences', () => {
@@ -201,6 +256,25 @@ describe('ReferenceCleanupService', () => {
 
       expect(loggingService.error).toHaveBeenCalled();
       expect(result.seats).toEqual([]);
+    });
+
+    it('keeps a partial seat snapshot when clearLocationReferences throws with one', async () => {
+      const partial = {
+        locationId: 'loc-1',
+        seats: [{ houseId: 'h1', houseName: 'House Ok', seatId: 'loc-1' }],
+      };
+      const err: any = new Error('mid-loop');
+      err.partialSnapshot = partial;
+      err.failedHouseNames = ['House Fail'];
+      houseService.clearLocationReferences.and.returnValue(Promise.reject(err));
+
+      const result = await service.clearLocationReferences('loc-1');
+
+      expect(result).toEqual(partial);
+      expect(notificationService.showWarning).toHaveBeenCalledWith(
+        `Couldn't update the House "House Fail", so this link was left in place.`
+      );
+      expect(loggingService.error).not.toHaveBeenCalled();
     });
   });
 

@@ -9,7 +9,11 @@ import {
   LocationReferenceSnapshot,
   ReferenceRestoreResult,
 } from '../interfaces/reference-snapshot.interface';
-import { normalizeHouseData, validateHouseData } from '../utils/house.utils';
+import {
+  houseLinkUpdateFailureMessage,
+  normalizeHouseData,
+  validateHouseData,
+} from '../utils/house.utils';
 import { parseMarkdown, generateMarkdown } from '../utils/markdown.utils';
 import { asciiSlugify } from '../utils/slug.utils';
 import { generateId } from '../utils/id.utils';
@@ -296,6 +300,8 @@ export class HouseService {
   /**
    * Remove a character from all house memberships and leadership (for deletion cleanup).
    * Returns a typed snapshot of prior membership/leadership for Undo restore.
+   * Each removal is recorded only after its write succeeds; mid-loop failures leave
+   * that House unchanged and are toasted so Undo can still restore successful ones.
    */
   async removeCharacterFromHouses(characterId: string): Promise<HouseCharacterSnapshot> {
     const empty: HouseCharacterSnapshot = { characterId, removals: [] };
@@ -307,8 +313,7 @@ export class HouseService {
       await this.load(projectPath, true);
 
       const houses = this.subject.value;
-      const removals: HouseCharacterRemoval[] = [];
-      const affectedHouses: House[] = [];
+      const pending: { house: House; removal: HouseCharacterRemoval }[] = [];
 
       for (const house of houses) {
         let changed = false;
@@ -342,23 +347,39 @@ export class HouseService {
         }
 
         if (changed) {
-          removals.push({
-            houseId: house.id,
-            houseName: house.name,
-            characterIds: previousCharacterIds,
-            leadership: previousLeadership,
-            currentLeadershipId: previousCurrentLeadershipId,
-            prunedReigns: structuredClone(prunedReigns.map((reign) => {
-              const original = previousLeadership.find((r) => r.id === reign.id);
-              return original ? structuredClone(original) : structuredClone(reign);
-            })),
+          pending.push({
+            house: updatedHouse,
+            removal: {
+              houseId: house.id,
+              houseName: house.name,
+              characterIds: previousCharacterIds,
+              leadership: previousLeadership,
+              currentLeadershipId: previousCurrentLeadershipId,
+              prunedReigns: structuredClone(prunedReigns.map((reign) => {
+                const original = previousLeadership.find((r) => r.id === reign.id);
+                return original ? structuredClone(original) : structuredClone(reign);
+              })),
+            },
           });
-          affectedHouses.push(updatedHouse);
         }
       }
 
-      for (const house of affectedHouses) {
-        await this.update(house.id, house, house.raw);
+      const removals: HouseCharacterRemoval[] = [];
+      const failedNames: string[] = [];
+      for (const { house, removal } of pending) {
+        try {
+          await this.update(house.id, house, house.raw);
+          removals.push(removal);
+        } catch (error) {
+          this.logger.error(
+            `Failed to update House "${house.name}" while removing character references`,
+            error
+          );
+          failedNames.push(house.name);
+        }
+      }
+      if (failedNames.length > 0) {
+        this.notificationService.showWarning(houseLinkUpdateFailureMessage(failedNames));
       }
 
       return { characterId, removals };
@@ -472,6 +493,8 @@ export class HouseService {
   /**
    * Clear seatId from any houses that reference a deleted location.
    * Returns prior seatId values for Undo restore.
+   * Each seat is recorded only after its write succeeds; mid-loop failures leave
+   * that House unchanged and are toasted so Undo can still restore successful ones.
    */
   async clearLocationReferences(locationId: string): Promise<LocationReferenceSnapshot> {
     const empty: LocationReferenceSnapshot = { locationId, seats: [] };
@@ -483,17 +506,30 @@ export class HouseService {
       await this.load(projectPath, true);
 
       const houses = this.subject.value;
-      const seats: HouseSeatRemoval[] = [];
       const affectedHouses = houses.filter(house => house.seatId === locationId);
 
+      const seats: HouseSeatRemoval[] = [];
+      const failedNames: string[] = [];
       for (const house of affectedHouses) {
-        seats.push({
+        const seat: HouseSeatRemoval = {
           houseId: house.id,
           houseName: house.name,
           seatId: locationId,
-        });
-        const updatedHouse = { ...house, seatId: undefined };
-        await this.update(house.id, updatedHouse, house.raw);
+        };
+        try {
+          const updatedHouse = { ...house, seatId: undefined };
+          await this.update(house.id, updatedHouse, house.raw);
+          seats.push(seat);
+        } catch (error) {
+          this.logger.error(
+            `Failed to update House "${house.name}" while clearing location seat`,
+            error
+          );
+          failedNames.push(house.name);
+        }
+      }
+      if (failedNames.length > 0) {
+        this.notificationService.showWarning(houseLinkUpdateFailureMessage(failedNames));
       }
 
       return { locationId, seats };

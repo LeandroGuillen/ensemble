@@ -710,7 +710,7 @@ export class CastService {
         throw error;
       }
       this.logger.error('Failed to delete cast:', error);
-      throw new Error(`Failed to delete cast: ${error}`);
+      throw new Error(`Failed to delete cast: ${errorMessage(error)}`);
     }
   }
 

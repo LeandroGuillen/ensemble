@@ -42,6 +42,9 @@ describe('trash-record-id', () => {
   it('TrashStagingError is detectable for component skip-toast logic', () => {
     expect(isTrashStagingError(new TrashStagingError('x'))).toBeTrue();
     expect(isTrashStagingError(new Error('x'))).toBeFalse();
-    expect(trashOrphanStickyMessage('Ada', '/proj')).toContain('/proj/.ensemble-trash/');
+    expect(trashOrphanStickyMessage('Ada', '/proj')).toBe(
+      `Couldn't finish deleting "Ada" and could not restore it. ` +
+        `It's kept in /proj/.ensemble-trash/; move it back from there to recover it.`
+    );
   });
 });

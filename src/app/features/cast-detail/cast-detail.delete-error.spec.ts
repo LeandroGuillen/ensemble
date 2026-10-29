@@ -24,11 +24,13 @@ describe('CastDetailComponent delete error display', () => {
   });
 
   it('sets error for an ordinary delete failure', async () => {
-    metadataService.removeCast.and.rejectWith(new Error('no project loaded'));
+    metadataService.removeCast.and.rejectWith(
+      new Error('Failed to delete cast: no project loaded')
+    );
 
     await component.deleteCast();
 
-    expect(component.error).toBe('Failed to delete cast: Error: no project loaded');
+    expect(component.error).toBe('Failed to delete cast: no project loaded');
     expect(router.navigate).not.toHaveBeenCalled();
   });
 

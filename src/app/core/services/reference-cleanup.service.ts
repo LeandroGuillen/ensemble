@@ -1,15 +1,18 @@
 import { Injectable, Injector } from '@angular/core';
 import {
   CharacterReferenceSnapshot,
+  HouseCharacterSnapshot,
   LocationReferenceSnapshot,
   ReferenceRestoreResult,
   ReferenceRestoreSkip,
 } from '../interfaces/reference-snapshot.interface';
+import { houseLinkUpdateFailureMessage } from '../utils/house.utils';
 import { HouseService } from './house.service';
 import { PlotBoardService } from './plot-board.service';
 import { CastService } from './cast.service';
 import { MetadataService } from './metadata.service';
 import { LoggingService } from './logging.service';
+import { NotificationService } from './notification.service';
 
 /**
  * Centralized service for cleaning up cross-references when entities are deleted.
@@ -28,8 +31,46 @@ export class ReferenceCleanupService {
     private castService: CastService,
     private metadataService: MetadataService,
     private logger: LoggingService,
+    private notificationService: NotificationService,
     private injector: Injector
   ) {}
+
+  /** Keep a House partial snapshot if a cleanup step threw with one attached. */
+  private takePartialHouseSnapshot(error: unknown): HouseCharacterSnapshot | null {
+    const partial = (error as { partialSnapshot?: unknown })?.partialSnapshot;
+    if (
+      partial &&
+      typeof partial === 'object' &&
+      Array.isArray((partial as HouseCharacterSnapshot).removals)
+    ) {
+      return partial as HouseCharacterSnapshot;
+    }
+    return null;
+  }
+
+  private takePartialLocationSnapshot(error: unknown): LocationReferenceSnapshot | null {
+    const partial = (error as { partialSnapshot?: unknown })?.partialSnapshot;
+    if (
+      partial &&
+      typeof partial === 'object' &&
+      Array.isArray((partial as LocationReferenceSnapshot).seats)
+    ) {
+      return partial as LocationReferenceSnapshot;
+    }
+    return null;
+  }
+
+  private toastFailedHouseLinks(error: unknown): void {
+    const names = (error as { failedHouseNames?: unknown })?.failedHouseNames;
+    if (!Array.isArray(names) || names.length === 0) {
+      return;
+    }
+    const cleaned = names.filter((n): n is string => typeof n === 'string' && n.trim().length > 0);
+    if (cleaned.length === 0) {
+      return;
+    }
+    this.notificationService.showWarning(houseLinkUpdateFailureMessage(cleaned));
+  }
 
   /**
    * Count how many resources reference a character.
@@ -103,9 +144,15 @@ export class ReferenceCleanupService {
     try {
       snapshot.houses = await this.houseService.removeCharacterFromHouses(characterId);
     } catch (cleanupError) {
-      const msg = 'Failed to remove character from houses';
-      this.logger.error(msg, cleanupError);
-      cleanupErrors.push(msg);
+      const partial = this.takePartialHouseSnapshot(cleanupError);
+      if (partial) {
+        snapshot.houses = partial;
+        this.toastFailedHouseLinks(cleanupError);
+      } else {
+        const msg = 'Failed to remove character from houses';
+        this.logger.error(msg, cleanupError);
+        cleanupErrors.push(msg);
+      }
     }
 
     try {
@@ -196,6 +243,11 @@ export class ReferenceCleanupService {
     try {
       return await this.houseService.clearLocationReferences(locationId);
     } catch (cleanupError) {
+      const partial = this.takePartialLocationSnapshot(cleanupError);
+      if (partial) {
+        this.toastFailedHouseLinks(cleanupError);
+        return partial;
+      }
       this.logger.error('Failed to clear location references from houses', cleanupError);
       return { locationId, seats: [] };
     }

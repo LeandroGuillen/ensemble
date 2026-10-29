@@ -43,7 +43,7 @@ export function trashStagingFailureMessage(name: string, error: string): string 
 export function trashOrphanStickyMessage(name: string, projectPath: string): string {
   return (
     `Couldn't finish deleting "${name}" and could not restore it. ` +
-    `It's kept in ${projectPath}/.ensemble-trash/. Use Undo if offered, or restore from there.`
+    `It's kept in ${projectPath}/.ensemble-trash/; move it back from there to recover it.`
   );
 }
 

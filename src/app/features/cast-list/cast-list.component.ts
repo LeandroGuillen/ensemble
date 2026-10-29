@@ -262,8 +262,10 @@ export class CastListComponent implements OnInit {
       } catch (error) {
         this.logger.error("Failed to delete cast:", error);
         // Staging/rollback already toasted; avoid a misleading inline "Failed to delete".
+        // Service already prefixes "Failed to delete cast:"; use its message once.
         if (!isTrashStagingError(error)) {
-          this.error = `Failed to delete cast: ${error}`;
+          this.error =
+            error instanceof Error ? error.message : `Failed to delete cast: ${error}`;
         }
       }
     }

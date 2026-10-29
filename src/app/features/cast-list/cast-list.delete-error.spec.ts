@@ -27,13 +27,15 @@ describe('CastListComponent delete error display', () => {
   });
 
   it('sets error for an ordinary delete failure', async () => {
-    metadataService.removeCast.and.rejectWith(new Error('no project loaded'));
+    metadataService.removeCast.and.rejectWith(
+      new Error('Failed to delete cast: no project loaded')
+    );
     const event = { stopPropagation: jasmine.createSpy('stopPropagation') } as any;
 
     await component.deleteCast(cast, event);
 
     expect(event.stopPropagation).toHaveBeenCalled();
-    expect(component.error).toBe('Failed to delete cast: Error: no project loaded');
+    expect(component.error).toBe('Failed to delete cast: no project loaded');
   });
 
   it('does not set error for TrashStagingError (service already toasted)', async () => {

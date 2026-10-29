@@ -1689,8 +1689,11 @@ export class CharacterDetailComponent
     } catch (error) {
       this.logger.error("Delete error:", error);
       // Staging/rollback toasts come from the service (TrashStagingError).
+      // Service already prefixes "Failed to delete character:"; use its message once.
       if (!isTrashStagingError(error)) {
-        this.notificationService.showError(`Failed to delete character: ${error}`);
+        const message =
+          error instanceof Error ? error.message : `Failed to delete character: ${error}`;
+        this.notificationService.showError(message);
       }
       this.cdr.markForCheck();
     }

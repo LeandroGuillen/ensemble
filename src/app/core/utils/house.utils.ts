@@ -31,6 +31,17 @@ export function normalizeHouseData(raw: Record<string, unknown>, content: string
   return data;
 }
 
+/** Toast when a House file could not be updated during delete reference cleanup. */
+export function houseLinkUpdateFailureMessage(names: string[]): string {
+  const cleaned = names.map((n) => String(n || '').trim()).filter(Boolean);
+  if (cleaned.length <= 1) {
+    const name = cleaned[0] || 'Untitled';
+    return `Couldn't update the House "${name}", so this link was left in place.`;
+  }
+  const listed = cleaned.map((n) => `"${n}"`).join(', ');
+  return `Couldn't update the Houses ${listed}, so these links were left in place.`;
+}
+
 export function validateHouseData(data: HouseFormData): void {
   if (!data.name.trim()) throw new Error('House name is required.');
   if (data.colors.some(color => !/^#[0-9a-f]{6}$/i.test(color))) throw new Error('House colors must be six-digit hex colors.');
