@@ -6,6 +6,10 @@ import {
   LocationReferenceSnapshot,
   ReferenceRestoreResult,
 } from '../interfaces/reference-snapshot.interface';
+import {
+  projectPathFromStagedPath,
+  trashCommitFailedMessage,
+} from '../trash/trash-record-id';
 import { ElectronService } from './electron.service';
 import { NotificationService } from './notification.service';
 import { LoggingService } from './logging.service';
@@ -63,9 +67,9 @@ interface PendingUndoRecord {
 }
 
 /**
- * Renderer Undo plumbing for OS-trash deletes (Part 2).
- * Holds pending tokens, shows Undo toasts, and runs the Undo order.
- * No delete flow calls this yet — Part 3 wires it.
+ * Renderer Undo plumbing for OS-trash deletes.
+ * Holds pending tokens, shows Undo toasts, runs Undo, and surfaces sticky
+ * trash-commit-failed errors (subscribed once from this singleton).
  */
 @Injectable({
   providedIn: 'root',
@@ -164,15 +168,28 @@ export class UndoDeleteService {
       return;
     }
     this.subscribedToCommitFailed = true;
+    if (typeof this.electronService.onTrashCommitFailed !== 'function') {
+      // Unit-test Electron stubs may omit the listener; skip quietly.
+      return;
+    }
     this.electronService.onTrashCommitFailed((_event, data) => {
       if (!data?.token) {
         return;
       }
-      // Events may arrive for leftovers the renderer never staged — ignore unknown tokens.
-      if (!this.pending.has(data.token)) {
-        return;
+      const name = data.name || 'item';
+      const error = data.error || 'unknown error';
+      const projectPath =
+        projectPathFromStagedPath(data.stagedPath || '') || 'this project';
+      // Sticky (duration 0). Wired once from this singleton.
+      this.notificationService.showError(
+        trashCommitFailedMessage(name, error, projectPath),
+        0
+      );
+      // Drop renderer Undo state when we know about this token; leftovers from
+      // a prior session may have no pending entry.
+      if (this.pending.has(data.token)) {
+        this.dropToken(data.token);
       }
-      this.dropToken(data.token);
     });
   }
 

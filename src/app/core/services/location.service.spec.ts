@@ -5,6 +5,9 @@ import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
 import { FileWatcherService } from './file-watcher.service';
 import { LoggingService } from './logging.service';
+import { NotificationService } from './notification.service';
+import { ReferenceCleanupService } from './reference-cleanup.service';
+import { UndoDeleteService } from './undo-delete.service';
 import { Project } from '../interfaces/project.interface';
 import { LOCATION_TYPES, LocationFormData } from '../interfaces/location.interface';
 
@@ -12,6 +15,9 @@ describe('LocationService', () => {
   let service: LocationService;
   let electronService: jasmine.SpyObj<ElectronService>;
   let projectService: jasmine.SpyObj<ProjectService>;
+  let notificationService: jasmine.SpyObj<NotificationService>;
+  let undoDeleteService: jasmine.SpyObj<UndoDeleteService>;
+  let referenceCleanup: jasmine.SpyObj<ReferenceCleanupService>;
 
   const createValidProject = (): Project => ({
     path: '/test/project',
@@ -62,6 +68,10 @@ describe('LocationService', () => {
       existingFiles.delete(p.replace(/\\/g, '/'));
       return { success: true };
     });
+    spy.stageForTrash.and.callFake(async (_project: string, target: string) => {
+      existingFiles.delete(target.replace(/\\/g, '/'));
+      return { success: true, token: 'tok-loc', expiresAt: Date.now() + 15000 };
+    });
   };
 
   beforeEach(() => {
@@ -73,6 +83,7 @@ describe('LocationService', () => {
       'writeFileAtomic',
       'moveDirectory',
       'deleteFile',
+      'stageForTrash',
       'getFileStats',
       'getImageAsDataUrl',
     ]);
@@ -99,6 +110,18 @@ describe('LocationService', () => {
       fileChanges$: new BehaviorSubject<any>(null),
     });
     const loggingSpy = jasmine.createSpyObj('LoggingService', ['log', 'error', 'warn']);
+    const notificationSpy = jasmine.createSpyObj('NotificationService', ['showError']);
+    const undoDeleteSpy = jasmine.createSpyObj('UndoDeleteService', ['register', 'dismissAll']);
+    const cleanupSpy = jasmine.createSpyObj('ReferenceCleanupService', [
+      'clearLocationReferences',
+      'restoreLocationReferences',
+    ]);
+    cleanupSpy.clearLocationReferences.and.returnValue(
+      Promise.resolve({ locationId: '', seats: [] })
+    );
+    cleanupSpy.restoreLocationReferences.and.returnValue(
+      Promise.resolve({ restored: 0, skipped: [] })
+    );
 
     TestBed.configureTestingModule({
       providers: [
@@ -107,12 +130,18 @@ describe('LocationService', () => {
         { provide: ProjectService, useValue: projectSpy },
         { provide: FileWatcherService, useValue: fileWatcherSpy },
         { provide: LoggingService, useValue: loggingSpy },
+        { provide: NotificationService, useValue: notificationSpy },
+        { provide: UndoDeleteService, useValue: undoDeleteSpy },
+        { provide: ReferenceCleanupService, useValue: cleanupSpy },
       ],
     });
 
     service = TestBed.inject(LocationService);
     electronService = TestBed.inject(ElectronService) as jasmine.SpyObj<ElectronService>;
     projectService = TestBed.inject(ProjectService) as jasmine.SpyObj<ProjectService>;
+    notificationService = TestBed.inject(NotificationService) as jasmine.SpyObj<NotificationService>;
+    undoDeleteService = TestBed.inject(UndoDeleteService) as jasmine.SpyObj<UndoDeleteService>;
+    referenceCleanup = TestBed.inject(ReferenceCleanupService) as jasmine.SpyObj<ReferenceCleanupService>;
   });
 
   it('should be created', () => {
@@ -324,7 +353,7 @@ A foggy port.`,
   });
 
   describe('deleteLocation with distinct collision files', () => {
-    it('deleting one colliding location does not delete the other file', async () => {
+    it('deleting one colliding location does not stage the other file', async () => {
       projectService.getCurrentProject.and.returnValue(createValidProject());
 
       const first = await service.createLocation({ ...createFormData(), name: 'The Castle' });
@@ -334,8 +363,12 @@ A foggy port.`,
 
       await service.deleteLocation(first.id);
 
-      expect(electronService.deleteFile).toHaveBeenCalledWith(first.filePath);
-      expect(electronService.deleteFile).not.toHaveBeenCalledWith(second.filePath);
+      expect(electronService.stageForTrash).toHaveBeenCalledWith(
+        '/test/project',
+        first.filePath,
+        jasmine.objectContaining({ kind: 'location' })
+      );
+      expect(electronService.deleteFile).not.toHaveBeenCalled();
       expect(existingFiles.has(second.filePath)).toBeTrue();
       expect(existingFiles.has(first.filePath)).toBeFalse();
       expect(service.getLocationById(second.id)?.filePath).toBe(second.filePath);
@@ -343,53 +376,85 @@ A foggy port.`,
   });
 
   describe('deleteLocation', () => {
-    it('deletes the file and removes from the list', async () => {
+    it('stages the file, removes from the list, and registers Undo', async () => {
       const project = createValidProject();
       projectService.getCurrentProject.and.returnValue(project);
-      electronService.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));
-      electronService.deleteFile.and.returnValue(Promise.resolve({ success: true }));
 
       const created = await service.createLocation(createFormData());
       const deleted = await service.deleteLocation(created.id);
 
       expect(deleted).toBeTrue();
       expect(service.getLocationsSnapshot()).toEqual([]);
-      expect(electronService.deleteFile).toHaveBeenCalledWith(created.filePath);
+      expect(electronService.stageForTrash).toHaveBeenCalledWith(
+        '/test/project',
+        created.filePath,
+        jasmine.objectContaining({ kind: 'location', name: created.name })
+      );
+      expect(electronService.deleteFile).not.toHaveBeenCalled();
+      expect(undoDeleteService.register).toHaveBeenCalled();
     });
 
     it('calls house seatId cleanup when deleting a location', async () => {
       const project = createValidProject();
       projectService.getCurrentProject.and.returnValue(project);
-      electronService.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));
-      electronService.deleteFile.and.returnValue(Promise.resolve({ success: true }));
 
       const created = await service.createLocation(createFormData());
-      
-      // We need to spy on the cleanup service that's injected
-      const cleanupSpy = spyOn((service as any).referenceCleanup, 'clearLocationReferences').and.returnValue(Promise.resolve());
-
       await service.deleteLocation(created.id);
 
-      expect(cleanupSpy).toHaveBeenCalledWith(created.id);
+      expect(referenceCleanup.clearLocationReferences).toHaveBeenCalledWith(created.id);
     });
 
     it('still succeeds when house cleanup throws an error', async () => {
       const project = createValidProject();
       projectService.getCurrentProject.and.returnValue(project);
-      electronService.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));
-      electronService.deleteFile.and.returnValue(Promise.resolve({ success: true }));
 
       const created = await service.createLocation(createFormData());
-      
-      // Simulate cleanup failure
-      spyOn((service as any).referenceCleanup, 'clearLocationReferences').and.returnValue(Promise.reject(new Error('Cleanup failed')));
+      referenceCleanup.clearLocationReferences.and.returnValue(
+        Promise.reject(new Error('Cleanup failed'))
+      );
 
       const deleted = await service.deleteLocation(created.id);
 
-      // Should still succeed despite cleanup error
       expect(deleted).toBeTrue();
       expect(service.getLocationsSnapshot()).toEqual([]);
-      expect(electronService.deleteFile).toHaveBeenCalledWith(created.filePath);
+      expect(electronService.stageForTrash).toHaveBeenCalled();
+      expect(electronService.deleteFile).not.toHaveBeenCalled();
+    });
+
+    it('on staging failure leaves lists unchanged and toasts Nothing was changed', async () => {
+      const project = createValidProject();
+      projectService.getCurrentProject.and.returnValue(project);
+      const created = await service.createLocation(createFormData());
+      electronService.stageForTrash.and.returnValue(
+        Promise.resolve({ success: false, error: 'busy' })
+      );
+
+      await expectAsync(service.deleteLocation(created.id)).toBeRejected();
+      expect(service.getLocationById(created.id)).toBeTruthy();
+      expect(existingFiles.has(created.filePath)).toBeTrue();
+      expect(notificationService.showError).toHaveBeenCalledWith(
+        `Couldn't delete "${created.name}": busy. Nothing was changed.`
+      );
+      expect(undoDeleteService.register).not.toHaveBeenCalled();
+    });
+
+    it('sanitizes recordIds with a dot or accent for staging', async () => {
+      const project = createValidProject();
+      projectService.getCurrentProject.and.returnValue(project);
+      const created = await service.createLocation(createFormData());
+      (created as any).id = 'loc.harbour';
+      (service as any).locationsSubject.next([created]);
+
+      await service.deleteLocation('loc.harbour');
+      expect(electronService.stageForTrash).toHaveBeenCalledWith(
+        '/test/project',
+        created.filePath,
+        jasmine.objectContaining({ recordId: 'loc_harbour' })
+      );
+      expect(undoDeleteService.register).toHaveBeenCalledWith(
+        'tok-loc',
+        jasmine.objectContaining({ recordId: 'loc.harbour' })
+      );
     });
   });
 });

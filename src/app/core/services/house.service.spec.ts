@@ -5,6 +5,8 @@ import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
 import { FileWatcherService } from './file-watcher.service';
 import { LoggingService } from './logging.service';
+import { NotificationService } from './notification.service';
+import { UndoDeleteService } from './undo-delete.service';
 import { HouseFormData } from '../interfaces/house.interface';
 import { generateMarkdown, parseMarkdown } from '../utils/markdown.utils';
 
@@ -16,6 +18,8 @@ describe('HouseService', () => {
   let project$: BehaviorSubject<any>;
   let events: Subject<any>;
   let electron: jasmine.SpyObj<ElectronService>;
+  let notifications: jasmine.SpyObj<NotificationService>;
+  let undoDelete: jasmine.SpyObj<UndoDeleteService>;
   const data = (name = 'House Stark'): HouseFormData => ({
     name, motto: 'Winter is coming', colors: ['#ffffff'], characterIds: ['ned'], content: '## Origins\n\nLong ago.',
     leadership: [
@@ -30,19 +34,27 @@ describe('HouseService', () => {
     folders = new Set();
     events = new Subject();
     project$ = new BehaviorSubject({ path: '/project', metadata: { books: [{ id: 'b1' }, { id: 'b2' }] } });
-    electron = jasmine.createSpyObj('ElectronService', ['fileExists', 'createDirectory', 'readDirectoryRecursive', 'readFile', 'writeFileAtomic', 'deleteFile', 'getImageAsDataUrl']);
+    electron = jasmine.createSpyObj('ElectronService', ['fileExists', 'createDirectory', 'readDirectoryRecursive', 'readFile', 'writeFileAtomic', 'deleteFile', 'stageForTrash', 'getImageAsDataUrl']);
     electron.fileExists.and.callFake(async path => disk.has(path) || folders.has(path));
     electron.createDirectory.and.callFake(async path => { folders.add(path); return { success: true }; });
     electron.readDirectoryRecursive.and.callFake(async path => ({ success: true, files: [...disk.keys()].filter(file => file.startsWith(path + '/') && file.endsWith('.md')).map(file => ({ absolutePath: file, relativePath: file.slice(path.length + 1) })) }));
     electron.readFile.and.callFake(async path => disk.has(path) ? { success: true, content: disk.get(path) } : { success: false, error: 'Missing file' });
     electron.writeFileAtomic.and.callFake(async (path, raw) => { disk.set(path, raw); return { success: true }; });
     electron.deleteFile.and.callFake(async path => { disk.delete(path); return { success: true }; });
+    electron.stageForTrash.and.callFake(async (_project, target) => {
+      disk.delete(target);
+      return { success: true, token: 'tok-house', expiresAt: Date.now() + 15000 };
+    });
     electron.getImageAsDataUrl.and.resolveTo(null);
+    notifications = jasmine.createSpyObj('NotificationService', ['showError']);
+    undoDelete = jasmine.createSpyObj('UndoDeleteService', ['register', 'dismissAll']);
     TestBed.configureTestingModule({ providers: [HouseService,
       { provide: ElectronService, useValue: electron },
       { provide: ProjectService, useValue: { currentProject$: project$, getCurrentProject: () => project$.value } },
       { provide: FileWatcherService, useValue: { fileChanges$: events } },
       { provide: LoggingService, useValue: jasmine.createSpyObj('LoggingService', ['error']) },
+      { provide: NotificationService, useValue: notifications },
+      { provide: UndoDeleteService, useValue: undoDelete },
     ] });
     service = TestBed.inject(HouseService);
   });
@@ -106,16 +118,52 @@ describe('HouseService', () => {
     expect(disk.get(one.filePath)).toBe(external);
   });
 
-  it('keeps image and note artifacts when deleting a House', async () => {
+  it('keeps image and note artifacts when staging a House delete', async () => {
     const house = await service.createHouse(data());
     const image = '/project/houses/house-stark/crest.webp';
     const note = '/project/houses/house-stark/notes.md';
     disk.set(image, 'image bytes');
     disk.set(note, 'Personal notes');
     await service.deleteHouse(house.id, house.raw);
+    expect(electron.stageForTrash).toHaveBeenCalledWith(
+      '/project',
+      house.filePath,
+      jasmine.objectContaining({ kind: 'house', recordId: jasmine.any(String), name: house.name })
+    );
+    expect(electron.deleteFile).not.toHaveBeenCalled();
     expect(disk.has(house.filePath)).toBeFalse();
     expect(disk.has(image)).toBeTrue();
     expect(disk.has(note)).toBeTrue();
+    expect(undoDelete.register).toHaveBeenCalled();
+  });
+
+  it('on staging failure leaves the House untouched and toasts Nothing was changed', async () => {
+    const house = await service.createHouse(data());
+    electron.stageForTrash.and.returnValue(Promise.resolve({ success: false, error: 'locked' }));
+    await expectAsync(service.deleteHouse(house.id, house.raw)).toBeRejectedWithError(/locked/);
+    expect(disk.has(house.filePath)).toBeTrue();
+    expect(service.getById(house.id)).toBeTruthy();
+    expect(notifications.showError).toHaveBeenCalledWith(
+      `Couldn't delete "${house.name}": locked. Nothing was changed.`
+    );
+    expect(undoDelete.register).not.toHaveBeenCalled();
+  });
+
+  it('sanitizes House ids with a dot for staging', async () => {
+    const house = await service.createHouse(data());
+    // Force a dotted id on the in-memory record (staging uses house.id).
+    (house as any).id = 'house.stark';
+    (service as any).subject.next([house]);
+    await service.deleteHouse('house.stark', house.raw);
+    expect(electron.stageForTrash).toHaveBeenCalledWith(
+      '/project',
+      house.filePath,
+      jasmine.objectContaining({ recordId: 'house_stark' })
+    );
+    expect(undoDelete.register).toHaveBeenCalledWith(
+      'tok-house',
+      jasmine.objectContaining({ recordId: 'house.stark' })
+    );
   });
 
   it('preserves unrecognized frontmatter and historical references when editing', async () => {

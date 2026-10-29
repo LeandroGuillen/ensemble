@@ -809,7 +809,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
   }
 
   async resetBaseColors(): Promise<void> {
-    if (!(await this.modalService.confirm('Reset all base colors to defaults? This cannot be undone.'))) {
+    if (!(await this.modalService.confirm('Reset all base colors to defaults? Your custom base colors will be replaced.'))) {
       return;
     }
     try {

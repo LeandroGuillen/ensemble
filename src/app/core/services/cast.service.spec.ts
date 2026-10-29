@@ -2,6 +2,8 @@ import { CastService } from './cast.service';
 import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
 import { LoggingService } from './logging.service';
+import { NotificationService } from './notification.service';
+import { UndoDeleteService } from './undo-delete.service';
 import { Project, Pinboard } from '../interfaces/project.interface';
 
 /** In-memory disk exercises the real migration and index reload paths. */
@@ -10,6 +12,11 @@ describe('Cast canvases', () => {
   let project: Project;
   let files: Map<string, string>;
   let directories: Set<string>;
+  let stageCalls: { projectPath: string; targetPath: string; meta: any }[];
+  let deleteDirCalls: string[];
+  let undoRegister: jasmine.Spy;
+  let showError: jasmine.Spy;
+  let electron: ElectronService;
 
   const board = (id: string, name = 'Court'): Pinboard => ({
     id, name,
@@ -24,11 +31,15 @@ describe('Cast canvases', () => {
   beforeEach(() => {
     files = new Map();
     directories = new Set();
+    stageCalls = [];
+    deleteDirCalls = [];
+    undoRegister = jasmine.createSpy('register');
+    showError = jasmine.createSpy('showError');
     project = { path: '/project', metadata: {
       projectName: 'Test', version: '1', categories: [], tags: [], books: [],
       settings: { defaultCategory: '' }, pinboards: [],
     } };
-    const electron = {
+    electron = {
       fileExists: async (path: string) => files.has(path) || directories.has(path),
       createDirectory: async (path: string) => { directories.add(path); return { success: true }; },
       writeFileAtomic: async (path: string, content: string) => { files.set(path, content); return { success: true }; },
@@ -39,9 +50,16 @@ describe('Cast canvases', () => {
         files: [...files.keys()].filter(item => item.startsWith(`${path}/`) && !item.slice(path.length + 1).includes('/')).map(item => item.slice(path.length + 1)),
       }),
       deleteDirectoryRecursive: async (path: string) => {
+        deleteDirCalls.push(path);
         directories.delete(path);
         for (const file of files.keys()) if (file.startsWith(`${path}/`)) files.delete(file);
         return { success: true };
+      },
+      stageForTrash: async (projectPath: string, targetPath: string, meta: any) => {
+        stageCalls.push({ projectPath, targetPath, meta });
+        directories.delete(targetPath);
+        for (const file of [...files.keys()]) if (file.startsWith(`${targetPath}/`)) files.delete(file);
+        return { success: true, token: 'tok-cast', expiresAt: Date.now() + 15000 };
       },
     } as unknown as ElectronService;
     const projects = {
@@ -52,8 +70,17 @@ describe('Cast canvases', () => {
       deletePinboard: async (id: string) => {
         project.metadata.pinboards = project.metadata.pinboards?.filter(item => item.id !== id);
       },
+      restorePinboard: async (pinboard: Pinboard) => {
+        project.metadata.pinboards = [...(project.metadata.pinboards || []), pinboard];
+      },
     } as unknown as ProjectService;
-    service = new CastService(electron, projects, { error: () => {}, warn: () => {} } as unknown as LoggingService);
+    service = new CastService(
+      electron,
+      projects,
+      { error: () => {}, warn: () => {} } as unknown as LoggingService,
+      { showError } as unknown as NotificationService,
+      { register: undoRegister } as unknown as UndoDeleteService
+    );
   });
 
   it('migrates legacy boards once, preserving positions, relationships and view state', async () => {
@@ -91,14 +118,48 @@ describe('Cast canvases', () => {
     expect(project.metadata.pinboards!.find(item => item.id === 'second')).toEqual(board('second', 'Other'));
   });
 
-  it('creates no default cast for an empty project and deletes a cast with its canvas', async () => {
+  it('creates no default cast for an empty project and stages a cast with its canvas', async () => {
     await service.loadCasts(project.path);
     expect(service.getCastsSnapshot()).toEqual([]);
     const cast = await service.createCast({ name: 'New', characterIds: ['a', 'b'] });
     expect(project.metadata.pinboards![0].nodes.map(node => node.id)).toEqual(['a', 'b']);
+    const folderPath = cast.folderPath!;
     await service.deleteCast(cast.id);
+    expect(stageCalls.length).toBe(1);
+    expect(stageCalls[0].targetPath).toBe(folderPath);
+    expect(stageCalls[0].meta.kind).toBe('cast');
+    expect(deleteDirCalls).toEqual([]);
+    expect(undoRegister).toHaveBeenCalledWith(
+      'tok-cast',
+      jasmine.objectContaining({ kind: 'cast', recordId: cast.id, name: 'New' })
+    );
     await service.forceReloadCasts();
     expect(service.getCastsSnapshot()).toEqual([]);
     expect(project.metadata.pinboards).toEqual([]);
+  });
+
+  it('sanitizes cast ids with a dot for staging and keeps the real id for Undo', async () => {
+    await service.loadCasts(project.path);
+    const cast = await service.createCast({ name: 'Court', characterIds: ['a'] });
+    (cast as any).id = 'cast.court';
+    (service as any).castsSubject.next([cast]);
+    await service.deleteCast('cast.court');
+    expect(stageCalls[0].meta.recordId).toBe('cast_court');
+    expect(undoRegister).toHaveBeenCalledWith(
+      'tok-cast',
+      jasmine.objectContaining({ recordId: 'cast.court' })
+    );
+  });
+
+  it('on staging failure leaves the cast unchanged and toasts Nothing was changed', async () => {
+    await service.loadCasts(project.path);
+    const cast = await service.createCast({ name: 'Keep', characterIds: ['a'] });
+    (electron as any).stageForTrash = async () => ({ success: false, error: 'nope' });
+    await expectAsync(service.deleteCast(cast.id)).toBeRejected();
+    expect(service.getCastById(cast.id)).toBeTruthy();
+    expect(showError).toHaveBeenCalledWith(
+      `Couldn't delete "Keep": nope. Nothing was changed.`
+    );
+    expect(undoRegister).not.toHaveBeenCalled();
   });
 });

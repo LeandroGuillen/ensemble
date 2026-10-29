@@ -394,7 +394,7 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
     }
     if (
       !(await this.modalService.confirm(
-        `Are you sure you want to delete the location "${this.location.name}"?`
+        `Are you sure you want to delete the location "${this.location.name}"?\n\nIt will be moved to the system Trash. You can undo for 15 seconds.`
       ))
     ) {
       return;
@@ -402,10 +402,10 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
 
     try {
       await this.locationService.deleteLocation(this.location.id);
-      this.notificationService.showSuccess(`Deleted ${this.location.name}`);
+      // Undo toast is shown by UndoDeleteService.register.
       await this.router.navigate(['/locations']);
     } catch (error) {
-      this.error = `Failed to delete location: ${error}`;
+      // Staging failure already toasted "Nothing was changed." from the service.
       this.logger.error('Failed to delete location:', error);
     }
   }

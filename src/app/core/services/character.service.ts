@@ -23,6 +23,13 @@ import { normalizeAliases } from '../utils/character-alias.utils';
 import { normalizeBookCode } from '../utils/book-display.utils';
 import { assertIpcSuccess, withIpcError } from '../utils/ipc.utils';
 import { requireProject } from '../utils/project.utils';
+import {
+  CharacterReferenceSnapshot,
+} from '../interfaces/reference-snapshot.interface';
+import {
+  sanitizeTrashRecordId,
+  trashStagingFailureMessage,
+} from '../trash/trash-record-id';
 import { ElectronService } from './electron.service';
 import { FileWatcherService } from './file-watcher.service';
 import { ProjectService } from './project.service';
@@ -31,6 +38,8 @@ import { MetadataService } from './metadata.service';
 import { PlotBoardService } from './plot-board.service';
 import { CastService } from './cast.service';
 import { ReferenceCleanupService } from './reference-cleanup.service';
+import { NotificationService } from './notification.service';
+import { UndoDeleteService } from './undo-delete.service';
 
 /** Coerces a raw frontmatter `prompts` value into a clean CharacterPrompt[]. */
 function normalizePrompts(raw: unknown): CharacterPrompt[] {
@@ -70,7 +79,9 @@ export class CharacterService {
     private metadataService: MetadataService,
     private plotBoardService: PlotBoardService,
     private castService: CastService,
-    private referenceCleanup: ReferenceCleanupService
+    private referenceCleanup: ReferenceCleanupService,
+    private notificationService: NotificationService,
+    private undoDelete: UndoDeleteService
   ) {
     // Subscribe to file changes to auto-reload characters
     this.fileWatcherService.fileChanges$.pipe(takeUntilDestroyed()).subscribe((event) => {
@@ -634,6 +645,7 @@ export class CharacterService {
       return character;
     } catch (error) {
       if (createdFolderPath) {
+        // Rollback only: permanent delete of a folder we just created. Never stage.
         await this.electronService.deleteDirectoryRecursive(createdFolderPath);
       }
       this.logger.error('Failed to create character', error);
@@ -694,6 +706,7 @@ export class CharacterService {
       return localizedDraft;
     } catch (error) {
       if (createdFolderPath) {
+        // Rollback only: permanent delete of a folder we just created. Never stage.
         await this.electronService.deleteDirectoryRecursive(createdFolderPath);
       }
       this.logger.error('Failed to create character draft', error);
@@ -1151,7 +1164,8 @@ export class CharacterService {
   }
 
   /**
-   * Permanently deletes a character file
+   * Stage a character / draft / Lore figure for OS trash + Undo.
+   * Order: stageForTrash → memory/thumbnail → reference cleanup → UndoDeleteService.
    */
   async deleteCharacter(id: string): Promise<boolean> {
     try {
@@ -1164,11 +1178,26 @@ export class CharacterService {
         return false;
       }
 
-      const deleteResult = isFolderBasedCharacterPath(character.relativePath)
-        ? await this.electronService.deleteDirectoryRecursive(pathDirname(character.filePath))
-        : await this.electronService.deleteFile(character.filePath);
-      if (!deleteResult.success) {
-        throw new Error(`Failed to delete character: ${deleteResult.error}`);
+      const project = requireProject(this.projectService.getCurrentProject());
+      const kind = character.draft ? 'draft' : character.lore ? 'lore' : 'character';
+      const name = character.name || (isDraft ? 'Unnamed draft' : 'Untitled');
+      const targetPath = isFolderBasedCharacterPath(character.relativePath)
+        ? pathDirname(character.filePath)
+        : character.filePath;
+
+      const stageResult = await this.electronService.stageForTrash(
+        project.path,
+        targetPath,
+        {
+          kind,
+          recordId: sanitizeTrashRecordId(character.id),
+          name,
+        }
+      );
+      if (!stageResult.success || !stageResult.token) {
+        const err = stageResult.error || 'Unknown error';
+        this.notificationService.showError(trashStagingFailureMessage(name, err));
+        throw new Error(err);
       }
 
       this.removeCachedThumbnailsForCharacter(character.id);
@@ -1177,10 +1206,45 @@ export class CharacterService {
       const filteredCharacters = characters.filter((char) => char.id !== character.id);
       sourceSubject.next(filteredCharacters);
 
+      let referenceSnapshot: CharacterReferenceSnapshot | null = null;
       if (!isDraft) {
-        // Cleanup all references to this character across the project
-        await this.referenceCleanup.removeCharacterReferences(character.id);
+        referenceSnapshot = await this.referenceCleanup.removeCharacterReferences(
+          character.id
+        );
       }
+
+      const recordId = character.id;
+      const collection = sourceSubject;
+      this.undoDelete.register(stageResult.token, {
+        kind,
+        recordId,
+        name,
+        referenceSnapshot,
+        expiresAt: stageResult.expiresAt,
+        hasConflict: () => {
+          if (this.findRecord(recordId)) {
+            return true;
+          }
+          const needle = name.trim().toLowerCase();
+          if (!needle) {
+            return false;
+          }
+          return collection.value.some(
+            (c) => (c.name || '').trim().toLowerCase() === needle
+          );
+        },
+        reload: async () => {
+          await this.forceReloadCharacters();
+        },
+        restoreReferences: async (snapshot) => {
+          if (!snapshot || isDraft) {
+            return { restored: 0, skipped: [] };
+          }
+          return this.referenceCleanup.restoreCharacterReferences(
+            snapshot as CharacterReferenceSnapshot
+          );
+        },
+      });
 
       return true;
     } catch (error) {

@@ -34,7 +34,7 @@ describe('Character Delete Message Utils', () => {
       expect(message).toContain('This character will be removed from:');
       expect(message).toContain('1 house: House Stark');
       expect(message).toContain('1 cast: Main Cast');
-      expect(message).toContain('This action cannot be undone.');
+      expect(message).toContain('It will be moved to the system Trash. You can undo for 15 seconds.');
     });
 
     it('should still show confirmation dialog when counting references fails', async () => {
@@ -51,7 +51,7 @@ describe('Character Delete Message Utils', () => {
 
       // Should return base message without crashing
       expect(message).toContain('Are you sure you want to delete "Jon Snow"?');
-      expect(message).toContain('This action cannot be undone.');
+      expect(message).toContain('It will be moved to the system Trash. You can undo for 15 seconds.');
       
       // Should NOT contain reference details
       expect(message).not.toContain('This character will be removed from:');
@@ -72,7 +72,7 @@ describe('Character Delete Message Utils', () => {
       );
 
       expect(message).toContain('Are you sure you want to delete "Draft Character"?');
-      expect(message).toContain('This action cannot be undone.');
+      expect(message).toContain('It will be moved to the system Trash. You can undo for 15 seconds.');
       
       // Should not have called countCharacterReferences
       expect(mockCharacterService.countCharacterReferences).not.toHaveBeenCalled();
@@ -113,7 +113,7 @@ describe('Character Delete Message Utils', () => {
 
       expect(message).toContain('Are you sure you want to delete "Orphan Character"?');
       expect(message).not.toContain('This character will be removed from:');
-      expect(message).toContain('This action cannot be undone.');
+      expect(message).toContain('It will be moved to the system Trash. You can undo for 15 seconds.');
     });
 
     it('should handle count rejection and still produce valid message', async () => {
@@ -131,7 +131,7 @@ describe('Character Delete Message Utils', () => {
       // Function should not throw
       expect(message).toBeTruthy();
       expect(message).toContain('Test Character');
-      expect(message).toContain('This action cannot be undone.');
+      expect(message).toContain('It will be moved to the system Trash. You can undo for 15 seconds.');
       
       // Error should be logged
       expect(mockLogger.error).toHaveBeenCalled();

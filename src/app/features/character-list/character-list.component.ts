@@ -656,10 +656,14 @@ export class CharacterListComponent implements OnInit {
     event.stopPropagation();
 
     const displayName = this.getCharacterDisplayName(character);
-    if (await this.modalService.confirm(`Are you sure you want to delete "${displayName}"?\n\nThis action cannot be undone.`)) {
+    if (
+      await this.modalService.confirm(
+        `Are you sure you want to delete "${displayName}"?\n\nIt will be moved to the system Trash. You can undo for 15 seconds. After that, restore it from the system Trash (links in Houses, pinboards and plot threads come back only with Undo).`
+      )
+    ) {
       try {
         await this.characterService.deleteCharacter(character.id);
-        this.notificationService.showSuccess(`${character.draft ? 'Draft' : 'Character'} "${displayName}" deleted successfully`);
+        // Undo toast is shown by UndoDeleteService.register.
       } catch (error) {
         this.logger.error("Failed to delete character:", error);
       }

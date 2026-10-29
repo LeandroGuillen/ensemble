@@ -123,7 +123,7 @@
       <h4>Delete plot board?</h4>
       @if (deleteDialogPath; as path) {
         <p class="rename-hint">
-          Remove <strong>{{ displayStem(path) }}</strong> from disk? This cannot be undone.
+          Delete <strong>{{ displayStem(path) }}</strong> from disk? Plot boards aren't moved to Trash yet, so this is permanent.
         </p>
       }
       @if (deletePlotBoardError) {

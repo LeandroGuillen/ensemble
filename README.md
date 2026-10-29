@@ -11,6 +11,7 @@ Character management application for writers and worldbuilders.
 - **Relationship Visualization**: Interactive graph view for character relationships
 - **Project Organization**: Work with multiple projects in separate folders
 - **External Editing**: Saved Markdown edits from apps such as Obsidian refresh character lists and open character pages in Ensemble. If both apps edit the same file, Ensemble asks you to reload before saving.
+- **Undoable deletes**: Deleting a character, draft, Lore figure, location, House, or cast shows Undo for 15 seconds. After that, restore the item from the system Trash; links in Houses, pinboards, and plot threads come back only with Undo. On Linux without trash support, items stay in the project's `.ensemble-trash/` folder until a later open retries.
 
 ## Development
 
@@ -77,6 +78,7 @@ older version. Use full Debian and Fedora VMs for those final release checks.
 ```
 project-folder/
 ├── ensemble.json           # Project metadata: categories, tags, settings, lastSession, relationships
+├── .ensemble-trash/        # Staged deletes (exclude from backups/exports); then OS trash
 ├── houses/                 # Family and dynasty records
 │   └── house-stark/
 │       └── house-stark.md   # House frontmatter + Markdown history

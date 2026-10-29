@@ -13,9 +13,15 @@ import { generateId } from '../utils/id.utils';
 import { pathBasename, pathJoin } from '../utils/path.utils';
 import { assertIpcSuccess } from '../utils/ipc.utils';
 import { requireProject } from '../utils/project.utils';
+import {
+  sanitizeTrashRecordId,
+  trashStagingFailureMessage,
+} from '../trash/trash-record-id';
 import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
 import { LoggingService } from './logging.service';
+import { NotificationService } from './notification.service';
+import { UndoDeleteService } from './undo-delete.service';
 
 /** Entry for a cast in casts.json (name/characterIds live there; folder holds description + thumbnails). */
 export interface CastIndexEntry {
@@ -42,7 +48,9 @@ export class CastService {
   constructor(
     private electronService: ElectronService,
     private projectService: ProjectService,
-    private logger: LoggingService
+    private logger: LoggingService,
+    private notificationService: NotificationService,
+    private undoDelete: UndoDeleteService
   ) {}
 
   getCasts(): Observable<Cast[]> {
@@ -542,7 +550,7 @@ export class CastService {
   }
 
   /**
-   * Deletes a cast and its folder from disk.
+   * Stage a cast folder for OS trash + Undo (casts.json entry and linked pinboard snapshotted).
    */
   async deleteCast(id: string): Promise<boolean> {
     const project = requireProject(this.projectService.getCurrentProject());
@@ -556,25 +564,78 @@ export class CastService {
         return false;
       }
 
-      // If cast has a folder, delete it recursively from disk
+      const name = cast.name || 'Untitled';
+      const referenceSnapshot = this.captureCastDeleteSnapshot(id);
+
       if (cast.folderPath) {
-        const deleteResult = await this.electronService.deleteDirectoryRecursive(cast.folderPath);
-        if (!deleteResult.success) {
-          throw new Error(`Failed to delete cast folder: ${deleteResult.error}`);
+        const stageResult = await this.electronService.stageForTrash(
+          project.path,
+          cast.folderPath,
+          {
+            kind: 'cast',
+            recordId: sanitizeTrashRecordId(cast.id),
+            name,
+          }
+        );
+        if (!stageResult.success || !stageResult.token) {
+          const err = stageResult.error || 'Unknown error';
+          this.notificationService.showError(trashStagingFailureMessage(name, err));
+          throw new Error(err);
         }
+
+        await this.removeCastsFileEntry(id);
+
+        const filteredCasts = casts.filter((c) => c.id !== id);
+        if (
+          cast.pinboardId &&
+          this.projectService.getPinboards().some((board) => board.id === cast.pinboardId)
+        ) {
+          await this.projectService.deletePinboard(cast.pinboardId);
+        }
+        this.castsSubject.next(filteredCasts);
+
+        const recordId = cast.id;
+        this.undoDelete.register(stageResult.token, {
+          kind: 'cast',
+          recordId,
+          name,
+          referenceSnapshot,
+          expiresAt: stageResult.expiresAt,
+          hasConflict: () => {
+            if (this.getCastById(recordId)) {
+              return true;
+            }
+            const needle = name.trim().toLowerCase();
+            if (!needle) {
+              return false;
+            }
+            return this.castsSubject.value.some(
+              (c) => (c.name || '').trim().toLowerCase() === needle
+            );
+          },
+          // casts.json entry is restored in restoreReferences (folder already on disk).
+          reload: async () => {},
+          restoreReferences: async (snapshot) => {
+            if (!snapshot) {
+              return { restored: 0, skipped: [] };
+            }
+            return this.restoreCastDelete(snapshot as CastDeleteSnapshot);
+          },
+        });
       } else {
-        this.logger.warn(`Cast '${cast.name}' has no folder to delete - removing from memory only`);
+        this.logger.warn(
+          `Cast '${cast.name}' has no folder to stage - removing from memory only`
+        );
+        await this.removeCastsFileEntry(id);
+        const filteredCasts = casts.filter((c) => c.id !== id);
+        if (
+          cast.pinboardId &&
+          this.projectService.getPinboards().some((board) => board.id === cast.pinboardId)
+        ) {
+          await this.projectService.deletePinboard(cast.pinboardId);
+        }
+        this.castsSubject.next(filteredCasts);
       }
-
-      // Remove the cast from the casts.json index
-      await this.removeCastsFileEntry(id);
-
-      // Update in-memory list (remove cast regardless of whether it had a folder)
-      const filteredCasts = casts.filter((c) => c.id !== id);
-      if (cast.pinboardId && this.projectService.getPinboards().some(board => board.id === cast.pinboardId)) {
-        await this.projectService.deletePinboard(cast.pinboardId);
-      }
-      this.castsSubject.next(filteredCasts);
 
       return true;
     } catch (error) {

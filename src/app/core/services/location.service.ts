@@ -9,11 +9,18 @@ import { pathJoin, pathDirname } from '../utils/path.utils';
 import { parseThumbnailReference, resolveThumbnailPath } from '../utils/thumbnail.utils';
 import { assertIpcSuccess } from '../utils/ipc.utils';
 import { requireProject } from '../utils/project.utils';
+import { LocationReferenceSnapshot } from '../interfaces/reference-snapshot.interface';
+import {
+  sanitizeTrashRecordId,
+  trashStagingFailureMessage,
+} from '../trash/trash-record-id';
 import { ElectronService } from './electron.service';
 import { FileWatcherService } from './file-watcher.service';
 import { ProjectService } from './project.service';
 import { LoggingService } from './logging.service';
 import { ReferenceCleanupService } from './reference-cleanup.service';
+import { NotificationService } from './notification.service';
+import { UndoDeleteService } from './undo-delete.service';
 
 function normalizeLocationRelativePath(relativePath: string): string {
   return relativePath.replace(/\\/g, '/').replace(/^\/+/, '');
@@ -35,7 +42,9 @@ export class LocationService {
     private projectService: ProjectService,
     private fileWatcherService: FileWatcherService,
     private logger: LoggingService,
-    private referenceCleanup: ReferenceCleanupService
+    private referenceCleanup: ReferenceCleanupService,
+    private notificationService: NotificationService,
+    private undoDelete: UndoDeleteService
   ) {
     this.fileWatcherService.fileChanges$.pipe(takeUntilDestroyed()).subscribe((event) => {
       this.handleFileChange(event);
@@ -292,20 +301,69 @@ export class LocationService {
         return false;
       }
 
-      const deleteResult = await this.electronService.deleteFile(location.filePath);
-      if (!deleteResult.success) {
-        throw new Error(`Failed to delete location: ${deleteResult.error}`);
+      const project = requireProject(this.projectService.getCurrentProject());
+      const name = location.name || 'Untitled';
+      const stageResult = await this.electronService.stageForTrash(
+        project.path,
+        location.filePath,
+        {
+          kind: 'location',
+          recordId: sanitizeTrashRecordId(location.id),
+          name,
+        }
+      );
+      if (!stageResult.success || !stageResult.token) {
+        const err = stageResult.error || 'Unknown error';
+        this.notificationService.showError(trashStagingFailureMessage(name, err));
+        throw new Error(err);
       }
 
       this.thumbnailDataUrls.delete(location.id);
       this.locationsSubject.next(locations.filter((loc) => loc.id !== location.id));
 
-      // Cleanup: clear seatId from any houses that reference this location (non-blocking)
+      let referenceSnapshot: LocationReferenceSnapshot | null = null;
       try {
-        await this.referenceCleanup.clearLocationReferences(location.id);
+        referenceSnapshot = await this.referenceCleanup.clearLocationReferences(
+          location.id
+        );
       } catch (cleanupError) {
-        this.logger.warn('Failed to cleanup location references in houses, continuing', cleanupError);
+        this.logger.warn(
+          'Failed to cleanup location references in houses, continuing',
+          cleanupError
+        );
       }
+
+      const recordId = location.id;
+      this.undoDelete.register(stageResult.token, {
+        kind: 'location',
+        recordId,
+        name,
+        referenceSnapshot,
+        expiresAt: stageResult.expiresAt,
+        hasConflict: () => {
+          if (this.getLocationById(recordId)) {
+            return true;
+          }
+          const needle = name.trim().toLowerCase();
+          if (!needle) {
+            return false;
+          }
+          return this.locationsSubject.value.some(
+            (loc) => (loc.name || '').trim().toLowerCase() === needle
+          );
+        },
+        reload: async () => {
+          await this.forceReloadLocations();
+        },
+        restoreReferences: async (snapshot) => {
+          if (!snapshot) {
+            return { restored: 0, skipped: [] };
+          }
+          return this.referenceCleanup.restoreLocationReferences(
+            snapshot as LocationReferenceSnapshot
+          );
+        },
+      });
 
       return true;
     } catch (error) {

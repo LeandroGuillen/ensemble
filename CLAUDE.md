@@ -39,6 +39,13 @@ Located in `src/app/core/services/`:
 - **FileWatcherService**: Monitors work folder for external file changes (using chokidar)
 - **WikiLinkTargetsService**: `[[wikilink]]` resolver and completion entries (characters, locations, Houses) for the Markdown description editors
 - **SkinService**: Applies the UI skin (`settings.skin`, per project) by setting `html[data-skin]`. Skins change shape/type/motion independently of the color theme; registry in `src/app/core/skins/`, styles in `src/styles/skins/_<id>.scss` scoped to `html[data-skin='<id>']`
+- **UndoDeleteService**: 15 s Undo toast after staging a delete; restores files via `restoreFromTrash` and reapplies snapshots. Subscribes once to sticky `trash-commit-failed` errors.
+
+### OS trash (deletes)
+
+- Deleting a character, draft, Lore figure, location, House, or cast **stages** into `<project>/.ensemble-trash/<entryId>/` (with `manifest.json`), shows an Undo toast for 15 s, then moves the item to the system Trash via `shell.trashItem`.
+- Any future backup, snapshot, or export **must exclude** `.ensemble-trash/`.
+- `deleteDirectoryRecursive` is for **rollbacks only** (e.g. half-created character folders in `createCharacter` / `createCharacterDraft`). User-facing deletes must not call it on those paths.
 
 ### Core Utilities
 
@@ -124,6 +131,7 @@ Each project has this structure:
 ```
 project-folder/
 ├── ensemble.json           # Project metadata: categories, tags, settings, lastSession, pinboards
+├── .ensemble-trash/        # Staged deletes before OS trash (exclude from backups/exports)
 ├── comfyui-workflows/      # ComfyUI API-format workflow JSON (optional; image generation)
 ├── locations/              # Location files (recursively scanned)
 │   └── _<slug>.md          # Location file (e.g., "_grey-harbor.md")
@@ -213,7 +221,7 @@ Location ID is stable in frontmatter. Locations use project books and a single `
 
 ### Removed Features
 
-- Trash system (`_deleted/` folder, restore, empty trash) — including the cast trash folder
+- In-app Trash browser (`_deleted/` folder, restore, empty trash) — including the cast trash folder (user deletes now stage to `.ensemble-trash/` then the OS trash)
 - Images library (multiple images per character)
 - Additional fields (extra `.md` files in character folders)
 - `mangamaster` field

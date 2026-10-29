@@ -35,6 +35,7 @@ export async function buildCharacterDeleteMessage(
     }
   }
 
-  confirmMessage += '\n\nThis action cannot be undone.';
+  confirmMessage +=
+    '\n\nIt will be moved to the system Trash. You can undo for 15 seconds. After that, restore it from the system Trash (links in Houses, pinboards and plot threads come back only with Undo).';
   return confirmMessage;
 }

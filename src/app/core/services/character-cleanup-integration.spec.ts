@@ -12,6 +12,7 @@ import { ElectronService } from './electron.service';
 import { FileWatcherService } from './file-watcher.service';
 import { LoggingService } from './logging.service';
 import { NotificationService } from './notification.service';
+import { UndoDeleteService } from './undo-delete.service';
 import { Project } from '../interfaces/project.interface';
 import { Character } from '../interfaces/character.interface';
 
@@ -68,6 +69,7 @@ describe('Character Cleanup Integration (Real DI)', () => {
       'copyFile',
       'deleteFile',
       'deleteDirectoryRecursive',
+      'stageForTrash',
       'getFileStats',
       'getImageAsDataUrl'
     ]);
@@ -79,6 +81,9 @@ describe('Character Cleanup Integration (Real DI)', () => {
     electronSpy.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));
     electronSpy.deleteFile.and.returnValue(Promise.resolve({ success: true }));
     electronSpy.deleteDirectoryRecursive.and.returnValue(Promise.resolve({ success: true }));
+    electronSpy.stageForTrash.and.returnValue(
+      Promise.resolve({ success: true, token: 'tok-int', expiresAt: Date.now() + 15000 })
+    );
     electronSpy.getFileStats.and.returnValue(Promise.resolve({
       success: true,
       stats: { mtime: new Date(), ctime: new Date() }
@@ -90,7 +95,9 @@ describe('Character Cleanup Integration (Real DI)', () => {
     });
 
     const loggingSpy = jasmine.createSpyObj('LoggingService', ['log', 'error', 'warn']);
-    const notificationSpy = jasmine.createSpyObj('NotificationService', ['showError']);
+    const notificationSpy = jasmine.createSpyObj('NotificationService', ['showError', 'showUndo', 'dismiss']);
+    notificationSpy.showUndo.and.returnValue('toast-1');
+    const undoDeleteSpy = jasmine.createSpyObj('UndoDeleteService', ['register', 'dismissAll']);
 
     TestBed.configureTestingModule({
       providers: [
@@ -107,6 +114,7 @@ describe('Character Cleanup Integration (Real DI)', () => {
         { provide: FileWatcherService, useValue: fileWatcherSpy },
         { provide: LoggingService, useValue: loggingSpy },
         { provide: NotificationService, useValue: notificationSpy },
+        { provide: UndoDeleteService, useValue: undoDeleteSpy },
         {
           provide: ProjectService,
           useValue: {
@@ -116,10 +124,13 @@ describe('Character Cleanup Integration (Real DI)', () => {
             getCharactersFolderPath: () => '/test/project/characters',
             getDefaultCharacterStyle: () => 'default',
             getCharacterStyles: () => [{ id: 'default', name: 'Default' }],
+            getPinboards: () => project$.value?.metadata?.pinboards || [],
             remapCharacterIds: jasmine.createSpy('remapCharacterIds').and.returnValue(Promise.resolve(false)),
             updateProject: jasmine.createSpy('updateProject').and.returnValue(Promise.resolve()),
             updatePinboardById: jasmine.createSpy('updatePinboardById').and.returnValue(Promise.resolve()),
-            saveProjectMetadata: jasmine.createSpy('saveProjectMetadata').and.returnValue(Promise.resolve())
+            saveProjectMetadata: jasmine.createSpy('saveProjectMetadata').and.returnValue(Promise.resolve()),
+            deletePinboard: jasmine.createSpy('deletePinboard').and.returnValue(Promise.resolve()),
+            restorePinboard: jasmine.createSpy('restorePinboard').and.returnValue(Promise.resolve()),
           }
         }
       ]
@@ -187,8 +198,12 @@ describe('Character Cleanup Integration (Real DI)', () => {
     };
     (characterService as any).charactersSubject.next([character]);
 
-    // Delete the character
+    // Delete the character (stages to trash — must not permanently rm)
     await characterService.deleteCharacter('char-1');
+
+    expect(electronService.stageForTrash).toHaveBeenCalled();
+    expect(electronService.deleteFile).not.toHaveBeenCalled();
+    expect(electronService.deleteDirectoryRecursive).not.toHaveBeenCalled();
 
     // Verify pinboard was updated
     expect(projectService.updatePinboardById).toHaveBeenCalled();

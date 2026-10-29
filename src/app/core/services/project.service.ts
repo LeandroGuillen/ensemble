@@ -259,6 +259,15 @@ export class ProjectService {
       this.currentProjectSubject.next(project);
       this.recentProjects.add(projectPath);
 
+      // setWorkFolder already committed the previous project's pending trash entries.
+      // Drop renderer Undo toasts so they cannot restore against the wrong project.
+      try {
+        const { UndoDeleteService } = await import('./undo-delete.service');
+        this.injector.get(UndoDeleteService).dismissAll();
+      } catch (dismissError) {
+        this.logger.warn('Failed to dismiss pending Undo toasts after project load', dismissError);
+      }
+
       return project;
     } catch (error) {
       this.logger.error('Failed to load project', error);

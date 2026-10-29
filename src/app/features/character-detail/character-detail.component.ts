@@ -1681,14 +1681,12 @@ export class CharacterDetailComponent
 
     try {
       await this.characterService.deleteCharacter(this.character.id);
-      this.notificationService.showSuccess(
-        `${this.isDraftMode ? 'Draft' : 'Character'} "${this.character.name || 'Unnamed draft'}" deleted successfully`
-      );
+      // Undo toast is shown by UndoDeleteService.register.
       this.router.navigate(["/characters"], {
         queryParams: this.isDraftMode ? { drawer: 'true' } : this.isLoreMode ? { lore: 'true' } : undefined,
       });
     } catch (error) {
-      this.notificationService.showError(`Failed to delete character: ${error}`);
+      // Staging failure already toasted "Nothing was changed." from the service.
       this.logger.error("Delete error:", error);
       this.cdr.markForCheck();
     }

@@ -16,10 +16,16 @@ import { generateId } from '../utils/id.utils';
 import { pathJoin } from '../utils/path.utils';
 import { parseThumbnailReference, resolveThumbnailPath } from '../utils/thumbnail.utils';
 import { assertIpcSuccess } from '../utils/ipc.utils';
+import {
+  sanitizeTrashRecordId,
+  trashStagingFailureMessage,
+} from '../trash/trash-record-id';
 import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
 import { FileWatcherService } from './file-watcher.service';
 import { LoggingService } from './logging.service';
+import { NotificationService } from './notification.service';
+import { UndoDeleteService } from './undo-delete.service';
 
 @Injectable({ providedIn: 'root' })
 export class HouseService {
@@ -29,7 +35,14 @@ export class HouseService {
   private loaded = false;
   private queue: Promise<unknown> = Promise.resolve();
 
-  constructor(private electron: ElectronService, private projects: ProjectService, watcher: FileWatcherService, private logger: LoggingService) {
+  constructor(
+    private electron: ElectronService,
+    private projects: ProjectService,
+    watcher: FileWatcherService,
+    private logger: LoggingService,
+    private notificationService: NotificationService,
+    private undoDelete: UndoDeleteService
+  ) {
     this.projects.currentProject$.pipe(takeUntilDestroyed()).subscribe(project => {
       if (project?.path !== this.projectPath) {
         this.projectPath = project?.path || null;
@@ -155,13 +168,56 @@ export class HouseService {
   deleteHouse(id: string, expectedRaw: string): Promise<void> {
     const projectPath = this.projects.getCurrentProject()?.path;
     return this.serial(async () => {
-      if (!projectPath || projectPath !== this.projectPath || projectPath !== this.projects.getCurrentProject()?.path) throw new Error('The project changed.');
+      if (!projectPath || projectPath !== this.projectPath || projectPath !== this.projects.getCurrentProject()?.path) {
+        throw new Error('The project changed.');
+      }
       const house = this.getById(id);
-      if (!house) throw new Error('This House no longer exists.');
+      if (!house) {
+        throw new Error('This House no longer exists.');
+      }
       await this.checkRevision(house.filePath, expectedRaw);
-      // Keep crests, notes, and other user files in the folder.
-      assertIpcSuccess(await this.electron.deleteFile(house.filePath), 'Delete house');
-      if (projectPath === this.projects.getCurrentProject()?.path) this.publish(this.subject.value.filter(item => item.id !== id));
+
+      // Stage the house .md only — keep crests, notes, and other user files in the folder.
+      const name = house.name || 'Untitled';
+      const stageResult = await this.electron.stageForTrash(projectPath, house.filePath, {
+        kind: 'house',
+        recordId: sanitizeTrashRecordId(house.id),
+        name,
+      });
+      if (!stageResult.success || !stageResult.token) {
+        const err = stageResult.error || 'Unknown error';
+        this.notificationService.showError(trashStagingFailureMessage(name, err));
+        throw new Error(err);
+      }
+
+      if (projectPath === this.projects.getCurrentProject()?.path) {
+        this.publish(this.subject.value.filter((item) => item.id !== id));
+      }
+
+      const recordId = house.id;
+      this.undoDelete.register(stageResult.token, {
+        kind: 'house',
+        recordId,
+        name,
+        referenceSnapshot: null,
+        expiresAt: stageResult.expiresAt,
+        hasConflict: () => {
+          if (this.getById(recordId)) {
+            return true;
+          }
+          const needle = name.trim().toLowerCase();
+          if (!needle) {
+            return false;
+          }
+          return this.subject.value.some(
+            (h) => (h.name || '').trim().toLowerCase() === needle
+          );
+        },
+        reload: async () => {
+          await this.loadHouses(true);
+        },
+        restoreReferences: async () => ({ restored: 0, skipped: [] }),
+      });
     });
   }
 

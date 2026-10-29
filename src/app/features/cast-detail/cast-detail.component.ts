@@ -462,15 +462,15 @@ export class CastDetailComponent implements OnInit, OnDestroy {
 
     if (
       await this.modalService.confirm(
-        `Are you sure you want to delete the cast "${this.cast.name}"?\n\nThis will not delete the characters themselves.`
+        `Are you sure you want to delete the cast "${this.cast.name}"?\n\nThis will not delete the characters themselves.\n\nIt will be moved to the system Trash. You can undo for 15 seconds.`
       )
     ) {
       try {
         await this.metadataService.removeCast(this.cast.id);
-        this.notificationService.showSuccess(`Cast "${this.cast.name}" deleted successfully`);
+        // Undo toast is shown by UndoDeleteService.register.
         this.router.navigate(["/casts"]);
       } catch (error) {
-        this.error = `Failed to delete cast: ${error}`;
+        // Staging failure already toasted "Nothing was changed." from the service.
         this.logger.error("Failed to delete cast:", error);
       }
     }

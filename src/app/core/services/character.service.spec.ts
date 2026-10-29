@@ -10,8 +10,20 @@ import { MetadataService } from './metadata.service';
 import { PlotBoardService } from './plot-board.service';
 import { CastService } from './cast.service';
 import { ReferenceCleanupService } from './reference-cleanup.service';
+import { UndoDeleteService } from './undo-delete.service';
 import { Project, ProjectMetadata } from '../interfaces/project.interface';
 import { Character, CharacterFormData } from '../interfaces/character.interface';
+
+function emptyCharacterSnapshot(characterId: string) {
+  return {
+    characterId,
+    bookPovs: { characterId, removals: [] },
+    casts: { characterId, removals: [] },
+    houses: { characterId, removals: [] },
+    pinboards: { characterId, removals: [] },
+    plotThreads: { characterId, removals: [] },
+  };
+}
 
 describe('CharacterService', () => {
   let service: CharacterService;
@@ -24,6 +36,7 @@ describe('CharacterService', () => {
   let plotBoardService: jasmine.SpyObj<PlotBoardService>;
   let castService: jasmine.SpyObj<CastService>;
   let referenceCleanupService: jasmine.SpyObj<ReferenceCleanupService>;
+  let undoDeleteService: jasmine.SpyObj<UndoDeleteService>;
 
   const createValidProject = (): Project => ({
     path: '/test/project',
@@ -66,12 +79,16 @@ describe('CharacterService', () => {
       'copyFile',
       'deleteFile',
       'deleteDirectoryRecursive',
+      'stageForTrash',
       'getFileStats',
     ]);
     electronSpy.getFileStats.and.returnValue(Promise.resolve({
       success: true,
       stats: { mtime: new Date('2024-01-02T00:00:00Z'), ctime: new Date('2024-01-01T00:00:00Z') },
     }));
+    electronSpy.stageForTrash.and.returnValue(
+      Promise.resolve({ success: true, token: 'tok-char', expiresAt: Date.now() + 15000 })
+    );
     const projectSpy = jasmine.createSpyObj('ProjectService', [
       'getCurrentProject',
       'getCharactersFolderPath',
@@ -101,12 +118,15 @@ describe('CharacterService', () => {
     const referenceCleanupSpy = jasmine.createSpyObj('ReferenceCleanupService', [
       'countCharacterReferences',
       'removeCharacterReferences',
-      'clearLocationReferences'
+      'clearLocationReferences',
+      'restoreCharacterReferences',
     ]);
     referenceCleanupSpy.countCharacterReferences.and.returnValue(Promise.resolve({ houses: [], casts: [], pinboards: [], plotBoards: [] }));
-    referenceCleanupSpy.removeCharacterReferences.and.returnValue(Promise.resolve());
-    referenceCleanupSpy.clearLocationReferences.and.returnValue(Promise.resolve());
+    referenceCleanupSpy.removeCharacterReferences.and.callFake(async (id: string) => emptyCharacterSnapshot(id));
+    referenceCleanupSpy.clearLocationReferences.and.returnValue(Promise.resolve({ locationId: '', seats: [] }));
+    referenceCleanupSpy.restoreCharacterReferences.and.returnValue(Promise.resolve({ restored: 0, skipped: [] }));
     projectSpy.remapCharacterIds.and.returnValue(Promise.resolve(false));
+    const undoDeleteSpy = jasmine.createSpyObj('UndoDeleteService', ['register', 'dismissAll']);
 
     TestBed.configureTestingModule({
       providers: [
@@ -119,7 +139,8 @@ describe('CharacterService', () => {
         { provide: MetadataService, useValue: metadataSpy },
         { provide: PlotBoardService, useValue: plotBoardSpy },
         { provide: CastService, useValue: castSpy },
-        { provide: ReferenceCleanupService, useValue: referenceCleanupSpy }
+        { provide: ReferenceCleanupService, useValue: referenceCleanupSpy },
+        { provide: UndoDeleteService, useValue: undoDeleteSpy },
       ]
     });
 
@@ -133,6 +154,7 @@ describe('CharacterService', () => {
     plotBoardService = TestBed.inject(PlotBoardService) as jasmine.SpyObj<PlotBoardService>;
     castService = TestBed.inject(CastService) as jasmine.SpyObj<CastService>;
     referenceCleanupService = TestBed.inject(ReferenceCleanupService) as jasmine.SpyObj<ReferenceCleanupService>;
+    undoDeleteService = TestBed.inject(UndoDeleteService) as jasmine.SpyObj<UndoDeleteService>;
 
     electronService.isElectron.and.returnValue(true);
     electronService.createDirectory.and.returnValue(Promise.resolve({ success: true }));
@@ -925,7 +947,7 @@ describe('CharacterService', () => {
   });
 
   describe('deleteCharacter', () => {
-    it('should delete a character', async () => {
+    it('stages a single-file character and does not deleteFile/deleteDirectoryRecursive', async () => {
       const project = createValidProject();
       projectService.getCurrentProject.and.returnValue(project);
       (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
@@ -946,14 +968,15 @@ describe('CharacterService', () => {
 
       (service as any).charactersSubject.next([character]);
 
-      electronService.deleteFile.and.returnValue(Promise.resolve({ success: true }));
-
       await service.deleteCharacter('main-character/_test-character.md');
 
       const characters = (service as any).charactersSubject.value;
       expect(characters.find((c: Character) => c.id === 'main-character/_test-character.md')).toBeUndefined();
-      expect(electronService.deleteFile).toHaveBeenCalled();
+      expect(electronService.stageForTrash).toHaveBeenCalled();
+      expect(electronService.deleteFile).not.toHaveBeenCalled();
+      expect(electronService.deleteDirectoryRecursive).not.toHaveBeenCalled();
       expect(referenceCleanupService.removeCharacterReferences).toHaveBeenCalledWith('main-character/_test-character.md');
+      expect(undoDeleteService.register).toHaveBeenCalled();
     });
 
     it('should invoke reference cleanup for non-draft characters', async () => {
@@ -976,11 +999,11 @@ describe('CharacterService', () => {
       };
 
       (service as any).charactersSubject.next([character]);
-      electronService.deleteDirectoryRecursive.and.returnValue(Promise.resolve({ success: true }));
 
       await service.deleteCharacter('char-id-1');
 
       expect(referenceCleanupService.removeCharacterReferences).toHaveBeenCalledWith('char-id-1');
+      expect(electronService.deleteDirectoryRecursive).not.toHaveBeenCalled();
     });
 
     it('should not invoke reference cleanup for draft characters', async () => {
@@ -1004,11 +1027,14 @@ describe('CharacterService', () => {
       };
 
       (service as any).draftsSubject.next([draft]);
-      electronService.deleteDirectoryRecursive.and.returnValue(Promise.resolve({ success: true }));
 
       await service.deleteCharacter('draft-id-1');
 
       expect(referenceCleanupService.removeCharacterReferences).not.toHaveBeenCalled();
+      expect(undoDeleteService.register).toHaveBeenCalledWith(
+        'tok-char',
+        jasmine.objectContaining({ kind: 'draft' })
+      );
     });
 
     it('should return false when character does not exist', async () => {
@@ -1022,7 +1048,7 @@ describe('CharacterService', () => {
       expect(result).toBe(false);
     });
 
-    it('deletes the whole folder for a folder-based character', async () => {
+    it('stages the whole folder for a folder-based character', async () => {
       const project = createValidProject();
       projectService.getCurrentProject.and.returnValue(project);
       const character: Character = {
@@ -1041,10 +1067,131 @@ describe('CharacterService', () => {
       (service as any).charactersSubject.next([character]);
 
       expect(await service.deleteCharacter(character.id)).toBeTrue();
-      expect(electronService.deleteDirectoryRecursive).toHaveBeenCalledWith(
-        '/test/project/characters/roger-rabbit'
+      expect(electronService.stageForTrash).toHaveBeenCalledWith(
+        '/test/project',
+        '/test/project/characters/roger-rabbit',
+        jasmine.objectContaining({ kind: 'character', recordId: 'roger-id', name: 'Roger Rabbit' })
+      );
+      expect(electronService.deleteDirectoryRecursive).not.toHaveBeenCalled();
+      expect(electronService.deleteFile).not.toHaveBeenCalled();
+    });
+
+    it('sanitizes recordIds with a dot or accent for staging but keeps the real id for Undo', async () => {
+      const project = createValidProject();
+      projectService.getCurrentProject.and.returnValue(project);
+      const dotted: Character = {
+        id: 'jon.snow',
+        name: 'Jon',
+        category: 'main-character',
+        tags: [],
+        books: [],
+        prompts: [],
+        content: '',
+        created: new Date(),
+        modified: new Date(),
+        relativePath: 'jon/jon.md',
+        filePath: '/test/project/characters/jon/jon.md',
+      };
+      const accented: Character = {
+        id: 'josé',
+        name: 'José',
+        category: 'main-character',
+        tags: [],
+        books: [],
+        prompts: [],
+        content: '',
+        created: new Date(),
+        modified: new Date(),
+        relativePath: 'jose/jose.md',
+        filePath: '/test/project/characters/jose/jose.md',
+      };
+      (service as any).charactersSubject.next([dotted]);
+      await service.deleteCharacter('jon.snow');
+      expect(electronService.stageForTrash).toHaveBeenCalledWith(
+        '/test/project',
+        '/test/project/characters/jon',
+        jasmine.objectContaining({ recordId: 'jon_snow' })
+      );
+      expect(undoDeleteService.register).toHaveBeenCalledWith(
+        'tok-char',
+        jasmine.objectContaining({ recordId: 'jon.snow' })
+      );
+
+      electronService.stageForTrash.calls.reset();
+      undoDeleteService.register.calls.reset();
+      (service as any).charactersSubject.next([accented]);
+      await service.deleteCharacter('josé');
+      expect(electronService.stageForTrash).toHaveBeenCalledWith(
+        '/test/project',
+        '/test/project/characters/jose',
+        jasmine.objectContaining({ recordId: 'jos_' })
+      );
+      expect(undoDeleteService.register).toHaveBeenCalledWith(
+        'tok-char',
+        jasmine.objectContaining({ recordId: 'josé' })
+      );
+    });
+
+    it('on staging failure leaves lists unchanged and toasts Nothing was changed', async () => {
+      const project = createValidProject();
+      projectService.getCurrentProject.and.returnValue(project);
+      const character: Character = {
+        id: 'char-fail',
+        name: 'Fail Me',
+        category: 'main-character',
+        tags: [],
+        books: [],
+        prompts: [],
+        content: '',
+        created: new Date(),
+        modified: new Date(),
+        relativePath: 'fail-me/fail-me.md',
+        filePath: '/test/project/characters/fail-me/fail-me.md',
+      };
+      (service as any).charactersSubject.next([character]);
+      electronService.stageForTrash.and.returnValue(
+        Promise.resolve({ success: false, error: 'disk full' })
+      );
+
+      await expectAsync(service.deleteCharacter('char-fail')).toBeRejected();
+      expect((service as any).charactersSubject.value).toEqual([character]);
+      expect(referenceCleanupService.removeCharacterReferences).not.toHaveBeenCalled();
+      expect(undoDeleteService.register).not.toHaveBeenCalled();
+      expect(notificationService.showError).toHaveBeenCalledWith(
+        `Couldn't delete "Fail Me": disk full. Nothing was changed.`
       );
       expect(electronService.deleteFile).not.toHaveBeenCalled();
+      expect(electronService.deleteDirectoryRecursive).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('create rollbacks stay permanent', () => {
+    it('createCharacter rollback calls deleteDirectoryRecursive and never stages', async () => {
+      const project = createValidProject();
+      projectService.getCurrentProject.and.returnValue(project);
+      electronService.createDirectory.and.returnValue(Promise.resolve({ success: true }));
+      electronService.writeFileAtomic.and.returnValue(
+        Promise.resolve({ success: false, error: 'write failed' })
+      );
+
+      await expectAsync(service.createCharacter(createValidCharacterFormData())).toBeRejected();
+      expect(electronService.deleteDirectoryRecursive).toHaveBeenCalled();
+      expect(electronService.stageForTrash).not.toHaveBeenCalled();
+    });
+
+    it('createDraft rollback calls deleteDirectoryRecursive and never stages', async () => {
+      const project = createValidProject();
+      projectService.getCurrentProject.and.returnValue(project);
+      electronService.createDirectory.and.returnValue(Promise.resolve({ success: true }));
+      electronService.writeFileAtomic.and.returnValue(
+        Promise.resolve({ success: false, error: 'write failed' })
+      );
+
+      await expectAsync(
+        service.createDraft({ name: '', category: '', tags: [], books: [], prompts: [], content: '' })
+      ).toBeRejected();
+      expect(electronService.deleteDirectoryRecursive).toHaveBeenCalled();
+      expect(electronService.stageForTrash).not.toHaveBeenCalled();
     });
   });
 

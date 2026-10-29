@@ -5,6 +5,12 @@
 - Do not stop or restart the user's app or server. If the existing instance cannot be inspected, use builds and automated tests, and report the verification limit instead of launching another instance.
 - When cleaning up processes you started, identify and stop only those exact processes. Never use broad process-name matching to kill app or server processes.
 
+## OS trash / deletes
+
+- User deletes (character, draft, Lore, location, House, cast) stage into `<project>/.ensemble-trash/` then go to the OS trash after a 15 s Undo window.
+- Any future backup, snapshot, or export must exclude `.ensemble-trash/`.
+- `deleteDirectoryRecursive` is for rollbacks of folders the app just created only — never for those user-facing deletes.
+
 ## Dev server port
 
 - Default Angular / Electron-dev URL port is **4200**. Override with `ENSEMBLE_DEV_PORT` (shared by `ng serve`, `wait-on`, and `lib/window.js`).

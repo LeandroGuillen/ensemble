@@ -10,6 +10,8 @@ import { ProjectService } from './project.service';
 import { ElectronService } from './electron.service';
 import { FileWatcherService } from './file-watcher.service';
 import { LoggingService } from './logging.service';
+import { NotificationService } from './notification.service';
+import { UndoDeleteService } from './undo-delete.service';
 import { CastEditorSessionService } from './cast-editor-session.service';
 import { CharacterService } from './character.service';
 import { Project } from '../interfaces/project.interface';
@@ -87,9 +89,20 @@ describe('Character reference restore integration (Real DI)', () => {
       'readFile',
       'writeFileAtomic',
       'deleteFile',
+      'deleteDirectoryRecursive',
+      'stageForTrash',
       'getImageAsDataUrl',
     ]);
     electron.isElectron.and.returnValue(true);
+    electron.stageForTrash.and.callFake(async (_p: string, target: string) => {
+      disk.delete(target);
+      folders.delete(target);
+      for (const key of [...disk.keys()]) {
+        if (key.startsWith(target + '/')) disk.delete(key);
+      }
+      return { success: true, token: 'tok-restore-int', expiresAt: Date.now() + 15000 };
+    });
+    electron.deleteDirectoryRecursive.and.returnValue(Promise.resolve({ success: true }));
     electron.fileExists.and.callFake(
       async (path: string) => disk.has(path) || folders.has(path)
     );
@@ -181,6 +194,14 @@ describe('Character reference restore integration (Real DI)', () => {
         {
           provide: LoggingService,
           useValue: jasmine.createSpyObj('LoggingService', ['log', 'error', 'warn']),
+        },
+        {
+          provide: NotificationService,
+          useValue: jasmine.createSpyObj('NotificationService', ['showError', 'showUndo', 'dismiss']),
+        },
+        {
+          provide: UndoDeleteService,
+          useValue: jasmine.createSpyObj('UndoDeleteService', ['register', 'dismissAll']),
         },
         {
           provide: CastEditorSessionService,

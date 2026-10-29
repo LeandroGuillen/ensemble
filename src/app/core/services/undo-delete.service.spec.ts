@@ -223,19 +223,30 @@ describe('UndoDeleteService', () => {
     commitFailedHandler!({}, {
       token: 'tok-fail',
       name: 'Ada',
-      stagedPath: '/x',
+      stagedPath: '/proj/.ensemble-trash/entry/ada.md',
       error: 'os trash unavailable',
     });
     expect(service.hasPending('tok-fail')).toBeFalse();
     expect(notifications.dismiss).toHaveBeenCalledWith('toast-1');
+    expect(notifications.showError).toHaveBeenCalledWith(
+      `Couldn't move "Ada" to the system Trash (os trash unavailable). ` +
+        `It's kept in /proj/.ensemble-trash/ and Ensemble will retry next time you open this project.`,
+      0
+    );
 
+    notifications.showError.calls.reset();
     register('tok-other');
     commitFailedHandler!({}, {
       token: 'never-seen',
       name: 'Ghost',
-      stagedPath: '/y',
+      stagedPath: '/other/.ensemble-trash/e/g.md',
       error: 'boom',
     });
+    // Unknown tokens still get the sticky toast (leftover commit failures).
+    expect(notifications.showError).toHaveBeenCalledWith(
+      jasmine.stringMatching(/Couldn't move "Ghost"/),
+      0
+    );
     expect(service.hasPending('tok-other')).toBeTrue();
   });
 
