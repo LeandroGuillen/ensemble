@@ -1,4 +1,4 @@
-import { DestroyRef, Injector, inject, Component, OnInit, HostListener } from "@angular/core";
+import { DestroyRef, Injector, NgZone, inject, Component, OnInit, HostListener } from "@angular/core";
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterOutlet, NavigationEnd } from "@angular/router";
 
@@ -32,8 +32,10 @@ export class AppComponent implements OnInit {
   private watchedProjectKey: string | null = null;
   private watcherTransition: Promise<void> = Promise.resolve();
   private readonly destroyRef = inject(DestroyRef);
+  private readonly ngZone = inject(NgZone);
+  /** IPC arrives outside Angular's zone; re-enter so the conflict dialog is change-detected. */
   private readonly prepareToLeaveHandler = () => {
-    void this.handlePrepareToLeaveRequest();
+    void this.ngZone.run(() => this.handlePrepareToLeaveRequest());
   };
 
   // Confirmation dialog state
@@ -186,12 +188,14 @@ export class AppComponent implements OnInit {
         }
       });
 
-    // Subscribe to confirmation requests
+    // Subscribe to confirmation requests (may emit from outside NgZone via IPC).
     this.modalService.confirmation$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((request) => {
-        this.currentConfirmation = request;
-        this.confirmationVisible = true;
+        this.ngZone.run(() => {
+          this.currentConfirmation = request;
+          this.confirmationVisible = true;
+        });
       });
   }
 
