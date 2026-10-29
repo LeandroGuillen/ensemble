@@ -19,19 +19,19 @@ export const SHORTCUT_REGISTRY: readonly Shortcut[] = [
 
   // Character List
   { keys: ['N'], description: 'Create new character', category: 'Character List' },
-  { keys: ['L'], description: 'Toggle list/grid view', category: 'Character List' },
+  { keys: ['L'], description: 'Cycle view: grid → list → compact → gallery', category: 'Character List' },
   { keys: ['Enter'], description: 'Open selected character', category: 'Character List' },
   { keys: ['↑', '↓'], description: 'Navigate characters', category: 'Character List' },
 
   // Lore (same CharacterListComponent, lore collection)
   { keys: ['N'], description: 'Create new lore figure', category: 'Lore' },
-  { keys: ['L'], description: 'Toggle list/grid view', category: 'Lore' },
+  { keys: ['L'], description: 'Cycle view: grid → list → compact → gallery', category: 'Lore' },
   { keys: ['Enter'], description: 'Open selected lore figure', category: 'Lore' },
   { keys: ['↑', '↓'], description: 'Navigate lore figures', category: 'Lore' },
 
   // Drawer (same CharacterListComponent, drafts)
   { keys: ['N'], description: 'Create new draft', category: 'Drawer' },
-  { keys: ['L'], description: 'Toggle list/grid view', category: 'Drawer' },
+  { keys: ['L'], description: 'Cycle view: grid → list → compact → gallery', category: 'Drawer' },
   { keys: ['Enter'], description: 'Open selected draft', category: 'Drawer' },
   { keys: ['↑', '↓'], description: 'Navigate drafts', category: 'Drawer' },
 
@@ -92,6 +92,17 @@ export const SHORTCUT_REGISTRY: readonly Shortcut[] = [
 
   // Command Palette
   { keys: ['↑', '↓'], description: 'Navigate commands', category: 'Command Palette' },
+  { keys: ['PgUp/PgDn'], description: 'Jump selection by page', category: 'Command Palette' },
+  { keys: ['Home/End'], description: 'Jump to first / last command', category: 'Command Palette' },
   { keys: ['Enter'], description: 'Execute selected command', category: 'Command Palette' },
   { keys: ['Esc'], description: 'Close command palette', category: 'Command Palette' },
+
+  // Markdown Editor
+  { keys: ['Ctrl', 'B'], description: 'Bold', category: 'Markdown Editor' },
+  { keys: ['Ctrl', 'I'], description: 'Italic', category: 'Markdown Editor' },
+  { keys: ['Ctrl', 'Shift', 'X'], description: 'Strikethrough', category: 'Markdown Editor' },
+  { keys: ['Ctrl', 'K'], description: 'Insert wiki link', category: 'Markdown Editor' },
+
+  // Project Selector
+  { keys: ['1–9'], description: 'Open recent project N', category: 'Project Selector' },
 ];
