@@ -27,6 +27,7 @@ import { ResolvedWikiLink } from '../../core/utils/wiki-links.utils';
 import { WikiLinkTargetsService } from '../../core/services/wiki-link-targets.service';
 import { MarkdownEditorComponent, WikiLinkSuggestion } from '../../shared/markdown-editor/markdown-editor.component';
 import { buildCharacterDeleteMessage } from './character-delete-message.utils';
+import { isTrashStagingError } from '../../core/trash/trash-record-id';
 import {
   Book,
   Category,
@@ -1686,8 +1687,11 @@ export class CharacterDetailComponent
         queryParams: this.isDraftMode ? { drawer: 'true' } : this.isLoreMode ? { lore: 'true' } : undefined,
       });
     } catch (error) {
-      // Staging failure already toasted "Nothing was changed." from the service.
       this.logger.error("Delete error:", error);
+      // Staging/rollback toasts come from the service (TrashStagingError).
+      if (!isTrashStagingError(error)) {
+        this.notificationService.showError(`Failed to delete character: ${error}`);
+      }
       this.cdr.markForCheck();
     }
   }

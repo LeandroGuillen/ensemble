@@ -72,6 +72,7 @@ describe('LocationService', () => {
       existingFiles.delete(target.replace(/\\/g, '/'));
       return { success: true, token: 'tok-loc', expiresAt: Date.now() + 15000 };
     });
+    spy.restoreFromTrash.and.callFake(async () => ({ success: true }));
   };
 
   beforeEach(() => {
@@ -84,6 +85,7 @@ describe('LocationService', () => {
       'moveDirectory',
       'deleteFile',
       'stageForTrash',
+      'restoreFromTrash',
       'getFileStats',
       'getImageAsDataUrl',
     ]);
@@ -454,6 +456,20 @@ A foggy port.`,
       expect(undoDeleteService.register).toHaveBeenCalledWith(
         'tok-loc',
         jasmine.objectContaining({ recordId: 'loc.harbour' })
+      );
+    });
+
+    it('post-stage register failure restores from trash and re-lists the location', async () => {
+      const project = createValidProject();
+      projectService.getCurrentProject.and.returnValue(project);
+      const created = await service.createLocation(createFormData());
+      undoDeleteService.register.and.throwError('register boom');
+
+      await expectAsync(service.deleteLocation(created.id)).toBeRejected();
+      expect(electronService.restoreFromTrash).toHaveBeenCalledWith('tok-loc');
+      expect(service.getLocationById(created.id)).toBeTruthy();
+      expect(notificationService.showError).toHaveBeenCalledWith(
+        `Couldn't delete "${created.name}": register boom. Nothing was changed.`
       );
     });
   });

@@ -14,14 +14,20 @@ import { pathBasename, pathJoin } from '../utils/path.utils';
 import { assertIpcSuccess } from '../utils/ipc.utils';
 import { requireProject } from '../utils/project.utils';
 import {
+  isTrashStagingError,
   sanitizeTrashRecordId,
   trashStagingFailureMessage,
+  TrashStagingError,
 } from '../trash/trash-record-id';
+import {
+  errorMessage,
+  restoreStagedOrOfferUndo,
+} from '../trash/trash-delete-rollback';
 import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
 import { LoggingService } from './logging.service';
 import { NotificationService } from './notification.service';
-import { UndoDeleteService } from './undo-delete.service';
+import { UndoDeleteEntry, UndoDeleteService } from './undo-delete.service';
 
 /** Entry for a cast in casts.json (name/characterIds live there; folder holds description + thumbnails). */
 export interface CastIndexEntry {
@@ -551,6 +557,7 @@ export class CastService {
 
   /**
    * Stage a cast folder for OS trash + Undo (casts.json entry and linked pinboard snapshotted).
+   * Post-stage failures restore the folder and roll back casts.json / pinboard / memory.
    */
   async deleteCast(id: string): Promise<boolean> {
     const project = requireProject(this.projectService.getCurrentProject());
@@ -580,48 +587,108 @@ export class CastService {
         if (!stageResult.success || !stageResult.token) {
           const err = stageResult.error || 'Unknown error';
           this.notificationService.showError(trashStagingFailureMessage(name, err));
-          throw new Error(err);
+          throw new TrashStagingError(err);
         }
 
-        await this.removeCastsFileEntry(id);
+        const token = stageResult.token;
+        let removedCastsJson = false;
 
-        const filteredCasts = casts.filter((c) => c.id !== id);
-        if (
-          cast.pinboardId &&
-          this.projectService.getPinboards().some((board) => board.id === cast.pinboardId)
-        ) {
-          await this.projectService.deletePinboard(cast.pinboardId);
+        try {
+          await this.removeCastsFileEntry(id);
+          removedCastsJson = true;
+
+          if (
+            cast.pinboardId &&
+            this.projectService.getPinboards().some((board) => board.id === cast.pinboardId)
+          ) {
+            await this.projectService.deletePinboard(cast.pinboardId);
+          }
+          this.castsSubject.next(casts.filter((c) => c.id !== id));
+
+          const recordId = cast.id;
+          this.undoDelete.register(token, {
+            kind: 'cast',
+            recordId,
+            name,
+            referenceSnapshot,
+            expiresAt: stageResult.expiresAt,
+            hasConflict: () => {
+              if (this.getCastById(recordId)) {
+                return true;
+              }
+              const needle = name.trim().toLowerCase();
+              if (!needle) {
+                return false;
+              }
+              return this.castsSubject.value.some(
+                (c) => (c.name || '').trim().toLowerCase() === needle
+              );
+            },
+            reload: async () => {},
+            restoreReferences: async (snapshot) => {
+              if (!snapshot) {
+                return { restored: 0, skipped: [] };
+              }
+              return this.restoreCastDelete(snapshot as CastDeleteSnapshot);
+            },
+          });
+        } catch (postError) {
+          const errMsg = errorMessage(postError);
+          const buildUndoEntry = (): UndoDeleteEntry => ({
+            kind: 'cast',
+            recordId: cast.id,
+            name,
+            referenceSnapshot,
+            expiresAt: stageResult.expiresAt,
+            hasConflict: () => !!this.getCastById(cast.id),
+            reload: async () => {},
+            restoreReferences: async (snapshot) => {
+              if (!snapshot) {
+                return { restored: 0, skipped: [] };
+              }
+              return this.restoreCastDelete(snapshot as CastDeleteSnapshot);
+            },
+          });
+          const outcome = await restoreStagedOrOfferUndo({
+            electron: this.electronService,
+            undoDelete: this.undoDelete,
+            notifications: this.notificationService,
+            token,
+            name,
+            projectPath: project.path,
+            buildUndoEntry,
+          });
+
+          if (outcome === 'restored') {
+            // Roll back any in-memory / index / pinboard changes made so far.
+            this.castsSubject.next(casts);
+            if (removedCastsJson && referenceSnapshot?.castEntry) {
+              try {
+                await this.upsertCastsFileEntry({
+                  id: referenceSnapshot.castEntry.id,
+                  name: referenceSnapshot.castEntry.name,
+                  characterIds: [...referenceSnapshot.castEntry.characterIds],
+                  pinboardId: referenceSnapshot.castEntry.pinboardId,
+                });
+              } catch (reindexError) {
+                this.logger.error('Failed to restore casts.json after abort', reindexError);
+              }
+            }
+            // Always re-apply the snapshotted pinboard when present (covers
+            // deletePinboard throwing after a partial in-memory removal).
+            if (referenceSnapshot?.pinboard) {
+              try {
+                await this.projectService.restorePinboard(
+                  structuredClone(referenceSnapshot.pinboard)
+                );
+              } catch (pinError) {
+                this.logger.error('Failed to restore pinboard after abort', pinError);
+              }
+            }
+            this.notificationService.showError(trashStagingFailureMessage(name, errMsg));
+          }
+          throw new TrashStagingError(errMsg);
         }
-        this.castsSubject.next(filteredCasts);
-
-        const recordId = cast.id;
-        this.undoDelete.register(stageResult.token, {
-          kind: 'cast',
-          recordId,
-          name,
-          referenceSnapshot,
-          expiresAt: stageResult.expiresAt,
-          hasConflict: () => {
-            if (this.getCastById(recordId)) {
-              return true;
-            }
-            const needle = name.trim().toLowerCase();
-            if (!needle) {
-              return false;
-            }
-            return this.castsSubject.value.some(
-              (c) => (c.name || '').trim().toLowerCase() === needle
-            );
-          },
-          // casts.json entry is restored in restoreReferences (folder already on disk).
-          reload: async () => {},
-          restoreReferences: async (snapshot) => {
-            if (!snapshot) {
-              return { restored: 0, skipped: [] };
-            }
-            return this.restoreCastDelete(snapshot as CastDeleteSnapshot);
-          },
-        });
       } else {
         this.logger.warn(
           `Cast '${cast.name}' has no folder to stage - removing from memory only`
@@ -639,6 +706,9 @@ export class CastService {
 
       return true;
     } catch (error) {
+      if (isTrashStagingError(error)) {
+        throw error;
+      }
       this.logger.error('Failed to delete cast:', error);
       throw new Error(`Failed to delete cast: ${error}`);
     }

@@ -44,6 +44,7 @@ import { WikiLinkTargetsService } from '../../core/services/wiki-link-targets.se
 import { MarkdownEditorComponent } from '../../shared/markdown-editor/markdown-editor.component';
 import { getBookDisplayName } from '../../core/utils/book-display.utils';
 import { LocationTypeSelectComponent } from '../../shared/location-type-select/location-type-select.component';
+import { isTrashStagingError } from '../../core/trash/trash-record-id';
 
 @Component({
   selector: 'app-location-detail',
@@ -405,8 +406,11 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
       // Undo toast is shown by UndoDeleteService.register.
       await this.router.navigate(['/locations']);
     } catch (error) {
-      // Staging failure already toasted "Nothing was changed." from the service.
       this.logger.error('Failed to delete location:', error);
+      // Staging/rollback toasts come from the service (TrashStagingError).
+      if (!isTrashStagingError(error)) {
+        this.error = `Failed to delete location: ${error}`;
+      }
     }
   }
 

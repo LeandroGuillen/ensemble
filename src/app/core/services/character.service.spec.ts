@@ -80,6 +80,7 @@ describe('CharacterService', () => {
       'deleteFile',
       'deleteDirectoryRecursive',
       'stageForTrash',
+      'restoreFromTrash',
       'getFileStats',
     ]);
     electronSpy.getFileStats.and.returnValue(Promise.resolve({
@@ -89,6 +90,7 @@ describe('CharacterService', () => {
     electronSpy.stageForTrash.and.returnValue(
       Promise.resolve({ success: true, token: 'tok-char', expiresAt: Date.now() + 15000 })
     );
+    electronSpy.restoreFromTrash.and.returnValue(Promise.resolve({ success: true }));
     const projectSpy = jasmine.createSpyObj('ProjectService', [
       'getCurrentProject',
       'getCharactersFolderPath',
@@ -1162,6 +1164,69 @@ describe('CharacterService', () => {
       );
       expect(electronService.deleteFile).not.toHaveBeenCalled();
       expect(electronService.deleteDirectoryRecursive).not.toHaveBeenCalled();
+    });
+
+    it('post-stage register failure restores from trash and re-emits the character', async () => {
+      const project = createValidProject();
+      projectService.getCurrentProject.and.returnValue(project);
+      const character: Character = {
+        id: 'char-post',
+        name: 'Post Fail',
+        category: 'main-character',
+        tags: [],
+        books: [],
+        prompts: [],
+        content: '',
+        created: new Date(),
+        modified: new Date(),
+        relativePath: 'post-fail/post-fail.md',
+        filePath: '/test/project/characters/post-fail/post-fail.md',
+      };
+      (service as any).charactersSubject.next([character]);
+      electronService.restoreFromTrash.and.returnValue(Promise.resolve({ success: true }));
+      undoDeleteService.register.and.throwError('register boom');
+
+      await expectAsync(service.deleteCharacter('char-post')).toBeRejected();
+      expect(electronService.restoreFromTrash).toHaveBeenCalledWith('tok-char');
+      expect((service as any).charactersSubject.value).toEqual([character]);
+      expect(notificationService.showError).toHaveBeenCalledWith(
+        `Couldn't delete "Post Fail": register boom. Nothing was changed.`
+      );
+      expect(referenceCleanupService.restoreCharacterReferences).toHaveBeenCalled();
+    });
+
+    it('post-stage failure when restoreFromTrash fails registers Undo', async () => {
+      const project = createValidProject();
+      projectService.getCurrentProject.and.returnValue(project);
+      const character: Character = {
+        id: 'char-orphan',
+        name: 'Orphan',
+        category: 'main-character',
+        tags: [],
+        books: [],
+        prompts: [],
+        content: '',
+        created: new Date(),
+        modified: new Date(),
+        relativePath: 'orphan/orphan.md',
+        filePath: '/test/project/characters/orphan/orphan.md',
+      };
+      (service as any).charactersSubject.next([character]);
+      electronService.restoreFromTrash.and.returnValue(
+        Promise.resolve({ success: false, error: 'blocked' })
+      );
+      // First call throws (post-stage); second call (offer Undo) succeeds.
+      let registerCalls = 0;
+      undoDeleteService.register.and.callFake(() => {
+        registerCalls += 1;
+        if (registerCalls === 1) {
+          throw new Error('first register boom');
+        }
+      });
+
+      await expectAsync(service.deleteCharacter('char-orphan')).toBeRejected();
+      expect(electronService.restoreFromTrash).toHaveBeenCalledWith('tok-char');
+      expect(registerCalls).toBe(2);
     });
   });
 

@@ -1,8 +1,11 @@
 import {
+  isTrashStagingError,
   projectPathFromStagedPath,
   sanitizeTrashRecordId,
   trashCommitFailedMessage,
+  trashOrphanStickyMessage,
   trashStagingFailureMessage,
+  TrashStagingError,
 } from './trash-record-id';
 
 describe('trash-record-id', () => {
@@ -34,5 +37,11 @@ describe('trash-record-id', () => {
     expect(
       projectPathFromStagedPath('/proj/.ensemble-trash/2026-char-id/ada.md')
     ).toBe('/proj');
+  });
+
+  it('TrashStagingError is detectable for component skip-toast logic', () => {
+    expect(isTrashStagingError(new TrashStagingError('x'))).toBeTrue();
+    expect(isTrashStagingError(new Error('x'))).toBeFalse();
+    expect(trashOrphanStickyMessage('Ada', '/proj')).toContain('/proj/.ensemble-trash/');
   });
 });

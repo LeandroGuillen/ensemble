@@ -11,16 +11,22 @@ import { assertIpcSuccess } from '../utils/ipc.utils';
 import { requireProject } from '../utils/project.utils';
 import { LocationReferenceSnapshot } from '../interfaces/reference-snapshot.interface';
 import {
+  isTrashStagingError,
   sanitizeTrashRecordId,
   trashStagingFailureMessage,
+  TrashStagingError,
 } from '../trash/trash-record-id';
+import {
+  errorMessage,
+  restoreStagedOrOfferUndo,
+} from '../trash/trash-delete-rollback';
 import { ElectronService } from './electron.service';
 import { FileWatcherService } from './file-watcher.service';
 import { ProjectService } from './project.service';
 import { LoggingService } from './logging.service';
 import { ReferenceCleanupService } from './reference-cleanup.service';
 import { NotificationService } from './notification.service';
-import { UndoDeleteService } from './undo-delete.service';
+import { UndoDeleteEntry, UndoDeleteService } from './undo-delete.service';
 
 function normalizeLocationRelativePath(relativePath: string): string {
   return relativePath.replace(/\\/g, '/').replace(/^\/+/, '');
@@ -315,26 +321,14 @@ export class LocationService {
       if (!stageResult.success || !stageResult.token) {
         const err = stageResult.error || 'Unknown error';
         this.notificationService.showError(trashStagingFailureMessage(name, err));
-        throw new Error(err);
+        throw new TrashStagingError(err);
       }
 
-      this.thumbnailDataUrls.delete(location.id);
-      this.locationsSubject.next(locations.filter((loc) => loc.id !== location.id));
-
-      let referenceSnapshot: LocationReferenceSnapshot | null = null;
-      try {
-        referenceSnapshot = await this.referenceCleanup.clearLocationReferences(
-          location.id
-        );
-      } catch (cleanupError) {
-        this.logger.warn(
-          'Failed to cleanup location references in houses, continuing',
-          cleanupError
-        );
-      }
-
+      const token = stageResult.token;
       const recordId = location.id;
-      this.undoDelete.register(stageResult.token, {
+      let referenceSnapshot: LocationReferenceSnapshot | null = null;
+
+      const buildUndoEntry = (): UndoDeleteEntry => ({
         kind: 'location',
         recordId,
         name,
@@ -365,8 +359,53 @@ export class LocationService {
         },
       });
 
+      try {
+        this.thumbnailDataUrls.delete(location.id);
+        this.locationsSubject.next(locations.filter((loc) => loc.id !== location.id));
+
+        try {
+          referenceSnapshot = await this.referenceCleanup.clearLocationReferences(
+            location.id
+          );
+        } catch (cleanupError) {
+          this.logger.warn(
+            'Failed to cleanup location references in houses, continuing',
+            cleanupError
+          );
+        }
+
+        this.undoDelete.register(token, buildUndoEntry());
+      } catch (postError) {
+        const errMsg = errorMessage(postError);
+        const outcome = await restoreStagedOrOfferUndo({
+          electron: this.electronService,
+          undoDelete: this.undoDelete,
+          notifications: this.notificationService,
+          token,
+          name,
+          projectPath: project.path,
+          buildUndoEntry,
+        });
+
+        if (outcome === 'restored') {
+          this.locationsSubject.next(locations);
+          if (referenceSnapshot) {
+            try {
+              await this.referenceCleanup.restoreLocationReferences(referenceSnapshot);
+            } catch (refError) {
+              this.logger.error('Failed to restore location references after abort', refError);
+            }
+          }
+          this.notificationService.showError(trashStagingFailureMessage(name, errMsg));
+        }
+        throw new TrashStagingError(errMsg);
+      }
+
       return true;
     } catch (error) {
+      if (isTrashStagingError(error)) {
+        throw error;
+      }
       this.logger.error('Failed to delete location', error);
       throw new Error(`Failed to delete location: ${error}`);
     }

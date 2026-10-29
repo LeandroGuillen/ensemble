@@ -26,6 +26,7 @@ import {
   plainLetterKey,
 } from '../../core/utils/list-keyboard.utils';
 import { resolveThumbnailForBookStyle } from '../../core/utils/thumbnail.utils';
+import { isTrashStagingError } from '../../core/trash/trash-record-id';
 import { CharacterFilterComponent } from '../../shared/character-filter/character-filter.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import {
@@ -666,6 +667,10 @@ export class CharacterListComponent implements OnInit {
         // Undo toast is shown by UndoDeleteService.register.
       } catch (error) {
         this.logger.error("Failed to delete character:", error);
+        // Staging/rollback toasts come from the service (TrashStagingError).
+        if (!isTrashStagingError(error)) {
+          this.notificationService.showError(`Failed to delete character: ${error}`);
+        }
       }
     }
   }

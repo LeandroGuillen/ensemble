@@ -34,16 +34,28 @@ describe('HouseService', () => {
     folders = new Set();
     events = new Subject();
     project$ = new BehaviorSubject({ path: '/project', metadata: { books: [{ id: 'b1' }, { id: 'b2' }] } });
-    electron = jasmine.createSpyObj('ElectronService', ['fileExists', 'createDirectory', 'readDirectoryRecursive', 'readFile', 'writeFileAtomic', 'deleteFile', 'stageForTrash', 'getImageAsDataUrl']);
+    electron = jasmine.createSpyObj('ElectronService', ['fileExists', 'createDirectory', 'readDirectoryRecursive', 'readFile', 'writeFileAtomic', 'deleteFile', 'stageForTrash', 'restoreFromTrash', 'getImageAsDataUrl']);
     electron.fileExists.and.callFake(async path => disk.has(path) || folders.has(path));
     electron.createDirectory.and.callFake(async path => { folders.add(path); return { success: true }; });
     electron.readDirectoryRecursive.and.callFake(async path => ({ success: true, files: [...disk.keys()].filter(file => file.startsWith(path + '/') && file.endsWith('.md')).map(file => ({ absolutePath: file, relativePath: file.slice(path.length + 1) })) }));
     electron.readFile.and.callFake(async path => disk.has(path) ? { success: true, content: disk.get(path) } : { success: false, error: 'Missing file' });
     electron.writeFileAtomic.and.callFake(async (path, raw) => { disk.set(path, raw); return { success: true }; });
     electron.deleteFile.and.callFake(async path => { disk.delete(path); return { success: true }; });
+    const staged = new Map<string, string>();
     electron.stageForTrash.and.callFake(async (_project, target) => {
+      const raw = disk.get(target);
+      if (raw !== undefined) staged.set('tok-house', raw);
       disk.delete(target);
       return { success: true, token: 'tok-house', expiresAt: Date.now() + 15000 };
+    });
+    electron.restoreFromTrash.and.callFake(async (token: string) => {
+      const raw = staged.get(token);
+      // Restore is path-agnostic in this fake; callers check getById / list.
+      if (raw !== undefined) {
+        // Put content back under any missing house path from priorHouses via publish rollback.
+        staged.delete(token);
+      }
+      return { success: true };
     });
     electron.getImageAsDataUrl.and.resolveTo(null);
     notifications = jasmine.createSpyObj('NotificationService', ['showError']);
@@ -163,6 +175,23 @@ describe('HouseService', () => {
     expect(undoDelete.register).toHaveBeenCalledWith(
       'tok-house',
       jasmine.objectContaining({ recordId: 'house.stark' })
+    );
+  });
+
+  it('post-stage register failure restores from trash and re-lists the House', async () => {
+    const house = await service.createHouse(data());
+    undoDelete.register.and.throwError('register boom');
+    // Put file back on restore so disk matches memory rollback.
+    electron.restoreFromTrash.and.callFake(async () => {
+      disk.set(house.filePath, house.raw);
+      return { success: true };
+    });
+
+    await expectAsync(service.deleteHouse(house.id, house.raw)).toBeRejected();
+    expect(electron.restoreFromTrash).toHaveBeenCalledWith('tok-house');
+    expect(service.getById(house.id)).toBeTruthy();
+    expect(notifications.showError).toHaveBeenCalledWith(
+      `Couldn't delete "${house.name}": register boom. Nothing was changed.`
     );
   });
 

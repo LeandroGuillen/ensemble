@@ -28,6 +28,7 @@ import { aliasesMatchSearch } from "../../core/utils/character-alias.utils";
 import { CastEditorSessionService } from '../../core/services/cast-editor-session.service';
 import { PinboardViewComponent } from '../pinboard-view/pinboard-view.component';
 import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
+import { isTrashStagingError } from '../../core/trash/trash-record-id';
 
 @Component({
     selector: "app-cast-detail",
@@ -470,8 +471,11 @@ export class CastDetailComponent implements OnInit, OnDestroy {
         // Undo toast is shown by UndoDeleteService.register.
         this.router.navigate(["/casts"]);
       } catch (error) {
-        // Staging failure already toasted "Nothing was changed." from the service.
         this.logger.error("Failed to delete cast:", error);
+        // Staging/rollback toasts come from the service (TrashStagingError).
+        if (!isTrashStagingError(error)) {
+          this.error = `Failed to delete cast: ${error}`;
+        }
       }
     }
   }

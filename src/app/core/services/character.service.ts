@@ -27,9 +27,15 @@ import {
   CharacterReferenceSnapshot,
 } from '../interfaces/reference-snapshot.interface';
 import {
+  isTrashStagingError,
   sanitizeTrashRecordId,
   trashStagingFailureMessage,
+  TrashStagingError,
 } from '../trash/trash-record-id';
+import {
+  errorMessage,
+  restoreStagedOrOfferUndo,
+} from '../trash/trash-delete-rollback';
 import { ElectronService } from './electron.service';
 import { FileWatcherService } from './file-watcher.service';
 import { ProjectService } from './project.service';
@@ -39,7 +45,7 @@ import { PlotBoardService } from './plot-board.service';
 import { CastService } from './cast.service';
 import { ReferenceCleanupService } from './reference-cleanup.service';
 import { NotificationService } from './notification.service';
-import { UndoDeleteService } from './undo-delete.service';
+import { UndoDeleteEntry, UndoDeleteService } from './undo-delete.service';
 
 /** Coerces a raw frontmatter `prompts` value into a clean CharacterPrompt[]. */
 function normalizePrompts(raw: unknown): CharacterPrompt[] {
@@ -1166,6 +1172,7 @@ export class CharacterService {
   /**
    * Stage a character / draft / Lore figure for OS trash + Undo.
    * Order: stageForTrash → memory/thumbnail → reference cleanup → UndoDeleteService.
+   * Post-stage failures restore the staged path and roll back in-memory/refs.
    */
   async deleteCharacter(id: string): Promise<boolean> {
     try {
@@ -1197,25 +1204,16 @@ export class CharacterService {
       if (!stageResult.success || !stageResult.token) {
         const err = stageResult.error || 'Unknown error';
         this.notificationService.showError(trashStagingFailureMessage(name, err));
-        throw new Error(err);
+        throw new TrashStagingError(err);
       }
 
-      this.removeCachedThumbnailsForCharacter(character.id);
-
-      // Update in-memory list
-      const filteredCharacters = characters.filter((char) => char.id !== character.id);
-      sourceSubject.next(filteredCharacters);
-
-      let referenceSnapshot: CharacterReferenceSnapshot | null = null;
-      if (!isDraft) {
-        referenceSnapshot = await this.referenceCleanup.removeCharacterReferences(
-          character.id
-        );
-      }
-
+      const token = stageResult.token;
       const recordId = character.id;
       const collection = sourceSubject;
-      this.undoDelete.register(stageResult.token, {
+      let referenceSnapshot: CharacterReferenceSnapshot | null = null;
+      let cleanedRefs = false;
+
+      const buildUndoEntry = (): UndoDeleteEntry => ({
         kind,
         recordId,
         name,
@@ -1246,8 +1244,49 @@ export class CharacterService {
         },
       });
 
+      try {
+        this.removeCachedThumbnailsForCharacter(character.id);
+        sourceSubject.next(characters.filter((char) => char.id !== character.id));
+
+        if (!isDraft) {
+          referenceSnapshot = await this.referenceCleanup.removeCharacterReferences(
+            character.id
+          );
+          cleanedRefs = true;
+        }
+
+        this.undoDelete.register(token, buildUndoEntry());
+      } catch (postError) {
+        const errMsg = errorMessage(postError);
+        const outcome = await restoreStagedOrOfferUndo({
+          electron: this.electronService,
+          undoDelete: this.undoDelete,
+          notifications: this.notificationService,
+          token,
+          name,
+          projectPath: project.path,
+          buildUndoEntry,
+        });
+
+        if (outcome === 'restored') {
+          sourceSubject.next(characters);
+          if (cleanedRefs && referenceSnapshot) {
+            try {
+              await this.referenceCleanup.restoreCharacterReferences(referenceSnapshot);
+            } catch (refError) {
+              this.logger.error('Failed to restore character references after abort', refError);
+            }
+          }
+          this.notificationService.showError(trashStagingFailureMessage(name, errMsg));
+        }
+        throw new TrashStagingError(errMsg);
+      }
+
       return true;
     } catch (error) {
+      if (isTrashStagingError(error)) {
+        throw error;
+      }
       this.logger.error('Failed to delete character', error);
       throw new Error(`Failed to delete character: ${error}`);
     }

@@ -19,13 +19,18 @@ import { assertIpcSuccess } from '../utils/ipc.utils';
 import {
   sanitizeTrashRecordId,
   trashStagingFailureMessage,
+  TrashStagingError,
 } from '../trash/trash-record-id';
+import {
+  errorMessage,
+  restoreStagedOrOfferUndo,
+} from '../trash/trash-delete-rollback';
 import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
 import { FileWatcherService } from './file-watcher.service';
 import { LoggingService } from './logging.service';
 import { NotificationService } from './notification.service';
-import { UndoDeleteService } from './undo-delete.service';
+import { UndoDeleteEntry, UndoDeleteService } from './undo-delete.service';
 
 @Injectable({ providedIn: 'root' })
 export class HouseService {
@@ -179,6 +184,7 @@ export class HouseService {
 
       // Stage the house .md only — keep crests, notes, and other user files in the folder.
       const name = house.name || 'Untitled';
+      const priorHouses = this.subject.value;
       const stageResult = await this.electron.stageForTrash(projectPath, house.filePath, {
         kind: 'house',
         recordId: sanitizeTrashRecordId(house.id),
@@ -187,15 +193,12 @@ export class HouseService {
       if (!stageResult.success || !stageResult.token) {
         const err = stageResult.error || 'Unknown error';
         this.notificationService.showError(trashStagingFailureMessage(name, err));
-        throw new Error(err);
+        throw new TrashStagingError(err);
       }
 
-      if (projectPath === this.projects.getCurrentProject()?.path) {
-        this.publish(this.subject.value.filter((item) => item.id !== id));
-      }
-
+      const token = stageResult.token;
       const recordId = house.id;
-      this.undoDelete.register(stageResult.token, {
+      const buildUndoEntry = (): UndoDeleteEntry => ({
         kind: 'house',
         recordId,
         name,
@@ -218,6 +221,31 @@ export class HouseService {
         },
         restoreReferences: async () => ({ restored: 0, skipped: [] }),
       });
+
+      try {
+        if (projectPath === this.projects.getCurrentProject()?.path) {
+          this.publish(this.subject.value.filter((item) => item.id !== id));
+        }
+        this.undoDelete.register(token, buildUndoEntry());
+      } catch (postError) {
+        const errMsg = errorMessage(postError);
+        const outcome = await restoreStagedOrOfferUndo({
+          electron: this.electron,
+          undoDelete: this.undoDelete,
+          notifications: this.notificationService,
+          token,
+          name,
+          projectPath,
+          buildUndoEntry,
+        });
+        if (outcome === 'restored') {
+          if (projectPath === this.projects.getCurrentProject()?.path) {
+            this.publish(priorHouses);
+          }
+          this.notificationService.showError(trashStagingFailureMessage(name, errMsg));
+        }
+        throw new TrashStagingError(errMsg);
+      }
     });
   }
 

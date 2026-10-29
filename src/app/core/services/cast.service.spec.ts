@@ -13,10 +13,12 @@ describe('Cast canvases', () => {
   let files: Map<string, string>;
   let directories: Set<string>;
   let stageCalls: { projectPath: string; targetPath: string; meta: any }[];
+  let restoreCalls: string[];
   let deleteDirCalls: string[];
   let undoRegister: jasmine.Spy;
   let showError: jasmine.Spy;
-  let electron: ElectronService;
+  let electron: any;
+  let projects: any;
 
   const board = (id: string, name = 'Court'): Pinboard => ({
     id, name,
@@ -32,6 +34,7 @@ describe('Cast canvases', () => {
     files = new Map();
     directories = new Set();
     stageCalls = [];
+    restoreCalls = [];
     deleteDirCalls = [];
     undoRegister = jasmine.createSpy('register');
     showError = jasmine.createSpy('showError');
@@ -39,6 +42,7 @@ describe('Cast canvases', () => {
       projectName: 'Test', version: '1', categories: [], tags: [], books: [],
       settings: { defaultCategory: '' }, pinboards: [],
     } };
+    const stagedFolders = new Map<string, string>(); // token -> folder path
     electron = {
       fileExists: async (path: string) => files.has(path) || directories.has(path),
       createDirectory: async (path: string) => { directories.add(path); return { success: true }; },
@@ -57,12 +61,22 @@ describe('Cast canvases', () => {
       },
       stageForTrash: async (projectPath: string, targetPath: string, meta: any) => {
         stageCalls.push({ projectPath, targetPath, meta });
+        stagedFolders.set('tok-cast', targetPath);
         directories.delete(targetPath);
         for (const file of [...files.keys()]) if (file.startsWith(`${targetPath}/`)) files.delete(file);
         return { success: true, token: 'tok-cast', expiresAt: Date.now() + 15000 };
       },
-    } as unknown as ElectronService;
-    const projects = {
+      restoreFromTrash: async (token: string) => {
+        restoreCalls.push(token);
+        const folder = stagedFolders.get(token);
+        if (folder) {
+          directories.add(folder);
+          stagedFolders.delete(token);
+        }
+        return { success: true };
+      },
+    };
+    projects = {
       getCurrentProject: () => project,
       getCastsFolderPath: () => '/project/casts',
       getPinboards: () => project.metadata.pinboards || [],
@@ -71,12 +85,15 @@ describe('Cast canvases', () => {
         project.metadata.pinboards = project.metadata.pinboards?.filter(item => item.id !== id);
       },
       restorePinboard: async (pinboard: Pinboard) => {
-        project.metadata.pinboards = [...(project.metadata.pinboards || []), pinboard];
+        const boards = project.metadata.pinboards || [];
+        if (!boards.some((b) => b.id === pinboard.id)) {
+          project.metadata.pinboards = [...boards, pinboard];
+        }
       },
-    } as unknown as ProjectService;
+    };
     service = new CastService(
-      electron,
-      projects,
+      electron as unknown as ElectronService,
+      projects as unknown as ProjectService,
       { error: () => {}, warn: () => {} } as unknown as LoggingService,
       { showError } as unknown as NotificationService,
       { register: undoRegister } as unknown as UndoDeleteService
@@ -154,12 +171,111 @@ describe('Cast canvases', () => {
   it('on staging failure leaves the cast unchanged and toasts Nothing was changed', async () => {
     await service.loadCasts(project.path);
     const cast = await service.createCast({ name: 'Keep', characterIds: ['a'] });
-    (electron as any).stageForTrash = async () => ({ success: false, error: 'nope' });
+    electron.stageForTrash = async () => ({ success: false, error: 'nope' });
     await expectAsync(service.deleteCast(cast.id)).toBeRejected();
     expect(service.getCastById(cast.id)).toBeTruthy();
     expect(showError).toHaveBeenCalledWith(
       `Couldn't delete "Keep": nope. Nothing was changed.`
     );
     expect(undoRegister).not.toHaveBeenCalled();
+  });
+
+  it('casts.json write failure after staging restores folder and leaves casts.json unchanged', async () => {
+    await service.loadCasts(project.path);
+    const cast = await service.createCast({ name: 'New', characterIds: ['a', 'b'] });
+    const folderPath = cast.folderPath!;
+    const castsJsonBefore = files.get('/project/casts/casts.json');
+    expect(castsJsonBefore).toBeTruthy();
+
+    electron.writeFileAtomic = async (path: string, content: string) => {
+      if (path.endsWith('casts.json')) {
+        return { success: false, error: 'disk full' };
+      }
+      files.set(path, content);
+      return { success: true };
+    };
+
+    await expectAsync(service.deleteCast(cast.id)).toBeRejected();
+
+    expect(restoreCalls).toEqual(['tok-cast']);
+    expect(directories.has(folderPath)).toBeTrue();
+    expect(service.getCastById(cast.id)).toBeTruthy();
+    expect(files.get('/project/casts/casts.json')).toBe(castsJsonBefore);
+    expect(showError).toHaveBeenCalledWith(
+      `Couldn't delete "New": Failed to write casts.json: disk full. Nothing was changed.`
+    );
+    expect(undoRegister).not.toHaveBeenCalled();
+  });
+
+  it('deletePinboard failure after staging restores folder, casts.json and pinboard', async () => {
+    await service.loadCasts(project.path);
+    const cast = await service.createCast({ name: 'Court', characterIds: ['a'] });
+    const folderPath = cast.folderPath!;
+    const pinboardId = cast.pinboardId!;
+    const castsJsonBefore = files.get('/project/casts/casts.json');
+
+    projects.deletePinboard = async () => {
+      throw new Error('pinboard write failed');
+    };
+
+    await expectAsync(service.deleteCast(cast.id)).toBeRejected();
+
+    expect(restoreCalls).toEqual(['tok-cast']);
+    expect(directories.has(folderPath)).toBeTrue();
+    expect(service.getCastById(cast.id)).toBeTruthy();
+    const castsJson = JSON.parse(files.get('/project/casts/casts.json')!);
+    expect(castsJson.casts.some((c: { id: string }) => c.id === cast.id)).toBeTrue();
+    expect(project.metadata.pinboards!.some((b) => b.id === pinboardId)).toBeTrue();
+    expect(showError).toHaveBeenCalledWith(
+      `Couldn't delete "Court": pinboard write failed. Nothing was changed.`
+    );
+    // castsJsonBefore was captured before the failed delete; entry must still be present.
+    expect(castsJsonBefore).toBeTruthy();
+  });
+
+  it('when restoreFromTrash also fails, registers Undo instead of leaving the user stranded', async () => {
+    await service.loadCasts(project.path);
+    const cast = await service.createCast({ name: 'Stuck', characterIds: ['a'] });
+    electron.writeFileAtomic = async (path: string, content: string) => {
+      if (path.endsWith('casts.json')) {
+        return { success: false, error: 'disk full' };
+      }
+      files.set(path, content);
+      return { success: true };
+    };
+    electron.restoreFromTrash = async (token: string) => {
+      restoreCalls.push(token);
+      return { success: false, error: 'restore blocked' };
+    };
+
+    await expectAsync(service.deleteCast(cast.id)).toBeRejected();
+    expect(restoreCalls).toEqual(['tok-cast']);
+    expect(undoRegister).toHaveBeenCalledWith(
+      'tok-cast',
+      jasmine.objectContaining({ kind: 'cast', name: 'Stuck' })
+    );
+  });
+
+  it('when restore and Undo register both fail, shows sticky .ensemble-trash error', async () => {
+    await service.loadCasts(project.path);
+    const cast = await service.createCast({ name: 'Orphan', characterIds: ['a'] });
+    electron.writeFileAtomic = async (path: string, content: string) => {
+      if (path.endsWith('casts.json')) {
+        return { success: false, error: 'disk full' };
+      }
+      files.set(path, content);
+      return { success: true };
+    };
+    electron.restoreFromTrash = async (token: string) => {
+      restoreCalls.push(token);
+      return { success: false, error: 'gone' };
+    };
+    undoRegister.and.throwError('register boom');
+
+    await expectAsync(service.deleteCast(cast.id)).toBeRejected();
+    expect(showError).toHaveBeenCalledWith(
+      jasmine.stringMatching(/\.ensemble-trash\//),
+      0
+    );
   });
 });

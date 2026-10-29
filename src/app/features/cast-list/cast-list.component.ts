@@ -18,6 +18,7 @@ import {
 import { pathJoin } from "../../core/utils/path.utils";
 import { aliasesMatchSearch } from "../../core/utils/character-alias.utils";
 import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
+import { isTrashStagingError } from '../../core/trash/trash-record-id';
 
 @Component({
     selector: "app-cast-list",
@@ -259,8 +260,11 @@ export class CastListComponent implements OnInit {
       try {
         await this.metadataService.removeCast(cast.id);
       } catch (error) {
-        this.error = `Failed to delete cast: ${error}`;
         this.logger.error("Failed to delete cast:", error);
+        // Staging/rollback already toasted; avoid a misleading inline "Failed to delete".
+        if (!isTrashStagingError(error)) {
+          this.error = `Failed to delete cast: ${error}`;
+        }
       }
     }
   }

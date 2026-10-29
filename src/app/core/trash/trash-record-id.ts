@@ -11,9 +11,40 @@ export function sanitizeTrashRecordId(id: string): string {
   return sanitized.length > 0 ? sanitized : 'id';
 }
 
-/** Staging-failure toast text (exact). */
+/**
+ * Thrown after the service has already shown the staging/rollback toast
+ * (or registered Undo / sticky .ensemble-trash error). Components must not
+ * toast or show a second error for this type.
+ */
+export class TrashStagingError extends Error {
+  readonly trashStaging = true as const;
+
+  constructor(message: string) {
+    super(message);
+    this.name = 'TrashStagingError';
+  }
+}
+
+export function isTrashStagingError(error: unknown): error is TrashStagingError {
+  return (
+    error instanceof TrashStagingError ||
+    (!!error &&
+      typeof error === 'object' &&
+      (error as { trashStaging?: unknown }).trashStaging === true)
+  );
+}
+
+/** Staging-failure / post-stage rollback toast text (exact). */
 export function trashStagingFailureMessage(name: string, error: string): string {
   return `Couldn't delete "${name}": ${error}. Nothing was changed.`;
+}
+
+/** Sticky when restoreFromTrash fails after a post-stage abort and Undo cannot register. */
+export function trashOrphanStickyMessage(name: string, projectPath: string): string {
+  return (
+    `Couldn't finish deleting "${name}" and could not restore it. ` +
+    `It's kept in ${projectPath}/.ensemble-trash/. Use Undo if offered, or restore from there.`
+  );
 }
 
 /** Sticky trash-commit-failed toast text (exact). */
