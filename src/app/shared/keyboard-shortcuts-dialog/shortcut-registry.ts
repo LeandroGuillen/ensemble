@@ -59,10 +59,15 @@ export const SHORTCUT_REGISTRY: readonly Shortcut[] = [
 
   // Book Plan
   { keys: ['Ctrl', 'J'], description: 'Search plan (2180, @character, !todo, !oculto…)', category: 'Book Plan' },
+  { keys: ['Alt', 'PgUp/PgDn'], description: 'Previous / next chapter', category: 'Book Plan' },
   { keys: ['PgUp/PgDn'], description: 'Previous / next chapter (focus mode)', category: 'Book Plan' },
   { keys: ['Alt', 'Shift', 'PgUp/PgDn'], description: 'Previous / next heading (scenes included)', category: 'Book Plan' },
   { keys: ['Ctrl', '.'], description: 'Toggle focus on the current chapter', category: 'Book Plan' },
   { keys: ['Ctrl', 'Alt', '←/→'], description: 'Back / forward through jumps', category: 'Book Plan' },
+
+  // Plan search (Ctrl+J overlay)
+  { keys: ['PgUp/PgDn'], description: 'Move selection by 10 results', category: 'Plan search' },
+  { keys: ['Tab / Shift+Tab'], description: 'Next / previous result group', category: 'Plan search' },
 
   // Concepts
   { keys: ['Ctrl', 'N'], description: 'Add new concept', category: 'Concepts' },

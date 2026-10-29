@@ -47,6 +47,43 @@ describe('KeyboardShortcutsService registry', () => {
     expect(listL?.description).toMatch(/grid.*list.*compact.*gallery/i);
   });
 
+  it('lists book plan Alt+PgUp/PgDn and plan-search paging / Tab group jump', () => {
+    const shortcuts = service.getAllShortcuts();
+    const byCat = (category: string) => shortcuts.filter((s) => s.category === category);
+
+    const bookPlan = byCat('Book Plan');
+    const altChapter = bookPlan.find(
+      (s) =>
+        s.keys.length === 2 &&
+        s.keys[0] === 'Alt' &&
+        s.keys[1] === 'PgUp/PgDn' &&
+        s.description === 'Previous / next chapter'
+    );
+    expect(altChapter).toBeTruthy();
+    // Must not be confused with Alt+Shift headings or focus-mode plain PgUp/PgDn.
+    expect(
+      bookPlan.find((s) => s.keys.join('+') === 'Alt+Shift+PgUp/PgDn')?.description
+    ).toMatch(/heading/i);
+    expect(
+      bookPlan.find((s) => s.keys.length === 1 && s.keys[0] === 'PgUp/PgDn')?.description
+    ).toMatch(/focus mode/i);
+
+    const planSearch = byCat('Plan search');
+    expect(
+      planSearch.find(
+        (s) => s.keys.join('+') === 'PgUp/PgDn' && /move selection by 10/i.test(s.description)
+      )
+    ).toBeTruthy();
+    expect(
+      planSearch.find(
+        (s) =>
+          s.keys.length === 1 &&
+          s.keys[0] === 'Tab / Shift+Tab' &&
+          /next \/ previous result group/i.test(s.description)
+      )
+    ).toBeTruthy();
+  });
+
   it('returns copies so callers cannot mutate the registry', () => {
     const first = service.getAllShortcuts();
     first[0].keys.push('MUTATED');
