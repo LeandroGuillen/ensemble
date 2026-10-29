@@ -283,12 +283,16 @@ export class HouseService {
 
   /**
    * Restore house membership/leadership from a removeCharacterFromHouses snapshot.
-   * Skips houses that no longer exist.
+   * Re-adds only the deleted character (never overwrites whole lists): inserts at its
+   * prior index in characterIds and each surviving reign, re-creates pruned reigns
+   * with only that id, and restores currentLeadershipId only when still unset and
+   * the reign exists again. Skips houses that no longer exist.
    */
   async restoreCharacterToHouses(snapshot: HouseCharacterSnapshot): Promise<ReferenceRestoreResult> {
     const result: ReferenceRestoreResult = { restored: 0, skipped: [] };
     const projectPath = this.projects.getCurrentProject()?.path;
-    if (!projectPath || !snapshot?.removals?.length) return result;
+    const characterId = snapshot?.characterId;
+    if (!projectPath || !characterId || !snapshot?.removals?.length) return result;
 
     return this.serial(async () => {
       if (projectPath !== this.projects.getCurrentProject()?.path) return result;
@@ -304,13 +308,74 @@ export class HouseService {
           });
           continue;
         }
+
+        const nextCharacterIds = [...house.characterIds];
+        if (!nextCharacterIds.includes(characterId)) {
+          const memberIndex = removal.characterIds.indexOf(characterId);
+          const insertAt =
+            memberIndex < 0
+              ? nextCharacterIds.length
+              : Math.min(memberIndex, nextCharacterIds.length);
+          nextCharacterIds.splice(insertAt, 0, characterId);
+        }
+
+        const nextLeadership = house.leadership.map((reign) => ({
+          ...reign,
+          characterIds: [...reign.characterIds],
+        }));
+
+        for (const priorReign of removal.leadership) {
+          if (!priorReign.characterIds.includes(characterId)) {
+            continue;
+          }
+          const liveIndex = nextLeadership.findIndex((reign) => reign.id === priorReign.id);
+          if (liveIndex !== -1) {
+            const live = nextLeadership[liveIndex];
+            if (!live.characterIds.includes(characterId)) {
+              const reignMemberIndex = priorReign.characterIds.indexOf(characterId);
+              const insertAt =
+                reignMemberIndex < 0
+                  ? live.characterIds.length
+                  : Math.min(reignMemberIndex, live.characterIds.length);
+              live.characterIds.splice(insertAt, 0, characterId);
+            }
+            continue;
+          }
+
+          // Reign is gone: either we pruned it, or a later delete emptied it.
+          // Re-create with only the character being undone (never revive peers).
+          const template =
+            removal.prunedReigns.find((reign) => reign.id === priorReign.id) || priorReign;
+          const restoredReign = {
+            ...structuredClone(template),
+            characterIds: [characterId],
+          };
+          const priorLeadershipIndex = removal.leadership.findIndex(
+            (reign) => reign.id === priorReign.id
+          );
+          const insertAt =
+            priorLeadershipIndex < 0
+              ? nextLeadership.length
+              : Math.min(priorLeadershipIndex, nextLeadership.length);
+          nextLeadership.splice(insertAt, 0, restoredReign);
+        }
+
+        let nextCurrentLeadershipId = house.currentLeadershipId;
+        if (
+          !nextCurrentLeadershipId &&
+          removal.currentLeadershipId &&
+          nextLeadership.some((reign) => reign.id === removal.currentLeadershipId)
+        ) {
+          nextCurrentLeadershipId = removal.currentLeadershipId;
+        }
+
         await this.update(
           house.id,
           {
             ...house,
-            characterIds: [...removal.characterIds],
-            leadership: structuredClone(removal.leadership),
-            currentLeadershipId: removal.currentLeadershipId,
+            characterIds: nextCharacterIds,
+            leadership: nextLeadership,
+            currentLeadershipId: nextCurrentLeadershipId,
           },
           house.raw
         );
@@ -372,6 +437,11 @@ export class HouseService {
             id: seat.houseId,
             label: seat.houseName || seat.houseId,
           });
+          continue;
+        }
+        // Do not overwrite a seat assigned during the Undo window.
+        if (house.seatId) {
+          result.restored += 1;
           continue;
         }
         await this.update(house.id, { ...house, seatId: seat.seatId }, house.raw);

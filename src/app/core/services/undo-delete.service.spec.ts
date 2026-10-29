@@ -9,6 +9,9 @@ import {
   ReferenceRestoreResult,
 } from '../interfaces/reference-snapshot.interface';
 
+/** Must match UndoDeleteService.UNDO_ENTRY_EXPIRE_MARGIN_MS (cast for 59ad382). */
+const EXPIRE_MARGIN_MS = 500;
+
 describe('UndoDeleteService', () => {
   let service: UndoDeleteService;
   let electron: jasmine.SpyObj<ElectronService>;
@@ -16,6 +19,7 @@ describe('UndoDeleteService', () => {
   let commitFailedHandler:
     | ((event: unknown, data: { token: string; name: string; stagedPath: string; error: string }) => void)
     | null;
+  let toastSeq = 0;
 
   const emptySnapshot = (characterId: string): CharacterReferenceSnapshot => ({
     characterId,
@@ -28,6 +32,7 @@ describe('UndoDeleteService', () => {
 
   beforeEach(() => {
     commitFailedHandler = null;
+    toastSeq = 0;
     electron = jasmine.createSpyObj('ElectronService', [
       'restoreFromTrash',
       'onTrashCommitFailed',
@@ -44,7 +49,7 @@ describe('UndoDeleteService', () => {
       'dismiss',
       'dismissAll',
     ]);
-    notifications.showUndo.and.returnValue('toast-1');
+    notifications.showUndo.and.callFake(() => `toast-${++toastSeq}`);
 
     TestBed.configureTestingModule({
       providers: [
@@ -61,6 +66,11 @@ describe('UndoDeleteService', () => {
     service = TestBed.inject(UndoDeleteService);
   });
 
+  afterEach(() => {
+    // Clear expiry timers left by conflict / pending tokens.
+    service.dismissAll();
+  });
+
   function register(
     token: string,
     options: {
@@ -72,6 +82,7 @@ describe('UndoDeleteService', () => {
       snapshot?: CharacterReferenceSnapshot;
       restoreResult?: ReferenceRestoreResult;
       callOrder?: string[];
+      expiresAt?: number;
     } = {}
   ) {
     const callOrder = options.callOrder || [];
@@ -102,10 +113,11 @@ describe('UndoDeleteService', () => {
       recordId: 'id1',
       name: options.name || 'Ada',
       referenceSnapshot: options.snapshot || emptySnapshot('id1'),
+      ...(options.expiresAt !== undefined ? { expiresAt: options.expiresAt } : {}),
       hasConflict: options.hasConflict || (() => false),
       reload,
       restoreReferences,
-    });
+    } as any);
 
     return { reload, restoreReferences, callOrder };
   }
@@ -227,12 +239,36 @@ describe('UndoDeleteService', () => {
     expect(service.hasPending('tok-other')).toBeTrue();
   });
 
-  it('dismissAll clears pending tokens and dismisses toasts', () => {
+  it('dismissAll clears pending tokens and dismisses only this service\'s toasts', () => {
     register('tok-a');
     register('tok-b');
+    notifications.dismiss.calls.reset();
+    notifications.dismissAll.calls.reset();
+
     service.dismissAll();
     expect(service.hasPending('tok-a')).toBeFalse();
     expect(service.hasPending('tok-b')).toBeFalse();
-    expect(notifications.dismissAll).toHaveBeenCalled();
+    // Must not wipe unrelated app toasts.
+    expect(notifications.dismissAll).not.toHaveBeenCalled();
+    expect(notifications.dismiss.calls.allArgs()).toEqual([['toast-1'], ['toast-2']]);
   });
+
+  it('expiry timer drops many pending entries after the undo window', fakeAsync(() => {
+    for (let i = 0; i < 50; i++) {
+      register(`tok-expire-${i}`);
+    }
+    const pendingCount = () =>
+      typeof (service as any).pendingCount === 'function'
+        ? (service as any).pendingCount()
+        : Array.from({ length: 50 }, (_, i) => `tok-expire-${i}`).filter((t) =>
+            service.hasPending(t)
+          ).length;
+    expect(pendingCount()).toBe(50);
+
+    tick(UNDO_WINDOW_MS + EXPIRE_MARGIN_MS);
+    expect(pendingCount()).toBe(0);
+    for (let i = 0; i < 50; i++) {
+      expect(service.hasPending(`tok-expire-${i}`)).toBeFalse();
+    }
+  }));
 });

@@ -617,6 +617,8 @@ export class PlotBoardService {
 
       const board = this.parseFile(read.content);
       let changed = false;
+      /** Removals applied in memory for this board; counted only after a successful write. */
+      const pendingRestores: PlotThreadCharacterRemoval[] = [];
 
       for (const removal of boardRemovals) {
         const thread = board.threads.find((t) => t.id === removal.threadId);
@@ -635,15 +637,23 @@ export class PlotBoardService {
         const insertAt = Math.min(Math.max(0, removal.index), thread.characters.length);
         thread.characters.splice(insertAt, 0, snapshot.characterId);
         changed = true;
-        result.restored += 1;
+        pendingRestores.push(removal);
       }
 
       if (changed) {
         const writeResult = await this.electronService.writeFileAtomic(filePath, this.generateFile(board));
         if (!writeResult.success) {
           this.logger.error(`Failed to restore character on ${relativePath}`, writeResult.error);
+          for (const removal of pendingRestores) {
+            result.skipped.push({
+              kind: 'plot-thread',
+              id: `${removal.boardPath}#${removal.threadId}`,
+              label: removal.threadName || removal.threadId,
+            });
+          }
           continue;
         }
+        result.restored += pendingRestores.length;
         if (current && this.normalizeRelativePath(current) === this.normalizeRelativePath(relativePath)) {
           this.plotBoardSubject.next(board);
         }

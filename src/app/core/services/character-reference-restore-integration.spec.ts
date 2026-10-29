@@ -214,24 +214,30 @@ describe('Character reference restore integration (Real DI)', () => {
     });
     const houseBefore = structuredClone(houseService.getById(house.id)!);
 
+    // Real casts.json write path: seed index + folder, spy only loadCasts.
+    const castsFolder = `${PROJECT_PATH}/casts`;
+    const castFolder = `${castsFolder}/main`;
+    folders.add(castsFolder);
+    folders.add(castFolder);
+    const castsJsonPath = `${castsFolder}/casts.json`;
+    const castEntry = {
+      id: 'cast-1',
+      name: 'Main Cast',
+      characterIds: ['x', 'char-1', 'y'],
+    };
+    disk.set(
+      castsJsonPath,
+      JSON.stringify({ version: 1, casts: [castEntry] }, null, 2)
+    );
     (castService as any).castsSubject.next([
       {
-        id: 'cast-1',
-        name: 'Main Cast',
-        characterIds: ['x', 'char-1', 'y'],
-        folderPath: `${PROJECT_PATH}/casts/main`,
+        ...castEntry,
+        folderPath: castFolder,
       },
     ]);
     (castService as any).hasLoadedForCurrentProject = true;
     (castService as any).currentProjectPath = PROJECT_PATH;
     spyOn(castService as any, 'loadCasts').and.returnValue(Promise.resolve());
-    spyOn(castService, 'updateCast').and.callFake(async (id, data) => {
-      const next = (castService as any).castsSubject.value.map((c: any) =>
-        c.id === id ? { ...c, ...data } : c
-      );
-      (castService as any).castsSubject.next(next);
-      return next.find((c: any) => c.id === id);
-    });
 
     const plotPath = `${PROJECT_PATH}/arc.plotboard.md`;
     // Canonicalize through generateFile so cleanup→restore can match byte-for-byte.
@@ -252,6 +258,7 @@ threads:
     const pinboardBefore = structuredClone(project$.value!.metadata.pinboards![0]);
     const booksBefore = structuredClone((metadataService as any).metadataSubject.value.books);
     const castBefore = structuredClone((castService as any).castsSubject.value[0].characterIds);
+    const castsJsonBefore = disk.get(castsJsonPath)!;
 
     // Casts keep this runnable on 6a214e3 (void cleanup / missing restore) so ACs fail by assertion.
     const snapshot = (await cleanup.removeCharacterReferences('char-1')) as any;
@@ -279,6 +286,7 @@ threads:
 
     expect(disk.get(plotPath)).toBe(plotBefore);
     expect((castService as any).castsSubject.value[0].characterIds).toEqual(castBefore);
+    expect(disk.get(castsJsonPath)).toBe(castsJsonBefore);
     expect((metadataService as any).metadataSubject.value.books).toEqual(booksBefore);
   });
 
@@ -292,33 +300,62 @@ threads:
       content: '',
     });
 
+    const castsFolder = `${PROJECT_PATH}/casts`;
+    const castFolder = `${castsFolder}/main`;
+    folders.add(castsFolder);
+    folders.add(castFolder);
+    disk.set(
+      `${castsFolder}/casts.json`,
+      JSON.stringify(
+        { version: 1, casts: [{ id: 'cast-1', name: 'Main Cast', characterIds: ['char-1'] }] },
+        null,
+        2
+      )
+    );
     (castService as any).castsSubject.next([
       {
         id: 'cast-1',
         name: 'Main Cast',
         characterIds: ['char-1'],
-        folderPath: `${PROJECT_PATH}/casts/main`,
+        folderPath: castFolder,
       },
     ]);
     (castService as any).hasLoadedForCurrentProject = true;
     (castService as any).currentProjectPath = PROJECT_PATH;
     spyOn(castService as any, 'loadCasts').and.returnValue(Promise.resolve());
-    spyOn(castService, 'updateCast').and.callFake(async (id, data) => {
-      const next = (castService as any).castsSubject.value.map((c: any) =>
-        c.id === id ? { ...c, ...data } : c
-      );
-      (castService as any).castsSubject.next(next);
-      return next.find((c: any) => c.id === id);
-    });
+
+    const plotPath = `${PROJECT_PATH}/arc.plotboard.md`;
+    disk.set(
+      plotPath,
+      plotBoardService.generateFile(
+        plotBoardService.parseFile(`---
+threads:
+  - id: t1
+    name: Thread One
+    characters:
+      - char-1
+---
+`)
+      )
+    );
 
     const snapshot = (await cleanup.removeCharacterReferences('char-1')) as any;
+    const pinboardAfterCleanup = structuredClone(projectService.getPinboards()[0]);
+    expect(pinboardAfterCleanup.nodes.find((n: any) => n.id === 'char-1')).toBeUndefined();
 
     await houseService.deleteHouse(house.id, houseService.getById(house.id)!.raw);
     expect(houseService.getById(house.id)).toBeUndefined();
 
     expect(typeof (cleanup as any).restoreCharacterReferences).toBe('function');
     const restore = await (cleanup as any).restoreCharacterReferences(snapshot);
-    expect(restore.skipped.some((s: any) => s.kind === 'house' && s.id === house.id)).toBeTrue();
+    expect(restore.skipped).toEqual([
+      { kind: 'house', id: house.id, label: 'House Keep' },
+    ]);
     expect((castService as any).castsSubject.value[0].characterIds).toContain('char-1');
+    expect(
+      (metadataService as any).metadataSubject.value.books[0].povCharacterIds
+    ).toContain('char-1');
+    expect(projectService.getPinboards()[0].nodes.some((n: any) => n.id === 'char-1')).toBeTrue();
+    expect(disk.get(plotPath)).toContain('char-1');
   });
 });

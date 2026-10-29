@@ -150,6 +150,104 @@ describe('Reference cleanup snapshots', () => {
         { houseId: house.id, houseName: 'House Seat', seatId: 'loc-harbour' },
       ]);
     });
+
+    it('house restore re-adds only the undone character (does not revive a later-deleted peer)', async () => {
+      const house = await service.createHouse({
+        name: 'House Shared',
+        motto: '',
+        colors: [],
+        characterIds: ['char-1', 'char-2'],
+        leadership: [
+          { id: 'r1', characterIds: ['char-1', 'char-2'], period: 'Y1', books: [], notes: '' },
+        ],
+        currentLeadershipId: 'r1',
+        content: '',
+      });
+
+      const snap1 = (await service.removeCharacterFromHouses('char-1')) as any;
+      expect(service.getById(house.id)!.characterIds).toEqual(['char-2']);
+      expect(service.getById(house.id)!.leadership[0].characterIds).toEqual(['char-2']);
+
+      await service.removeCharacterFromHouses('char-2');
+      expect(service.getById(house.id)!.characterIds).toEqual([]);
+      expect(service.getById(house.id)!.leadership).toEqual([]);
+
+      await (service as any).restoreCharacterToHouses(snap1);
+      const after = service.getById(house.id)!;
+      expect(after.characterIds).toEqual(['char-1']);
+      expect(after.leadership).toEqual([
+        jasmine.objectContaining({
+          id: 'r1',
+          characterIds: ['char-1'],
+        }),
+      ]);
+      expect(after.currentLeadershipId).toBe('r1');
+    });
+
+    it('house restore does not wipe membership edits made during the Undo window', async () => {
+      const house = await service.createHouse({
+        name: 'House Edit',
+        motto: '',
+        colors: [],
+        characterIds: ['char-1', 'char-2'],
+        leadership: [],
+        content: '',
+      });
+
+      const snap = (await service.removeCharacterFromHouses('char-1')) as any;
+      expect(service.getById(house.id)!.characterIds).toEqual(['char-2']);
+
+      const live = service.getById(house.id)!;
+      await service.updateHouse(
+        live.id,
+        {
+          name: live.name,
+          motto: live.motto,
+          colors: live.colors,
+          characterIds: ['char-9'],
+          leadership: [],
+          content: live.content,
+        },
+        live.raw
+      );
+      expect(service.getById(house.id)!.characterIds).toEqual(['char-9']);
+
+      await (service as any).restoreCharacterToHouses(snap);
+      // Re-inserts char-1 at its prior index (0) without wiping char-9.
+      expect(service.getById(house.id)!.characterIds).toEqual(['char-1', 'char-9']);
+    });
+
+    it('location seat restore leaves a newer seatId alone', async () => {
+      const house = await service.createHouse({
+        name: 'House Seat2',
+        motto: '',
+        colors: [],
+        seatId: 'loc-old',
+        characterIds: [],
+        leadership: [],
+        content: '',
+      });
+      const snap = (await service.clearLocationReferences('loc-old')) as any;
+      expect(service.getById(house.id)!.seatId).toBeUndefined();
+
+      const live = service.getById(house.id)!;
+      await service.updateHouse(
+        live.id,
+        {
+          name: live.name,
+          motto: live.motto,
+          colors: live.colors,
+          seatId: 'loc-new',
+          characterIds: [],
+          leadership: [],
+          content: live.content,
+        },
+        live.raw
+      );
+
+      await (service as any).restoreLocationReferences(snap);
+      expect(service.getById(house.id)!.seatId).toBe('loc-new');
+    });
   });
 
   describe('other cleanup snapshots', () => {
@@ -366,6 +464,54 @@ threads:
           threadId: 't1',
           threadName: 'Thread One',
           index: 1,
+        },
+      ]);
+    });
+
+    it('plot restore reports skips when writeFileAtomic fails (not a false restored count)', async () => {
+      const boardContent = `---
+threads:
+  - id: t1
+    name: Thread One
+    characters:
+      - other
+      - later
+---
+`;
+      electron.readDirectoryRecursive.and.returnValue(
+        Promise.resolve({
+          success: true,
+          files: [
+            {
+              relativePath: 'arc.plotboard.md',
+              absolutePath: `${PROJECT_PATH}/arc.plotboard.md`,
+            },
+          ],
+        })
+      );
+      electron.readFile.and.returnValue(Promise.resolve({ success: true, content: boardContent }));
+      electron.writeFileAtomic.and.returnValue(
+        Promise.resolve({ success: false, error: 'disk full' })
+      );
+
+      const result = await (plotBoardService as any).restoreCharacterToThreads({
+        characterId: 'char-1',
+        removals: [
+          {
+            boardPath: 'arc.plotboard.md',
+            threadId: 't1',
+            threadName: 'Thread One',
+            index: 1,
+          },
+        ],
+      });
+
+      expect(result.restored).toBe(0);
+      expect(result.skipped).toEqual([
+        {
+          kind: 'plot-thread',
+          id: 'arc.plotboard.md#t1',
+          label: 'Thread One',
         },
       ]);
     });
