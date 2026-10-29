@@ -3,6 +3,11 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BehaviorSubject } from 'rxjs';
 import { Character, CharacterFormData } from '../interfaces/character.interface';
 import { Book, Cast, Category, ProjectMetadata, ProjectSettings, Saga, Series, Tag } from '../interfaces/project.interface';
+import {
+  BookPovRemoval,
+  BookPovSnapshot,
+  ReferenceRestoreResult,
+} from '../interfaces/reference-snapshot.interface';
 import { ValidationResult } from '../interfaces/validation.interface';
 import { CharacterValidator } from '../validators/character.validator';
 import { ProjectValidator } from '../validators/project.validator';
@@ -582,20 +587,29 @@ export class MetadataService {
 
   /**
    * Removes a character id from every book's povCharacterIds (e.g. after character delete).
+   * Returns prior PoV indexes for Undo restore.
    */
-  async removeCharacterFromBookPovs(characterId: string): Promise<void> {
+  async removeCharacterFromBookPovs(characterId: string): Promise<BookPovSnapshot> {
+    const empty: BookPovSnapshot = { characterId, removals: [] };
     const metadata = this.metadataSubject.value;
     if (!metadata) {
-      return;
+      return empty;
     }
 
     const books = metadata.books || [];
+    const removals: BookPovRemoval[] = [];
     let changed = false;
     const updatedBooks = books.map((book) => {
       const ids = book.povCharacterIds;
       if (!ids || !ids.includes(characterId)) {
         return book;
       }
+      const index = ids.indexOf(characterId);
+      removals.push({
+        bookId: book.id,
+        bookName: book.name || book.id,
+        index,
+      });
       changed = true;
       return {
         ...book,
@@ -604,13 +618,60 @@ export class MetadataService {
     });
 
     if (!changed) {
-      return;
+      return empty;
     }
 
     await this.saveMetadata({
       ...metadata,
       books: updatedBooks,
     });
+    return { characterId, removals };
+  }
+
+  /**
+   * Re-insert a character into book PoV lists at snapshotted indexes.
+   * Skips books that no longer exist.
+   */
+  async restoreCharacterToBookPovs(snapshot: BookPovSnapshot): Promise<ReferenceRestoreResult> {
+    const result: ReferenceRestoreResult = { restored: 0, skipped: [] };
+    const metadata = this.metadataSubject.value;
+    if (!metadata || !snapshot?.removals?.length) {
+      return result;
+    }
+
+    const books = [...(metadata.books || [])];
+    let changed = false;
+
+    for (const removal of snapshot.removals) {
+      const bookIndex = books.findIndex((book) => book.id === removal.bookId);
+      if (bookIndex === -1) {
+        result.skipped.push({
+          kind: 'book',
+          id: removal.bookId,
+          label: removal.bookName || removal.bookId,
+        });
+        continue;
+      }
+      const book = books[bookIndex];
+      const ids = [...(book.povCharacterIds || [])];
+      if (ids.includes(snapshot.characterId)) {
+        result.restored += 1;
+        continue;
+      }
+      const insertAt = Math.min(Math.max(0, removal.index), ids.length);
+      ids.splice(insertAt, 0, snapshot.characterId);
+      books[bookIndex] = { ...book, povCharacterIds: ids };
+      changed = true;
+      result.restored += 1;
+    }
+
+    if (changed) {
+      await this.saveMetadata({
+        ...metadata,
+        books,
+      });
+    }
+    return result;
   }
 
   /**

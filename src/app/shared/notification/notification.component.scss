@@ -38,6 +38,26 @@
     color: var(--color-text-primary, #f2f4f7);
   }
 
+  .notification-action {
+    flex-shrink: 0;
+    align-self: center;
+    background: transparent;
+    border: 1px solid var(--color-border, #2a3142);
+    border-radius: var(--radius-sm, 4px);
+    padding: 0.25rem 0.625rem;
+    cursor: pointer;
+    color: var(--color-text-primary, #f2f4f7);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.25;
+    transition: background 0.15s, border-color 0.15s;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: var(--color-text-secondary, #a0a8b8);
+    }
+  }
+
   .notification-close {
     flex-shrink: 0;
     background: none;

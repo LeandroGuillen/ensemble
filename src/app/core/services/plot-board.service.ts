@@ -1,6 +1,11 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { PlotBoard, PlotBoardFrontmatter, PlotCellMeta, PlotRow, PlotThread } from '../interfaces/plot-board.interface';
+import {
+  PlotThreadCharacterRemoval,
+  PlotThreadCharacterSnapshot,
+  ReferenceRestoreResult,
+} from '../interfaces/reference-snapshot.interface';
 import { parseMarkdown, generateMarkdown } from '../utils/markdown.utils';
 import { remapPlotBoardCharacterIds } from '../utils/character-id.utils';
 import { pathJoin } from '../utils/path.utils';
@@ -521,9 +526,11 @@ export class PlotBoardService {
   }
 
   /**
-   * Remove a character from all plot board threads (for deletion cleanup)
+   * Remove a character from all plot board threads (for deletion cleanup).
+   * Returns prior thread positions for Undo restore.
    */
-  async removeCharacterFromThreads(characterId: string): Promise<void> {
+  async removeCharacterFromThreads(characterId: string): Promise<PlotThreadCharacterSnapshot> {
+    const removals: PlotThreadCharacterRemoval[] = [];
     const paths = await this.discoverPlotboardFiles();
     const current = this.getCurrentRelativePath();
 
@@ -538,7 +545,14 @@ export class PlotBoardService {
       let changed = false;
 
       for (const thread of board.threads) {
-        if (thread.characters.includes(characterId)) {
+        const index = thread.characters.indexOf(characterId);
+        if (index !== -1) {
+          removals.push({
+            boardPath: relativePath,
+            threadId: thread.id,
+            threadName: thread.name,
+            index,
+          });
           thread.characters = thread.characters.filter(id => id !== characterId);
           changed = true;
         }
@@ -551,12 +565,92 @@ export class PlotBoardService {
           continue;
         }
 
-        // Update in-memory board if this is the currently open one
         if (current && this.normalizeRelativePath(current) === this.normalizeRelativePath(relativePath)) {
           this.plotBoardSubject.next(board);
         }
       }
     }
+
+    return { characterId, removals };
+  }
+
+  /**
+   * Re-insert a character into plot threads at snapshotted indexes.
+   * Skips boards/threads that no longer exist.
+   */
+  async restoreCharacterToThreads(snapshot: PlotThreadCharacterSnapshot): Promise<ReferenceRestoreResult> {
+    const result: ReferenceRestoreResult = { restored: 0, skipped: [] };
+    if (!snapshot?.removals?.length) return result;
+
+    const current = this.getCurrentRelativePath();
+    const byBoard = new Map<string, PlotThreadCharacterRemoval[]>();
+    for (const removal of snapshot.removals) {
+      const list = byBoard.get(removal.boardPath) || [];
+      list.push(removal);
+      byBoard.set(removal.boardPath, list);
+    }
+
+    for (const [relativePath, boardRemovals] of byBoard) {
+      const filePath = this.getAbsolutePath(relativePath);
+      if (!filePath) {
+        for (const removal of boardRemovals) {
+          result.skipped.push({
+            kind: 'plot-thread',
+            id: `${removal.boardPath}#${removal.threadId}`,
+            label: removal.threadName || removal.threadId,
+          });
+        }
+        continue;
+      }
+
+      const read = await this.electronService.readFile(filePath);
+      if (!read.success || !read.content) {
+        for (const removal of boardRemovals) {
+          result.skipped.push({
+            kind: 'plot-thread',
+            id: `${removal.boardPath}#${removal.threadId}`,
+            label: removal.threadName || removal.threadId,
+          });
+        }
+        continue;
+      }
+
+      const board = this.parseFile(read.content);
+      let changed = false;
+
+      for (const removal of boardRemovals) {
+        const thread = board.threads.find((t) => t.id === removal.threadId);
+        if (!thread) {
+          result.skipped.push({
+            kind: 'plot-thread',
+            id: `${removal.boardPath}#${removal.threadId}`,
+            label: removal.threadName || removal.threadId,
+          });
+          continue;
+        }
+        if (thread.characters.includes(snapshot.characterId)) {
+          result.restored += 1;
+          continue;
+        }
+        const insertAt = Math.min(Math.max(0, removal.index), thread.characters.length);
+        thread.characters.splice(insertAt, 0, snapshot.characterId);
+        changed = true;
+        result.restored += 1;
+      }
+
+      if (changed) {
+        const writeResult = await this.electronService.writeFileAtomic(filePath, this.generateFile(board));
+        if (!writeResult.success) {
+          this.logger.error(`Failed to restore character on ${relativePath}`, writeResult.error);
+          continue;
+        }
+        if (current && this.normalizeRelativePath(current) === this.normalizeRelativePath(relativePath)) {
+          this.plotBoardSubject.next(board);
+        }
+      }
+    }
+
+    return result;
   }
 
   renameThreadId(

@@ -2,6 +2,13 @@ import { Injectable } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BehaviorSubject } from 'rxjs';
 import { House, HouseFormData } from '../interfaces/house.interface';
+import {
+  HouseCharacterRemoval,
+  HouseCharacterSnapshot,
+  HouseSeatRemoval,
+  LocationReferenceSnapshot,
+  ReferenceRestoreResult,
+} from '../interfaces/reference-snapshot.interface';
 import { normalizeHouseData, validateHouseData } from '../utils/house.utils';
 import { parseMarkdown, generateMarkdown } from '../utils/markdown.utils';
 import { asciiSlugify } from '../utils/slug.utils';
@@ -203,30 +210,34 @@ export class HouseService {
   }
 
   /**
-   * Remove a character from all house memberships and leadership (for deletion cleanup)
+   * Remove a character from all house memberships and leadership (for deletion cleanup).
+   * Returns a typed snapshot of prior membership/leadership for Undo restore.
    */
-  async removeCharacterFromHouses(characterId: string): Promise<void> {
+  async removeCharacterFromHouses(characterId: string): Promise<HouseCharacterSnapshot> {
+    const empty: HouseCharacterSnapshot = { characterId, removals: [] };
     const projectPath = this.projects.getCurrentProject()?.path;
-    if (!projectPath) return;
+    if (!projectPath) return empty;
 
     return this.serial(async () => {
-      if (projectPath !== this.projects.getCurrentProject()?.path) return;
+      if (projectPath !== this.projects.getCurrentProject()?.path) return empty;
       await this.load(projectPath, true);
 
       const houses = this.subject.value;
+      const removals: HouseCharacterRemoval[] = [];
       const affectedHouses: House[] = [];
 
       for (const house of houses) {
         let changed = false;
+        const previousLeadership = structuredClone(house.leadership);
+        const previousCharacterIds = [...house.characterIds];
+        const previousCurrentLeadershipId = house.currentLeadershipId;
         const updatedHouse = { ...house };
 
-        // Remove from characterIds
         if (updatedHouse.characterIds.includes(characterId)) {
           updatedHouse.characterIds = updatedHouse.characterIds.filter(id => id !== characterId);
           changed = true;
         }
 
-        // Remove from leadership entries
         const updatedLeadership = updatedHouse.leadership.map(reign => {
           if (reign.characterIds.includes(characterId)) {
             changed = true;
@@ -238,45 +249,135 @@ export class HouseService {
           return reign;
         });
 
-        // Drop leadership entries that are now empty
+        const prunedReigns = updatedLeadership.filter(reign => reign.characterIds.length === 0);
         updatedHouse.leadership = updatedLeadership.filter(reign => reign.characterIds.length > 0);
 
-        // Clear currentLeadershipId if that reign is now gone
         if (updatedHouse.currentLeadershipId && !updatedHouse.leadership.some(r => r.id === updatedHouse.currentLeadershipId)) {
           updatedHouse.currentLeadershipId = undefined;
           changed = true;
         }
 
         if (changed) {
+          removals.push({
+            houseId: house.id,
+            houseName: house.name,
+            characterIds: previousCharacterIds,
+            leadership: previousLeadership,
+            currentLeadershipId: previousCurrentLeadershipId,
+            prunedReigns: structuredClone(prunedReigns.map((reign) => {
+              const original = previousLeadership.find((r) => r.id === reign.id);
+              return original ? structuredClone(original) : structuredClone(reign);
+            })),
+          });
           affectedHouses.push(updatedHouse);
         }
       }
 
-      // Save all affected houses
       for (const house of affectedHouses) {
         await this.update(house.id, house, house.raw);
       }
+
+      return { characterId, removals };
     });
   }
 
   /**
-   * Clear seatId from any houses that reference a deleted location
+   * Restore house membership/leadership from a removeCharacterFromHouses snapshot.
+   * Skips houses that no longer exist.
    */
-  async clearLocationReferences(locationId: string): Promise<void> {
+  async restoreCharacterToHouses(snapshot: HouseCharacterSnapshot): Promise<ReferenceRestoreResult> {
+    const result: ReferenceRestoreResult = { restored: 0, skipped: [] };
     const projectPath = this.projects.getCurrentProject()?.path;
-    if (!projectPath) return;
+    if (!projectPath || !snapshot?.removals?.length) return result;
 
     return this.serial(async () => {
-      if (projectPath !== this.projects.getCurrentProject()?.path) return;
+      if (projectPath !== this.projects.getCurrentProject()?.path) return result;
+      await this.load(projectPath, true);
+
+      for (const removal of snapshot.removals) {
+        const house = this.getById(removal.houseId);
+        if (!house) {
+          result.skipped.push({
+            kind: 'house',
+            id: removal.houseId,
+            label: removal.houseName || removal.houseId,
+          });
+          continue;
+        }
+        await this.update(
+          house.id,
+          {
+            ...house,
+            characterIds: [...removal.characterIds],
+            leadership: structuredClone(removal.leadership),
+            currentLeadershipId: removal.currentLeadershipId,
+          },
+          house.raw
+        );
+        result.restored += 1;
+      }
+      return result;
+    });
+  }
+
+  /**
+   * Clear seatId from any houses that reference a deleted location.
+   * Returns prior seatId values for Undo restore.
+   */
+  async clearLocationReferences(locationId: string): Promise<LocationReferenceSnapshot> {
+    const empty: LocationReferenceSnapshot = { locationId, seats: [] };
+    const projectPath = this.projects.getCurrentProject()?.path;
+    if (!projectPath) return empty;
+
+    return this.serial(async () => {
+      if (projectPath !== this.projects.getCurrentProject()?.path) return empty;
       await this.load(projectPath, true);
 
       const houses = this.subject.value;
+      const seats: HouseSeatRemoval[] = [];
       const affectedHouses = houses.filter(house => house.seatId === locationId);
 
       for (const house of affectedHouses) {
+        seats.push({
+          houseId: house.id,
+          houseName: house.name,
+          seatId: locationId,
+        });
         const updatedHouse = { ...house, seatId: undefined };
         await this.update(house.id, updatedHouse, house.raw);
       }
+
+      return { locationId, seats };
+    });
+  }
+
+  /**
+   * Restore House seatId values cleared by clearLocationReferences.
+   * Skips houses that no longer exist.
+   */
+  async restoreLocationReferences(snapshot: LocationReferenceSnapshot): Promise<ReferenceRestoreResult> {
+    const result: ReferenceRestoreResult = { restored: 0, skipped: [] };
+    const projectPath = this.projects.getCurrentProject()?.path;
+    if (!projectPath || !snapshot?.seats?.length) return result;
+
+    return this.serial(async () => {
+      if (projectPath !== this.projects.getCurrentProject()?.path) return result;
+      await this.load(projectPath, true);
+
+      for (const seat of snapshot.seats) {
+        const house = this.getById(seat.houseId);
+        if (!house) {
+          result.skipped.push({
+            kind: 'house',
+            id: seat.houseId,
+            label: seat.houseName || seat.houseId,
+          });
+          continue;
+        }
+        await this.update(house.id, { ...house, seatId: seat.seatId }, house.raw);
+        result.restored += 1;
+      }
+      return result;
     });
   }
 }

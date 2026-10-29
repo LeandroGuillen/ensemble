@@ -20,22 +20,28 @@ describe('ReferenceCleanupService', () => {
     const houseSpy = jasmine.createSpyObj('HouseService', [
       'countCharacterReferences',
       'removeCharacterFromHouses',
-      'clearLocationReferences'
+      'restoreCharacterToHouses',
+      'clearLocationReferences',
+      'restoreLocationReferences',
     ]);
     const pinboardSpy = jasmine.createSpyObj('PinboardService', [
       'countCharacterReferences',
-      'removeCharacterConnections'
+      'removeCharacterConnections',
+      'restoreCharacterConnections',
     ]);
     const plotBoardSpy = jasmine.createSpyObj('PlotBoardService', [
       'countCharacterReferences',
-      'removeCharacterFromThreads'
+      'removeCharacterFromThreads',
+      'restoreCharacterToThreads',
     ]);
     const castSpy = jasmine.createSpyObj('CastService', [
       'countCharacterInCasts',
-      'removeCharacterFromCasts'
+      'removeCharacterFromCasts',
+      'restoreCharacterToCasts',
     ]);
     const metadataSpy = jasmine.createSpyObj('MetadataService', [
-      'removeCharacterFromBookPovs'
+      'removeCharacterFromBookPovs',
+      'restoreCharacterToBookPovs',
     ]);
     const loggingSpy = jasmine.createSpyObj('LoggingService', ['error', 'warn']);
 
@@ -98,13 +104,24 @@ describe('ReferenceCleanupService', () => {
     });
   });
 
+  const emptySnap = (characterId: string) => ({
+    characterId,
+    removals: [] as never[],
+  });
+
   describe('removeCharacterReferences', () => {
     beforeEach(() => {
-      metadataService.removeCharacterFromBookPovs.and.returnValue(Promise.resolve());
-      castService.removeCharacterFromCasts.and.returnValue(Promise.resolve());
-      houseService.removeCharacterFromHouses.and.returnValue(Promise.resolve());
-      pinboardService.removeCharacterConnections.and.returnValue(Promise.resolve());
-      plotBoardService.removeCharacterFromThreads.and.returnValue(Promise.resolve());
+      metadataService.removeCharacterFromBookPovs.and.returnValue(
+        Promise.resolve(emptySnap('char-1'))
+      );
+      castService.removeCharacterFromCasts.and.returnValue(Promise.resolve(emptySnap('char-1')));
+      houseService.removeCharacterFromHouses.and.returnValue(Promise.resolve(emptySnap('char-1')));
+      pinboardService.removeCharacterConnections.and.returnValue(
+        Promise.resolve(emptySnap('char-1'))
+      );
+      plotBoardService.removeCharacterFromThreads.and.returnValue(
+        Promise.resolve(emptySnap('char-1'))
+      );
     });
 
     it('should remove character from book PoVs', async () => {
@@ -168,7 +185,9 @@ describe('ReferenceCleanupService', () => {
 
   describe('clearLocationReferences', () => {
     it('should clear house references to location', async () => {
-      houseService.clearLocationReferences.and.returnValue(Promise.resolve());
+      houseService.clearLocationReferences.and.returnValue(
+        Promise.resolve({ locationId: 'loc-1', seats: [] })
+      );
 
       await service.clearLocationReferences('loc-1');
 
@@ -178,15 +197,18 @@ describe('ReferenceCleanupService', () => {
     it('should handle errors gracefully', async () => {
       houseService.clearLocationReferences.and.returnValue(Promise.reject(new Error('House error')));
 
-      await service.clearLocationReferences('loc-1');
+      const result = await service.clearLocationReferences('loc-1');
 
       expect(loggingService.error).toHaveBeenCalled();
+      expect(result.seats).toEqual([]);
     });
   });
 
   describe('Plot thread cleanup', () => {
     beforeEach(() => {
-      plotBoardService.removeCharacterFromThreads.and.returnValue(Promise.resolve());
+      plotBoardService.removeCharacterFromThreads.and.returnValue(
+        Promise.resolve(emptySnap('char-1'))
+      );
       plotBoardService.countCharacterReferences.and.returnValue(Promise.resolve([
         { id: 'board1.plotboard.md', name: 'board1' }
       ]));
@@ -208,10 +230,14 @@ describe('ReferenceCleanupService', () => {
 
     it('should continue cleanup if plot thread removal fails', async () => {
       plotBoardService.removeCharacterFromThreads.and.returnValue(Promise.reject(new Error('Plot error')));
-      metadataService.removeCharacterFromBookPovs.and.returnValue(Promise.resolve());
-      castService.removeCharacterFromCasts.and.returnValue(Promise.resolve());
-      houseService.removeCharacterFromHouses.and.returnValue(Promise.resolve());
-      pinboardService.removeCharacterConnections.and.returnValue(Promise.resolve());
+      metadataService.removeCharacterFromBookPovs.and.returnValue(
+        Promise.resolve(emptySnap('char-1'))
+      );
+      castService.removeCharacterFromCasts.and.returnValue(Promise.resolve(emptySnap('char-1')));
+      houseService.removeCharacterFromHouses.and.returnValue(Promise.resolve(emptySnap('char-1')));
+      pinboardService.removeCharacterConnections.and.returnValue(
+        Promise.resolve(emptySnap('char-1'))
+      );
 
       await service.removeCharacterReferences('char-1');
 

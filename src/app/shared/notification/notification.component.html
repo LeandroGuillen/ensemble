@@ -1,5 +1,5 @@
 <div class="notification-container" role="region" aria-live="polite" aria-label="Notifications">
-  @for (notification of notifications; track notification) {
+  @for (notification of notifications; track notification.id) {
     <div
       class="notification"
       [class.notification-success]="notification.type === 'success'"
@@ -11,6 +11,15 @@
       >
       <i [class]="getIconClass(notification.type)"></i>
       <span class="notification-message">{{ notification.message }}</span>
+      @if (notification.action) {
+        <button
+          type="button"
+          class="notification-action"
+          (click)="onActionClick(notification)"
+          >
+          {{ notification.action.label }}
+        </button>
+      }
       <button
         type="button"
         class="notification-close"
@@ -22,4 +31,3 @@
     </div>
   }
 </div>
-

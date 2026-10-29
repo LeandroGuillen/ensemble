@@ -1,11 +1,17 @@
 import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
 
+export interface NotificationAction {
+  label: string;
+  run: () => void | Promise<void>;
+}
+
 export interface Notification {
   id: string;
   type: 'success' | 'error' | 'warning' | 'info';
   message: string;
-  duration?: number; // Auto-dismiss after milliseconds (0 = no auto-dismiss)
+  duration?: number; // Auto-dismiss after milliseconds (0 = no auto-dismiss / sticky)
+  action?: NotificationAction;
 }
 
 @Injectable({
@@ -14,6 +20,10 @@ export interface Notification {
 export class NotificationService {
   private notificationsSubject = new Subject<Notification>();
   public notifications$ = this.notificationsSubject.asObservable();
+
+  private dismissSubject = new Subject<string | 'all'>();
+  public dismiss$ = this.dismissSubject.asObservable();
+
   private notificationId = 0;
 
   /**
@@ -29,7 +39,8 @@ export class NotificationService {
   }
 
   /**
-   * Show an error notification
+   * Show an error notification.
+   * Pass duration 0 for a sticky error (no auto-dismiss).
    */
   showError(message: string, duration = 5000): void {
     this.show({
@@ -65,10 +76,39 @@ export class NotificationService {
   }
 
   /**
+   * Show an Undo toast with an action button. Dismisses after durationMs.
+   * Returns the notification id so callers can dismiss it explicitly.
+   */
+  showUndo(
+    message: string,
+    onUndo: () => void | Promise<void>,
+    durationMs: number
+  ): string {
+    const id = `notification-${++this.notificationId}`;
+    this.show({
+      id,
+      type: 'info',
+      message,
+      duration: durationMs,
+      action: { label: 'Undo', run: onUndo },
+    });
+    return id;
+  }
+
+  /** Dismiss one notification by id. */
+  dismiss(id: string): void {
+    this.dismissSubject.next(id);
+  }
+
+  /** Dismiss every visible notification. */
+  dismissAll(): void {
+    this.dismissSubject.next('all');
+  }
+
+  /**
    * Show a notification
    */
   private show(notification: Notification): void {
     this.notificationsSubject.next(notification);
   }
 }
-

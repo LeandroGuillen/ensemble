@@ -1,7 +1,13 @@
 import { reconcileCastPinboard } from '../utils/cast-pinboard.utils';
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { Cast } from '../interfaces/project.interface';
+import { Cast, Pinboard } from '../interfaces/project.interface';
+import {
+  CastDeleteSnapshot,
+  CastMembershipRemoval,
+  CastMembershipSnapshot,
+  ReferenceRestoreResult,
+} from '../interfaces/reference-snapshot.interface';
 import { asciiSlugify } from '../utils/slug.utils';
 import { generateId } from '../utils/id.utils';
 import { pathBasename, pathJoin } from '../utils/path.utils';
@@ -807,15 +813,111 @@ export class CastService {
       .map(cast => ({ id: cast.id, name: cast.name }));
   }
 
-  async removeCharacterFromCasts(characterId: string): Promise<void> {
+  async removeCharacterFromCasts(characterId: string): Promise<CastMembershipSnapshot> {
+    const empty: CastMembershipSnapshot = { characterId, removals: [] };
     const project = this.projectService.getCurrentProject();
-    if (!project) return;
+    if (!project) return empty;
     await this.loadCasts(project.path);
+    const removals: CastMembershipRemoval[] = [];
     for (const cast of this.castsSubject.value) {
-      if (cast.characterIds.includes(characterId)) {
-        await this.updateCast(cast.id, { characterIds: cast.characterIds.filter(id => id !== characterId) });
+      const index = cast.characterIds.indexOf(characterId);
+      if (index !== -1) {
+        removals.push({
+          castId: cast.id,
+          castName: cast.name,
+          index,
+        });
+        await this.updateCast(cast.id, {
+          characterIds: cast.characterIds.filter((id) => id !== characterId),
+        });
       }
     }
+    return { characterId, removals };
+  }
+
+  /**
+   * Re-insert a character into casts at the snapshotted indexes.
+   * Skips casts that no longer exist.
+   */
+  async restoreCharacterToCasts(snapshot: CastMembershipSnapshot): Promise<ReferenceRestoreResult> {
+    const result: ReferenceRestoreResult = { restored: 0, skipped: [] };
+    const project = this.projectService.getCurrentProject();
+    if (!project || !snapshot?.removals?.length) return result;
+    await this.loadCasts(project.path);
+
+    for (const removal of snapshot.removals) {
+      const cast = this.getCastById(removal.castId);
+      if (!cast) {
+        result.skipped.push({
+          kind: 'cast',
+          id: removal.castId,
+          label: removal.castName || removal.castId,
+        });
+        continue;
+      }
+      if (cast.characterIds.includes(snapshot.characterId)) {
+        result.restored += 1;
+        continue;
+      }
+      const next = [...cast.characterIds];
+      const insertAt = Math.min(Math.max(0, removal.index), next.length);
+      next.splice(insertAt, 0, snapshot.characterId);
+      await this.updateCast(cast.id, { characterIds: next });
+      result.restored += 1;
+    }
+    return result;
+  }
+
+  /**
+   * Capture a cast + linked pinboard for Part 3 Undo of cast delete.
+   * Does not delete anything. Unused by delete flows in Part 2.
+   */
+  captureCastDeleteSnapshot(castId: string): CastDeleteSnapshot | null {
+    const cast = this.getCastById(castId);
+    if (!cast) return null;
+    let pinboard: Pinboard | undefined;
+    if (cast.pinboardId) {
+      pinboard = this.projectService.getPinboards().find((board) => board.id === cast.pinboardId);
+      if (pinboard) {
+        pinboard = structuredClone(pinboard);
+      }
+    }
+    return {
+      castEntry: {
+        id: cast.id,
+        name: cast.name,
+        characterIds: [...cast.characterIds],
+        pinboardId: cast.pinboardId,
+      },
+      folderPath: cast.folderPath,
+      pinboard,
+    };
+  }
+
+  /**
+   * Restore a cast index entry and its linked pinboard from a delete snapshot.
+   * Folder contents are assumed already restored on disk by trash restore.
+   * Unused by delete flows in Part 2.
+   */
+  async restoreCastDelete(snapshot: CastDeleteSnapshot): Promise<ReferenceRestoreResult> {
+    const result: ReferenceRestoreResult = { restored: 0, skipped: [] };
+    const project = this.projectService.getCurrentProject();
+    if (!project || !snapshot?.castEntry) return result;
+
+    await this.upsertCastsFileEntry({
+      id: snapshot.castEntry.id,
+      name: snapshot.castEntry.name,
+      characterIds: [...snapshot.castEntry.characterIds],
+      pinboardId: snapshot.castEntry.pinboardId,
+    });
+
+    if (snapshot.pinboard) {
+      await this.projectService.restorePinboard(structuredClone(snapshot.pinboard));
+    }
+
+    await this.forceReloadCasts();
+    result.restored += 1;
+    return result;
   }
 
   /**

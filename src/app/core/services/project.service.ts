@@ -962,6 +962,23 @@ export class ProjectService {
   }
 
   /**
+   * Re-insert a previously snapshotted pinboard (Part 2/3 cast-delete Undo).
+   * If a pinboard with the same id already exists, its data is replaced.
+   */
+  async restorePinboard(pinboard: Pinboard): Promise<void> {
+    await this.mutateMetadata((metadata) => {
+      const pinboards = [...(metadata.pinboards || [])];
+      const index = pinboards.findIndex((board) => board.id === pinboard.id);
+      if (index === -1) {
+        pinboards.push(pinboard);
+      } else {
+        pinboards[index] = pinboard;
+      }
+      metadata.pinboards = pinboards;
+    });
+  }
+
+  /**
    * Gets pinboard data from the current active pinboard
    */
   getPinboard(): { nodes: PinboardPin[]; edges: PinboardConnection[] } {

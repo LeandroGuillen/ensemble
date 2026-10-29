@@ -2,6 +2,11 @@ import { Injectable } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { PinboardConnection, PinboardPin, PinboardData } from '../interfaces/pinboard.interface';
+import {
+  PinboardCharacterRemoval,
+  PinboardCharacterSnapshot,
+  ReferenceRestoreResult,
+} from '../interfaces/reference-snapshot.interface';
 import { LegacyPinboardConnectionFields } from '../interfaces/legacy.interface';
 import { generateId } from '../utils/id.utils';
 import { DEFAULT_CONNECTION_COLOR, DEFAULT_CONNECTION_LABEL_COLOR } from '../constants/project.constants';
@@ -265,28 +270,51 @@ export class PinboardService {
   }
 
   /**
-   * Removes all connections for a specific character from ALL pinboards (for referential integrity)
+   * Removes all connections for a specific character from ALL pinboards (for referential integrity).
+   * Returns removed nodes/edges for Undo restore.
    */
-  async removeCharacterConnections(characterId: string): Promise<void> {
+  async removeCharacterConnections(characterId: string): Promise<PinboardCharacterSnapshot> {
+    const empty: PinboardCharacterSnapshot = { characterId, removals: [] };
     const project = this.projectService.getCurrentProject();
-    if (!project?.metadata?.pinboards) return;
+    if (!project?.metadata?.pinboards) return empty;
 
-    // Clean up all pinboards in the project
+    const removals: PinboardCharacterRemoval[] = [];
+
     for (const pinboard of project.metadata.pinboards) {
       if (!pinboard.nodes || !pinboard.edges) continue;
 
-      const hadNode = pinboard.nodes.some(node => node.id === characterId);
-      const hadEdge = pinboard.edges.some(edge => 
-        edge.source === characterId || edge.target === characterId
-      );
+      const nodeIndexes: number[] = [];
+      const removedNodes = pinboard.nodes.filter((node, index) => {
+        if (node.id === characterId) {
+          nodeIndexes.push(index);
+          return true;
+        }
+        return false;
+      });
+      const edgeIndexes: number[] = [];
+      const removedEdges = pinboard.edges.filter((edge, index) => {
+        if (edge.source === characterId || edge.target === characterId) {
+          edgeIndexes.push(index);
+          return true;
+        }
+        return false;
+      });
 
-      if (hadNode || hadEdge) {
+      if (removedNodes.length > 0 || removedEdges.length > 0) {
+        removals.push({
+          pinboardId: pinboard.id,
+          pinboardName: pinboard.name,
+          nodes: structuredClone(removedNodes),
+          edges: structuredClone(removedEdges),
+          nodeIndexes: [...nodeIndexes],
+          edgeIndexes: [...edgeIndexes],
+        });
+
         const cleanedNodes = pinboard.nodes.filter(node => node.id !== characterId);
         const cleanedEdges = pinboard.edges.filter(edge =>
           edge.source !== characterId && edge.target !== characterId
         );
-        
-        // Update this specific pinboard
+
         await this.projectService.updatePinboardById(pinboard.id, {
           nodes: cleanedNodes,
           edges: cleanedEdges
@@ -294,20 +322,87 @@ export class PinboardService {
       }
     }
 
-    // Update current pinboard view if it's affected
     const currentData = this.pinboardDataSubject.value;
     const updatedNodes = currentData.nodes.filter(node => node.id !== characterId);
     const updatedEdges = currentData.edges.filter(edge =>
       edge.source !== characterId && edge.target !== characterId
     );
 
-    if (updatedNodes.length !== currentData.nodes.length || 
+    if (updatedNodes.length !== currentData.nodes.length ||
         updatedEdges.length !== currentData.edges.length) {
       this.pinboardDataSubject.next({
         nodes: updatedNodes,
         edges: updatedEdges
       });
     }
+
+    return { characterId, removals };
+  }
+
+  /**
+   * Re-add snapshotted pinboard nodes/edges for a character.
+   * Skips pinboards that no longer exist.
+   */
+  async restoreCharacterConnections(snapshot: PinboardCharacterSnapshot): Promise<ReferenceRestoreResult> {
+    const result: ReferenceRestoreResult = { restored: 0, skipped: [] };
+    const project = this.projectService.getCurrentProject();
+    if (!project?.metadata?.pinboards || !snapshot?.removals?.length) {
+      return result;
+    }
+
+    for (const removal of snapshot.removals) {
+      const pinboard = project.metadata.pinboards.find((board) => board.id === removal.pinboardId);
+      if (!pinboard) {
+        result.skipped.push({
+          kind: 'pinboard',
+          id: removal.pinboardId,
+          label: removal.pinboardName || removal.pinboardId,
+        });
+        continue;
+      }
+
+      const nodes = [...(pinboard.nodes || [])];
+      const edges = [...(pinboard.edges || [])];
+      removal.nodes.forEach((node, i) => {
+        if (nodes.some((existing) => existing.id === node.id)) {
+          return;
+        }
+        const preferred = removal.nodeIndexes?.[i];
+        const insertAt =
+          preferred === undefined
+            ? nodes.length
+            : Math.min(Math.max(0, preferred), nodes.length);
+        nodes.splice(insertAt, 0, structuredClone(node));
+      });
+      removal.edges.forEach((edge, i) => {
+        if (edges.some((existing) => existing.id === edge.id)) {
+          return;
+        }
+        const preferred = removal.edgeIndexes?.[i];
+        const insertAt =
+          preferred === undefined
+            ? edges.length
+            : Math.min(Math.max(0, preferred), edges.length);
+        edges.splice(insertAt, 0, structuredClone(edge));
+      });
+
+      await this.projectService.updatePinboardById(pinboard.id, { nodes, edges });
+      result.restored += 1;
+    }
+
+    // Refresh current view from project metadata if the active board was restored.
+    const currentId = this.currentPinboardIdSubject.value;
+    if (currentId) {
+      const current = this.projectService.getPinboards().find((board) => board.id === currentId);
+      if (current) {
+        this.pinboardDataSubject.next({
+          nodes: [...(current.nodes || [])],
+          edges: [...(current.edges || [])],
+        });
+      }
+    }
+
+    return result;
   }
 
   /**
