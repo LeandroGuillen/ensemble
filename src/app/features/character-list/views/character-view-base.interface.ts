@@ -4,7 +4,10 @@ export interface CharacterViewData {
   characters: Character[];
   categories: Category[];
   tags: Tag[];
-  selectedCharacterId?: string | null;
+  /** Flat keyboard-nav index of the highlighted occurrence (-1 = none). */
+  selectedNavIndex?: number;
+  /** Global nav-index offset for the first card in this view instance. */
+  navIndexOffset?: number;
   selectedCharacterIds: string[];
   thumbnailDataUrls: Map<string, string>;
 }

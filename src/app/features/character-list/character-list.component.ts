@@ -408,13 +408,51 @@ export class CharacterListComponent implements OnInit {
     return this.filteredCharacters;
   }
 
-  /** Id of the keyboard-highlighted character, for views that compare by id. */
+  /**
+   * Id of the keyboard-highlighted character (for Enter / tests).
+   * Views must NOT use this for .selected — a character in two Tag/Cast/Book
+   * groups would highlight every copy; use selectedNavIndex + navIndexOffset.
+   */
   get selectedCharacterId(): string | null {
     const list = this.getNavigationCharacters();
     if (this.selectedCharacterIndex < 0 || this.selectedCharacterIndex >= list.length) {
       return null;
     }
     return list[this.selectedCharacterIndex]?.id ?? null;
+  }
+
+  /** Sum of characters in groups before `groupIndex` for the current groupBy mode. */
+  getGroupNavOffset(groupIndex: number): number {
+    const groups = this.getActiveNavigationGroups();
+    let offset = 0;
+    for (let i = 0; i < groupIndex && i < groups.length; i++) {
+      offset += groups[i].characters.length;
+    }
+    return offset;
+  }
+
+  /** True when the card at navIndexOffset+localIndex is the single keyboard highlight. */
+  isNavOccurrenceHighlighted(navIndexOffset: number, localIndex: number): boolean {
+    return (
+      this.selectedCharacterIndex >= 0 &&
+      this.selectedCharacterIndex === navIndexOffset + localIndex
+    );
+  }
+
+  private getActiveNavigationGroups(): Array<{ characters: Character[] }> {
+    if (this.groupBy === 'category') {
+      return this.groupedCharacters;
+    }
+    if (this.groupBy === 'tag') {
+      return this.groupedByTag;
+    }
+    if (this.groupBy === 'cast') {
+      return this.groupedByCast;
+    }
+    if (this.groupBy === 'book') {
+      return this.groupedByBook;
+    }
+    return [{ characters: this.filteredCharacters }];
   }
 
   @HostListener('document:keydown', ['$event'])
@@ -498,13 +536,13 @@ export class CharacterListComponent implements OnInit {
   }
 
   private scrollToSelectedCharacter(): void {
-    const id = this.selectedCharacterId;
-    if (!id) return;
+    if (this.selectedCharacterIndex < 0) return;
 
-    // Use setTimeout to ensure DOM is updated
+    // Use setTimeout to ensure DOM is updated; target the occurrence, not first id match.
+    const navIndex = this.selectedCharacterIndex;
     setTimeout(() => {
       const selectedElement = document.querySelector(
-        `.character-item[data-character-id="${CSS.escape(id)}"]`
+        `.character-item[data-nav-index="${navIndex}"]`
       ) as HTMLElement | null;
 
       if (selectedElement) {

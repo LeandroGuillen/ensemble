@@ -19,7 +19,10 @@ export class CharacterListViewComponent {
   @Input() categories: Category[] = [];
   @Input() tags: Tag[] = [];
   @Input() columns: 1 | 2 = 2;
-  @Input() selectedCharacterId: string | null = null;
+  /** Flat keyboard-nav index of the highlighted occurrence (-1 = none). */
+  @Input() selectedNavIndex = -1;
+  /** Global nav-index offset for the first card in this view instance. */
+  @Input() navIndexOffset = 0;
   @Input() dndEnabled = false;
   @Input() selectedCharacterIds: string[] = [];
   @Input() thumbnailDataUrls: Map<string, string> = new Map();
@@ -37,6 +40,14 @@ export class CharacterListViewComponent {
   private dragInProgress = false;
 
   constructor(public metadataHelper: MetadataHelperService) {}
+
+  /** Highlight by occurrence in the flattened nav list, not by character id. */
+  isOccurrenceSelected(localIndex: number): boolean {
+    return (
+      this.selectedNavIndex >= 0 &&
+      this.selectedNavIndex === this.navIndexOffset + localIndex
+    );
+  }
 
   getCharacterLink(character: Character): string[] {
     return ['/character', encodeURIComponent(character.id)];

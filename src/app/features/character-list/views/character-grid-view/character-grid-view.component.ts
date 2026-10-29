@@ -17,7 +17,10 @@ export class CharacterGridViewComponent {
   @Input() characters: Character[] = [];
   @Input() categories: Category[] = [];
   @Input() tags: Tag[] = [];
-  @Input() selectedCharacterId: string | null = null;
+  /** Flat keyboard-nav index of the highlighted occurrence (-1 = none). */
+  @Input() selectedNavIndex = -1;
+  /** Global nav-index offset for the first card in this view instance. */
+  @Input() navIndexOffset = 0;
   @Input() dndEnabled = false;
   @Input() thumbnailDataUrls: Map<string, string> = new Map();
   /** When set, category labels use the book-specific override if present. */
@@ -38,6 +41,14 @@ export class CharacterGridViewComponent {
   private dragInProgress = false;
 
   constructor(public metadataHelper: MetadataHelperService) {}
+
+  /** Highlight by occurrence in the flattened nav list, not by character id. */
+  isOccurrenceSelected(localIndex: number): boolean {
+    return (
+      this.selectedNavIndex >= 0 &&
+      this.selectedNavIndex === this.navIndexOffset + localIndex
+    );
+  }
 
   getDisplayCategoryId(character: Character): string {
     return resolveEffectiveCategory(character, this.categoryContextBookId);

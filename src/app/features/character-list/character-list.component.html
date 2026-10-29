@@ -403,7 +403,7 @@
               <div
                 class="grouped-view"
                 >
-                @for (group of getGroupedCharacters(); track group) {
+                @for (group of getGroupedCharacters(); track group; let gi = $index) {
                   <div
                     class="category-group"
                     >
@@ -448,7 +448,8 @@
                           [categoryContextBookId]="selectedBook"
                           [tags]="tags"
                           [dndEnabled]="isCategoryDragDropEnabled()"
-                          [selectedCharacterId]="selectedCharacterId"
+                          [selectedNavIndex]="selectedCharacterIndex"
+                          [navIndexOffset]="getGroupNavOffset(gi)"
                           [thumbnailDataUrls]="thumbnailDataUrls"
                           [povCharacterIds]="povCharacterIdSet"
                           [povBadgeColor]="povBadgeColor"
@@ -467,7 +468,8 @@
                           [tags]="tags"
                           [dndEnabled]="isCategoryDragDropEnabled()"
                           [columns]="columns"
-                          [selectedCharacterId]="selectedCharacterId"
+                          [selectedNavIndex]="selectedCharacterIndex"
+                          [navIndexOffset]="getGroupNavOffset(gi)"
                           [thumbnailDataUrls]="thumbnailDataUrls"
                           [povCharacterIds]="povCharacterIdSet"
                           [povBadgeColor]="povBadgeColor"
@@ -488,7 +490,8 @@
                           [tags]="tags"
                           [dndEnabled]="isCategoryDragDropEnabled()"
                           [columns]="columns"
-                          [selectedCharacterId]="selectedCharacterId"
+                          [selectedNavIndex]="selectedCharacterIndex"
+                          [navIndexOffset]="getGroupNavOffset(gi)"
                           [thumbnailDataUrls]="thumbnailDataUrls"
                           [povCharacterIds]="povCharacterIdSet"
                           [povBadgeColor]="povBadgeColor"
@@ -504,7 +507,8 @@
                       @if (viewMode === 'gallery') {
                         <app-character-gallery-view
                           [characters]="group.characters"
-                          [selectedCharacterId]="selectedCharacterId"
+                          [selectedNavIndex]="selectedCharacterIndex"
+                          [navIndexOffset]="getGroupNavOffset(gi)"
                           [tags]="tags"
                           [dndEnabled]="isCategoryDragDropEnabled()"
                           [thumbnailDataUrls]="thumbnailDataUrls"
@@ -526,7 +530,7 @@
               <div
                 class="grouped-view"
                 >
-                @for (group of getGroupedByTag(); track group) {
+                @for (group of getGroupedByTag(); track group; let gi = $index) {
                   <div class="category-group">
                     <div
                       class="category-tab"
@@ -548,7 +552,8 @@
                           [categories]="categories"
                           [categoryContextBookId]="selectedBook"
                           [tags]="tags"
-                          [selectedCharacterId]="selectedCharacterId"
+                          [selectedNavIndex]="selectedCharacterIndex"
+                          [navIndexOffset]="getGroupNavOffset(gi)"
                           [thumbnailDataUrls]="thumbnailDataUrls"
                           [povCharacterIds]="povCharacterIdSet"
                           [povBadgeColor]="povBadgeColor"
@@ -564,7 +569,8 @@
                           [categoryContextBookId]="selectedBook"
                           [tags]="tags"
                           [columns]="columns"
-                          [selectedCharacterId]="selectedCharacterId"
+                          [selectedNavIndex]="selectedCharacterIndex"
+                          [navIndexOffset]="getGroupNavOffset(gi)"
                           [thumbnailDataUrls]="thumbnailDataUrls"
                           [povCharacterIds]="povCharacterIdSet"
                           [povBadgeColor]="povBadgeColor"
@@ -582,7 +588,8 @@
                           [categoryContextBookId]="selectedBook"
                           [tags]="tags"
                           [columns]="columns"
-                          [selectedCharacterId]="selectedCharacterId"
+                          [selectedNavIndex]="selectedCharacterIndex"
+                          [navIndexOffset]="getGroupNavOffset(gi)"
                           [thumbnailDataUrls]="thumbnailDataUrls"
                           [povCharacterIds]="povCharacterIdSet"
                           [povBadgeColor]="povBadgeColor"
@@ -596,7 +603,8 @@
                       @if (viewMode === 'gallery') {
                         <app-character-gallery-view
                           [characters]="group.characters"
-                          [selectedCharacterId]="selectedCharacterId"
+                          [selectedNavIndex]="selectedCharacterIndex"
+                          [navIndexOffset]="getGroupNavOffset(gi)"
                           [tags]="tags"
                           [thumbnailDataUrls]="thumbnailDataUrls"
                           [povCharacterIds]="povCharacterIdSet"
@@ -613,7 +621,7 @@
             <!-- Grouped View by Cast -->
             @if (filteredCharacters.length > 0 && groupBy === 'cast') {
               <div class="grouped-view">
-                @for (group of getGroupedByCast(); track group.castId) {
+                @for (group of getGroupedByCast(); track group.castId; let gi = $index) {
                   <div class="category-group">
                     <div
                       class="category-tab"
@@ -634,7 +642,8 @@
                           [categories]="categories"
                           [categoryContextBookId]="selectedBook"
                           [tags]="tags"
-                          [selectedCharacterId]="selectedCharacterId"
+                          [selectedNavIndex]="selectedCharacterIndex"
+                          [navIndexOffset]="getGroupNavOffset(gi)"
                           [thumbnailDataUrls]="thumbnailDataUrls"
                           [povCharacterIds]="povCharacterIdSet"
                           [povBadgeColor]="povBadgeColor"
@@ -649,7 +658,8 @@
                           [categoryContextBookId]="selectedBook"
                           [tags]="tags"
                           [columns]="columns"
-                          [selectedCharacterId]="selectedCharacterId"
+                          [selectedNavIndex]="selectedCharacterIndex"
+                          [navIndexOffset]="getGroupNavOffset(gi)"
                           [thumbnailDataUrls]="thumbnailDataUrls"
                           [povCharacterIds]="povCharacterIdSet"
                           [povBadgeColor]="povBadgeColor"
@@ -664,7 +674,8 @@
                           [categoryContextBookId]="selectedBook"
                           [tags]="tags"
                           [columns]="columns"
-                          [selectedCharacterId]="selectedCharacterId"
+                          [selectedNavIndex]="selectedCharacterIndex"
+                          [navIndexOffset]="getGroupNavOffset(gi)"
                           [thumbnailDataUrls]="thumbnailDataUrls"
                           [povCharacterIds]="povCharacterIdSet"
                           [povBadgeColor]="povBadgeColor"
@@ -675,7 +686,8 @@
                       @if (viewMode === 'gallery') {
                         <app-character-gallery-view
                           [characters]="group.characters"
-                          [selectedCharacterId]="selectedCharacterId"
+                          [selectedNavIndex]="selectedCharacterIndex"
+                          [navIndexOffset]="getGroupNavOffset(gi)"
                           [tags]="tags"
                           [thumbnailDataUrls]="thumbnailDataUrls"
                           [povCharacterIds]="povCharacterIdSet"
@@ -692,7 +704,7 @@
             <!-- Grouped View by Book -->
             @if (filteredCharacters.length > 0 && groupBy === 'book') {
               <div class="grouped-view">
-                @for (group of getGroupedByBook(); track group.bookId) {
+                @for (group of getGroupedByBook(); track group.bookId; let gi = $index) {
                   <div class="category-group">
                     <div
                       class="category-tab"
@@ -713,7 +725,8 @@
                           [categories]="categories"
                           [categoryContextBookId]="selectedBook"
                           [tags]="tags"
-                          [selectedCharacterId]="selectedCharacterId"
+                          [selectedNavIndex]="selectedCharacterIndex"
+                          [navIndexOffset]="getGroupNavOffset(gi)"
                           [thumbnailDataUrls]="thumbnailDataUrls"
                           [povCharacterIds]="povCharacterIdSet"
                           [povBadgeColor]="povBadgeColor"
@@ -728,7 +741,8 @@
                           [categoryContextBookId]="selectedBook"
                           [tags]="tags"
                           [columns]="columns"
-                          [selectedCharacterId]="selectedCharacterId"
+                          [selectedNavIndex]="selectedCharacterIndex"
+                          [navIndexOffset]="getGroupNavOffset(gi)"
                           [thumbnailDataUrls]="thumbnailDataUrls"
                           [povCharacterIds]="povCharacterIdSet"
                           [povBadgeColor]="povBadgeColor"
@@ -743,7 +757,8 @@
                           [categoryContextBookId]="selectedBook"
                           [tags]="tags"
                           [columns]="columns"
-                          [selectedCharacterId]="selectedCharacterId"
+                          [selectedNavIndex]="selectedCharacterIndex"
+                          [navIndexOffset]="getGroupNavOffset(gi)"
                           [thumbnailDataUrls]="thumbnailDataUrls"
                           [povCharacterIds]="povCharacterIdSet"
                           [povBadgeColor]="povBadgeColor"
@@ -754,7 +769,8 @@
                       @if (viewMode === 'gallery') {
                         <app-character-gallery-view
                           [characters]="group.characters"
-                          [selectedCharacterId]="selectedCharacterId"
+                          [selectedNavIndex]="selectedCharacterIndex"
+                          [navIndexOffset]="getGroupNavOffset(gi)"
                           [tags]="tags"
                           [thumbnailDataUrls]="thumbnailDataUrls"
                           [povCharacterIds]="povCharacterIdSet"
@@ -785,7 +801,8 @@
                     [categories]="categories"
                     [categoryContextBookId]="selectedBook"
                     [tags]="tags"
-                    [selectedCharacterId]="selectedCharacterId"
+                    [selectedNavIndex]="selectedCharacterIndex"
+                    [navIndexOffset]="0"
                     [thumbnailDataUrls]="thumbnailDataUrls"
                     [povCharacterIds]="povCharacterIdSet"
                     [povBadgeColor]="povBadgeColor"
@@ -804,7 +821,8 @@
                     [categoryContextBookId]="selectedBook"
                     [tags]="tags"
                     [columns]="columns"
-                    [selectedCharacterId]="selectedCharacterId"
+                    [selectedNavIndex]="selectedCharacterIndex"
+                    [navIndexOffset]="0"
                     [thumbnailDataUrls]="thumbnailDataUrls"
                     [povCharacterIds]="povCharacterIdSet"
                     [povBadgeColor]="povBadgeColor"
@@ -823,7 +841,8 @@
                     [categoryContextBookId]="selectedBook"
                     [tags]="tags"
                     [columns]="columns"
-                    [selectedCharacterId]="selectedCharacterId"
+                    [selectedNavIndex]="selectedCharacterIndex"
+                    [navIndexOffset]="0"
                     [thumbnailDataUrls]="thumbnailDataUrls"
                     [povCharacterIds]="povCharacterIdSet"
                     [povBadgeColor]="povBadgeColor"
@@ -837,7 +856,8 @@
                 @if (filteredCharacters.length > 0 && viewMode === 'gallery') {
                   <app-character-gallery-view
                     [characters]="filteredCharacters"
-                    [selectedCharacterId]="selectedCharacterId"
+                    [selectedNavIndex]="selectedCharacterIndex"
+                    [navIndexOffset]="0"
                     [dndEnabled]="!drawerMode"
                     [tags]="tags"
                     [thumbnailDataUrls]="thumbnailDataUrls"
