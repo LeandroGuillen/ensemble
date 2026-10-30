@@ -20,7 +20,7 @@ import {
   Validators,
 } from "@angular/forms";
 import { ActivatedRoute, Router, RouterLink } from "@angular/router";
-import { Location } from "@angular/common";
+import { DatePipe, Location } from "@angular/common";
 import { debounceTime } from "rxjs/operators";
 import { combineLatest, merge } from "rxjs";
 import { ResolvedWikiLink } from '../../core/utils/wiki-links.utils';
@@ -78,6 +78,9 @@ import { ImagePickerDialogComponent } from "../../shared/image-picker-dialog/ima
 import { CharacterPromptsEditorComponent } from "./components/character-prompts-editor/character-prompts-editor.component";
 import { GeneratePortraitDialogComponent } from "./components/generate-portrait-dialog/generate-portrait-dialog.component";
 
+/** Where a character lives; changed from the infobox and applied on save. */
+type CharacterCollection = 'characters' | 'lore' | 'draft';
+
 @Component({
     selector: "app-character-detail",
     imports: [
@@ -92,6 +95,7 @@ import { GeneratePortraitDialogComponent } from "./components/generate-portrait-
     GeneratePortraitDialogComponent,
     CharacterHousesComponent,
     MarkdownEditorComponent,
+    DatePipe,
 ],
     templateUrl: "./character-detail.component.html",
     styleUrls: ["./character-detail.component.scss"]
@@ -101,6 +105,7 @@ export class CharacterDetailComponent
 {
   @ViewChild("nameInput") nameInput?: ElementRef<HTMLInputElement>;
   @ViewChild("addBookMenu") addBookMenu?: ElementRef<HTMLDetailsElement>;
+  @ViewChild("portraitMenu") portraitMenu?: ElementRef<HTMLDetailsElement>;
 
   private readonly destroyRef = inject(DestroyRef);
 
@@ -127,6 +132,15 @@ export class CharacterDetailComponent
   isEditing = false;
   isDraftMode = false;
   isLoreMode = false;
+  /** Draft page: collection the draft moves to on save (null = stays a draft). */
+  pendingConvert: 'characters' | 'lore' | null = null;
+  /** Character/Lore page: move to drafts on save. */
+  pendingDraft = false;
+  readonly collectionOptions: { id: CharacterCollection; name: string; tooltip: string }[] = [
+    { id: 'characters', name: 'Character', tooltip: 'Characters (name and category required)' },
+    { id: 'lore', name: 'Lore', tooltip: 'Lore figures (only a name required)' },
+    { id: 'draft', name: 'Draft', tooltip: 'Drafts — kept out of casts, pinboards and PoV lists' },
+  ];
   isLoading = false;
   activeTab: 'basic' = 'basic';
   /** 'main' or bookId; which content tab is active */
@@ -396,11 +410,11 @@ export class CharacterDetailComponent
   };
 
   @HostListener('document:click', ['$event'])
-  closeAddBookMenuOnOutsideClick(event: MouseEvent): void {
-    const menu = this.addBookMenu?.nativeElement;
+  closeMenusOnOutsideClick(event: MouseEvent): void {
     const target = event.target;
-    if (menu?.open && target instanceof Node && !menu.contains(target)) {
-      menu.open = false;
+    if (!(target instanceof Node)) return;
+    for (const menu of [this.addBookMenu?.nativeElement, this.portraitMenu?.nativeElement]) {
+      if (menu?.open && !menu.contains(target)) menu.open = false;
     }
   }
 
@@ -414,6 +428,45 @@ export class CharacterDetailComponent
     this.ngZone.runOutsideAngular(() => {
       document.addEventListener('keydown', this.keydownListener);
     });
+  }
+
+  /** Collection selected in the infobox; applied on save. */
+  get collection(): CharacterCollection {
+    if (this.isDraftMode) return this.pendingConvert ?? 'draft';
+    if (this.pendingDraft) return 'draft';
+    return this.isLoreMode ? 'lore' : 'characters';
+  }
+
+  /** Collection the character is stored in now. */
+  get savedCollection(): CharacterCollection {
+    if (this.isDraftMode) return 'draft';
+    if (!this.isEditing) return this.route.snapshot.queryParamMap?.get('lore') === 'true' ? 'lore' : 'characters';
+    return this.character?.lore ? 'lore' : 'characters';
+  }
+
+  get collectionChangeHint(): string {
+    const target = this.collection;
+    if (target === this.savedCollection) return '';
+    if (!this.isEditing) return '';
+    if (target === 'draft') return 'Moves to drafts when you save. Drafts are left out of casts, pinboards and PoV lists.';
+    return `Moves to ${target === 'lore' ? 'Lore' : 'Characters'} when you save.`;
+  }
+
+  setCollection(collection: CharacterCollection): void {
+    if (collection === this.collection) return;
+    if (this.isDraftMode) {
+      this.pendingConvert = collection === 'draft' ? null : collection;
+      this.characterForm.markAsDirty();
+      this.cdr.markForCheck();
+      return;
+    }
+    this.pendingDraft = collection === 'draft';
+    if (collection === 'draft') {
+      this.characterForm.markAsDirty();
+      this.cdr.markForCheck();
+    } else {
+      this.setLoreMode(collection === 'lore');
+    }
   }
 
   setLoreMode(lore: boolean, markDirty = true): void {
@@ -493,6 +546,8 @@ export class CharacterDetailComponent
       if (refreshedCharacter) {
         this.character = refreshedCharacter;
         this.setLoreMode(!!refreshedCharacter.lore, false);
+        this.pendingDraft = false;
+        this.pendingConvert = null;
 
         if (id !== refreshedCharacter.id) {
           this.router.navigate(
@@ -746,6 +801,15 @@ export class CharacterDetailComponent
 
   async onSubmit(): Promise<void> {
     if (this.isSaving || this.savingBookPageId) return;
+    // A collection change picked in the infobox is applied by the save.
+    if (this.isDraftMode && this.pendingConvert) {
+      await this.convertDraft(this.pendingConvert);
+      return;
+    }
+    if (!this.isDraftMode && this.pendingDraft) {
+      await this.moveCharacterToDraft();
+      return;
+    }
     // Name/content use updateOn:'blur', so a value typed into the still-focused
     // field (e.g. submitting with Ctrl+Enter) is pending until blur. Blur it so
     // the pending value is applied before validating.
@@ -1629,27 +1693,54 @@ export class CharacterDetailComponent
     await this.electronService.showItemInFolder(this.character.filePath);
   }
 
+  /** Saves the form and moves the character to drafts (or creates it as a draft). */
   async moveCharacterToDraft(): Promise<void> {
-    if (!this.character || !this.isEditing || this.isDraftMode || this.isSaving) {
+    if (this.isDraftMode || this.isSaving || this.savingBookPageId) return;
+    const bookIds: string[] = this.characterForm.value.books || [];
+    const dirtyBookIds = bookIds.filter(bookId => this.isBookPageDirty(bookId));
+    if (this.externalMainConflict || dirtyBookIds.some(bookId => this.externalBookConflicts.has(bookId))) {
+      this.notificationService.showError('Reload external changes before saving.');
+      return;
+    }
+    if (!this.currentProject) {
+      this.notificationService.showError('No project loaded');
       return;
     }
 
-    const confirmed = await this.modalService.confirm(
-      `Move "${this.character.name || 'Unnamed character'}" back to drafts?\n\nIt will no longer appear in casts, pinboards, or book PoV lists.`
-    );
-
-    if (!confirmed) {
-      return;
+    const active = document.activeElement;
+    if (
+      active instanceof HTMLElement &&
+      (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)
+    ) {
+      active.blur();
     }
+    this.addAlias();
 
     this.isSaving = true;
     this.cdr.markForCheck();
     try {
-      const data = this.buildFormData();
-      await this.characterService.updateCharacter(this.character.id, data);
-      const draft = await this.characterService.moveToDraft(this.character.id);
-      this.notificationService.showSuccess(`"${draft.name || 'Unnamed draft'}" moved back to drafts`);
+      const data = { ...this.buildFormData(), lore: false };
+      let draft: Character;
+      if (this.isEditing && this.character) {
+        const updated = await this.characterService.updateCharacter(this.character.id, data);
+        if (!updated) throw new Error('Character not found');
+        this.character = updated;
+        for (const bookId of dirtyBookIds) {
+          const content = this.bookPageData[bookId].content;
+          await this.characterService.saveBookPage(updated.id, bookId, content);
+          this.bookPageOriginalContent[bookId] = content;
+        }
+        draft = await this.characterService.moveToDraft(updated.id);
+      } else {
+        draft = await this.characterService.createDraft(data);
+      }
+      this.pendingDraft = false;
       this.characterForm.markAsPristine();
+      this.notificationService.showSuccess(
+        this.isEditing
+          ? `"${draft.name || 'Unnamed draft'}" moved back to drafts`
+          : 'Draft created successfully'
+      );
       this.router.navigate(['/characters'], { queryParams: { drawer: 'true' }, replaceUrl: true });
     } catch (error) {
       this.notificationService.showError(

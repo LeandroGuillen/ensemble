@@ -9,7 +9,7 @@ describe('Character detail save', () => {
 
   beforeEach(() => {
     component = Object.create(CharacterDetailComponent.prototype);
-    characterService = jasmine.createSpyObj('CharacterService', ['updateCharacter', 'saveBookPage', 'promoteDraft', 'createDraft']);
+    characterService = jasmine.createSpyObj('CharacterService', ['updateCharacter', 'saveBookPage', 'promoteDraft', 'createDraft', 'moveToDraft']);
     notification = jasmine.createSpyObj('NotificationService', ['showSuccess', 'showError']);
     router = jasmine.createSpyObj('Router', ['navigate']);
     Object.assign(component, {
@@ -163,4 +163,40 @@ describe('Character detail save', () => {
     });
   });
 
+  it('moves a character to drafts only when saving, after writing book notes', async () => {
+    characterService.moveToDraft.and.resolveTo({ id: 'ada', name: 'Ada' });
+    component.setCollection('draft');
+    expect(component.collection).toBe('draft');
+    expect(characterService.moveToDraft).not.toHaveBeenCalled();
+
+    await component.onSubmit();
+
+    expect(characterService.saveBookPage).toHaveBeenCalledBefore(characterService.moveToDraft);
+    expect(characterService.moveToDraft).toHaveBeenCalledOnceWith('ada');
+    expect(router.navigate).toHaveBeenCalledOnceWith(['/characters'], {
+      queryParams: { drawer: 'true' }, replaceUrl: true,
+    });
+  });
+
+  it('converts a draft to the collection picked in the infobox when saving', async () => {
+    component.isDraftMode = true;
+    characterService.promoteDraft.and.resolveTo({ id: 'ada', name: 'Ada', lore: true });
+    component.setCollection('lore');
+    expect(characterService.promoteDraft).not.toHaveBeenCalled();
+
+    await component.onSubmit();
+
+    expect(characterService.promoteDraft).toHaveBeenCalledOnceWith('ada', 'lore');
+  });
+
+  it('saves a draft in place when its collection is set back to Draft', async () => {
+    component.isDraftMode = true;
+    component.setCollection('characters');
+    component.setCollection('draft');
+
+    await component.onSubmit();
+
+    expect(characterService.promoteDraft).not.toHaveBeenCalled();
+    expect(characterService.updateCharacter).toHaveBeenCalled();
+  });
 });

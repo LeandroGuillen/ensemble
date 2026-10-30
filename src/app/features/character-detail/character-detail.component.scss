@@ -148,7 +148,7 @@
   grid-template-areas:
     'thumb  head'
     'thumb  fields'
-    'scope  scope'
+    'thumb  danger'
     'body   body';
   column-gap: var(--spacing-xl);
   row-gap: var(--spacing-md);
@@ -167,16 +167,17 @@
   align-self: start;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: var(--spacing-lg);
   min-width: 0;
+
+  > .hero-field {
+    gap: var(--spacing-sm);
+  }
 }
 
-.hero-card > .infobox > .portrait-scope,
 .hero-card > .writing-workspace {
   margin-top: calc(var(--spacing-xl) - var(--spacing-md));
 }
-
-.infobox > .portrait-scope { grid-area: scope; }
 
 @container detail-shell (max-width: 640px) {
   .hero-card {
@@ -186,7 +187,7 @@
       'thumb'
       'head'
       'fields'
-      'scope'
+      'danger'
       'body';
   }
 }
@@ -223,22 +224,14 @@
     scrollbar-width: thin;
   }
 
-  .infobox .hero-thumb-column {
+  .infobox .hero-thumb-column,
+  .infobox .infobox-fields {
     align-self: stretch;
   }
 
   .infobox .hero-thumb,
-  .infobox .portrait-change-btn {
+  .infobox .portrait-actions {
     max-width: none;
-  }
-
-  .hero-card > .infobox > .portrait-scope {
-    margin-top: 0;
-    padding: var(--spacing-md) 0 0;
-    border: none;
-    border-top: 1px solid var(--color-border);
-    border-radius: 0;
-    background: transparent;
   }
 
   .article-head .form-control.form-control-hero {
@@ -1108,18 +1101,28 @@
 // Danger zone
 // ---------------------------------------------------------------------------
 
-.secondary-actions {
+// Delete sits at the bottom of the infobox, set apart from the fields above.
+.infobox-danger {
+  grid-area: danger;
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--spacing-sm);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spacing-xs);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border);
+
+  .danger-link {
+    padding-inline: 0;
+  }
 }
 
-.danger-link.portrait-link:hover:not(:disabled),
-.danger-link.collection-link:hover:not(:disabled) {
-  color: var(--color-accent-primary);
-  text-decoration-color: var(--color-accent-primary);
+.infobox-dates {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
 }
 
 .danger-link {
@@ -1195,33 +1198,166 @@
 }
 
 // The picture controls follow the active book and selected style.
-.portrait-change-btn {
+.portrait-actions {
+  display: flex;
+  gap: 0;
   width: 100%;
   max-width: 240px;
 }
 
-.portrait-scope {
+.portrait-change-btn {
+  flex: 1 1 auto;
+  min-width: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.portrait-more-menu {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+
+  &[open] .portrait-more-summary {
+    color: var(--color-text-primary);
+    background: var(--color-bg-tertiary);
+  }
+}
+
+.portrait-more-summary {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--spacing-md);
-  padding: var(--spacing-md);
-  border: 1px solid var(--color-border);
+  height: 100%;
+  padding-inline: var(--spacing-sm);
+  margin-left: -1px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  list-style: none;
+  cursor: pointer;
+
+  &::-webkit-details-marker { display: none; }
+
+  .portrait-more-chevron {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.portrait-more-popover {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + var(--spacing-xs));
+  right: 0;
+  min-width: 180px;
+  padding: var(--spacing-xs);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-light);
   border-radius: var(--radius-md);
-  background: var(--color-bg-secondary);
+  box-shadow: var(--shadow-lg);
+}
+
+.portrait-more-option {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  width: 100%;
+  padding: var(--spacing-sm);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 0.8125rem;
+  text-align: left;
+  cursor: pointer;
+
+  .ui-icon { color: var(--color-accent-primary); }
+
+  &:hover:not(:disabled),
+  &:focus-visible {
+    background: var(--color-bg-tertiary);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// Collection switch (Character / Lore / Draft); matches the category toggle.
+.collection-toggle {
+  display: flex;
+  gap: 2px;
+  width: 100%;
+  padding: 2px;
+  background-color: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.collection-option {
+  flex: 1 1 0;
+  padding: 4px 8px;
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--radius-sm) - 1px);
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover:not(.active):not(:disabled) {
+    color: var(--color-text-primary);
+    background-color: var(--color-bg-elevated);
+  }
+
+  &.active {
+    background-color: var(--color-accent-primary);
+    color: white;
+    font-weight: 600;
+  }
+
+  // Where the character is stored now, while another collection is pending.
+  &.is-saved {
+    box-shadow: inset 0 0 0 1px var(--color-border-light);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+}
+
+.collection-hint {
+  line-height: 1.4;
+}
+
+.portrait-scope {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px var(--spacing-sm);
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.4;
 }
 
 .portrait-scope-copy {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
   min-width: 0;
   overflow-wrap: anywhere;
-  font-size: 0.8125rem;
+}
 
-  span {
-    color: var(--color-text-secondary);
-    font-size: 0.75rem;
+.portrait-scope-reset {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent-primary);
+  font: inherit;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: underline;
   }
 }

@@ -28,22 +28,6 @@
       <kbd class="shortcut-hint">ESC</kbd>
     </button>
     @if (activeContentTab === 'main') {
-      @if (isDraftMode) {
-        <button
-          type="button"
-          class="btn btn-secondary"
-          [disabled]="isSaving || savingBookPageId"
-          (click)="convertDraft('characters')"
-          title="Move this draft to Characters (name and category required)"
-        >Convert to Character</button>
-        <button
-          type="button"
-          class="btn btn-secondary"
-          [disabled]="isSaving || savingBookPageId"
-          (click)="convertDraft('lore')"
-          title="Move this draft to Lore (only a name required)"
-        >Convert to Lore</button>
-      }
       <button
         type="button"
         class="btn btn-primary"
@@ -173,41 +157,6 @@
                beside it on wide screens and above the text on narrow ones. -->
           <section class="hero-card article-layout">
             <div class="hero-main article-head">
-              <div class="secondary-actions" role="group" aria-label="Character actions">
-                <button
-                  type="button"
-                  class="danger-link portrait-link"
-                  (click)="openGeneratePortrait()"
-                  [disabled]="!imageGenerationEnabled || isSaving || savingBookPageId"
-                >Generate portrait</button>
-                @if (!isDraftMode) {
-                  <button
-                    type="button"
-                    class="danger-link collection-link"
-                    (click)="setLoreMode(!isLoreMode)"
-                    [disabled]="isSaving || savingBookPageId"
-                    title="Change collection when you save"
-                  >{{ isLoreMode ? 'Promote to Character' : 'Move to Lore' }}</button>
-                }
-                @if (!isDraftMode && isEditing) {
-                  <button
-                    type="button"
-                    class="danger-link"
-                    (click)="moveCharacterToDraft()"
-                    [disabled]="isSaving || savingBookPageId"
-                    title="Move character back to drafts"
-                  >Move to draft</button>
-                }
-                @if (isEditing) {
-                  <button
-                    type="button"
-                    class="danger-link"
-                    (click)="deleteCharacter()"
-                    [disabled]="isSaving || savingBookPageId"
-                    title="Delete character"
-                  >Delete {{ isDraftMode ? 'draft' : 'character' }}</button>
-                }
-              </div>
               <div class="hero-field">
                 <div class="name-line">
                   <div class="name-input-group">
@@ -315,11 +264,35 @@
                     </div>
                   }
                 </div>
-                <button type="button" class="btn btn-secondary portrait-change-btn"
-                  (click)="openImagePicker()">
-                  {{ activeBookId && !hasOwnThumbnailForStyle(selectedStyleId || defaultCharacterStyle)
-                    ? 'Set book picture' : thumbnailPreviewUrl ? 'Change picture' : 'Add picture' }}
-                </button>
+                <div class="portrait-actions">
+                  <button type="button" class="btn btn-secondary portrait-change-btn"
+                    (click)="openImagePicker()">
+                    {{ activeBookId && !hasOwnThumbnailForStyle(selectedStyleId || defaultCharacterStyle)
+                      ? 'Set book picture' : thumbnailPreviewUrl ? 'Change picture' : 'Add picture' }}
+                  </button>
+                  <details class="portrait-more-menu" #portraitMenu>
+                    <summary
+                      class="btn btn-secondary portrait-more-summary"
+                      title="More picture options"
+                      aria-label="More picture options"
+                    >
+                      <svg class="ui-icon portrait-more-chevron" aria-hidden="true"><use href="assets/ui-icons.svg#chevron-down" /></svg>
+                    </summary>
+                    <div class="portrait-more-popover" role="menu">
+                      <button
+                        type="button"
+                        class="portrait-more-option"
+                        role="menuitem"
+                        (click)="portraitMenu.open = false; openGeneratePortrait()"
+                        [disabled]="!imageGenerationEnabled || isSaving || savingBookPageId"
+                        [title]="imageGenerationEnabled ? 'Generate a portrait with ComfyUI' : 'Enable image generation in AI Settings first'"
+                      >
+                        <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#sparkles" /></svg>
+                        <span>Generate</span>
+                      </button>
+                    </div>
+                  </details>
+                </div>
                 @if (characterStyles.length > 1) {
                   <div class="style-strip" role="listbox" aria-label="Character styles">
                     @for (style of characterStyles; track style.id) {
@@ -352,12 +325,47 @@
                     title="Add another character style in Settings"
                   >Add another style</a>
                 }
+                <div class="portrait-scope" role="status">
+                  <span class="portrait-scope-copy">
+                    @if (activeBookId) {
+                      Picture for {{ getBookName(activeBookId) }} ·
+                      {{ hasOwnThumbnailForStyle(selectedStyleId || defaultCharacterStyle) ? 'Only used in this book' : 'Using main picture' }}
+                    } @else {
+                      Main picture · used by books without their own
+                    }
+                  </span>
+                  @if (activeBookId && hasOwnThumbnailForStyle(selectedStyleId || defaultCharacterStyle)) {
+                    <button type="button" class="portrait-scope-reset" (click)="removeThumbnail()">Use main picture</button>
+                  }
+                </div>
               </div>
 
               <div class="infobox-fields">
+                <div class="hero-field form-group-collection">
+                  <label class="form-label" id="collection-label">Collection</label>
+                  <div class="collection-toggle" role="radiogroup" aria-labelledby="collection-label">
+                    @for (option of collectionOptions; track option.id) {
+                      <button
+                        type="button"
+                        class="collection-option"
+                        role="radio"
+                        [class.active]="collection === option.id"
+                        [class.is-saved]="isEditing && savedCollection === option.id && collection !== option.id"
+                        [attr.aria-checked]="collection === option.id"
+                        [disabled]="isSaving || savingBookPageId"
+                        [title]="option.tooltip"
+                        (click)="setCollection(option.id)"
+                      >{{ option.name }}</button>
+                    }
+                  </div>
+                  @if (collectionChangeHint) {
+                    <span class="hero-field-hint collection-hint">{{ collectionChangeHint }}</span>
+                  }
+                </div>
+
                 @if (categories.length > 0) {
                   <div class="hero-field form-group-category" [class.field-highlight]="characterForm.get('category')?.invalid && characterForm.get('category')?.touched">
-                    <label class="form-label">Category{{ isDraftMode || isLoreMode ? '' : ' *' }}</label>
+                    <label class="form-label">Category{{ collection === 'characters' ? ' *' : '' }}</label>
                     <app-category-toggle
                       [options]="categoryToggleOptions"
                       [selectedValue]="getSelectedCategoryForActiveTab()"
@@ -394,25 +402,23 @@
                 }
               </div>
 
-              <div class="portrait-scope" role="status">
-                <div class="portrait-scope-copy">
-                  <strong>{{ activeBookId ? 'Picture for ' + getBookName(activeBookId) : 'Main character picture' }}</strong>
-                  <span>
-                    @if (activeBookId) {
-                      @if (hasOwnThumbnailForStyle(selectedStyleId || defaultCharacterStyle)) {
-                        Only used in this book · {{ selectedStyleName }} style
-                      } @else {
-                        Using main picture · {{ selectedStyleName }} style
-                      }
-                    } @else {
-                      Used by books without their own picture · {{ selectedStyleName }} style
-                    }
-                  </span>
+              @if (isEditing) {
+                <div class="infobox-danger">
+                  @if (character?.created || character?.modified) {
+                    <p class="infobox-dates">
+                      @if (character?.created) { <span>Created {{ character!.created | date: 'mediumDate' }}</span> }
+                      @if (character?.modified) { <span>Last saved {{ character!.modified | date: 'mediumDate' }}</span> }
+                    </p>
+                  }
+                  <button
+                    type="button"
+                    class="danger-link"
+                    (click)="deleteCharacter()"
+                    [disabled]="isSaving || savingBookPageId"
+                    [title]="'Delete ' + (isDraftMode ? 'draft' : 'character')"
+                  >Delete {{ isDraftMode ? 'draft' : 'character' }}</button>
                 </div>
-                @if (activeBookId && hasOwnThumbnailForStyle(selectedStyleId || defaultCharacterStyle)) {
-                  <button type="button" class="btn btn-ghost" (click)="removeThumbnail()">Use main picture</button>
-                }
-              </div>
+              }
             </aside>
 
             <div class="writing-workspace">
