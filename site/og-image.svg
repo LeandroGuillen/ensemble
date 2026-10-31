@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1200" height="630" viewBox="0 0 1200 630">
+  <title>Ensemble: Your characters, in files you own.</title>
+  <rect width="1200" height="630" fill="#071b2e"/>
+  <image x="110" y="135" width="360" height="360" href="icon.svg" xlink:href="icon.svg"/>
+  <text x="540" y="290" fill="#ffe680" font-family="Georgia, 'DejaVu Serif', 'Liberation Serif', serif" font-weight="700" font-size="104">Ensemble</text>
+  <text x="544" y="370" fill="#f3efe2" font-family="Georgia, 'DejaVu Serif', 'Liberation Serif', serif" font-size="42">Your characters,</text>
+  <text x="544" y="424" fill="#f3efe2" font-family="Georgia, 'DejaVu Serif', 'Liberation Serif', serif" font-size="42">in files you own.</text>
+</svg>
