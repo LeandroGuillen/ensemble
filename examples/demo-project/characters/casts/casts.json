@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "casts": [
+    {
+      "id": "lighthouse-crew",
+      "name": "The Lighthouse Crew",
+      "characterIds": [
+        "mara-vell",
+        "oren-vell",
+        "saffi-reed",
+        "brother-cael"
+      ],
+      "pinboardId": "lighthouse-crew-board"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 {
   "name": "ensemble",
-  "version": "1.21.18",
+  "version": "1.21.19",
   "description": "Character management application for writers and worldbuilders",
   "main": "main.js",
   "scripts": {
@@ -25,7 +25,7 @@
     "dist": "npm run build-electron-all",
     "build-icons": "node scripts/build-icons.js",
     "prebuild-electron": "npm run build-icons",
-    "test:main": "node --test lib/*.test.js",
+    "test:main": "node --test lib/*.test.js test/*.test.js",
     "test": "npm run test:main && CHROME_BIN=/usr/bin/chromium ng test --watch=false",
     "verify": "node verify-setup.js",
     "lint": "ng lint",

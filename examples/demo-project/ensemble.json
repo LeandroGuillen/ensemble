@@ -1,0 +1,317 @@
+{
+  "projectName": "The Lantern Coast",
+  "version": "1.0.0",
+  "categories": [
+    {
+      "id": "main-character",
+      "name": "Main Character",
+      "color": "#3498db"
+    },
+    {
+      "id": "supporting",
+      "name": "Supporting Character",
+      "color": "#2ecc71"
+    },
+    {
+      "id": "antagonist",
+      "name": "Antagonist",
+      "color": "#e74c3c"
+    },
+    {
+      "id": "minor",
+      "name": "Minor Character",
+      "color": "#9b59b6"
+    }
+  ],
+  "tags": [
+    {
+      "id": "keeper",
+      "name": "Keeper",
+      "color": "#e6b957"
+    },
+    {
+      "id": "sailor",
+      "name": "Sailor",
+      "color": "#3498db"
+    },
+    {
+      "id": "noble",
+      "name": "Noble",
+      "color": "#9b59b6"
+    },
+    {
+      "id": "scholar",
+      "name": "Scholar",
+      "color": "#1abc9c"
+    },
+    {
+      "id": "tide-touched",
+      "name": "Tide Touched",
+      "color": "#e91e63"
+    },
+    {
+      "id": "oathbound",
+      "name": "Oathbound",
+      "color": "#f39c12"
+    }
+  ],
+  "books": [
+    {
+      "id": "lc1",
+      "name": "The Lantern Keepers",
+      "code": "lc1",
+      "color": "#e6b957",
+      "description": "A harbor goes dark, and a keeper must decide which memories are worth burning to bring its sailors home.",
+      "status": "published",
+      "povCharacterIds": [
+        "mara-vell",
+        "saffi-reed"
+      ],
+      "seriesId": "lantern-coast"
+    },
+    {
+      "id": "lc2",
+      "name": "Tidebreak",
+      "code": "lc2",
+      "color": "#48a9a6",
+      "description": "A girl returns from beneath the sea, bringing an unpaid promise that could break the coast’s oldest charter.",
+      "status": "in-progress",
+      "povCharacterIds": [
+        "mara-vell",
+        "ilse-dunmore",
+        "wren-dunmore"
+      ],
+      "seriesId": "lantern-coast",
+      "plan": {
+        "path": "books/lc2/lc2.plan.md"
+      }
+    }
+  ],
+  "series": [
+    {
+      "id": "lantern-coast",
+      "name": "The Lantern Coast",
+      "description": "Memory lights the way home along a coast haunted by its bargains.",
+      "color": "#e6b957"
+    }
+  ],
+  "settings": {
+    "defaultCategory": "main-character",
+    "charactersFolder": "characters",
+    "locationsFolder": "locations",
+    "castsFolder": "characters/casts",
+    "namesFile": "characters/names.md",
+    "imagesFolder": "img",
+    "theme": "blue-gold",
+    "skin": "classic",
+    "characterStyles": [
+      {
+        "id": "default",
+        "name": "Default"
+      }
+    ],
+    "defaultCharacterStyle": "default"
+  },
+  "pinboards": [
+    {
+      "id": "coast-relationships",
+      "name": "Coast relationships",
+      "nodes": [
+        {
+          "id": "mara-vell",
+          "name": "Mara Vell",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "category": "main-character"
+        },
+        {
+          "id": "oren-vell",
+          "name": "Oren Vell",
+          "position": {
+            "x": 240,
+            "y": 0
+          },
+          "category": "supporting"
+        },
+        {
+          "id": "ilse-dunmore",
+          "name": "Ilse Dunmore",
+          "position": {
+            "x": 480,
+            "y": 0
+          },
+          "category": "antagonist"
+        },
+        {
+          "id": "teodor-dunmore",
+          "name": "Teodor Dunmore",
+          "position": {
+            "x": 720,
+            "y": 0
+          },
+          "category": "supporting"
+        },
+        {
+          "id": "saffi-reed",
+          "name": "Saffi Reed",
+          "position": {
+            "x": 0,
+            "y": 260
+          },
+          "category": "supporting"
+        },
+        {
+          "id": "brother-cael",
+          "name": "Brother Cael",
+          "position": {
+            "x": 240,
+            "y": 260
+          },
+          "category": "supporting"
+        },
+        {
+          "id": "nessa-quill",
+          "name": "Nessa Quill",
+          "position": {
+            "x": 480,
+            "y": 260
+          },
+          "category": "supporting"
+        },
+        {
+          "id": "the-grey-pilot",
+          "name": "The Grey Pilot",
+          "position": {
+            "x": 720,
+            "y": 260
+          },
+          "category": "minor"
+        }
+      ],
+      "edges": [
+        {
+          "id": "siblings",
+          "source": "mara-vell",
+          "target": "oren-vell",
+          "type": "relationship",
+          "label": "siblings",
+          "color": "#e6b957",
+          "arrowTo": true
+        },
+        {
+          "id": "rivals",
+          "source": "mara-vell",
+          "target": "ilse-dunmore",
+          "type": "relationship",
+          "label": "rivals",
+          "color": "#e77474",
+          "arrowTo": true
+        },
+        {
+          "id": "debt",
+          "source": "saffi-reed",
+          "target": "the-grey-pilot",
+          "type": "relationship",
+          "label": "owes a debt",
+          "color": "#8fa9cc",
+          "arrowTo": true
+        },
+        {
+          "id": "mentor",
+          "source": "brother-cael",
+          "target": "mara-vell",
+          "type": "relationship",
+          "label": "mentor",
+          "color": "#79bea5",
+          "arrowTo": true
+        },
+        {
+          "id": "charter",
+          "source": "teodor-dunmore",
+          "target": "ilse-dunmore",
+          "type": "relationship",
+          "label": "shares command",
+          "color": "#b7a1cc",
+          "arrowTo": true
+        },
+        {
+          "id": "charts",
+          "source": "nessa-quill",
+          "target": "the-grey-pilot",
+          "type": "relationship",
+          "label": "seeks a passage",
+          "color": "#8fa9cc",
+          "arrowTo": true
+        }
+      ]
+    },
+    {
+      "id": "lighthouse-crew-board",
+      "name": "The Lighthouse Crew",
+      "nodes": [
+        {
+          "id": "mara-vell",
+          "name": "Mara Vell",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "category": "main-character"
+        },
+        {
+          "id": "oren-vell",
+          "name": "Oren Vell",
+          "position": {
+            "x": 240,
+            "y": 0
+          },
+          "category": "supporting"
+        },
+        {
+          "id": "saffi-reed",
+          "name": "Saffi Reed",
+          "position": {
+            "x": 0,
+            "y": 260
+          },
+          "category": "supporting"
+        },
+        {
+          "id": "brother-cael",
+          "name": "Brother Cael",
+          "position": {
+            "x": 240,
+            "y": 260
+          },
+          "category": "supporting"
+        }
+      ],
+      "edges": [
+        {
+          "id": "siblings",
+          "source": "mara-vell",
+          "target": "oren-vell",
+          "type": "relationship",
+          "label": "siblings",
+          "color": "#e6b957",
+          "arrowTo": true
+        },
+        {
+          "id": "mentor",
+          "source": "brother-cael",
+          "target": "mara-vell",
+          "type": "relationship",
+          "label": "mentor",
+          "color": "#79bea5",
+          "arrowTo": true
+        }
+      ]
+    }
+  ],
+  "lastSession": {
+    "lastRoute": "/characters",
+    "lastPinboardId": "coast-relationships"
+  }
+}

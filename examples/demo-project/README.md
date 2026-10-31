@@ -1,0 +1,35 @@
+# The Lantern Coast
+
+An original maritime fantasy demo for Ensemble. Along a coast of memory-powered lighthouses, a keeper and a harbor commander must decide which promises to keep when the drowned begin coming home.
+
+## Copy first, then open
+
+1. Copy this entire `examples/demo-project` folder to a location you can write to. You can also download the repository ZIP, extract it, and copy this folder from it.
+2. In Ensemble, open the copied folder as a project (select the folder containing `ensemble.json`).
+3. Explore Characters, Lore, Drawer, Houses, Locations, Library, Casts, the relationship pinboards, the plot board and Backstage. Select **Tidebreak** in Library to open its chapter plan. Select a book on Mara, Ilse or Saffi’s page to read the per-book notes.
+
+Ensemble writes project metadata immediately on opening and remembers navigation as you work. Opening a read-only folder fails; opening the repository’s original folder can leave local changes. Always work in your writable copy. Deletes use an Undo window and then the OS trash; exclude `.ensemble-trash/` from any backup, snapshot or export.
+
+The project starts with the dark Blue Gold theme and Classic skin. The coast relationship graph has eight people and labeled directional connections. The Lighthouse Crew has its own four-person graph. The current app also imports a relationship graph without an assigned cast as a cast on first opening, so it may add a Coast relationships cast to your copy. The supplied index contains one cast.
+
+## What to explore
+
+- **The Lantern Keepers** (`lc1`) is published; **Tidebreak** (`lc2`) is in progress. Both belong to The Lantern Coast series. There is no invented ISBN.
+- Ten active characters include Wren, who appears only in the second book. Ilse changes from antagonist to supporting character there, with different tags. Mara has a distinct second-book portrait. Alias examples use both supported file formats.
+- Two Lore figures remember the founding; one nameless Drawer draft suggests a future bell diver.
+- House Vell includes joint leadership and an interrupted reign. Ilse belongs to both houses during her stewardship. House Dunmore deliberately has no designated current leadership entry.
+- Six locations cover region, settlement, district, building, natural feature and plane. All have pictures.
+- `lantern-coast.pinboard.md` holds three plot threads and six rows. `books/lc2/lc2.plan.md` has six chapters, scenes, viewpoint IDs and TODO markers.
+- Backstage contains a harbor name list and two concepts.
+
+## Original content and license
+
+All worldbuilding, names, prose and images in this demo are original material created for this example, not taken from anyone’s manuscripts. The 19 illustrations were AI-generated specifically for this demo using the assistant’s built-in image generation capability, then resized and converted to 512 × 512 WebP. They are painted portraits, scenery and heraldic crests, not stock images or initials placeholders.
+
+To the extent copyright or related rights apply, the demo text and images are dedicated to the public domain under **CC0 1.0**. See [the CC0 dedication](https://creativecommons.org/publicdomain/zero/1.0/). No exclusivity or copyright protection is claimed for AI-generated output.
+
+Images live in `img/`: ten character portraits, Mara’s distinct `mara-vell-lc2.webp` portrait, six location pictures and two house crests. The original generation prompts are recorded in `image-prompts.md`.
+
+## Automated verification
+
+From the repository root, run `npm run test:main`, or `node --test test/demo-project.test.js` for just the demo. The test reads this folder without opening or modifying it. It uses the app’s actual wiki-link resolver and checks entity IDs, cross-references, images, required examples and a maintained list of forbidden brand names.
