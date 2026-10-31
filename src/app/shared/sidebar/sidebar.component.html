@@ -135,6 +135,7 @@
       <button
         class="footer-btn update-control"
         [class.update-available]="updateStatus.status === 'available'"
+        [class.update-downloading]="updateStatus.status === 'downloading'"
         [class.update-ready]="updateStatus.status === 'downloaded'"
         [class.update-error]="updateStatus.status === 'error'"
         [class.update-busy]="updateActionDisabled"
@@ -142,15 +143,15 @@
         (click)="handleUpdateAction()"
         [title]="updateActionLabel"
         [attr.aria-label]="updateActionLabel"
+        [attr.aria-busy]="updateAriaBusy"
       >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <use [attr.href]="updateStatus.status === 'available' || updateStatus.status === 'downloading' ? '#icon-download' : '#icon-refresh-cw'"></use>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <use [attr.href]="updateIconHref"></use>
         </svg>
-        @if (!isCollapsed && updateStatus.status === 'available') {
-          <span class="update-pill-label">Update</span>
-        }
-        @if (!isCollapsed && updateStatus.status === 'downloaded') {
-          <span class="update-pill-label">Restart</span>
+        @if (updateStatus.status === 'downloading') {
+          <span class="update-progress-track" aria-hidden="true">
+            <span class="update-progress-bar" [style.width.%]="updateDownloadPercent"></span>
+          </span>
         }
       </button>
     }
@@ -307,11 +308,28 @@
         <line x1="12" y1="15" x2="12" y2="3"/>
       </symbol>
 
-      <symbol id="icon-refresh-cw" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M20 11a8 8 0 0 0-14.2-5L3 9"/>
-        <path d="M3 4v5h5"/>
-        <path d="M4 13a8 8 0 0 0 14.2 5L21 15"/>
-        <path d="M21 20v-5h-5"/>
+      <!-- Check circle / update up to date -->
+      <symbol id="icon-circle-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="m9 12 2 2 4-4"/>
+      </symbol>
+
+      <!-- Hourglass / checking for update -->
+      <symbol id="icon-hourglass" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 2h12M6 22h12M8 2v4c0 2 1.5 3.5 4 6-2.5 2.5-4 4-4 6v4M16 2v4c0 2-1.5 3.5-4 6 2.5 2.5 4 4 4 6v4"/>
+      </symbol>
+
+      <!-- Power / restart to apply update -->
+      <symbol id="icon-power" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2v10"/>
+        <path d="M18.4 6.6a9 9 0 1 1-12.77.04"/>
+      </symbol>
+
+      <!-- Alert triangle / update failed -->
+      <symbol id="icon-alert-triangle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10.3 3.6 2.2 18a2 2 0 0 0 1.7 3h16.2a2 2 0 0 0 1.7-3L13.7 3.6a2 2 0 0 0-3.4 0Z"/>
+        <path d="M12 9v4"/>
+        <path d="M12 17h.01"/>
       </symbol>
 
       <!-- Plot Board (grid/columns icon) -->

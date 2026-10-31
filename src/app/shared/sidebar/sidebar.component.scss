@@ -449,32 +449,52 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
   .update-control {
     margin-left: auto;
     justify-content: center;
-    gap: 5px;
+    min-width: 28px;
+    min-height: 28px;
     position: relative;
+    // Static icon-only control: the icon never moves in any state.
+    transition: background-color var(--transition-fast), color var(--transition-fast);
 
-    &.update-available {
+    &:active { transform: none; }
+
+    &.update-available,
+    &.update-downloading {
       background: var(--color-accent-subtle);
       color: var(--color-accent-primary);
-      font-weight: 600;
     }
 
     &.update-ready {
       background: rgba(74, 222, 128, 0.12);
       color: var(--color-success);
-      font-weight: 600;
     }
 
     &.update-error { color: var(--color-error); }
 
-    &.update-busy {
-      cursor: progress;
+    &.update-busy { cursor: progress; }
 
-      svg { animation: update-spin 1.4s linear infinite; }
+    &:focus-visible {
+      outline: 2px solid var(--color-accent-primary);
+      outline-offset: 2px;
     }
 
-    .update-pill-label {
-      font-size: 0.75rem;
-      white-space: nowrap;
+    // Determinate download progress: width % is re-rendered per progress event,
+    // with no transition or keyframes.
+    .update-progress-track {
+      position: absolute;
+      left: 4px;
+      right: 4px;
+      bottom: 3px;
+      height: 2px;
+      border-radius: var(--radius-full);
+      background: color-mix(in srgb, currentColor 25%, transparent);
+      overflow: hidden;
+    }
+
+    .update-progress-bar {
+      display: block;
+      height: 100%;
+      background: currentColor;
+      border-radius: inherit;
     }
   }
 
@@ -497,10 +517,6 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
     border-radius: 50%;
     background: currentColor;
   }
-}
-
-@keyframes update-spin {
-  to { transform: rotate(360deg); }
 }
 
 // Keep the toggle in the same screen position in both sidebar states.

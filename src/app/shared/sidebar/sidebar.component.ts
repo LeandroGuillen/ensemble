@@ -256,14 +256,41 @@ export class SidebarComponent implements OnInit {
   }
 
   get updateActionLabel(): string {
+    const version = this.updateVersionLabel;
     switch (this.updateStatus.status) {
-      case 'available': return `Download update${this.updateStatus.version ? ` ${this.updateStatus.version}` : ''}`;
-      case 'downloading': return `Downloading update${this.updateStatus.progress ? ` ${Math.round(this.updateStatus.progress.percent)}%` : ''}`;
-      case 'downloaded': return 'Restart to apply update';
+      case 'available': return version ? `Download update ${version}` : 'Download update';
+      case 'downloading': return `Downloading update ${this.updateDownloadPercent}%`;
+      case 'downloaded': return version ? `Restart to apply update ${version}` : 'Restart to apply update';
       case 'checking': return 'Checking for updates';
-      case 'error': return 'Check for updates again';
-      default: return 'Check for updates';
+      case 'error': return 'Update failed. Click to check again';
+      default: return 'Up to date. Check for updates';
     }
+  }
+
+  get updateIconHref(): string {
+    switch (this.updateStatus.status) {
+      case 'checking': return '#icon-hourglass';
+      case 'available':
+      case 'downloading': return '#icon-download';
+      case 'downloaded': return '#icon-power';
+      case 'error': return '#icon-alert-triangle';
+      default: return '#icon-circle-check';
+    }
+  }
+
+  get updateAriaBusy(): 'true' | null {
+    return this.updateStatus.status === 'checking' || this.updateStatus.status === 'downloading' ? 'true' : null;
+  }
+
+  get updateDownloadPercent(): number {
+    const percent = this.updateStatus.progress?.percent ?? 0;
+    return Math.max(0, Math.min(100, Math.round(percent)));
+  }
+
+  private get updateVersionLabel(): string {
+    const version = this.updateStatus.version?.trim();
+    if (!version) return '';
+    return version.toLowerCase().startsWith('v') ? version : `v${version}`;
   }
 
   get updateActionDisabled(): boolean {
