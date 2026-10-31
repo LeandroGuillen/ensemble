@@ -1,188 +1,152 @@
-# Ensemble
+# Your characters, in files you own.
 
-Character management application for writers and worldbuilders.
+Ensemble is a desktop app for writers and worldbuilders to keep their characters, houses, places and plots in plain Markdown files they own.
+
+[![Latest release](https://img.shields.io/github/v/release/leandroguillen/ensemble)](https://github.com/leandroguillen/ensemble/releases/latest)
+[![Build and Release](https://github.com/leandroguillen/ensemble/actions/workflows/release.yml/badge.svg)](https://github.com/leandroguillen/ensemble/actions/workflows/release.yml)
+[![License: MIT](https://img.shields.io/github/license/leandroguillen/ensemble)](https://github.com/leandroguillen/ensemble/blob/master/LICENSE)
+[![Platform: Linux](https://img.shields.io/badge/platform-Linux-FCC624?logo=linux&logoColor=black)](https://github.com/leandroguillen/ensemble/releases/latest)
+
+Ensemble keeps your cast, your world and your plot in one folder of Markdown files on your own disk. Open that folder in any editor, back it up with the tools you already use, and keep it in Git if you want. There is no account to create and no server to sign in to.
+
+## Your files stay yours
+
+- No account, no login, no telemetry, no analytics and no crash reporting.
+- A project is a folder of plain Markdown files (with YAML front matter), a small `ensemble.json` and your images, on your disk.
+- Installed builds check GitHub Releases for new versions when the app starts, every four hours, and when you choose "Check for updates". They never download anything by themselves.
+- AI is optional and off by default. Name suggestions use a local model through Ollama or LM Studio. Portraits can use a local server, InvokeAI or ComfyUI. If you choose OpenAI or Gemini for portraits, Ensemble sends the portrait prompt and your API key to that service. Names are never sent to OpenAI or Gemini.
+- With local tools, nothing leaves your computer. The update check and a cloud portrait provider are the only exceptions, and the portrait provider is your choice.
 
 ## Features
 
-- **File-based Storage**: All data stored as plain text files (markdown and JSON)
-- **Character Management**: Create, edit, and organize character profiles
-- **Lore figures**: Founders, ancestors, legends, and other background figures use the full character editor, with only a name required. Characters, Lore, and Drawer have separate counters and saved filters. Lore figures appear in character pickers with a Lore label; drafts remain excluded.
-- **Houses**: Family and dynasty profiles with crests, mottos, colors, seats, multiple character memberships, and ordered leadership history. Reigns support joint heads, periods, notes, optional book references, and an explicit current leadership entry.
-- **Relationship Visualization**: Interactive graph view for character relationships
-- **Project Organization**: Work with multiple projects in separate folders
-- **External Editing**: Saved Markdown edits from apps such as Obsidian refresh character lists and open character pages in Ensemble. If both apps edit the same file, Ensemble asks you to reload before saving.
-- **Undoable deletes**: Deleting a character, draft, Lore figure, location, House, or cast shows Undo for 15 seconds. After that, restore the item from the system Trash; links in Houses, pinboards, and plot threads come back only with Undo. On Linux without trash support, items stay in the project's `.ensemble-trash/` folder until a later open retries.
+### People
+
+- **Characters**: create, edit and organize character profiles with categories and tags.
+- **Aliases**: give a character a.k.a. names and find them from search.
+- **Portraits and styles**: keep one portrait per character style and switch the style from the page.
+- **List views**: switch between grid, list, compact and gallery with `L`, and resize the gallery with a slider.
+- **Character page**: read a text column next to a sticky infobox on a wide screen, stacked on a narrow one.
+- **Book pages**: give a character their own description, tags and picture in each book.
+- **Lore figures**: keep founders, ancestors and legends as name-only records, labelled Lore in pickers.
+- **Drawer**: write a character as a draft and convert it to a Character or a Lore figure later.
+- **Casts**: group characters into a cast and pin them on a pinboard with labelled connections.
+- **Names**: keep name lists with descriptions, comments and strikethrough for options you dropped.
+- **Concepts**: keep titled notes for your ideas in a single `concepts.md` file.
+
+### World
+
+- **Locations**: record places with one of nine types, from Country to Natural Feature.
+- **Location filters**: filter by type, book and picture, and clear the filters in one click.
+- **Location icons**: give every type its own icon.
+- **Houses**: record crests, mottos, colors, seats, members and an ordered list of reigns with joint heads.
+
+### Story
+
+- **Books**: group your work in books, each with a cover, a status, a plan file and a manuscript folder.
+- **Book plan**: outline phases, chapters and scenes from chapter headings like `## 2180 - Title`, with a point-of-view portrait, TODO and OJO counts and a focus mode for one chapter.
+- **Book plan search**: jump to a year, a character or a marker with `Ctrl+J`.
+- **Plan conflicts**: when the plan file changed outside Ensemble, the app offers to keep your version or reload from disk.
+- **Plot board**: lay plot threads out in a grid of rows and move between cells with the keyboard.
+
+### Comfort
+
+- **Markdown editor**: write in a CodeMirror editor with live preview, GFM tables and formatting shortcuts.
+- **Wikilinks**: link characters, locations and Houses with `[[Name]]`, complete them with `[[`, follow them with `Ctrl`/`Cmd` + click, and open a missing target as a new record.
+- **Live external edits**: files changed in Obsidian or another editor refresh in Ensemble, and the character and House editors ask you to reload from disk before saving over a file that changed outside the app.
+- **Command palette**: press `Ctrl+P` or `/` to search commands.
+- **Shortcut list**: press `Ctrl+?` to see the shortcuts.
+- **Themes**: 7 color themes: Blue Gold, Catppuccin Mocha, Grayscale, Gruvbox, Rosé Pine, Sepia and Tokyo Night.
+- **Skins**: several skins, including Classic, Pixel and Liquid.
+- **Multiple projects**: keep several projects and open a recent one with the keys `1` to `9`.
+- **Duplicate project**: copy a project to start a variant of it.
+- **Undoable deletes**: delete a character, draft, Lore figure, location, House or cast and undo it for 15 seconds, then it goes to the system trash.
+- **Update checks**: installed builds check GitHub Releases and offer to restart into a new version.
+
+## Download and install
+
+Ensemble is Linux first, by design. The releases page has Linux packages. macOS and Windows builds are not published yet.
+
+Get the files for your distribution from [GitHub Releases](https://github.com/leandroguillen/ensemble/releases/latest). Every release ships an AppImage, a Debian package and an RPM. The version number in the file names changes with every release, so read it from the release you download.
+
+**AppImage**, a single file you run:
+
+```bash
+chmod +x Ensemble-*.AppImage
+./Ensemble-*.AppImage
+```
+
+Keep the AppImage in a folder you can write to, so the updater can replace it.
+
+**Debian, Ubuntu and derivatives**:
+
+```bash
+sudo dpkg -i ensemble_*_amd64.deb
+# or
+sudo apt install ./ensemble_*_amd64.deb
+```
+
+**Fedora, RHEL and derivatives**:
+
+```bash
+sudo rpm -i ensemble-*.x86_64.rpm
+# or
+sudo dnf install ./ensemble-*.x86_64.rpm
+```
+
+## First project
+
+Create a folder on your disk and open it in Ensemble as a project. Ensemble adds the folders it needs and writes a small `ensemble.json` with your categories, tags, books and settings.
+
+```
+project-folder/
+├── ensemble.json           # Project metadata: categories, tags, books, settings, pinboards
+├── .ensemble-trash/        # Staged deletes (exclude from backups/exports); then OS trash
+├── characters/             # Configurable character root
+│   ├── roger-rabbit/
+│   │   ├── roger-rabbit.md       # Main file (frontmatter + description)
+│   │   └── roger-rabbit.n26.md   # Book page, keyed by book code
+│   ├── @drafts/                   # Draft character folders
+│   │   └── unnamed-a1b2c3/
+│   │       └── unnamed-a1b2c3.md
+│   ├── casts/                     # Cast folders
+│   │   ├── casts.json             # Cast index: names and character ids
+│   │   └── the-hall-ensemble/
+│   │       └── description.md
+│   ├── concepts.md                # Concepts
+│   └── names.md                   # Name lists
+├── locations/             # Locations, one file each
+│   └── _springfield.md
+├── houses/                 # Family and dynasty records
+│   └── house-stark/
+│       └── house-stark.md   # House frontmatter + Markdown history
+├── img/                    # Images, including portraits
+└── my-book.pinboard.md     # Plot board
+```
+
+Folder names come from an ASCII transliteration of the name. The file layout of Houses, Lore figures and Locations is documented in [docs/data-format.md](docs/data-format.md).
 
 ## Development
 
-### Prerequisites
+Ensemble is an Angular 21 and Electron 43 desktop app.
 
 - Node.js 20.19+, 22.12+ or 24+ (the range Angular 21 supports)
 - npm or yarn
 
-### Installation
-
 ```bash
 npm install
-```
-
-### Development Server
-
-```bash
-# Full desktop app (Angular dev server + Electron). Default port 4200.
 npm start
-
-# Angular only (no Electron window)
-npm run serve
-
-# Alternate port when 4200 is already in use (e.g. another Ensemble instance)
-ENSEMBLE_DEV_PORT=4301 npm start
 ```
 
-`ENSEMBLE_DEV_PORT` (default `4200`) is shared by `ng serve`, `wait-on`, and the Electron window URL so they cannot drift. Invalid values fall back to 4200.
+`npm start` runs the Angular dev server and the Electron window. `npm run serve` runs the Angular app in a browser only. See [docs/development.md](docs/development.md) for the dev server port, running a second instance and production builds, and [docs/releasing.md](docs/releasing.md) for how releases are cut.
 
-To run two Electron instances side by side without sharing recent-projects / settings, give the second a separate Chromium user-data directory. Ensemble has no app-specific user-data env; it uses Electron’s `app.getPath('userData')`. Extra flags after `--` go straight to `scripts/electron-dev.js` (`"start": "node scripts/electron-dev.js"`), then to Electron via `ENSEMBLE_ELECTRON_EXTRA_ARGS` (not through a shell). On Linux `XDG_CONFIG_HOME` also isolates config (same approach as the headless run-app skill):
+## Roadmap
 
-```bash
-# Different port + isolated userData (flags after -- reach Electron literally)
-ENSEMBLE_DEV_PORT=4301 npm start -- --user-data-dir=/tmp/ensemble-dev-4301
+Planned work and open problems are tracked in [GitHub Issues](https://github.com/leandroguillen/ensemble/issues). What has shipped is listed in [GitHub Releases](https://github.com/leandroguillen/ensemble/releases).
 
-# Linux alternative
-ENSEMBLE_DEV_PORT=4301 XDG_CONFIG_HOME=/tmp/ensemble-cfg-4301 npm start
-```
+## Contributing
 
-### Building
-
-```bash
-# Build for production
-npm run build-electron
-```
-
-## Testing Linux packages
-
-Run the **Build and Release** workflow manually from GitHub Actions to build Linux
-artifacts and smoke test them without publishing a release. Every tagged release
-runs the same checks before publishing:
-
-- A clean Debian container installs the DEB and opens an Ensemble window under Xvfb.
-- A separate Debian container runs the AppImage with its extract-and-run fallback.
-- A clean Fedora container installs the RPM and opens an Ensemble window under Xvfb.
-
-These jobs test the generated artifacts and package dependencies on other Linux
-userlands. They do not exercise FUSE mounting, desktop integration, a real user
-session, package manager authentication, or installation of an update over an
-older version. Use full Debian and Fedora VMs for those final release checks.
-
-## Project Structure
-
-```
-project-folder/
-├── ensemble.json           # Project metadata: categories, tags, settings, lastSession, relationships
-├── .ensemble-trash/        # Staged deletes (exclude from backups/exports); then OS trash
-├── houses/                 # Family and dynasty records
-│   └── house-stark/
-│       └── house-stark.md   # House frontmatter + Markdown history
-└── characters/             # Configurable character root
-    ├── roger-rabbit/
-    │   ├── roger-rabbit.md       # Main file (frontmatter + description)
-    │   ├── roger-rabbit.n26.md   # Book page, keyed by book code
-    │   ├── portrait.webp          # Selected style thumbnail
-    │   └── reference.psd          # Unrecognized files are ignored
-    └── @drafts/                   # Draft character folders
-        └── unnamed-a1b2c3/
-            └── unnamed-a1b2c3.md
-```
-
-Folder names are derived from an ASCII-only transliteration of the character name
-(`José García` becomes `jose-garcia`). If that slug is already in use, Ensemble
-appends part of the stable character ID. The former `_name.md` layout is still
-readable for compatibility, but newly created characters use this structure.
-
-## Technology Stack
-
-- **Electron**: Cross-platform desktop application framework
-- **Angular**: Frontend framework with TypeScript
-- **vis.js**: Graph visualization library
-- **chokidar**: File system watching
-- **unified/remark**: Markdown processing
-
-## Releases and updates
-
-Push a tag matching `package.json` (for example, `v1.14.5`) to run the release
-workflow. It builds AppImage, DEB, and RPM packages on Linux. When macOS signing
-credentials are configured, it also builds signed, notarized DMG and ZIP
-packages for both macOS architectures. One publish job uploads the packages
-and their update metadata to the same GitHub release. The update feed needs
-both the package and its metadata; uploading an installer alone is insufficient.
-
-Before tagging, add these repository Actions secrets for the macOS build:
-
-- `MAC_CERTIFICATE`: base64 encoded Developer ID Application `.p12` certificate
-- `MAC_CERTIFICATE_PASSWORD`: password for that certificate
-- `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`: Apple notarization credentials
-
-Without any macOS credentials, the workflow publishes Linux packages only.
-Partially configured credentials fail the release. macOS automatic updates
-require the installed app and its replacement to be signed.
-Anyone using an earlier unsigned macOS build should install the first signed
-release manually, then subsequent releases can update in the app.
-
-Installed builds check GitHub Releases at startup and every four hours. Users
-can also check in Settings. When an update is ready, **Quit and Install** asks
-`electron-updater` to install the package matching the current platform.
-Linux AppImage users should keep the AppImage in a directory they can write to,
-so the updater can replace it. DEB and RPM installs use their respective package
-managers and may request administrator authentication. Builds run from source do
-not update themselves.
+Report bugs and ask for features on [GitHub Issues](https://github.com/leandroguillen/ensemble/issues). To work on the code, start from the issues list and read [docs/development.md](docs/development.md) to set up a local instance.
 
 ## License
 
-MIT
-
-## Houses
-
-Houses are stored under `houses/`, one folder per House. The main Markdown file
-has `type: house` in its YAML frontmatter. Crests use the same project image
-references as character thumbnails. Membership is stored in the House's
-`characterIds`; characters may belong to multiple Houses, regardless of book.
-Membership selections in the character editor are committed with Save Changes.
-
-The `leadership` array is chronological, oldest to newest: its saved array order
-is authoritative. Each entry has a stable `id`, `characterIds` (one or more
-joint heads), optional `period` and `notes`, and `books` containing optional book
-IDs. Dates and book references do not sort entries. Repeated characters across
-entries represent interrupted reigns. `currentLeadershipId` explicitly marks
-the current reign; an omitted value means unspecified or no current head.
-External Markdown edits refresh Houses. Open editors with unsaved changes require
-a reload before saving a changed file. Deleting a House preserves characters
-and other files in its folder.
-
-## Lore figures
-
-Lore uses the same character files and editor as Characters. Set `lore: true` in
-a record's frontmatter to place it in the Lore collection. Only the name is
-required; images, category, tags, books, descriptions, and other details are
-optional. The editor's Collection switch moves records between Characters and
-Lore while preserving their IDs, files, and references.
-
-Lore figures can be House members, historical leaders, cast members, and other
-character references. Character pickers show them with a **Lore** label.
-Drawer drafts remain separate and are excluded from those pickers.
-
-Drawer drafts can be converted from their editor using **Convert to Character**
-or **Convert to Lore**. Characters require a name and category; Lore figures
-require only a name. Conversion saves current edits and book notes, preserves
-the record's ID and images, and moves its folder out of `@drafts/`.
-
-## Locations
-
-Locations have an optional Type: Country, Region, Settlement, District, Building,
-Natural Feature, Continent, Plane, or Other. The editor includes explanations and
-examples for each type. Types are stored in Markdown frontmatter as `type` (for
-example, `type: settlement` or `type: natural-feature`). Existing locations without
-a type remain Unspecified.
-
-The Locations page displays type badges in grid and list views. Search matches
-names, descriptions, book names, and type labels. Type, book, and picture filters
-can be combined; their selections are remembered, and Clear Filters resets them.
-The toolbar wraps below the page title as space becomes limited.
+MIT. See [LICENSE](LICENSE).
