@@ -1,6 +1,6 @@
 {
   "name": "ensemble",
-  "version": "1.21.14",
+  "version": "1.21.15",
   "description": "Character management application for writers and worldbuilders",
   "main": "main.js",
   "scripts": {
@@ -40,7 +40,7 @@
   ],
   "author": {
     "name": "Leandro Guillen",
-    "email": "hi@leandroguillen.com"
+    "email": "ensemble@leandroguillen.com"
   },
   "homepage": "https://github.com/leandroguillen/ensemble",
   "repository": {
@@ -48,6 +48,9 @@
     "url": "https://github.com/leandroguillen/ensemble.git"
   },
   "license": "MIT",
+  "engines": {
+    "node": "^20.19.0 || ^22.12.0 || >=24.0.0"
+  },
   "devDependencies": {
     "@angular/build": "^21.2.11",
     "@angular/cli": "^21.2.11",
@@ -135,7 +138,7 @@
   "build": {
     "appId": "com.ensemble.app",
     "productName": "Ensemble",
-    "copyright": "Copyright © 2025 Ensemble",
+    "copyright": "Copyright © 2025-2026 Leandro Guillen",
     "directories": {
       "output": "release",
       "buildResources": "build"

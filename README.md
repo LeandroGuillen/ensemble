@@ -17,7 +17,7 @@ Character management application for writers and worldbuilders.
 
 ### Prerequisites
 
-- Node.js (v18 or higher)
+- Node.js 20.19+, 22.12+ or 24+ (the range Angular 21 supports)
 - npm or yarn
 
 ### Installation
