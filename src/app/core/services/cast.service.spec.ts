@@ -113,6 +113,38 @@ describe('Cast canvases', () => {
     expect(service.getCastsSnapshot()[0].id).toBe(cast.id);
   });
 
+  it('a reload that starts during pinboard migration does not duplicate existing casts', async () => {
+    // An existing cast with its own board, plus a legacy board that still needs migrating.
+    directories.add('/project/casts');
+    directories.add('/project/casts/crew');
+    files.set('/project/casts/crew/.castid', 'crew');
+    files.set('/project/casts/crew/description.md', 'Crew');
+    files.set('/project/casts/casts.json', JSON.stringify({
+      version: 1,
+      casts: [{ id: 'crew', name: 'Crew', characterIds: ['a', 'b'], pinboardId: 'crew-board' }],
+    }, null, 2));
+    project.metadata.pinboards = [board('legacy', 'Legacy'), board('crew-board', 'Crew')];
+
+    // On open, CharacterService's id remap calls forceReloadCasts() while the cast
+    // load is still inside migratePinboards (here: while it creates the legacy cast).
+    let reload: Promise<void> | null = null;
+    const createDirectory = electron.createDirectory;
+    electron.createDirectory = async (path: string) => {
+      if (!reload && path.startsWith('/project/casts/legacy')) reload = service.forceReloadCasts();
+      return createDirectory(path);
+    };
+
+    await service.loadCasts(project.path);
+    expect(reload).not.toBeNull();
+    await reload;
+
+    const names = service.getCastsSnapshot().map((c) => c.name).sort();
+    expect(names).toEqual(['Crew', 'Legacy']);
+    const index = JSON.parse(files.get('/project/casts/casts.json')!);
+    expect(index.casts.map((c: any) => c.name).sort()).toEqual(['Crew', 'Legacy']);
+    expect([...directories].filter((d) => d.startsWith('/project/casts/crew'))).toEqual(['/project/casts/crew']);
+  });
+
   it('keeps same-name legacy boards separate from existing casts', async () => {
     await service.loadCasts(project.path);
     const original = await service.createCast({ name: 'Court', characterIds: ['c'] });

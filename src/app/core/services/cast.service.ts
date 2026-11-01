@@ -154,6 +154,10 @@ export class CastService {
    * Forces a reload of casts from disk
    */
   async forceReloadCasts(): Promise<void> {
+    // Let an in-flight load finish first. Clearing the list under it (it may be
+    // inside migratePinboards) makes the migration think existing casts are
+    // missing and create duplicates. The reload below still reads the latest disk.
+    if (this.loading) await this.loading.catch(() => {});
     this.hasLoadedForCurrentProject = false;
     if (this.currentProjectPath) {
       this.castsSubject.next([]);
