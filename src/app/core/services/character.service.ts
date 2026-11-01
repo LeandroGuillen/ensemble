@@ -57,6 +57,13 @@ function normalizePrompts(raw: unknown): CharacterPrompt[] {
   }));
 }
 
+/** One per-book character page to rename when a book's code changes. */
+export interface BookPageMove {
+  from: string;
+  to: string;
+  name: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -205,6 +212,74 @@ export class CharacterService {
       ?.metadata.books?.find((candidate) => candidate.id === bookId);
     const suffix = bookPageSuffix({ id: bookId, code: book?.code });
     return pathJoin(dir, `${base}.${suffix}.md`);
+  }
+
+  /** `<dir>/<base>.<suffix>.md` for folder-based records, else null (legacy pages use the book id). */
+  private bookPagePathForSuffix(character: Character, suffix: string): string | null {
+    if (!isFolderBasedCharacterPath(character.relativePath)) return null;
+    const normalizedPath = character.filePath.replace(/\\/g, '/');
+    return pathJoin(pathDirname(normalizedPath), `${pathBasename(normalizedPath, '.md')}.${suffix}.md`);
+  }
+
+  /**
+   * Read-only preflight for a book code change: every character, Lore figure and
+   * draft page named with `oldSuffix` and the path it moves to. Throws (and
+   * changes nothing) when a target file already exists.
+   */
+  async planBookPageRename(oldSuffix: string, newSuffix: string): Promise<BookPageMove[]> {
+    if (oldSuffix === newSuffix) return [];
+    const records = [
+      ...this.charactersSubject.value,
+      ...this.loreSubject.value,
+      ...this.draftsSubject.value,
+    ];
+    const moves: BookPageMove[] = [];
+    const conflicts: string[] = [];
+    for (const record of records) {
+      const from = this.bookPagePathForSuffix(record, oldSuffix);
+      const to = this.bookPagePathForSuffix(record, newSuffix);
+      if (!from || !to || !(await this.electronService.fileExists(from))) continue;
+      if (await this.electronService.fileExists(to)) {
+        conflicts.push(`${record.name || record.id} (${pathBasename(to)})`);
+        continue;
+      }
+      moves.push({ from, to, name: record.name || record.id });
+    }
+    if (conflicts.length > 0) {
+      throw new Error(
+        `Can't change the book code: these characters already have notes under the new code: ${conflicts.join(', ')}. ` +
+          `Move or merge those files first.`
+      );
+    }
+    return moves;
+  }
+
+  /**
+   * Applies planned book page moves. On a failure, already-moved files are moved
+   * back and the error is rethrown, so notes are never left split.
+   */
+  async applyBookPageRename(moves: BookPageMove[]): Promise<void> {
+    const done: BookPageMove[] = [];
+    for (const move of moves) {
+      const result = await this.electronService.moveFile(move.from, move.to);
+      if (!result.success) {
+        await this.undoBookPageRename(done);
+        throw new Error(
+          `Couldn't rename the notes of "${move.name}" (${pathBasename(move.from)}): ${result.error || 'unknown error'}`
+        );
+      }
+      done.push(move);
+    }
+  }
+
+  /** Moves pages back (reverse order); best effort, logs what could not be undone. */
+  async undoBookPageRename(moves: BookPageMove[]): Promise<void> {
+    for (const move of [...moves].reverse()) {
+      const back = await this.electronService.moveFile(move.to, move.from);
+      if (!back.success) {
+        this.logger.error(`Failed to move ${move.to} back to ${move.from}: ${back.error}`);
+      }
+    }
   }
 
   /**

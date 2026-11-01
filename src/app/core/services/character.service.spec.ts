@@ -1627,4 +1627,91 @@ Body text
       expect(projectService.remapCharacterIds).toHaveBeenCalled();
     });
   });
+  describe('book page rename on book code change', () => {
+    let files: Set<string>;
+    const rec = (slug: string, extra: Partial<Character> = {}) =>
+      ({
+        id: `${slug}-id`,
+        name: slug,
+        relativePath: `${slug}/${slug}.md`,
+        filePath: `/test/project/characters/${slug}/${slug}.md`,
+        ...extra,
+      }) as Character;
+
+    beforeEach(() => {
+      files = new Set([
+        '/test/project/characters/ilse/ilse.lc2.md',
+        '/test/project/characters/mara/mara.lc2.md',
+        '/test/project/characters/@drafts/saffi/saffi.lc2.md',
+        '/test/project/characters/mara/mara.lc1.md',
+      ]);
+      electronService.fileExists.and.callFake(async (p: string) => files.has(p));
+      (electronService as any).moveFile = jasmine.createSpy('moveFile').and.callFake(async (from: string, to: string) => {
+        if (!files.has(from)) return { success: false, error: 'ENOENT' };
+        if (files.has(to)) return { success: false, error: `Destination already exists: ${to}` };
+        files.delete(from);
+        files.add(to);
+        return { success: true };
+      });
+      (service as any).charactersSubject.next([rec('ilse'), rec('mara'), rec('nopage')]);
+      (service as any).loreSubject.next([]);
+      (service as any).draftsSubject.next([
+        rec('saffi', {
+          draft: true,
+          relativePath: '@drafts/saffi/saffi.md',
+          filePath: '/test/project/characters/@drafts/saffi/saffi.md',
+        }),
+      ]);
+    });
+
+    it('renames every character and draft page from the old code to the new one', async () => {
+      const moves = await service.planBookPageRename('lc2', 'tb');
+      expect(moves.map((m) => m.to)).toEqual([
+        '/test/project/characters/ilse/ilse.tb.md',
+        '/test/project/characters/mara/mara.tb.md',
+        '/test/project/characters/@drafts/saffi/saffi.tb.md',
+      ]);
+      await service.applyBookPageRename(moves);
+      expect([...files].sort()).toEqual([
+        '/test/project/characters/@drafts/saffi/saffi.tb.md',
+        '/test/project/characters/ilse/ilse.tb.md',
+        '/test/project/characters/mara/mara.lc1.md',
+        '/test/project/characters/mara/mara.tb.md',
+      ]);
+
+      // The book tab now finds the old notes under the new code.
+      const project = createValidProject();
+      project.metadata.books = [{ id: 'tidebreak', code: 'tb', name: 'Tidebreak', color: '#111' }];
+      projectService.getCurrentProject.and.returnValue(project);
+      expect(files.has(service.getBookPageFilePath(rec('ilse'), 'tidebreak'))).toBeTrue();
+    });
+
+    it('refuses and changes nothing when a target already exists', async () => {
+      const before = [...files].sort();
+      await expectAsync(service.planBookPageRename('lc2', 'lc1')).toBeRejectedWithError(/mara \(mara\.lc1\.md\)/);
+      expect([...files].sort()).toEqual(before);
+      expect((electronService as any).moveFile).not.toHaveBeenCalled();
+    });
+
+    it('moves already-renamed pages back when a later rename fails', async () => {
+      const moves = await service.planBookPageRename('lc2', 'tb');
+      let calls = 0;
+      (electronService as any).moveFile.and.callFake(async (from: string, to: string) => {
+        calls += 1;
+        if (calls === 2) return { success: false, error: 'EACCES' };
+        if (!files.has(from) || files.has(to)) return { success: false, error: 'bad move' };
+        files.delete(from);
+        files.add(to);
+        return { success: true };
+      });
+      const before = [...files].sort();
+      await expectAsync(service.applyBookPageRename(moves)).toBeRejectedWithError(/mara.*EACCES/);
+      expect([...files].sort()).toEqual(before);
+    });
+
+    it('is a no-op when the suffix does not change', async () => {
+      expect(await service.planBookPageRename('lc2', 'lc2')).toEqual([]);
+    });
+  });
 });
+

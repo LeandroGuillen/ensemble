@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
 import { Book } from '../interfaces/project.interface';
 import { BookPlanSettings } from '../interfaces/book-plan.interface';
-import { getBookDisplayName } from '../utils/book-display.utils';
+import { bookPageSuffix, getBookDisplayName } from '../utils/book-display.utils';
+import { CharacterService } from './character.service';
 import { MetadataService } from './metadata.service';
 import { ModalService } from './modal.service';
 
@@ -43,7 +44,8 @@ const STATUS_MAP: Record<string, Book['status']> = {
 export class BookEditActionsService {
   constructor(
     private metadataService: MetadataService,
-    private modalService: ModalService
+    private modalService: ModalService,
+    private characterService: CharacterService
   ) {}
 
   /** Creates a book when `editing` is null, otherwise updates it. Throws on failure. */
@@ -75,7 +77,28 @@ export class BookEditActionsService {
       return this.metadataService.addBook(payload);
     }
 
+    // Character pages are named `<slug>.<code>.md`. When the code (or the id
+    // fallback when it's cleared) changes, rename them so the notes stay visible.
+    // Preflight first (refuses on an existing target, changes nothing), then the
+    // metadata save (which validates), then the renames; a failed rename is rolled
+    // back and the book's previous metadata restored.
+    const oldSuffix = bookPageSuffix(editing);
+    const newSuffix = bookPageSuffix({ id: editing.id, code: data.code });
+    const moves =
+      oldSuffix === newSuffix ? [] : await this.characterService.planBookPageRename(oldSuffix, newSuffix);
+
     const updated = await this.metadataService.updateBook(editing.id, payload);
+    if (moves.length > 0) {
+      try {
+        await this.characterService.applyBookPageRename(moves);
+      } catch (renameError) {
+        const { id: _id, ...previous } = editing;
+        await this.metadataService.updateBook(editing.id, { ...previous, code: editing.code ?? '' });
+        throw new Error(
+          `${renameError instanceof Error ? renameError.message : String(renameError)}. The book was not changed.`
+        );
+      }
+    }
     if ((editing.seriesId || undefined) !== seriesId || (editing.sagaId || undefined) !== sagaId) {
       await this.metadataService.moveBook(editing.id, { seriesId, sagaId }, undefined);
     }
