@@ -20,7 +20,7 @@ import {
 import { parseThumbnailReference, resolveThumbnailPath, resolveThumbnailForStyle, resolveThumbnailForBookStyle, normalizeThumbnailsMap, normalizeBookThumbnailsMap, thumbnailCacheKey, formatThumbnailWikiLink } from '../utils/thumbnail.utils';
 import { normalizeBookCategories, normalizeBookTags } from '../utils/character-category.utils';
 import { normalizeAliases } from '../utils/character-alias.utils';
-import { normalizeBookCode } from '../utils/book-display.utils';
+import { bookPageSuffix } from '../utils/book-display.utils';
 import { assertIpcSuccess, withIpcError } from '../utils/ipc.utils';
 import { requireProject } from '../utils/project.utils';
 import {
@@ -203,9 +203,8 @@ export class CharacterService {
     const book = this.projectService
       .getCurrentProject()
       ?.metadata.books?.find((candidate) => candidate.id === bookId);
-    const code =
-      asciiSlugify(normalizeBookCode(book?.code) || bookId) || asciiSlugify(bookId);
-    return pathJoin(dir, `${base}.${code}.md`);
+    const suffix = bookPageSuffix({ id: bookId, code: book?.code });
+    return pathJoin(dir, `${base}.${suffix}.md`);
   }
 
   /**

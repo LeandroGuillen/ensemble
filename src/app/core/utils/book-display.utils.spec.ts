@@ -1,4 +1,5 @@
 import {
+  bookPageSuffix,
   getBookCoverTitle,
   getBookDisplayName,
   getBookSpineLabel,
@@ -38,5 +39,18 @@ describe('book-display.utils', () => {
 
   it('falls back to description when no code', () => {
     expect(getBookSubtitle({ name: 'My Novel', description: 'A synopsis' })).toBe('A synopsis');
+  });
+  describe('bookPageSuffix', () => {
+    it('slugs the code, falling back to the id', () => {
+      expect(bookPageSuffix({ id: 'the-book', code: 'N26' })).toBe('n26');
+      expect(bookPageSuffix({ id: 'the-book', code: '  ' })).toBe('the-book');
+      expect(bookPageSuffix({ id: 'the-book' })).toBe('the-book');
+      expect(bookPageSuffix({ id: 'the-book', code: '!!!' })).toBe('the-book');
+    });
+
+    it('maps codes that differ only in case, dots or accents to the same suffix', () => {
+      expect(bookPageSuffix({ id: 'a', code: 'lc1' })).toBe(bookPageSuffix({ id: 'b', code: 'LC1.' }));
+      expect(bookPageSuffix({ id: 'a', code: 'Á1' })).toBe(bookPageSuffix({ id: 'b', code: 'A1' }));
+    });
   });
 });

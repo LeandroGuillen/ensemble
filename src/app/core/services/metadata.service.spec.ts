@@ -333,6 +333,64 @@ describe('MetadataService', () => {
       expect(projectService.updateMetadata).toHaveBeenCalled();
     });
 
+    describe('book codes that slug to the same notes file', () => {
+      const withBooks = (books: any[]) => {
+        const project = createValidProject();
+        project.metadata.books = books;
+        projectService.getCurrentProject.and.returnValue(project);
+        (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
+      };
+
+      const pairs: [string, string][] = [
+        ['lc1', 'LC1.'],
+        ['B1', 'B.1'],
+        ['A1', 'Á1'],
+        ['n23', 'N23!'],
+      ];
+
+      pairs.forEach(([existing, candidate]) => {
+        // addBook derives the id from the code, so an accented code is already
+        // refused by id validation; the updateBook spec covers that pair.
+        if (candidate !== 'Á1') it(`addBook refuses '${candidate}' next to '${existing}'`, async () => {
+          withBooks([{ id: 'one', name: 'One', code: existing, color: '#000' }]);
+          await expectAsync(service.addBook({ name: 'Two', code: candidate, color: '#111' })).toBeRejectedWithError(
+            /would share character notes files/
+          );
+          expect(projectService.updateMetadata).not.toHaveBeenCalled();
+        });
+
+        it(`updateBook refuses changing a code to '${candidate}' next to '${existing}'`, async () => {
+          withBooks([
+            { id: 'one', name: 'One', code: existing, color: '#000' },
+            { id: 'two', name: 'Two', code: 'zz9', color: '#111' },
+          ]);
+          await expectAsync(service.updateBook('two', { code: candidate })).toBeRejectedWithError(
+            /would share character notes files/
+          );
+          expect(projectService.updateMetadata).not.toHaveBeenCalled();
+        });
+      });
+
+      it('refuses a code that matches the id-based suffix of a book without a code', async () => {
+        withBooks([
+          { id: 'lc1', name: 'LC1', color: '#000' },
+          { id: 'other', name: 'Other', code: 'zz9', color: '#111' },
+        ]);
+        await expectAsync(service.updateBook('other', { code: 'LC1.' })).toBeRejectedWithError(
+          /would share character notes files \(\*\.lc1\.md\)/
+        );
+      });
+
+      it('still allows saving a book with its own code and distinct codes', async () => {
+        withBooks([
+          { id: 'one', name: 'One', code: 'lc1', color: '#000' },
+          { id: 'two', name: 'Two', code: 'lc2', color: '#111' },
+        ]);
+        await expectAsync(service.updateBook('one', { code: 'LC1', name: 'One again' })).toBeResolved();
+        await expectAsync(service.addBook({ name: 'Three', code: 'lc3', color: '#222' })).toBeResolved();
+      });
+    });
+
     it('should remove a book', async () => {
       const project = createValidProject();
       project.metadata.books = [{ id: 'book-1', name: 'Book 1', color: '#FF0000' }];

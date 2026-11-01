@@ -1,4 +1,5 @@
 import { Book } from '../interfaces/project.interface';
+import { asciiSlugify } from './slug.utils';
 
 /** Normalized title for storage/display when empty. */
 export const UNTITLED_BOOK_NAME = 'Untitled';
@@ -11,6 +12,15 @@ export function normalizeBookName(name: string | undefined | null): string {
 export function normalizeBookCode(code: string | undefined | null): string | undefined {
   const trimmed = code?.trim() ?? '';
   return trimmed.length > 0 ? trimmed : undefined;
+}
+
+/**
+ * Suffix used in per-book character page names (`<slug>.<suffix>.md`): the
+ * ASCII slug of the code, or of the id when there is no code (or it slugs to
+ * nothing). Two books must never share one, or they share one notes file.
+ */
+export function bookPageSuffix(book: Pick<Book, 'id' | 'code'>): string {
+  return asciiSlugify(normalizeBookCode(book.code) || book.id) || asciiSlugify(book.id);
 }
 
 /** Title for storage/display when no code takes priority; never empty. */

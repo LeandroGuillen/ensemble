@@ -15,6 +15,7 @@ import { pathJoin } from '../utils/path.utils';
 import { slugify } from '../utils/slug.utils';
 import { parseMarkdown, generateMarkdown } from '../utils/markdown.utils';
 import {
+  bookPageSuffix,
   getBookDisplayName,
   normalizeBookCode,
   normalizeBookName,
@@ -464,6 +465,7 @@ export class MetadataService {
     }
 
     this.assertUniqueBookCode(books, code);
+    this.assertUniqueBookPageSuffix(books, newBook);
 
     // Add book and save
     const updatedMetadata = {
@@ -525,6 +527,7 @@ export class MetadataService {
     }
 
     this.assertUniqueBookCode(books, code, id);
+    this.assertUniqueBookPageSuffix(books, updatedBook);
 
     // Update book and save
     const updatedBooks = [...books];
@@ -555,6 +558,26 @@ export class MetadataService {
     );
     if (duplicate) {
       throw new Error(`Book code '${code}' is already used by another book`);
+    }
+  }
+
+  /**
+   * Character book pages are named `<slug>.<bookPageSuffix>.md`, and the suffix
+   * drops case, dots, accents and punctuation. Refuse a code whose suffix matches
+   * another book's (`lc1` vs `LC1.`, `Á1` vs `A1`), or both books would read and
+   * overwrite the same notes file.
+   */
+  private assertUniqueBookPageSuffix(books: Book[], book: Book): void {
+    const suffix = bookPageSuffix(book);
+    const clash = books.find(
+      (other) => other.id !== book.id && bookPageSuffix(other) === suffix
+    );
+    if (clash) {
+      const label = book.code ? `Book code '${book.code}'` : `Book '${book.name}'`;
+      throw new Error(
+        `${label} would share character notes files (*.${suffix}.md) with "${getBookDisplayName(clash)}". ` +
+          `Use a code that differs in letters or digits, not only in case, accents or punctuation.`
+      );
     }
   }
 
