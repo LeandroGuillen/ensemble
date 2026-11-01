@@ -11,6 +11,21 @@
         "brother-cael"
       ],
       "pinboardId": "lighthouse-crew-board"
+    },
+    {
+      "id": "coast-relationships",
+      "name": "Coast relationships",
+      "characterIds": [
+        "mara-vell",
+        "oren-vell",
+        "ilse-dunmore",
+        "teodor-dunmore",
+        "saffi-reed",
+        "brother-cael",
+        "nessa-quill",
+        "the-grey-pilot"
+      ],
+      "pinboardId": "coast-relationships"
     }
   ]
 }

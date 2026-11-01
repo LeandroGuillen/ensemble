@@ -10,7 +10,7 @@ An original maritime fantasy demo for Ensemble. Along a coast of memory-powered 
 
 Ensemble writes project metadata immediately on opening and remembers navigation as you work. Opening a read-only folder fails; opening the repository’s original folder can leave local changes. Always work in your writable copy. Deletes use an Undo window and then the OS trash; exclude `.ensemble-trash/` from any backup, snapshot or export.
 
-The project starts with the dark Blue Gold theme and Classic skin. The coast relationship graph has eight people and labeled directional connections. The Lighthouse Crew has its own four-person graph. The current app also imports a relationship graph without an assigned cast as a cast on first opening, so it may add a Coast relationships cast to your copy. The supplied index contains one cast.
+The project starts with the dark Blue Gold theme and Classic skin. There are two casts, each with its own relationship graph: Coast relationships (eight people, with labeled directional connections) and The Lighthouse Crew (four people).
 
 ## What to explore
 

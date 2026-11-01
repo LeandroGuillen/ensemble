@@ -3,13 +3,29 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { buildSync } = require('esbuild');
+const { build, buildSync } = require('esbuild');
 const yaml = require('js-yaml');
+const picomatch = require('picomatch');
 const repo = path.resolve(__dirname, '..');
 const root = path.join(repo, 'examples/demo-project');
 // Bundle the real app resolver, including its normal Markdown dependencies, in memory.
 const resolverModule = buildSync({ entryPoints: [path.join(repo, 'src/app/core/utils/wiki-links.utils.ts')], bundle: true, platform: 'node', format: 'esm', write: false }).outputFiles[0].text;
 const resolver = import('data:text/javascript;base64,' + Buffer.from(resolverModule).toString('base64'));
+const esm = file => import('data:text/javascript;base64,' + Buffer.from(buildSync({ entryPoints: [path.join(repo, file)], bundle: true, platform: 'node', format: 'esm', write: false }).outputFiles[0].text).toString('base64'));
+// The app's own discovery and serialization rules, so the demo is checked the way the app reads it.
+const characterPaths = esm('src/app/core/utils/character-path.utils.ts');
+const castPinboard = esm('src/app/core/utils/cast-pinboard.utils.ts');
+// PlotBoardService with Angular and its injected services stubbed (parseFile/generateFile are pure).
+const plotBoardService = build({
+  entryPoints: [path.join(repo, 'src/app/core/services/plot-board.service.ts')], bundle: true, platform: 'node', format: 'cjs', write: false, logLevel: 'error',
+  plugins: [{ name: 'stub', setup(b) {
+    b.onResolve({ filter: /^@angular\// }, a => ({ path: a.path, namespace: 'stub' }));
+    b.onResolve({ filter: /\.service$/ }, a => (a.importer.endsWith('plot-board.service.ts') ? { path: a.path, namespace: 'stub' } : undefined));
+    b.onLoad({ filter: /.*/, namespace: 'stub' }, () => ({ loader: 'js', contents: 'export const Injectable = () => c => c; export class ElectronService {} export class ProjectService {} export class LoggingService {}' }));
+  } }],
+}).then(r => { const m = { exports: {} }; new Function('module', 'exports', 'require', r.outputFiles[0].text)(m, m.exports, require); return Object.create(m.exports.PlotBoardService.prototype); });
+/** Files under `folder` whose name matches `glob`, as `readDirectoryRecursive` scans them (basename match, .ensemble-trash skipped). */
+function scan(folder, glob) { const isMatch = picomatch(glob, { dot: true }); return files(path.join(root, folder)).filter(f => !f.includes('.ensemble-trash') && isMatch(path.basename(f))); }
 const forbidden = ['StarCraft', 'Warcraft', 'Apple', 'Windows XP', 'Windows 95', 'Windows 11', 'Microsoft Windows', 'Microsoft', 'MS-DOS', 'MSDOS', 'Mac OS', 'Macintosh', 'Blizzard', 'Nintendo', 'Pokémon', 'Pokemon', 'Harry Potter', 'Dragon Ball', 'Disney', 'OpenAI', 'ChatGPT', 'Midjourney', 'Stable Diffusion'];
 function files(dir) { return fs.readdirSync(dir, { withFileTypes: true }).flatMap(e => e.isDirectory() ? files(path.join(dir, e.name)) : [path.join(dir, e.name)]); }
 function read(file) { return fs.readFileSync(file, 'utf8'); }
@@ -35,6 +51,9 @@ function image(ref, local) {
 
 test('Lantern Coast demo has complete, resolvable canonical project data', async () => {
   const { resolveWikiLinkTarget } = await resolver;
+  const { parseCharacterMainFileLocation } = await characterPaths;
+  const { reconcileCastPinboard } = await castPinboard;
+  const plotBoards = await plotBoardService;
   const all = files(root), markdown = all.filter(f => f.endsWith('.md')).map(parse);
   for (const file of all.filter(f => /\.(md|json)$/.test(f))) {
     const text = read(file);
@@ -52,11 +71,13 @@ test('Lantern Coast demo has complete, resolvable canonical project data', async
   assert.equal(project.tags.length, 6); assert.equal(project.books.length, 2); assert.equal(project.series.length, 1);
   const bookIds = ids(project.books, 'books'), seriesIds = ids(project.series, 'series');
   const categoryIds = ids(project.categories, 'categories'), tagIds = ids(project.tags, 'tags');
-  const records = folder => markdown.filter(m => path.relative(root, m.file).startsWith(folder + '/') && path.basename(m.file) === path.basename(path.dirname(m.file)) + '.md');
-  const chars = records('characters'), locations = records('locations'), houses = records('houses');
+  // Same discovery as CharacterService (`*.md` + main-file rule), LocationService (`_*.md`) and HouseService (`*.md` with `type: house`).
+  const chars = scan('characters', '*.md').filter(f => parseCharacterMainFileLocation(path.relative(path.join(root, 'characters'), f).replaceAll(path.sep, '/'))).map(parse);
+  const locations = scan('locations', '_*.md').map(parse);
+  const houses = scan('houses', '*.md').map(parse).filter(m => m.fm.type === 'house');
   const active = chars.filter(m => !m.fm.lore && !m.file.includes('/@drafts/'));
   assert.equal(active.length, 10); assert.equal(chars.filter(m => m.fm.lore).length, 2); assert.equal(chars.filter(m => m.file.includes('/@drafts/')).length, 1);
-  assert.equal(locations.length, 6); assert.equal(houses.length, 2);
+  assert.equal(locations.length, 6, 'LocationService finds 6 locations (`_*.md` under locations/)'); assert.equal(houses.length, 2);
   assert.deepEqual(new Set(locations.map(m => m.fm.type)), new Set(['region', 'settlement', 'district', 'building', 'natural-feature', 'plane']));
   ids([...chars, ...locations, ...houses].map(m => m.fm), 'frontmatter');
   const charIds = new Set(chars.map(m => m.fm.id)), locIds = new Set(locations.map(m => m.fm.id));
@@ -103,19 +124,28 @@ test('Lantern Coast demo has complete, resolvable canonical project data', async
     const nodeIds = ids(board.nodes, board.id); ids(board.edges, board.id);
     for (const e of board.edges) { references([e.source, e.target], nodeIds, board.id); assert.ok(e.label && e.color); }
   }
-  const castIndex = JSON.parse(read(path.join(root, 'characters/casts/casts.json')));
-  assert.equal(castIndex.version, 1); assert.equal(castIndex.casts.length, 1); ids(castIndex.casts, 'casts');
+  const castsJson = read(path.join(root, 'characters/casts/casts.json')), castIndex = JSON.parse(castsJson);
+  assert.equal(castsJson, JSON.stringify(castIndex, null, 2), 'Canonical casts.json serialization');
+  assert.equal(castIndex.version, 1); assert.equal(castIndex.casts.length, 2); ids(castIndex.casts, 'casts');
+  const castFolders = fs.readdirSync(path.join(root, 'characters/casts'), { withFileTypes: true }).filter(e => e.isDirectory()).map(e => path.join(root, 'characters/casts', e.name));
+  assert.equal(castFolders.length, castIndex.casts.length, 'One folder per cast');
   for (const cast of castIndex.casts) {
     references(cast.characterIds, charIds, cast.name); references([cast.pinboardId], boardIds, cast.name);
-    const folder = path.join(root, 'characters/casts/the-lighthouse-crew');
-    assert.equal(read(path.join(folder, '.castid')), cast.id); assert.ok(read(path.join(folder, 'description.md')).trim());
-    assert.deepEqual(new Set(project.pinboards.find(b => b.id === cast.pinboardId).nodes.map(n => n.id)), new Set(cast.characterIds));
+    const folder = castFolders.find(f => fs.existsSync(path.join(f, '.castid')) && read(path.join(f, '.castid')) === cast.id);
+    assert.ok(folder, `${cast.name}: no folder with .castid ${cast.id}`); assert.ok(read(path.join(folder, 'description.md')).trim());
+    // Opening must not rewrite the cast's pinboard (CastService.syncCastPinboard).
+    const board = project.pinboards.find(b => b.id === cast.pinboardId);
+    assert.equal(JSON.stringify(reconcileCastPinboard(cast, board)), JSON.stringify(board), `${cast.name}: pinboard differs from its cast; opening would rewrite it`);
   }
+  // Opening must not create casts (CastService.migratePinboards turns every pinboard without a cast into one).
+  for (const board of project.pinboards) assert.ok(castIndex.casts.some(c => c.pinboardId === board.id), `Pinboard ${board.id} has no cast; opening would create one`);
   const plot = parse(path.join(root, 'lantern-coast.pinboard.md'));
-  assert.equal(plot.fm.threads.length, 3); assert.equal(plot.fm.rows.length, 6); assert.ok(Object.keys(plot.fm.cellMeta).length >= 2);
+  // Exactly what PlotBoardService writes, so opening (id remap, autosave) never rewrites it.
+  assert.equal(plot.raw, plotBoards.generateFile(plotBoards.parseFile(plot.raw)), 'Plot board is not in the form the app writes');
+  assert.equal(plot.fm.threads.length, 3); assert.equal(plotBoards.parseFile(plot.raw).rows.length, 6); assert.ok(Object.keys(plot.fm.cellMeta).length >= 2);
   const threadIds = ids(plot.fm.threads, 'plot threads');
   for (const t of plot.fm.threads) references(t.characters, charIds, t.name);
-  for (const [row, cells] of Object.entries(plot.fm.cellMeta)) { assert.ok(Number(row) < plot.fm.rows.length); references(Object.keys(cells), threadIds, 'cellMeta'); }
+  for (const [row, cells] of Object.entries(plot.fm.cellMeta)) { assert.ok(Number(row) < 6); references(Object.keys(cells), threadIds, 'cellMeta'); }
   assert.equal(plot.body.trim().split('\n').length, 8);
   const plan = read(path.join(root, 'books/lc2/lc2.plan.md'));
   assert.equal([...plan.matchAll(/^## \S+ - /gm)].length, 6);

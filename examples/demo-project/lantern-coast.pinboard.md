@@ -18,13 +18,6 @@ threads:
     characters:
       - wren-dunmore
       - nessa-quill
-rows:
-  - name: A dry arrival
-  - name: The closed gate
-  - name: A missing island
-  - name: The memory price
-  - name: Below the harbor
-  - name: A new promise
 cellMeta:
   '0':
     deep:
@@ -36,7 +29,7 @@ cellMeta:
       color: '#e6b957'
 ---
 
-| | The failing light | The salt charter | The returning tide |
+|| The failing light | The salt charter | The returning tide |
 |---|---|---|---|
 | A dry arrival | [[Mara Vell]] finds a blue flame. | [[Ilse Dunmore]] impounds a skiff. | [[Wren Dunmore]] returns without a shadow. |
 | The closed gate | [[Oren Vell]] hides a broken lens. | [[Teodor Dunmore]] locks the charter room. | [[Nessa Quill]] measures the wrong tide. |
