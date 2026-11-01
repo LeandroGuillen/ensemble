@@ -43,6 +43,11 @@
   "trashCommit": "trash-commit",
   "trashCommitFailed": "trash-commit-failed",
 
+  "backupCreate": "backup-create",
+  "backupRestore": "backup-restore",
+  "backupListSnapshots": "backup-list-snapshots",
+  "backupPruneSnapshots": "backup-prune-snapshots",
+
   "startFileWatcher": "start-file-watcher",
   "stopFileWatcher": "stop-file-watcher",
 

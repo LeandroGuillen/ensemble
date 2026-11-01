@@ -57,6 +57,11 @@ export interface IpcChannels {
   readonly trashCommit: string;
   readonly trashCommitFailed: string;
 
+  readonly backupCreate: string;
+  readonly backupRestore: string;
+  readonly backupListSnapshots: string;
+  readonly backupPruneSnapshots: string;
+
   readonly startFileWatcher: string;
   readonly stopFileWatcher: string;
 

@@ -10,8 +10,10 @@ const { normalizeRelativeFolder } = require('./lib/normalize-relative-folder');
 const { createWindow, registerNavigationIpc } = require('./lib/window');
 const { createLifecycleController } = require('./lib/window-lifecycle');
 const { createTrashManager, createQuitFlushGuard } = require('./lib/trash-manager');
+const { createBackupManager } = require('./lib/backup-manager');
 const dialogHandlers = require('./lib/dialog-handlers');
 const fsHandlers = require('./lib/fs-handlers');
+const backupHandlers = require('./lib/backup-handlers');
 const fileWatcher = require('./lib/file-watcher');
 const aiHttp = require('./lib/ai-http');
 const updater = require('./lib/updater');
@@ -64,6 +66,8 @@ const trashManager = createTrashManager({
   },
 });
 
+const backupManager = createBackupManager({ fs, path });
+
 const trashQuitFlush = createQuitFlushGuard({
   flush: () => trashManager.flushPending(),
   quit: () => app.quit(),
@@ -97,6 +101,7 @@ const sharedDeps = {
   recentProjectsPath,
   dialog,
   trashManager,
+  backupManager,
 };
 
 registerNavigationIpc(ipcMain, {
@@ -106,6 +111,7 @@ registerNavigationIpc(ipcMain, {
 
 dialogHandlers.register(ipcMain, sharedDeps);
 fsHandlers.register(ipcMain, sharedDeps);
+backupHandlers.register(ipcMain, sharedDeps);
 fileWatcher.register(ipcMain, sharedDeps);
 aiHttp.register(ipcMain, sharedDeps);
 updater.register(ipcMain, sharedDeps);

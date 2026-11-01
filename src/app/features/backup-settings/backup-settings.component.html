@@ -1,0 +1,94 @@
+<div class="backup-settings backup-settings-panel">
+  <div class="settings-content">
+    <div class="settings-inner">
+      <div class="form-section" [settingsSearchable]="['backup', 'snapshot', 'create', 'zip', 'download']">
+        <h3 class="form-section-title">Project backup</h3>
+        <p class="field-hint">
+          A snapshot is a zip of this project. Create one before a big change, then
+          restore it into a copy if something goes wrong.
+        </p>
+        <div class="form-group">
+          <button type="button" class="btn btn-secondary" (click)="createSnapshot()" [disabled]="creating">
+            {{ creating ? 'Creating…' : 'Create snapshot' }}
+          </button>
+          @if (lastResult) {
+            <div class="test-result success snapshot-result">
+              <div>
+                <strong>{{ lastResult.name }}</strong>
+                · {{ formatSize(lastResult.size) }}
+                · {{ lastResult.fileCount }} files
+              </div>
+              <div class="field-hint">{{ lastResult.path }}</div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="form-section" [settingsSearchable]="['backup folder', 'restore', 'automatic', 'migration', 'retention', 'keep']">
+        <div class="form-group">
+          <label class="form-label">Backup folder</label>
+          <div class="backup-folder-row">
+            <span class="backup-folder-path">{{ backupFolder || effectiveBackupDir }}</span>
+            <button type="button" class="btn btn-secondary" (click)="chooseBackupFolder()">Change…</button>
+          </div>
+          <p class="field-hint">
+            Snapshots are saved here. Automatic snapshots are kept for {{ keepAutomatic }}.
+          </p>
+        </div>
+
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" [(ngModel)]="autoBeforeMigration" (ngModelChange)="onAutoChange()" />
+            <span>Back up automatically before updates and migrations</span>
+          </label>
+          <p class="field-hint">
+            Takes a snapshot when a new version of Ensemble might change how your project is stored.
+          </p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Keep last automatic snapshots</label>
+          <input
+            type="number"
+            class="form-control"
+            min="1"
+            [(ngModel)]="keepAutomatic"
+            (ngModelChange)="onKeepChange()"
+          />
+        </div>
+      </div>
+
+      <div class="form-section" [settingsSearchable]="['snapshots', 'restore', 'history', 'open']">
+        <h3 class="form-section-title">Snapshots</h3>
+        @if (loading) {
+          <p class="field-hint">Loading…</p>
+        } @else if (snapshots.length === 0) {
+          <p class="field-hint">No snapshots yet.</p>
+        } @else {
+          <ul class="snapshot-list">
+            @for (snapshot of snapshots; track snapshot.path) {
+              <li class="snapshot-row">
+                <div class="snapshot-info">
+                  <span class="snapshot-name">{{ snapshot.name }}</span>
+                  <span class="snapshot-meta">
+                    {{ formatSize(snapshot.size) }}
+                    · {{ formatDate(snapshot.createdAt) }}
+                    · {{ snapshot.automatic ? 'Automatic' : 'Manual' }}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  (click)="restore(snapshot)"
+                  [disabled]="restoring"
+                >
+                  {{ restoring ? 'Restoring…' : 'Restore' }}
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    </div>
+  </div>
+</div>

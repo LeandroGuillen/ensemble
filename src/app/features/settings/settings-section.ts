@@ -5,7 +5,8 @@ export type SettingsSectionId =
   | 'tags'
   | 'character-styles'
   | 'ai'
-  | 'image-generation';
+  | 'image-generation'
+  | 'backup';
 
 /** Legacy / alias query values mapped to current section ids. */
 export const SETTINGS_SECTION_ALIASES: Record<string, SettingsSectionId> = {
@@ -25,4 +26,5 @@ export const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
   'character-styles',
   'ai',
   'image-generation',
+  'backup',
 ] as const;

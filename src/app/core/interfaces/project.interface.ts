@@ -1,4 +1,5 @@
 import { BookPlanSettings } from "./book-plan.interface";
+import { BackupSettings } from "./backup.interface";
 
 export interface Pinboard {
   id: string;
@@ -194,6 +195,7 @@ export interface ProjectSettings {
   pinboardView?: PinboardViewState;
   ai?: AiSettings;
   imageGeneration?: ImageGenerationSettings;
+  backup?: BackupSettings;
   theme?: string; // Theme ID (e.g., "blue-gold")
   skin?: string; // Skin ID (e.g., "classic", "pixel")
   colorPalette?: import('./color-palette.interface').ColorPaletteConfig;

@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { IpcChannels } from '../ipc/ipc-channels';
 import { LoggingService } from './logging.service';
+import { BackupSnapshot } from '../interfaces/backup.interface';
 
 declare global {
   interface Window {
@@ -260,6 +261,50 @@ export class ElectronService {
     if (this.isElectron()) {
       this.ipcRenderer.on(IpcChannels.trashCommitFailed, callback);
     }
+  }
+
+  /** Create a zip snapshot of the project folder (main-process backup manager). */
+  async createBackupSnapshot(
+    projectPath: string,
+    destDir?: string
+  ): Promise<{ success: boolean; snapshot?: BackupSnapshot; error?: string }> {
+    if (!this.isElectron()) {
+      return { success: false, error: 'Not running in Electron' };
+    }
+    return await this.ipcRenderer.invoke(IpcChannels.backupCreate, projectPath, destDir);
+  }
+
+  /** Restore a snapshot into a brand-new folder, never over the live project. */
+  async restoreBackupSnapshot(
+    zipPath: string,
+    destParentDir: string,
+    restoredName?: string
+  ): Promise<{ success: boolean; folderPath?: string; entryCount?: number; name?: string; error?: string }> {
+    if (!this.isElectron()) {
+      return { success: false, error: 'Not running in Electron' };
+    }
+    return await this.ipcRenderer.invoke(IpcChannels.backupRestore, zipPath, destParentDir, restoredName);
+  }
+
+  /** List the snapshots in a backup folder, newest first. */
+  async listBackupSnapshots(
+    dir: string
+  ): Promise<{ success: boolean; snapshots?: BackupSnapshot[]; error?: string }> {
+    if (!this.isElectron()) {
+      return { success: false, error: 'Not running in Electron' };
+    }
+    return await this.ipcRenderer.invoke(IpcChannels.backupListSnapshots, dir);
+  }
+
+  /** Keep only the newest `keepN` automatic snapshots in a backup folder. */
+  async pruneBackupSnapshots(
+    dir: string,
+    keepN: number
+  ): Promise<{ success: boolean; removed?: string[]; kept?: string[]; error?: string }> {
+    if (!this.isElectron()) {
+      return { success: false, error: 'Not running in Electron' };
+    }
+    return await this.ipcRenderer.invoke(IpcChannels.backupPruneSnapshots, dir, keepN);
   }
 
   async copyDirectoryRecursive(sourcePath: string, destPath: string): Promise<{ success: boolean; error?: string }> {

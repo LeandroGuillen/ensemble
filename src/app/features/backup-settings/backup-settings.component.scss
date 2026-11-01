@@ -1,0 +1,202 @@
+.settings-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--spacing-xl);
+}
+
+.backup-settings-panel .settings-content {
+  padding: 0;
+  overflow: visible;
+}
+
+.settings-inner {
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl);
+}
+
+.backup-settings-panel .settings-inner {
+  max-width: none;
+  margin: 0;
+}
+
+.form-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  max-width: 32rem;
+  width: 100%;
+}
+
+.form-section-title {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0 0 var(--spacing-xs) 0;
+  padding-bottom: var(--spacing-xs);
+  border-bottom: 1px solid var(--color-border-subtle);
+  width: 100%;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  width: 100%;
+}
+
+.backup-settings-panel .btn {
+  width: auto;
+  align-self: flex-start;
+}
+
+.form-label {
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: block;
+  margin-bottom: var(--spacing-xs);
+}
+
+.checkbox-label {
+  display: grid;
+  grid-template-columns: 1.125rem minmax(0, 1fr);
+  column-gap: var(--spacing-sm);
+  align-items: start;
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  font-size: 0.9375rem;
+
+  input[type='checkbox'] {
+    margin: 0.125rem 0 0;
+    width: 1.125rem;
+    height: 1.125rem;
+    cursor: pointer;
+    accent-color: var(--color-accent-primary);
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+  }
+}
+
+.form-control {
+  width: 100%;
+  max-width: 12rem;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font-size: 0.9375rem;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+
+  &:hover {
+    border-color: var(--color-border-light);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-accent-primary);
+    box-shadow: 0 0 0 3px rgba(229, 168, 85, 0.1);
+  }
+}
+
+.field-hint {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  margin: 0;
+  margin-top: var(--spacing-xs);
+  line-height: 1.5;
+}
+
+.test-result {
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  width: 100%;
+
+  &.success {
+    background: rgba(74, 222, 128, 0.08);
+    color: var(--color-success);
+    border: 1px solid rgba(74, 222, 128, 0.2);
+  }
+
+  strong {
+    color: var(--color-text-primary);
+  }
+}
+
+.backup-folder-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  width: 100%;
+}
+
+.backup-folder-path {
+  flex: 1;
+  min-width: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.snapshot-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.snapshot-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.snapshot-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.snapshot-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.875rem;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.snapshot-meta {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}

@@ -114,6 +114,9 @@
         @if (isAiSection(activeSection)) {
           <app-ai-settings [activeSection]="activeSection"></app-ai-settings>
         }
+        @if (isBackupSection(activeSection)) {
+          <app-backup-settings [activeSection]="activeSection"></app-backup-settings>
+        }
       </div>
     </div>
   </div>

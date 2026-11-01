@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { MetadataManagementComponent } from '../metadata-management/metadata-management.component';
 import { AiSettingsComponent } from '../ai-settings/ai-settings.component';
+import { BackupSettingsComponent } from '../backup-settings/backup-settings.component';
 import { ProjectService } from '../../core/services/project.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { ColorPaletteService } from '../../core/services/color-palette.service';
@@ -50,7 +51,7 @@ const SETTINGS_NAV_EXPANDED_GROUPS_KEY = 'settingsNavExpandedGroups';
 
 @Component({
   selector: 'app-settings',
-  imports: [FormsModule, PageHeaderComponent, MetadataManagementComponent, AiSettingsComponent],
+  imports: [FormsModule, PageHeaderComponent, MetadataManagementComponent, AiSettingsComponent, BackupSettingsComponent],
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.scss'],
 })
@@ -75,6 +76,12 @@ export class SettingsComponent implements OnInit, OnDestroy {
       id: 'appearance',
       label: 'Appearance',
       description: 'Theme, skin, colors, and interface zoom',
+    },
+    {
+      kind: 'leaf',
+      id: 'backup',
+      label: 'Backup',
+      description: 'Project snapshots and restore',
     },
     {
       kind: 'group',
@@ -228,6 +235,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   isAiSection(section: SettingsSectionId): boolean {
     return section === 'ai' || section === 'image-generation';
+  }
+
+  isBackupSection(section: SettingsSectionId): boolean {
+    return section === 'backup';
   }
 
   get activeNavItem(): SettingsNavLeaf {
