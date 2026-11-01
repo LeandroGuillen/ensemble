@@ -60,6 +60,7 @@ Ensemble keeps your cast, your world and your plot in one folder of Markdown fil
 - **Multiple projects**: keep several projects and open a recent one with the keys `1` to `9`.
 - **Duplicate project**: copy a project to start a variant of it.
 - **Undoable deletes**: delete a character, draft, Lore figure, location, House or cast and undo it for 15 seconds, then it goes to the system trash.
+- **Backups**: create a zip snapshot of a project and restore it into a copy, with automatic snapshots before updates and a retention limit.
 - **Update checks**: installed builds check GitHub Releases and offer to restart into a new version.
 
 ## Download and install
@@ -98,6 +99,8 @@ sudo dnf install ./ensemble-*.x86_64.rpm
 To look around before you write anything, [open the demo project](examples/demo-project/), an invented world called The Lantern Coast. Copy the `examples/demo-project` folder somewhere you can write to first, then open the copy; Ensemble writes to a project as soon as it opens it.
 
 Create a folder on your disk and open it in Ensemble as a project. Ensemble adds the folders it needs and writes a small `ensemble.json` with your categories, tags, books and settings.
+
+New to Ensemble? The [user guide](docs/user-guide.md) walks through the concepts — characters, Lore and drafts, books and per-book overrides, styles, Houses, casts and pinboards, plot boards, external editing and backups.
 
 ```
 project-folder/

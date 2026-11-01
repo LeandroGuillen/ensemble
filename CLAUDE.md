@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Ensemble is an Electron + Angular 17 desktop application for character management in worldbuilding and writing projects. All data is stored as **plain text files** (markdown for characters, JSON for project metadata) in user-defined work folders, enabling external editing and version control.
+Ensemble is an Electron + Angular 21 desktop application for character management in worldbuilding and writing projects. All data is stored as **plain text files** (markdown for characters, JSON for project metadata) in user-defined work folders, enabling external editing and version control.
 
 ## Architecture
 
 ### Three-Layer Architecture
 
-1. **UI Layer**: Angular 17 standalone components (lazy-loaded via routes)
+1. **UI Layer**: Angular 21 standalone components (lazy-loaded via routes)
 2. **Application Layer**: Angular services managing business logic and state
 3. **Data Layer**: Electron IPC bridge to Node.js file system operations
 
@@ -19,7 +19,7 @@ Ensemble is an Electron + Angular 17 desktop application for character managemen
 - **File-based storage**: All character data lives in work folders as `.md` files with YAML frontmatter
 - **IPC communication**: Angular calls `ElectronService` → IPC handlers in `main.js` → Node.js fs operations
 - **Reactive state**: Services use RxJS `BehaviorSubject` for state management
-- **Standalone components**: Using Angular 17's modern standalone API (no NgModules)
+- **Standalone components**: Using Angular 21's modern standalone API (no NgModules)
 - **Lazy loading**: All feature components loaded via dynamic imports in routes
 
 ### Core Services
@@ -32,7 +32,7 @@ Located in `src/app/core/services/`:
 - **LocationService**: CRUD operations for location files (`_*.md`), recursive scan under `locations/`, flat-file format
 - **CastService**: CRUD operations for cast folders under the casts folder
 - **PinboardService**: Manages pinboard data (nodes/edges) across multiple pinboards stored in `ensemble.json`
-- **PlotBoardService**: Discovers and manages `*.plotboard.md` files anywhere under the project
+- **PlotBoardService**: Discovers and manages plot-board Markdown files anywhere under the project (`*.pinboard.md`, plus legacy `*.plotboard.md`)
 - **BookPlanService**: Loads, autosaves (1s idle) and watches a book's plan file (`Book.plan.path`); external edits reload when there are no unsaved changes, otherwise they surface as a conflict
 - **BookEditActionsService**: Create/update/delete books from the Edit Book modal; shared by the Library and the book page
 - **MetadataService**: Validates characters against project metadata (categories/tags)
@@ -109,7 +109,7 @@ npm run build-electron-mac          # macOS (REQUIRES macOS system)
 npm run dist
 ```
 
-**Important**: See `PACKAGING.md` for cross-platform build limitations and CI/CD setup.
+Cross-platform note: the macOS build must run on macOS, and Windows builds need proper icons. See `docs/releasing.md` for how releases are cut.
 
 ### Testing
 
@@ -135,6 +135,9 @@ project-folder/
 ├── comfyui-workflows/      # ComfyUI API-format workflow JSON (optional; image generation)
 ├── locations/              # Location files (recursively scanned)
 │   └── _<slug>.md          # Location file (e.g., "_grey-harbor.md")
+├── houses/                 # House folders (one folder per House)
+│   └── <house-slug>/
+│       └── <house-slug>.md # House frontmatter + Markdown history
 ├── characters/             # Configurable character root
 │   ├── <character-slug>/
 │   │   ├── <character-slug>.md
@@ -142,10 +145,10 @@ project-folder/
 │   │   └── <selected thumbnail images>
 │   ├── @drafts/<draft-slug>/<draft-slug>.md
 │   └── casts/              # Cast folders (one folder per cast)
-└── **/*.plotboard.md   # Plot boards (any subfolder; identity = path from project root)
+└── **/*.pinboard.md   # Plot boards (any subfolder; also matches legacy *.plotboard.md)
 ```
 
-Plot boards are Markdown files matching `*.plotboard.md` anywhere under the project. The app discovers them at startup and via Refresh; which file is open is stored in `ensemble.json` under `lastSession.lastPlotboardPath` (relative path) and in the URL under `/plot-board/...`. New boards created in-app are written at the project root as `<slug>.plotboard.md`. Duplicate (sidebar) copies the file beside the original with an auto-generated stem: increment a trailing `-123` or digit suffix, otherwise append `-2`.
+Plot boards are Markdown files matching `*.pinboard.md` (or legacy `*.plotboard.md`) anywhere under the project. The app discovers them at startup and via Refresh; which file is open is stored in `ensemble.json` under `lastSession.lastPlotboardPath` (relative path) and in the URL under `/plot-board/...`. New boards created in-app are written at the project root as `<slug>.pinboard.md`. Duplicate (sidebar) copies the file beside the original with an auto-generated stem: increment a trailing `-123` or digit suffix, otherwise append `-2`.
 
 ### Character File Format
 
@@ -259,18 +262,26 @@ All routes defined in `src/app/app.routes.ts`:
 - `/characters` - Character list with search/filter
 - `/character/:id` - Edit existing character
 - `/character` - Create new character
+- `/character-draft/:id` - Edit existing character draft
+- `/character-draft` - Create new character draft
 - `/pinboard` - Pinboard visualization (vis.js)
+- `/settings` - Settings (General, Appearance, Backup, Categories, Tags, Character Styles, AI, Image Generation)
 - `/metadata` - Manage categories/tags
 - `/ai-settings` - AI provider configuration
 - `/library` - Library management (clicking a book opens `/book/:id`)
 - `/book/:id` - Book page: the book's plan (outline + focused Markdown editor, `?line=` jumps); "Edit book…" opens the Edit Book modal
+- `/concepts` - Concepts (titled notes in `concepts.md`)
+- `/names` - Name lists
 - `/backstage` - Backstage (concept/name generation)
 - `/plot-board` - Plot boards (with optional path param)
 - `/casts` - Cast list
-- `/cast/:id` - Cast detail
+- `/cast/:id` - Cast detail (with a `pinboard` sub-route)
 - `/locations` - Location list with search/filter
 - `/location/:id` - Edit existing location
 - `/location` - Create new location
+- `/houses` - House list
+- `/house/:id` - Edit existing House
+- `/house` - Create new House
 
 ## File Organization
 
@@ -295,7 +306,7 @@ main.js                 # Electron main process (IPC handlers, window management
 
 ## Technical Notes
 
-### Angular 17 Modern Features
+### Angular 21 Modern Features
 
 - All components are **standalone** (no NgModules)
 - Uses traditional structural directives: `*ngIf`, `*ngFor` (for compatibility)
@@ -339,9 +350,9 @@ All fs operations are **atomic** where possible:
 
 ## Project Context
 
-This project was built using **Kiro** (see `.kiro/specs/ensemble/`):
-- `requirements.md` - Full requirements specification
-- `design.md` - Architecture and design decisions
-- `tasks.md` - Implementation task breakdown
+Requirements and open work are tracked on the project board and in GitHub Issues. In-repo references:
 
-Reference these files for understanding original requirements and design rationale.
+- `docs/user-guide.md` - Concepts and how to use Ensemble
+- `docs/data-format.md` - On-disk file format for Houses, Lore and Locations
+- `docs/development.md` - Dev server port, a second instance, production builds
+- `docs/releasing.md` - How releases are cut
