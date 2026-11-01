@@ -6,14 +6,6 @@
   background: var(--color-bg-primary);
 }
 
-.error-state {
-  padding: var(--spacing-md);
-  background-color: rgba(248, 113, 113, 0.08);
-  border: 1px solid rgba(248, 113, 113, 0.2);
-  border-radius: var(--radius-lg);
-  margin: var(--spacing-md) var(--spacing-lg);
-}
-
 .error-message {
   color: var(--color-error);
   margin: 0;

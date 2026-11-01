@@ -116,15 +116,6 @@
         </div>
       }
 
-      @if (error && !isLoading) {
-        <div class="error-banner">
-          <div class="error-content">
-            <svg class="ui-icon error-icon" aria-hidden="true"><use href="assets/ui-icons.svg#alert-triangle" /></svg>
-            <span class="error-message">{{ error }}</span>
-            <button class="error-close" (click)="error = null" aria-label="Dismiss error"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg></button>
-          </div>
-        </div>
-      }
 
       @if (hasActiveFilters) {
         <div class="results-summary">

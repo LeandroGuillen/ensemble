@@ -19,14 +19,14 @@ describe('CastListComponent delete error display', () => {
 
     component = Object.create(CastListComponent.prototype);
     Object.assign(component, {
-      error: null as string | null,
+      toasts: jasmine.createSpyObj('NotificationService', ['showError']),
       metadataService,
       modalService,
       logger: jasmine.createSpyObj('LoggingService', ['error']),
     });
   });
 
-  it('sets error for an ordinary delete failure', async () => {
+  it('toasts an ordinary delete failure', async () => {
     metadataService.removeCast.and.rejectWith(
       new Error('Failed to delete cast: no project loaded')
     );
@@ -35,15 +35,15 @@ describe('CastListComponent delete error display', () => {
     await component.deleteCast(cast, event);
 
     expect(event.stopPropagation).toHaveBeenCalled();
-    expect(component.error).toBe('Failed to delete cast: no project loaded');
+    expect((component as any).toasts.showError).toHaveBeenCalledOnceWith('Failed to delete cast: no project loaded');
   });
 
-  it('does not set error for TrashStagingError (service already toasted)', async () => {
+  it('does not toast again for TrashStagingError (service already toasted)', async () => {
     metadataService.removeCast.and.rejectWith(new TrashStagingError('already toasted'));
     const event = { stopPropagation: jasmine.createSpy('stopPropagation') } as any;
 
     await component.deleteCast(cast, event);
 
-    expect(component.error).toBeNull();
+    expect((component as any).toasts.showError).not.toHaveBeenCalled();
   });
 });

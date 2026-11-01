@@ -42,6 +42,7 @@ import { isTrashStagingError } from '../../core/trash/trash-record-id';
     styleUrls: ["./cast-detail.component.scss"]
 })
 export class CastDetailComponent implements OnInit, OnDestroy {
+  private readonly toasts = inject(NotificationService);
   @ViewChild(PinboardViewComponent) pinboardView?: PinboardViewComponent;
   view: 'members' | 'pinboard' = 'members';
   readonly editorSession = inject(CastEditorSessionService);
@@ -70,7 +71,6 @@ export class CastDetailComponent implements OnInit, OnDestroy {
 
   isLoading = false;
   isSaving = false;
-  error: string | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -181,7 +181,7 @@ export class CastDetailComponent implements OnInit, OnDestroy {
         // Load thumbnail if exists
         await this.loadCastThumbnail(cast);
       } else {
-        this.error = "Cast not found";
+        this.toasts.showError("Cast not found");
         setTimeout(() => this.router.navigate(["/casts"]), 2000);
       }
     }
@@ -412,7 +412,6 @@ export class CastDetailComponent implements OnInit, OnDestroy {
 
     try {
       this.isSaving = true;
-      this.error = null;
 
       this.pinboardView?.networkService.saveViewState();
       const formData = this.castForm.value;
@@ -446,7 +445,7 @@ export class CastDetailComponent implements OnInit, OnDestroy {
         await this.router.navigate(['/casts']);
       }
     } catch (error) {
-      this.error = `Failed to save cast: ${error}`;
+      this.toasts.showError(`Failed to save cast: ${error}`);
       this.logger.error("Failed to save cast:", error);
     } finally {
       this.isSaving = false;
@@ -475,8 +474,7 @@ export class CastDetailComponent implements OnInit, OnDestroy {
         // Staging/rollback toasts come from the service (TrashStagingError).
         // Service already prefixes "Failed to delete cast:"; use its message once.
         if (!isTrashStagingError(error)) {
-          this.error =
-            error instanceof Error ? error.message : `Failed to delete cast: ${error}`;
+          this.toasts.showError(error instanceof Error ? error.message : `Failed to delete cast: ${error}`);
         }
       }
     }
@@ -514,7 +512,7 @@ export class CastDetailComponent implements OnInit, OnDestroy {
         await this.previewThumbnail(imagePath);
       }
     } catch (error) {
-      this.error = `Failed to select thumbnail: ${error}`;
+      this.toasts.showError(`Failed to select thumbnail: ${error}`);
       this.logger.error("Failed to select thumbnail:", error);
     }
   }
@@ -522,7 +520,6 @@ export class CastDetailComponent implements OnInit, OnDestroy {
   private async previewThumbnail(sourcePath: string): Promise<void> {
     try {
       this.isUploadingThumbnail = true;
-      this.error = null;
 
       // For new casts, just show a preview of the selected image
       const dataUrl = await this.electronService.getImageAsDataUrl(sourcePath);
@@ -534,7 +531,7 @@ export class CastDetailComponent implements OnInit, OnDestroy {
         this.castForm.markAsDirty();
       }
     } catch (error) {
-      this.error = `Failed to preview thumbnail: ${error}`;
+      this.toasts.showError(`Failed to preview thumbnail: ${error}`);
       this.logger.error("Failed to preview thumbnail:", error);
     } finally {
       this.isUploadingThumbnail = false;

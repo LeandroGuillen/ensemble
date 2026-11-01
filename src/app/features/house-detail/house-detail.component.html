@@ -6,7 +6,6 @@
   </app-page-header>
   <main>
     @if (loading) { <p class="empty">Loading House…</p> }
-    @if (error) { <p class="error" role="alert">{{ error }}</p> }
     @if (conflict) {
       <div class="notice" role="alert">
         {{ deleted ? 'This House was removed outside Ensemble.' : 'This House changed outside Ensemble. Reload before saving.' }}
@@ -217,4 +216,4 @@
     }
   </main>
 </div>
-<app-image-picker-dialog [(visible)]="showPicker" (imageSelected)="onImage($event)" (explorerError)="error = $event" />
+<app-image-picker-dialog [(visible)]="showPicker" (imageSelected)="onImage($event)" (explorerError)="onExplorerError($event)" />

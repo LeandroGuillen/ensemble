@@ -1,3 +1,4 @@
+import { NotificationService } from '../../core/services/notification.service';
 import { DestroyRef, inject, Component, OnInit, HostListener, SecurityContext } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -29,6 +30,7 @@ type BackstageMode = "concepts" | "nameLists";
     styleUrls: ["./backstage.component.scss"]
 })
 export class BackstageComponent implements OnInit {
+  private readonly toasts = inject(NotificationService);
   private readonly destroyRef = inject(DestroyRef);
 
   /** Locked by route: /concepts or /names */
@@ -37,7 +39,6 @@ export class BackstageComponent implements OnInit {
   concepts: CharacterConcept[] = [];
   nameLists: NameList[] = [];
   isLoading = false;
-  error: string | null = null;
 
   // Focused editing mode state
   focusedItemType: "concept" | "nameList" | null = null;
@@ -327,7 +328,6 @@ export class BackstageComponent implements OnInit {
     if (!nameList) return;
 
     this.generatingName = true;
-    this.error = null;
     try {
       const title = nameList.title?.trim();
       const generatedName = await this.aiService.generateCharacterName({
@@ -340,7 +340,7 @@ export class BackstageComponent implements OnInit {
       this.updateNameList(this.selectedNameListIndex, { names });
       this.selectedNameIndex = names.length - 1;
     } catch (error) {
-      this.error = error instanceof Error ? error.message : "Failed to generate name";
+      this.toasts.showError(error instanceof Error ? error.message : "Failed to generate name");
     } finally {
       this.generatingName = false;
     }
@@ -550,7 +550,7 @@ export class BackstageComponent implements OnInit {
       // Select the newly added concept
       this.selectedConceptIndex = this.concepts.length - 1;
     } catch (error) {
-      this.error = `Failed to add concept: ${error}`;
+      this.toasts.showError(`Failed to add concept: ${error}`);
       this.logger.error("Failed to add concept:", error);
     }
   }
@@ -562,7 +562,7 @@ export class BackstageComponent implements OnInit {
     try {
       await this.backstageService.updateConcept(index, updates);
     } catch (error) {
-      this.error = `Failed to update concept: ${error}`;
+      this.toasts.showError(`Failed to update concept: ${error}`);
       this.logger.error("Failed to update concept:", error);
     }
   }
@@ -578,7 +578,7 @@ export class BackstageComponent implements OnInit {
           this.selectedConceptIndex--;
         }
       } catch (error) {
-        this.error = `Failed to delete concept: ${error}`;
+        this.toasts.showError(`Failed to delete concept: ${error}`);
         this.logger.error("Failed to delete concept:", error);
       }
     }
@@ -602,7 +602,7 @@ export class BackstageComponent implements OnInit {
       // Select the newly added name list
       this.selectedNameListIndex = this.nameLists.length - 1;
     } catch (error) {
-      this.error = `Failed to add name list: ${error}`;
+      this.toasts.showError(`Failed to add name list: ${error}`);
       this.logger.error("Failed to add name list:", error);
     }
   }
@@ -614,7 +614,7 @@ export class BackstageComponent implements OnInit {
     try {
       await this.backstageService.updateNameList(index, updates);
     } catch (error) {
-      this.error = `Failed to update name list: ${error}`;
+      this.toasts.showError(`Failed to update name list: ${error}`);
       this.logger.error("Failed to update name list:", error);
     }
   }
@@ -637,7 +637,7 @@ export class BackstageComponent implements OnInit {
           this.selectedNameListIndex--;
         }
       } catch (error) {
-        this.error = `Failed to delete name list: ${error}`;
+        this.toasts.showError(`Failed to delete name list: ${error}`);
         this.logger.error("Failed to delete name list:", error);
       }
     }
@@ -654,10 +654,9 @@ export class BackstageComponent implements OnInit {
   async reload(): Promise<void> {
     try {
       this.isLoading = true;
-      this.error = null;
       await this.backstageService.loadBackstageData();
     } catch (error) {
-      this.error = `Failed to reload: ${error}`;
+      this.toasts.showError(`Failed to reload: ${error}`);
       this.logger.error("Failed to reload backstage data:", error);
     } finally {
       this.isLoading = false;
@@ -983,16 +982,16 @@ export class BackstageComponent implements OnInit {
     try {
       const projectPath = this.backstageService.getCurrentProjectPath();
       if (!projectPath) {
-        this.error = "No project loaded";
+        this.toasts.showError("No project loaded");
         return;
       }
       const filePath = `${projectPath}/characters/concepts.md`;
       const result = await this.electronService.openFileInEditor(filePath);
       if (!result.success) {
-        this.error = `Failed to open file: ${result.error}`;
+        this.toasts.showError(`Failed to open file: ${result.error}`);
       }
     } catch (error) {
-      this.error = `Failed to open file: ${error}`;
+      this.toasts.showError(`Failed to open file: ${error}`);
       this.logger.error("Failed to open concepts file:", error);
     }
   }
@@ -1000,16 +999,16 @@ export class BackstageComponent implements OnInit {
   async openNamesInEditor(): Promise<void> {
     try {
       if (!this.backstageService.getCurrentProjectPath()) {
-        this.error = "No project loaded";
+        this.toasts.showError("No project loaded");
         return;
       }
       const filePath = this.backstageService.getNamesFilePath();
       const result = await this.electronService.openFileInEditor(filePath);
       if (!result.success) {
-        this.error = `Failed to open file: ${result.error}`;
+        this.toasts.showError(`Failed to open file: ${result.error}`);
       }
     } catch (error) {
-      this.error = `Failed to open file: ${error}`;
+      this.toasts.showError(`Failed to open file: ${error}`);
       this.logger.error("Failed to open names file:", error);
     }
   }

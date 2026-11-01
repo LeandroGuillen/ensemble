@@ -7,12 +7,6 @@
     </div>
 
     <!-- Error Message (hidden while duplicate form shows its own) -->
-    @if (error && !showDuplicateForm) {
-      <div class="error-message">
-        <i class="icon-alert"></i>
-        {{ error }}
-      </div>
-    }
 
     <!-- Recent Projects Section -->
     @if (!showCreateForm && !showDuplicateForm) {
@@ -238,12 +232,6 @@
               </small>
             }
           </div>
-          @if (error) {
-            <div class="error-message" role="alert">
-              <i class="icon-alert"></i>
-              {{ error }}
-            </div>
-          }
           <div class="form-actions">
             <button
               class="btn btn-secondary"

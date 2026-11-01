@@ -76,4 +76,26 @@ describe('NotificationService', () => {
     service.showError('');
     expect(shown.length).toBe(3);
   });
+  it('a toast with an action (Retry) wins over a plain duplicate, in either order', () => {
+    const retry = { label: 'Retry', run: () => {} };
+    service.showError('Failed to load characters: EIO', 0, retry);
+    service.showError('Failed to load characters: EIO');
+    expect(shown.length).toBe(1);
+    expect(shown[0].action?.label).toBe('Retry');
+
+    clock += DUPLICATE_WINDOW_MS + 1;
+    service.showError('Failed to load locations: EIO');
+    service.showError('Failed to load locations: EIO', 0, retry);
+    expect(shown.slice(1).map((n) => !!n.action)).toEqual([false, true]);
+    expect(dismissed).toEqual([shown[1].id]);
+  });
+
+  it('showError returns the toast id so callers can dismiss it', () => {
+    const id = service.showError('Could not read books/b1.plan.md', 0);
+    expect(shown[0].id).toBe(id);
+    expect(shown[0].duration).toBe(0);
+    service.dismiss(id);
+    expect(dismissed).toEqual([id]);
+  });
 });
+

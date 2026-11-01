@@ -1,3 +1,4 @@
+import { NotificationService } from '../../core/services/notification.service';
 import { Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges, DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -59,6 +60,7 @@ interface PendingDelete {
     styleUrls: ['./metadata-management.component.scss']
 })
 export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy {
+  private readonly toasts = inject(NotificationService);
   private readonly destroyRef = inject(DestroyRef);
 
   /** Which settings panel section to render (driven by parent Settings page). */
@@ -101,7 +103,6 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
   private settingsSaveChain: Promise<void> = Promise.resolve();
   
   // Error handling
-  error: string | null = null;
   pendingDelete: PendingDelete | null = null;
   private pendingDeleteTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -255,14 +256,13 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
   private async loadData(): Promise<void> {
     try {
       this.loading = true;
-      this.error = null;
       
       const project = requireProject(this.projectService.getCurrentProject());
       
       await this.metadataService.loadMetadata(project.path);
     } catch (error) {
       this.logger.error('Failed to load metadata:', error);
-      this.error = `Failed to load metadata: ${error}`;
+      this.toasts.showError(`Failed to load metadata: ${error}`);
     } finally {
       this.loading = false;
     }
@@ -334,7 +334,6 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
 
     try {
       this.saving = true;
-      this.error = null;
       
       const formData: CategoryFormData = this.categoryForm.value;
 
@@ -359,7 +358,6 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
 
     try {
       this.saving = true;
-      this.error = null;
       
       await this.metadataService.removeCategory(category.id);
     } catch (error) {
@@ -407,7 +405,6 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
 
     try {
       this.saving = true;
-      this.error = null;
       
       const formData: TagFormData = this.tagForm.value;
       
@@ -432,7 +429,6 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
 
     try {
       this.saving = true;
-      this.error = null;
       
       await this.metadataService.removeTag(tag.id);
     } catch (error) {
@@ -454,7 +450,6 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
     const save = async () => {
       try {
         this.savingSettings = true;
-        this.error = null;
 
         // Normalize empty paths to their defaults.
         const charactersFolder = formData.charactersFolder?.trim() || 'characters';
@@ -541,11 +536,11 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
     if (!name) return;
     const id = slugify(name);
     if (!id) {
-      this.error = 'Character style name must produce a valid id';
+      this.toasts.showError('Character style name must produce a valid id');
       return;
     }
     if (this.characterStyles.some((s) => s.id === id)) {
-      this.error = `Character style "${id}" already exists`;
+      this.toasts.showError(`Character style "${id}" already exists`);
       return;
     }
     this.characterStyles = [...this.characterStyles, { id, name }];
@@ -589,7 +584,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
 
   async removeCharacterStyle(style: CharacterStyle): Promise<void> {
     if (this.characterStyles.length <= 1) {
-      this.error = 'At least one character style is required';
+      this.toasts.showError('At least one character style is required');
       return;
     }
     if (!this.beginDeleteConfirmation('character-style', style.id)) return;
@@ -634,7 +629,6 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
   private async persistCharacterStyles(): Promise<void> {
     try {
       this.saving = true;
-      this.error = null;
       const defaultCharacterStyle =
         this.settingsForm.get('defaultCharacterStyle')?.value ||
         this.characterStyles[0]?.id ||
@@ -707,7 +701,6 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
   private async saveReorderedCategories(newCategories: Category[]): Promise<void> {
     try {
       this.saving = true;
-      this.error = null;
 
       const metadata = this.metadataService.getCurrentMetadata();
       if (!metadata) {
@@ -740,7 +733,6 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
   private async saveReorderedTags(newTags: Tag[]): Promise<void> {
     try {
       this.saving = true;
-      this.error = null;
 
       const metadata = this.metadataService.getCurrentMetadata();
       if (!metadata) {
@@ -773,11 +765,10 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
   async updateBaseColor(index: number, color: string): Promise<void> {
     try {
       this.saving = true;
-      this.error = null;
       await this.colorPaletteService.updateBaseColor(index, color);
     } catch (error) {
       this.logger.error('Failed to update base color:', error);
-      this.error = `Failed to update color: ${error}`;
+      this.toasts.showError(`Failed to update color: ${error}`);
     } finally {
       this.saving = false;
     }
@@ -793,7 +784,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
 
   async saveBaseColor(index: number, color: string): Promise<void> {
     if (!/^#[0-9A-Fa-f]{6}$/.test(color)) {
-      this.error = 'Invalid color format. Use hex format like #3498db';
+      this.toasts.showError('Invalid color format. Use hex format like #3498db');
       return;
     }
     await this.updateBaseColor(index, color);
@@ -806,11 +797,10 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
     }
     try {
       this.saving = true;
-      this.error = null;
       await this.colorPaletteService.resetBaseColors();
     } catch (error) {
       this.logger.error('Failed to reset base colors:', error);
-      this.error = `Failed to reset colors: ${error}`;
+      this.toasts.showError(`Failed to reset colors: ${error}`);
     } finally {
       this.saving = false;
     }
@@ -818,17 +808,16 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
 
   async addExtraColor(): Promise<void> {
     if (!this.newExtraColor || !/^#[0-9A-Fa-f]{6}$/.test(this.newExtraColor)) {
-      this.error = 'Please enter a valid hex color (e.g., #3498db)';
+      this.toasts.showError('Please enter a valid hex color (e.g., #3498db)');
       return;
     }
     try {
       this.saving = true;
-      this.error = null;
       await this.colorPaletteService.addExtraColor(this.newExtraColor);
       this.newExtraColor = '';
     } catch (error) {
       this.logger.error('Failed to add extra color:', error);
-      this.error = `Failed to add color: ${error}`;
+      this.toasts.showError(`Failed to add color: ${error}`);
     } finally {
       this.saving = false;
     }
@@ -840,11 +829,10 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
     }
     try {
       this.saving = true;
-      this.error = null;
       await this.colorPaletteService.removeExtraColor(color);
     } catch (error) {
       this.logger.error('Failed to remove extra color:', error);
-      this.error = `Failed to remove color: ${error}`;
+      this.toasts.showError(`Failed to remove color: ${error}`);
     } finally {
       this.saving = false;
     }
@@ -857,11 +845,10 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
     const baseColors = this.getBaseColors();
     try {
       this.saving = true;
-      this.error = null;
       await this.colorPaletteService.setThemeOverrides(this.currentTheme.id, baseColors);
     } catch (error) {
       this.logger.error('Failed to set theme overrides:', error);
-      this.error = `Failed to set theme overrides: ${error}`;
+      this.toasts.showError(`Failed to set theme overrides: ${error}`);
     } finally {
       this.saving = false;
     }
@@ -876,11 +863,10 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
     }
     try {
       this.saving = true;
-      this.error = null;
       await this.colorPaletteService.removeThemeOverrides(this.currentTheme.id);
     } catch (error) {
       this.logger.error('Failed to remove theme overrides:', error);
-      this.error = `Failed to remove theme overrides: ${error}`;
+      this.toasts.showError(`Failed to remove theme overrides: ${error}`);
     } finally {
       this.saving = false;
     }

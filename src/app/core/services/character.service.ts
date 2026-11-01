@@ -413,8 +413,10 @@ export class CharacterService {
 
       const scanResult = await this.electronService.readDirectoryRecursive(charactersPath, '*.md');
       if (!scanResult.success || !scanResult.files) {
-        this.hasLoadedForCurrentProject = true;
-        return;
+        // Not marked as loaded, so a retry really reloads. Callers toast this.
+        throw new Error(
+          `Could not read the characters folder (${charactersPath}): ${scanResult.error || 'unknown error'}`
+        );
       }
 
       const records: Character[] = [];

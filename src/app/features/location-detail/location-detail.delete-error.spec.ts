@@ -15,7 +15,7 @@ describe('LocationDetailComponent delete error display', () => {
     component = Object.create(LocationDetailComponent.prototype);
     Object.assign(component, {
       location: { id: 'loc-1', name: 'Harbour' },
-      error: null,
+      toasts: jasmine.createSpyObj('NotificationService', ['showError']),
       locationService,
       modalService,
       router,
@@ -23,23 +23,23 @@ describe('LocationDetailComponent delete error display', () => {
     });
   });
 
-  it('sets error for an ordinary delete failure', async () => {
+  it('toasts an ordinary delete failure', async () => {
     locationService.deleteLocation.and.rejectWith(
       new Error('Failed to delete location: no project loaded')
     );
 
     await component.deleteLocation();
 
-    expect(component.error).toBe('Failed to delete location: no project loaded');
+    expect((component as any).toasts.showError).toHaveBeenCalledOnceWith('Failed to delete location: no project loaded');
     expect(router.navigate).not.toHaveBeenCalled();
   });
 
-  it('does not set error for TrashStagingError (service already toasted)', async () => {
+  it('does not toast again for TrashStagingError (service already toasted)', async () => {
     locationService.deleteLocation.and.rejectWith(new TrashStagingError('already toasted'));
 
     await component.deleteLocation();
 
-    expect(component.error).toBeNull();
+    expect((component as any).toasts.showError).not.toHaveBeenCalled();
     expect(router.navigate).not.toHaveBeenCalled();
   });
 });

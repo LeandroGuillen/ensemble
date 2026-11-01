@@ -1747,5 +1747,22 @@ Body text
       expect(entry.hasConflict()).toBeTrue();
     });
   });
+  describe('characters folder that cannot be read', () => {
+    it('throws a clear error and is not marked loaded, so a retry reloads', async () => {
+      const project = createValidProject();
+      projectService.getCurrentProject.and.returnValue(project);
+      electronService.fileExists.and.returnValue(Promise.resolve(true));
+      electronService.readDirectoryRecursive.and.returnValue(
+        Promise.resolve({ success: false, error: 'EACCES: permission denied', files: [] } as any)
+      );
+      await expectAsync(service.loadCharacters('/test/project')).toBeRejectedWithError(
+        /Failed to load characters: .*Could not read the characters folder .*EACCES/
+      );
+
+      electronService.readDirectoryRecursive.and.returnValue(Promise.resolve({ success: true, files: [] } as any));
+      await service.loadCharacters('/test/project');
+      expect(electronService.readDirectoryRecursive).toHaveBeenCalledTimes(2);
+    });
+  });
 });
 

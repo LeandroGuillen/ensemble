@@ -1,3 +1,4 @@
+import { NotificationService } from '../../core/services/notification.service';
 import { ChangeDetectorRef, Component, DestroyRef, HostListener, inject, OnDestroy, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -20,6 +21,7 @@ import { ResolvedWikiLink, WikiLinkSuggestion } from '../../core/utils/wiki-link
 
 @Component({ selector: 'app-house-detail', imports: [FormsModule, RouterLink, DragDropModule, PageHeaderComponent, ImagePickerDialogComponent, ConfirmButtonDirective, MarkdownEditorComponent], templateUrl: './house-detail.component.html', styleUrls: ['./house-detail.component.scss'] })
 export class HouseDetailComponent implements OnInit, OnDestroy {
+  private readonly toasts = inject(NotificationService);
   readonly houses = inject(HouseService);
   readonly charactersService = inject(CharacterService);
   readonly picker = inject(ImagePickerService);
@@ -47,7 +49,6 @@ export class HouseDetailComponent implements OnInit, OnDestroy {
   dirty = false;
   conflict = false;
   deleted = false;
-  error = '';
   newHouseFromLink: string | null = null;
   crest: string | null = null;
   pickingMember = false;
@@ -83,7 +84,6 @@ export class HouseDetailComponent implements OnInit, OnDestroy {
     const request = ++this.request;
     this.loading = true;
     this.leadershipEditing = false;
-    this.error = '';
     this.house = null;
     this.newHouseFromLink = !id && this.route.snapshot.queryParamMap?.get('fromLink') === '1'
       ? this.route.snapshot.queryParamMap.get('name') : null;
@@ -103,7 +103,7 @@ export class HouseDetailComponent implements OnInit, OnDestroy {
         this.model = { name: this.newHouseFromLink || '', motto: '', colors: [], characterIds: [], leadership: [], content: '' };
         this.crest = null;
       }
-    } catch (error) { if (request === this.request) this.error = String(error); }
+    } catch (error) { if (request === this.request) this.toasts.showError(String(error)); }
     finally { if (request === this.request && !this.destroyRef.destroyed) { this.loading = false; this.cdr.markForCheck(); } }
   }
 
@@ -147,7 +147,7 @@ export class HouseDetailComponent implements OnInit, OnDestroy {
       this.model.characterIds = [...this.model.characterIds, character.id];
       this.changed();
       this.loadMemberThumbnails();
-    } catch (error) { this.error = String(error); }
+    } catch (error) { this.toasts.showError(String(error)); }
     finally { this.pickingMember = false; if (!this.destroyRef.destroyed) this.cdr.markForCheck(); }
   }
   get missingMembers(): string[] { return this.model.characterIds.filter(id => !this.characters.some(character => character.id === id)); }
@@ -200,22 +200,22 @@ export class HouseDetailComponent implements OnInit, OnDestroy {
   async save(): Promise<void> {
     if (this.saving || this.pickingMember || this.conflict || this.deleted || this.loading) return;
     this.saving = true;
-    this.error = '';
     try {
       const saved = this.house ? await this.houses.updateHouse(this.house.id, this.model, this.house.raw) : await this.houses.createHouse(this.model);
       this.accept(saved);
       this.saving = false;
       await this.router.navigate(['/house', saved.id], { replaceUrl: true });
     } catch (error) {
-      this.error = String(error);
-      if (this.error.includes('changed on disk')) this.conflict = true;
+      const message = String(error);
+      this.toasts.showError(message);
+      if (message.includes('changed on disk')) this.conflict = true;
     } finally { this.saving = false; this.cdr.markForCheck(); }
   }
   async reload(): Promise<void> {
     if (this.dirty && !(await this.modal.confirm('Discard your unsaved House changes and reload from disk?', 'Reload House',
       { confirmText: 'Discard and reload', cancelText: 'Keep Editing' }))) return;
     const id = this.house?.id || this.route.snapshot.paramMap.get('id');
-    try { await this.houses.loadHouses(true); await this.open(id); } catch (error) { this.error = String(error); }
+    try { await this.houses.loadHouses(true); await this.open(id); } catch (error) { this.toasts.showError(String(error)); }
   }
   async delete(): Promise<void> {
     if (!this.house || this.saving || this.pickingMember || this.conflict) return;
@@ -226,8 +226,11 @@ export class HouseDetailComponent implements OnInit, OnDestroy {
       this.saving = false;
       await this.router.navigate(['/houses']);
     }
-    catch (error) { this.error = String(error); }
+    catch (error) { this.toasts.showError(String(error)); }
     finally { this.saving = false; this.cdr.markForCheck(); }
+  }
+  onExplorerError(message: string): void {
+    this.toasts.showError(message);
   }
   /** Unsaved changes are confirmed by the route's leave guard (`canLeave`). */
   async openDescriptionLink(href: string): Promise<void> {

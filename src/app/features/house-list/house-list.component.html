@@ -8,7 +8,6 @@
     </div>
   </app-page-header>
   <main>
-    @if (error) { <p class="error" role="alert">{{ error }}</p> }
     @if (loading) { <p class="empty">Loading houses…</p> }
     @else if (!filtered.length) {
       <div class="empty">

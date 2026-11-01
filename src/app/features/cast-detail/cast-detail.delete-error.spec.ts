@@ -15,7 +15,7 @@ describe('CastDetailComponent delete error display', () => {
     component = Object.create(CastDetailComponent.prototype);
     Object.assign(component, {
       cast: { id: 'cast-1', name: 'Court' },
-      error: null as string | null,
+      toasts: jasmine.createSpyObj('NotificationService', ['showError']),
       metadataService,
       modalService,
       router,
@@ -23,23 +23,23 @@ describe('CastDetailComponent delete error display', () => {
     });
   });
 
-  it('sets error for an ordinary delete failure', async () => {
+  it('toasts an ordinary delete failure', async () => {
     metadataService.removeCast.and.rejectWith(
       new Error('Failed to delete cast: no project loaded')
     );
 
     await component.deleteCast();
 
-    expect(component.error).toBe('Failed to delete cast: no project loaded');
+    expect((component as any).toasts.showError).toHaveBeenCalledOnceWith('Failed to delete cast: no project loaded');
     expect(router.navigate).not.toHaveBeenCalled();
   });
 
-  it('does not set error for TrashStagingError (service already toasted)', async () => {
+  it('does not toast again for TrashStagingError (service already toasted)', async () => {
     metadataService.removeCast.and.rejectWith(new TrashStagingError('already toasted'));
 
     await component.deleteCast();
 
-    expect(component.error).toBeNull();
+    expect((component as any).toasts.showError).not.toHaveBeenCalled();
     expect(router.navigate).not.toHaveBeenCalled();
   });
 });

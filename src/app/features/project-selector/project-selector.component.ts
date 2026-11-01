@@ -1,4 +1,5 @@
-import { Component, OnInit, HostListener } from '@angular/core';
+import { NotificationService } from '../../core/services/notification.service';
+import { Component, OnInit, HostListener, inject } from '@angular/core';
 import { Router } from '@angular/router';
 
 import { FormsModule } from '@angular/forms';
@@ -22,8 +23,8 @@ interface RecentProject {
     styleUrls: ['./project-selector.component.scss']
 })
 export class ProjectSelectorComponent implements OnInit {
+  private readonly toasts = inject(NotificationService);
   isLoading = false;
-  error: string | null = null;
   recentProjects: RecentProject[] = [];
   showCreateForm = false;
   newProjectName = '';
@@ -142,17 +143,16 @@ export class ProjectSelectorComponent implements OnInit {
    */
   async openRecentProject(projectPath: string): Promise<void> {
     this.isLoading = true;
-    this.error = null;
 
     try {
       const project = await this.projectService.loadProject(projectPath);
       if (project) {
         this.router.navigate(['/characters']);
       } else {
-        this.error = 'Failed to load project. Please check the folder structure.';
+        this.toasts.showError('Failed to load project. Please check the folder structure.');
       }
     } catch (error) {
-      this.error = `Failed to load project: ${error}`;
+      this.toasts.showError(`Failed to load project: ${error}`);
       this.logger.error('Project loading error:', error);
     } finally {
       this.isLoading = false;
@@ -164,7 +164,6 @@ export class ProjectSelectorComponent implements OnInit {
    */
   async selectExistingProject(): Promise<void> {
     this.isLoading = true;
-    this.error = null;
 
     try {
       const projectPath = await this.projectService.selectProject();
@@ -173,11 +172,11 @@ export class ProjectSelectorComponent implements OnInit {
         if (project) {
           this.router.navigate(['/characters']);
         } else {
-          this.error = 'Failed to load project. Please check the folder structure.';
+          this.toasts.showError('Failed to load project. Please check the folder structure.');
         }
       }
     } catch (error) {
-      this.error = `Failed to select project folder: ${error}`;
+      this.toasts.showError(`Failed to select project folder: ${error}`);
       this.logger.error('Project selection error:', error);
     } finally {
       this.isLoading = false;
@@ -191,7 +190,6 @@ export class ProjectSelectorComponent implements OnInit {
     this.showCreateForm = true;
     this.newProjectName = '';
     this.newProjectPath = '';
-    this.error = null;
   }
 
   /**
@@ -201,7 +199,6 @@ export class ProjectSelectorComponent implements OnInit {
     this.showCreateForm = false;
     this.newProjectName = '';
     this.newProjectPath = '';
-    this.error = null;
   }
 
   /**
@@ -214,7 +211,7 @@ export class ProjectSelectorComponent implements OnInit {
         this.newProjectPath = selectedPath;
       }
     } catch (error) {
-      this.error = `Failed to select folder: ${error}`;
+      this.toasts.showError(`Failed to select folder: ${error}`);
       this.logger.error('Folder selection error:', error);
     }
   }
@@ -224,17 +221,16 @@ export class ProjectSelectorComponent implements OnInit {
    */
   async createNewProject(): Promise<void> {
     if (!this.newProjectName.trim()) {
-      this.error = 'Please enter a project name.';
+      this.toasts.showError('Please enter a project name.');
       return;
     }
 
     if (!this.newProjectPath.trim()) {
-      this.error = 'Please select a folder for the new project.';
+      this.toasts.showError('Please select a folder for the new project.');
       return;
     }
 
     this.isLoading = true;
-    this.error = null;
 
     try {
       // Create project folder path
@@ -245,10 +241,10 @@ export class ProjectSelectorComponent implements OnInit {
       if (project) {
         this.router.navigate(['/characters']);
       } else {
-        this.error = 'Failed to create project.';
+        this.toasts.showError('Failed to create project.');
       }
     } catch (error) {
-      this.error = `Failed to create project: ${error}`;
+      this.toasts.showError(`Failed to create project: ${error}`);
       this.logger.error('Project creation error:', error);
     } finally {
       this.isLoading = false;
@@ -321,7 +317,6 @@ export class ProjectSelectorComponent implements OnInit {
     this.duplicateSourceName = projectName;
     this.duplicateProjectName = `${projectName} (Copy)`;
     this.duplicateProjectPath = '';
-    this.error = null;
   }
 
   /**
@@ -333,7 +328,6 @@ export class ProjectSelectorComponent implements OnInit {
     this.duplicateSourceName = '';
     this.duplicateProjectName = '';
     this.duplicateProjectPath = '';
-    this.error = null;
   }
 
   /**
@@ -346,7 +340,7 @@ export class ProjectSelectorComponent implements OnInit {
         this.duplicateProjectPath = selectedPath;
       }
     } catch (error) {
-      this.error = `Failed to select folder: ${error}`;
+      this.toasts.showError(`Failed to select folder: ${error}`);
       this.logger.error('Folder selection error:', error);
     }
   }
@@ -356,22 +350,21 @@ export class ProjectSelectorComponent implements OnInit {
    */
   async duplicateProject(): Promise<void> {
     if (!this.duplicateProjectName.trim()) {
-      this.error = 'Please enter a project name.';
+      this.toasts.showError('Please enter a project name.');
       return;
     }
 
     if (!this.duplicateProjectPath.trim()) {
-      this.error = 'Please select a folder for the duplicate project.';
+      this.toasts.showError('Please select a folder for the duplicate project.');
       return;
     }
 
     if (!this.duplicateSourcePath) {
-      this.error = 'Source project path is missing.';
+      this.toasts.showError('Source project path is missing.');
       return;
     }
 
     this.isLoading = true;
-    this.error = null;
 
     try {
       const project = await this.projectService.duplicateProject(
@@ -383,11 +376,11 @@ export class ProjectSelectorComponent implements OnInit {
       if (project) {
         this.router.navigate(['/characters']);
       } else {
-        this.error = 'Failed to duplicate project.';
+        this.toasts.showError('Failed to duplicate project.');
       }
     } catch (error) {
       const raw = error instanceof Error ? error.message : String(error);
-      this.error = raw;
+      this.toasts.showError(raw);
       this.logger.error('Project duplication error:', error);
     } finally {
       this.isLoading = false;

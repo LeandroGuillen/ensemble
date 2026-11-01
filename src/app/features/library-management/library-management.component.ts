@@ -51,6 +51,7 @@ type DragKind = "book" | "series" | "saga";
   styleUrls: ["./library-management.component.scss"],
 })
 export class LibraryManagementComponent implements OnInit {
+  private readonly toasts = inject(NotificationService);
   private readonly destroyRef = inject(DestroyRef);
 
   books: Book[] = [];
@@ -76,7 +77,6 @@ export class LibraryManagementComponent implements OnInit {
 
   loading = false;
   saving = false;
-  error: string | null = null;
 
   // Book DnD
   draggedBookId: string | null = null;
@@ -204,14 +204,13 @@ export class LibraryManagementComponent implements OnInit {
   private async loadData(): Promise<void> {
     try {
       this.loading = true;
-      this.error = null;
 
       const project = requireProject(this.projectService.getCurrentProject());
 
       await this.metadataService.loadMetadata(project.path);
     } catch (error) {
       this.logger.error("Failed to load metadata:", error);
-      this.error = `Failed to load metadata: ${error}`;
+      this.toasts.showError(`Failed to load metadata: ${error}`);
     } finally {
       this.loading = false;
     }
@@ -255,7 +254,6 @@ export class LibraryManagementComponent implements OnInit {
 
     try {
       this.saving = true;
-      this.error = null;
       await this.bookEditActions.save(this.editingBook, editorData);
       this.notificationService.showSuccess(
         this.editingBook ? "Book updated successfully" : "Book created successfully"
@@ -271,7 +269,6 @@ export class LibraryManagementComponent implements OnInit {
   async deleteBook(book: Book): Promise<void> {
     try {
       this.saving = true;
-      this.error = null;
       if (!(await this.bookEditActions.confirmAndDelete(book))) {
         return;
       }
@@ -322,7 +319,6 @@ export class LibraryManagementComponent implements OnInit {
 
     try {
       this.saving = true;
-      this.error = null;
       const value = this.seriesForm.value;
       const payload = {
         name: value.name.trim(),
@@ -409,7 +405,6 @@ export class LibraryManagementComponent implements OnInit {
 
     try {
       this.saving = true;
-      this.error = null;
       const value = this.sagaForm.value;
       const payload = {
         name: value.name.trim(),
@@ -657,7 +652,6 @@ export class LibraryManagementComponent implements OnInit {
   ): Promise<void> {
     try {
       this.saving = true;
-      this.error = null;
 
       const book = this.books.find((b) => b.id === bookId);
       if (!book) {
@@ -689,7 +683,7 @@ export class LibraryManagementComponent implements OnInit {
       await this.metadataService.moveBook(bookId, placement, insertIndex);
     } catch (error) {
       this.logger.error("Failed to move book:", error);
-      this.error = `Failed to move book: ${error}`;
+      this.toasts.showError(`Failed to move book: ${error}`);
     } finally {
       this.saving = false;
     }
@@ -779,7 +773,7 @@ export class LibraryManagementComponent implements OnInit {
       await this.metadataService.reorderSeries(ids);
     } catch (error) {
       this.logger.error("Failed to reorder series:", error);
-      this.error = `Failed to reorder series: ${error}`;
+      this.toasts.showError(`Failed to reorder series: ${error}`);
     } finally {
       this.saving = false;
     }
@@ -877,7 +871,7 @@ export class LibraryManagementComponent implements OnInit {
       await this.metadataService.reorderSagasInSeries(target.seriesId, ids);
     } catch (error) {
       this.logger.error("Failed to reorder sagas:", error);
-      this.error = `Failed to reorder sagas: ${error}`;
+      this.toasts.showError(`Failed to reorder sagas: ${error}`);
     } finally {
       this.saving = false;
     }

@@ -540,8 +540,6 @@
     (visibleChange)="showGeneratePortraitDialog = $event"
     [characterName]="characterForm.get('name')?.value || ''"
     [outputDirectory]="thumbnailOutputDirectory"
-    [error]="error"
-    (errorChange)="error = $event"
     (portraitGenerated)="onPortraitGenerated($event)"
   ></app-generate-portrait-dialog>
 

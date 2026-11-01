@@ -61,6 +61,7 @@ import { isTrashStagingError } from '../../core/trash/trash-record-id';
   styleUrls: ['./location-detail.component.scss'],
 })
 export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy {
+  private readonly toasts = inject(NotificationService);
   private readonly destroyRef = inject(DestroyRef);
 
   @ViewChild('nameInput') nameInput?: ElementRef<HTMLInputElement>;
@@ -96,7 +97,6 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
 
   isLoading = false;
   isSaving = false;
-  error: string | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -209,7 +209,6 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private async loadLocation(): Promise<void> {
-    this.error = null;
     if (this.isNewLocation) {
       this.location = null;
       this.locationForm.reset({
@@ -232,7 +231,7 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
       await this.ensureLocationsLoaded();
       const location = this.locationService.getLocationById(this.locationId);
       if (!location) {
-        this.error = 'Location not found';
+        this.toasts.showError('Location not found');
         return;
       }
 
@@ -247,7 +246,7 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
       this.locationForm.markAsPristine();
       await this.refreshThumbnailPreview();
     } catch (error) {
-      this.error = `Failed to load location: ${error}`;
+      this.toasts.showError(`Failed to load location: ${error}`);
       this.logger.error('Failed to load location:', error);
     } finally {
       this.isLoading = false;
@@ -353,7 +352,6 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
     }
 
     this.isSaving = true;
-    this.error = null;
     try {
       const formData = this.locationForm.getRawValue();
       const payload = {
@@ -409,8 +407,7 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
       // Staging/rollback toasts come from the service (TrashStagingError).
       // Service already prefixes "Failed to delete location:"; use its message once.
       if (!isTrashStagingError(error)) {
-        this.error =
-          error instanceof Error ? error.message : `Failed to delete location: ${error}`;
+        this.toasts.showError(error instanceof Error ? error.message : `Failed to delete location: ${error}`);
       }
     }
   }

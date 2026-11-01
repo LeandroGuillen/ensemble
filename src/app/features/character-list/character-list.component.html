@@ -311,12 +311,6 @@
   }
 
   <!-- Error State -->
-  @if (error) {
-    <div class="error-state">
-      <p class="error-message">{{ error }}</p>
-      <button class="btn btn-secondary" (click)="loadCharacters()">Retry</button>
-    </div>
-  }
 
   <!-- No Project State -->
   @if (!currentProject && !isLoading) {
@@ -327,7 +321,7 @@
 
   <!-- Main Content -->
   <div class="content-wrapper">
-    @if (currentProject && !isLoading && !error) {
+    @if (currentProject && !isLoading && !loadFailed) {
       <div class="controls-section">
         <!-- Multi-select Actions -->
         @if (selectedCharacterIds.length > 0) {
@@ -393,7 +387,7 @@
       </div>
     }
 
-        @if (currentProject && !isLoading && !error) {
+        @if (currentProject && !isLoading && !loadFailed) {
           <div
             class="scrollable-content"
             #scrollableContent

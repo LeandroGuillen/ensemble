@@ -174,7 +174,9 @@ export class BookPlanService {
       dirty: false,
       conflict: null,
       revision: (current?.revision ?? 0) + 1,
-      error: result.success ? null : result.error || `Could not read ${relativePath}`,
+      error: result.success
+        ? null
+        : `Could not read the plan ${relativePath}${result.error ? `: ${result.error}` : ''}`,
     };
     this.stateSubject.next(state);
     return state;

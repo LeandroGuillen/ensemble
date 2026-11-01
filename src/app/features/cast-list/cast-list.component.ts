@@ -1,3 +1,4 @@
+import { NotificationService } from '../../core/services/notification.service';
 import { DestroyRef, inject, Component, OnInit, NgZone, ChangeDetectorRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from "@angular/router";
@@ -27,6 +28,7 @@ import { isTrashStagingError } from '../../core/trash/trash-record-id';
     styleUrls: ["./cast-list.component.scss"]
 })
 export class CastListComponent implements OnInit {
+  private readonly toasts = inject(NotificationService);
   private readonly destroyRef = inject(DestroyRef);
 
   casts: Cast[] = [];
@@ -40,7 +42,6 @@ export class CastListComponent implements OnInit {
   searchTerm = "";
   viewMode: "grid" | "list" = "grid";
   isLoading = false;
-  error: string | null = null;
 
   constructor(
     private metadataService: MetadataService,
@@ -264,8 +265,7 @@ export class CastListComponent implements OnInit {
         // Staging/rollback already toasted; avoid a misleading inline "Failed to delete".
         // Service already prefixes "Failed to delete cast:"; use its message once.
         if (!isTrashStagingError(error)) {
-          this.error =
-            error instanceof Error ? error.message : `Failed to delete cast: ${error}`;
+          this.toasts.showError(error instanceof Error ? error.message : `Failed to delete cast: ${error}`);
         }
       }
     }

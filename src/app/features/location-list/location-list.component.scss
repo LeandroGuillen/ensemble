@@ -132,14 +132,6 @@ app-page-header {
   }
 }
 
-.error-banner {
-  background: rgba(248, 113, 113, 0.08);
-  border: 1px solid rgba(248, 113, 113, 0.2);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-md);
-  margin-bottom: var(--spacing-lg);
-}
-
 .error-content {
   display: flex;
   align-items: center;

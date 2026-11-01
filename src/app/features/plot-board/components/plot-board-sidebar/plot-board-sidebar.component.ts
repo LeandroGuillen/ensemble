@@ -1,4 +1,5 @@
 import { Component, EventEmitter, Input, OnInit, Output, inject } from '@angular/core';
+import { NotificationService } from '../../../../core/services/notification.service';
 
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -18,6 +19,7 @@ export class PlotBoardSidebarComponent implements OnInit {
   private readonly projectService = inject(ProjectService);
   private readonly router = inject(Router);
   private readonly logger = inject(LoggingService);
+  private readonly toasts = inject(NotificationService);
 
   @Input() open = true;
   @Input() currentPath: string | null = null;
@@ -30,7 +32,6 @@ export class PlotBoardSidebarComponent implements OnInit {
   @Output() beforeNavigate = new EventEmitter<void>();
 
   plotboardPaths: string[] = [];
-  duplicateError = '';
   renameError = '';
   showRenameDialog = false;
   renameValue = '';
@@ -38,7 +39,6 @@ export class PlotBoardSidebarComponent implements OnInit {
   newPlotBoardName = '';
   newPlotBoardError = '';
   showDeletePlotBoardDialog = false;
-  deletePlotBoardError = '';
   renameTargetPath: string | null = null;
   deleteTargetPath: string | null = null;
 
@@ -117,13 +117,11 @@ export class PlotBoardSidebarComponent implements OnInit {
 
   openDeletePlotBoardDialogForPath(rel: string): void {
     this.deleteTargetPath = this.plotBoardService.normalizeRelativePath(rel);
-    this.deletePlotBoardError = '';
     this.showDeletePlotBoardDialog = true;
   }
 
   cancelDeletePlotBoard(): void {
     this.showDeletePlotBoardDialog = false;
-    this.deletePlotBoardError = '';
     this.deleteTargetPath = null;
   }
 
@@ -142,7 +140,7 @@ export class PlotBoardSidebarComponent implements OnInit {
     }
     const del = await this.plotBoardService.deletePlotBoardFile(p);
     if (!del.success) {
-      this.deletePlotBoardError = del.error || 'Could not delete file';
+      this.toasts.showError(del.error || 'Could not delete file');
       if (isDeletingOpen) this.suspendAutoSaveChange.emit(false);
       return;
     }
@@ -202,7 +200,6 @@ export class PlotBoardSidebarComponent implements OnInit {
   }
 
   async duplicatePlotBoardForPath(rel: string): Promise<void> {
-    this.duplicateError = '';
     const norm = this.plotBoardService.normalizeRelativePath(rel);
     const cur = this.plotBoardService.getCurrentRelativePath();
     const isDuplicatingOpen =
@@ -212,7 +209,7 @@ export class PlotBoardSidebarComponent implements OnInit {
     }
     const result = await this.plotBoardService.duplicatePlotBoardFile(norm);
     if (!result.success || !result.newRelative) {
-      this.duplicateError = result.error || 'Could not duplicate file';
+      this.toasts.showError(result.error || 'Could not duplicate file');
       return;
     }
     await this.refreshList();

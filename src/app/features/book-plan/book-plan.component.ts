@@ -79,6 +79,21 @@ export class BookPlanComponent implements OnInit, OnDestroy {
   private readonly electronService = inject(ElectronService);
   private readonly bookEditActions = inject(BookEditActionsService);
   private readonly notifications = inject(NotificationService);
+  /** Plan read/save errors persist until resolved: one sticky toast per error, dismissed when it clears. */
+  private planError: string | null = null;
+  private planErrorToastId: string | null = null;
+
+  private syncPlanErrorToast(error: string | null): void {
+    if (error === this.planError) return;
+    this.planError = error;
+    if (this.planErrorToastId) {
+      this.notifications.dismiss(this.planErrorToastId);
+      this.planErrorToastId = null;
+    }
+    if (error) {
+      this.planErrorToastId = this.notifications.showError(error, 0);
+    }
+  }
   private readonly commandPalette = inject(CommandPaletteService);
   private readonly wikiLinkTargets = inject(WikiLinkTargetsService);
   private readonly logger = inject(LoggingService);
@@ -165,8 +180,11 @@ export class BookPlanComponent implements OnInit, OnDestroy {
       });
 
     this.bookPlan.state$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((state) => {
-      this.onState(state?.bookId === this.bookId ? state : null);
+      const own = state?.bookId === this.bookId ? state : null;
+      this.onState(own);
+      this.syncPlanErrorToast(own?.error ?? null);
     });
+    this.destroyRef.onDestroy(() => this.syncPlanErrorToast(null));
 
     this.metadataService.metadata$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((metadata) => {
       this.seriesList = metadata?.series || [];

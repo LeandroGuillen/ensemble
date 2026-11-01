@@ -41,7 +41,7 @@ export class NotificationService {
   private notificationId = 0;
 
   /** Recent error/warning toasts, for merging duplicates of one failure. */
-  private recent: { id: string; type: Notification['type']; key: string; at: number }[] = [];
+  private recent: { id: string; type: Notification['type']; key: string; at: number; hasAction: boolean }[] = [];
 
   /** Clock for the duplicate window (overridable in tests). */
   now: () => number = () => Date.now();
@@ -60,15 +60,19 @@ export class NotificationService {
 
   /**
    * Show an error notification.
-   * Pass duration 0 for a sticky error (no auto-dismiss).
+   * Pass duration 0 for a sticky error (no auto-dismiss). An optional action
+   * (e.g. Retry) adds a button to the toast.
    */
-  showError(message: string, duration = 5000): void {
+  showError(message: string, duration = 5000, action?: NotificationAction): string {
+    const id = `notification-${++this.notificationId}`;
     this.show({
-      id: `notification-${++this.notificationId}`,
+      id,
       type: 'error',
       message,
-      duration
+      duration,
+      ...(action ? { action } : {}),
     });
+    return id;
   }
 
   /**
@@ -137,8 +141,9 @@ export class NotificationService {
     // One failure, one toast: LoggingService.error toasts, and many callers
     // then toast the same failure again (often with added context). Merge an
     // error/warning that repeats a recent one of the same type, keeping the
-    // more descriptive text.
-    if (!toast.action && (toast.type === 'error' || toast.type === 'warning')) {
+    // one with an action button (e.g. Retry), else the more descriptive text.
+    // Undo toasts are type 'info' and never merged.
+    if (toast.type === 'error' || toast.type === 'warning') {
       const now = this.now();
       this.recent = this.recent.filter((r) => now - r.at <= DUPLICATE_WINDOW_MS);
       const key = message.toLowerCase();
@@ -148,12 +153,15 @@ export class NotificationService {
           )
         : undefined;
       if (dup) {
-        if (key.length <= dup.key.length) {
+        const hasAction = !!toast.action;
+        const newWins =
+          hasAction !== dup.hasAction ? hasAction : key.length > dup.key.length;
+        if (!newWins) {
           return; // Already showing this (or a fuller version of it).
         }
-        this.dismiss(dup.id); // Replace with the more descriptive one.
+        this.dismiss(dup.id); // Replace with the more useful one.
       }
-      this.recent.push({ id: toast.id, type: toast.type, key, at: now });
+      this.recent.push({ id: toast.id, type: toast.type, key, at: now, hasAction: !!toast.action });
     }
 
     this.notificationsSubject.next(toast);

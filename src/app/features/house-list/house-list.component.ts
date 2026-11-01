@@ -1,3 +1,4 @@
+import { NotificationService } from '../../core/services/notification.service';
 import { ChangeDetectorRef, Component, DestroyRef, HostListener, inject, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -18,6 +19,7 @@ import { PageHeaderComponent } from '../../shared/page-header/page-header.compon
   styleUrls: ['./house-list.component.scss'],
 })
 export class HouseListComponent implements OnInit {
+  private readonly toasts = inject(NotificationService);
   readonly houses = inject(HouseService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -27,7 +29,6 @@ export class HouseListComponent implements OnInit {
   crests = new Map<string, string>();
   search = '';
   loading = true;
-  error = '';
   selectedHouseIndex = -1;
 
   ngOnInit(): void {
@@ -59,11 +60,10 @@ export class HouseListComponent implements OnInit {
 
   async refresh(): Promise<void> {
     this.loading = true;
-    this.error = '';
     try {
       await this.houses.loadHouses(true);
     } catch (error) {
-      this.error = String(error);
+      this.toasts.showError(String(error));
     } finally {
       this.loading = false;
       this.cdr.markForCheck();

@@ -19,11 +19,6 @@
           [disabled]="isGeneratingPortrait"
         ><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg></button>
       </header>
-      @if (error) {
-        <div class="error-banner">
-          <span class="error-banner-text">{{ error }}</span>
-        </div>
-      }
       <label class="form-label" for="portrait-workflow">InvokeAI workflow</label>
       <select
         id="portrait-workflow"

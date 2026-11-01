@@ -60,6 +60,9 @@ import {
     ]
 })
 export class CharacterListComponent implements OnInit {
+  private readonly toasts = inject(NotificationService);
+  /** The last load failed: hide the (empty) list; the toast offers Retry. */
+  loadFailed = false;
   @ViewChild('scrollableContent', { static: false })
   private scrollableContentRef: ElementRef<HTMLDivElement> | null = null;
 
@@ -108,7 +111,6 @@ export class CharacterListComponent implements OnInit {
   thumbnailDataUrls: Map<string, string> = new Map();
   thumbnailModificationTimes: Map<string, string> = new Map();
   isLoading = false;
-  error: string | null = null;
   viewMode: 'grid' | 'list' | 'compact' | 'gallery' = 'grid'; // Toggle between grid (cards), list, compact, and gallery view
   columns: 1 | 2 = 2; // Column count for views
   sortBy: 'name' | 'category' = 'name';
@@ -564,10 +566,15 @@ export class CharacterListComponent implements OnInit {
 
     try {
       this.isLoading = true;
-      this.error = null;
       await this.characterService.loadCharacters(this.currentProject.path);
+      this.loadFailed = false;
     } catch (error) {
-      this.error = `Failed to load characters: ${error}`;
+      this.loadFailed = true;
+      // CharacterService already prefixes "Failed to load characters".
+      this.toasts.showError(error instanceof Error ? error.message : `Failed to load characters: ${error}`, 0, {
+        label: 'Retry',
+        run: () => this.loadCharacters(),
+      });
       this.logger.error('Failed to load characters:', error);
     } finally {
       this.isLoading = false;
@@ -579,10 +586,9 @@ export class CharacterListComponent implements OnInit {
 
     try {
       this.isLoading = true;
-      this.error = null;
       await this.characterService.forceReloadCharacters();
     } catch (error) {
-      this.error = `Failed to refresh characters: ${error}`;
+      this.toasts.showError(`Failed to refresh characters: ${error}`);
       this.logger.error('Failed to refresh characters:', error);
     } finally {
       this.isLoading = false;
@@ -594,12 +600,11 @@ export class CharacterListComponent implements OnInit {
 
     try {
       this.isLoading = true;
-      this.error = null;
       await this.characterService.scanForExistingCharacters();
 
       // Scan completed successfully
     } catch (error) {
-      this.error = `Failed to scan for characters: ${error}`;
+      this.toasts.showError(`Failed to scan for characters: ${error}`);
       this.logger.error('Failed to scan for characters:', error);
     } finally {
       this.isLoading = false;
@@ -615,7 +620,6 @@ export class CharacterListComponent implements OnInit {
 
     try {
       this.isLoading = true;
-      this.error = null;
       const character = await this.characterService.loadSpecificCharacterFile(filename);
 
       if (character) {
@@ -624,7 +628,7 @@ export class CharacterListComponent implements OnInit {
         this.notificationService.showError(`File not found or failed to load: ${filename}`);
       }
     } catch (error) {
-      this.error = `Failed to load specific file: ${error}`;
+      this.toasts.showError(`Failed to load specific file: ${error}`);
       this.logger.error('Failed to load specific file:', error);
     } finally {
       this.isLoading = false;
@@ -1135,12 +1139,11 @@ getFilterSummary(): string {
 
   showCastNameFormDialog(): void {
     if (this.selectedCharacterIds.length === 0) {
-      this.error = 'Please select at least one character to create a cast.';
+      this.toasts.showError('Please select at least one character to create a cast.');
       return;
     }
     this.showCastNameForm = true;
     this.newCastName = '';
-    this.error = null;
   }
 
   cancelCastForm(): void {
@@ -1150,7 +1153,7 @@ getFilterSummary(): string {
 
   async saveSelectionAsCast(): Promise<void> {
     if (!this.newCastName || this.newCastName.trim() === '') {
-      this.error = 'Please enter a name for the cast.';
+      this.toasts.showError('Please enter a name for the cast.');
       return;
     }
 
@@ -1164,12 +1167,11 @@ getFilterSummary(): string {
       this.selectedCharacterIds = [];
       this.showCastNameForm = false;
       this.newCastName = '';
-      this.error = null;
 
       // Reload casts
       this.casts = this.metadataService.getCasts();
     } catch (error) {
-      this.error = `Failed to create cast: ${error}`;
+      this.toasts.showError(`Failed to create cast: ${error}`);
       this.logger.error('Failed to create cast:', error);
     }
   }

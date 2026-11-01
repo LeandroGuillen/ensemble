@@ -5,8 +5,10 @@ import {
   OnChanges,
   Output,
   SimpleChanges,
+  inject,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { NotificationService } from '../../../../core/services/notification.service';
 import { ImageWorkflow } from '../../../../core/interfaces';
 import { ImageGenerationService } from '../../../../core/services/image-generation/image-generation.service';
 
@@ -17,15 +19,14 @@ import { ImageGenerationService } from '../../../../core/services/image-generati
   styleUrls: ['./generate-portrait-dialog.component.scss'],
 })
 export class GeneratePortraitDialogComponent implements OnChanges {
+  private readonly toasts = inject(NotificationService);
   @Input() visible = false;
   @Input() characterName = '';
   @Input() outputDirectory: string | null = null;
-  @Input() error: string | null = null;
 
   @Output() visibleChange = new EventEmitter<boolean>();
   @Output() closed = new EventEmitter<void>();
   @Output() portraitGenerated = new EventEmitter<string>();
-  @Output() errorChange = new EventEmitter<string | null>();
 
   imageWorkflows: ImageWorkflow[] = [];
   selectedImageWorkflowId = '';
@@ -64,7 +65,6 @@ export class GeneratePortraitDialogComponent implements OnChanges {
     if (!this.selectedImageWorkflowId || !this.positiveImagePrompt.trim()) return;
     const name = this.characterName.trim() || 'character';
     this.isGeneratingPortrait = true;
-    this.errorChange.emit(null);
     try {
       const relativePath = await this.imageGenerationService.generateAndSave({
         workflowId: this.selectedImageWorkflowId,
@@ -78,16 +78,13 @@ export class GeneratePortraitDialogComponent implements OnChanges {
       this.visibleChange.emit(false);
       this.closed.emit();
     } catch (error) {
-      this.errorChange.emit(
-        error instanceof Error ? error.message : 'Failed to generate portrait'
-      );
+      this.toasts.showError(error instanceof Error ? error.message : 'Failed to generate portrait');
     } finally {
       this.isGeneratingPortrait = false;
     }
   }
 
   private async loadWorkflows(): Promise<void> {
-    this.errorChange.emit(null);
     try {
       this.imageWorkflows = await this.imageGenerationService.listWorkflows();
       const configured = this.imageGenerationService.getDefaultWorkflowId();
@@ -96,9 +93,7 @@ export class GeneratePortraitDialogComponent implements OnChanges {
           ? configured
           : this.imageWorkflows[0]?.id) || '';
     } catch (error) {
-      this.errorChange.emit(
-        error instanceof Error ? error.message : 'Failed to load image workflows'
-      );
+      this.toasts.showError(error instanceof Error ? error.message : 'Failed to load image workflows');
       this.visible = false;
       this.visibleChange.emit(false);
       this.closed.emit();

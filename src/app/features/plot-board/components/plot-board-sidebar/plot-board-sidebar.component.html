@@ -33,9 +33,6 @@
       </button>
     </div>
   </div>
-  @if (duplicateError) {
-    <p class="plot-board-sidebar-error">{{ duplicateError }}</p>
-  }
   <ul class="plot-board-list">
     @for (rel of plotboardPaths; track rel) {
       <li class="plot-board-list-item">
@@ -125,9 +122,6 @@
         <p class="rename-hint">
           Delete <strong>{{ displayStem(path) }}</strong> from disk? Plot boards aren't moved to Trash yet, so this is permanent.
         </p>
-      }
-      @if (deletePlotBoardError) {
-        <p class="rename-error">{{ deletePlotBoardError }}</p>
       }
       <div class="rename-actions">
         <button type="button" class="btn-action" (click)="cancelDeletePlotBoard()">Cancel</button>

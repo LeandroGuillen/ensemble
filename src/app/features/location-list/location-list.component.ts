@@ -1,3 +1,4 @@
+import { NotificationService } from '../../core/services/notification.service';
 import { DestroyRef, inject, Component, OnInit, NgZone, ChangeDetectorRef, HostListener } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
@@ -27,6 +28,7 @@ import {
   styleUrls: ['./location-list.component.scss'],
 })
 export class LocationListComponent implements OnInit {
+  private readonly toasts = inject(NotificationService);
   private readonly destroyRef = inject(DestroyRef);
 
   allLocations: Location[] = [];
@@ -47,7 +49,6 @@ export class LocationListComponent implements OnInit {
   viewMode: 'grid' | 'list' = 'grid';
   selectedLocationIndex = -1;
   isLoading = false;
-  error: string | null = null;
 
   constructor(
     private metadataService: MetadataService,
@@ -176,11 +177,10 @@ export class LocationListComponent implements OnInit {
     }
 
     this.isLoading = true;
-    this.error = null;
     try {
       await this.locationService.loadLocations(project.path);
     } catch (error) {
-      this.error = `Failed to load locations: ${error}`;
+      this.toasts.showError(`Failed to load locations: ${error}`);
       this.logger.error('Failed to load locations:', error);
     } finally {
       this.isLoading = false;
@@ -190,11 +190,10 @@ export class LocationListComponent implements OnInit {
 
   async refreshLocations(): Promise<void> {
     this.isLoading = true;
-    this.error = null;
     try {
       await this.locationService.forceReloadLocations();
     } catch (error) {
-      this.error = `Failed to refresh locations: ${error}`;
+      this.toasts.showError(`Failed to refresh locations: ${error}`);
       this.logger.error('Failed to refresh locations:', error);
     } finally {
       this.isLoading = false;
