@@ -12,7 +12,7 @@ const { EventEmitter } = require('node:events');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { forwardSignals, supervise } = require('../lib/forward-signals');
+const { descendantPids, forwardSignals, supervise } = require('../lib/forward-signals');
 
 const repo = path.join(__dirname, '..');
 const posix = process.platform !== 'win32';
@@ -41,11 +41,33 @@ describe('forwardSignals / supervise (unit)', () => {
     it(`forwards ${signal} to the child`, () => {
       const child = fakeChild();
       const proc = fakeProc();
-      forwardSignals(child, { proc, platform: 'linux' });
+      forwardSignals(child, { proc, platform: 'linux', listDescendants: () => [] });
       proc.emit(signal);
       assert.deepEqual(child.killed, [signal]);
     });
   }
+
+  it('signals every descendant too, from a snapshot taken before the child is signalled', () => {
+    const child = fakeChild();
+    const proc = fakeProc();
+    const order = [];
+    child.kill = (signal) => order.push(['child', signal]);
+    forwardSignals(child, {
+      proc,
+      platform: 'linux',
+      listDescendants: (pid) => { order.push(['snapshot', pid]); return [11, 12, 13]; },
+      killPid: (pid, signal) => { order.push([pid, signal]); if (pid === 12) throw new Error('ESRCH'); },
+    });
+    proc.emit('SIGTERM');
+    assert.deepEqual(order, [['snapshot', 4242], ['child', 'SIGTERM'], [11, 'SIGTERM'], [12, 'SIGTERM'], [13, 'SIGTERM']]);
+  });
+
+  it('descendantPids walks the whole tree from ps output', () => {
+    const ps = '  1     0\n 4242   1\n 4300 4242\n 4301 4300\n 4302 4301\n 4400 4242\n 9000   1\n';
+    const pids = descendantPids(4242, () => ps);
+    assert.deepEqual([...pids].sort(), [4300, 4301, 4302, 4400]);
+    assert.deepEqual(descendantPids(4242, () => { throw new Error('no ps'); }), []);
+  });
 
   it('does not signal a child that already exited', () => {
     const child = fakeChild();
