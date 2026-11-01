@@ -150,9 +150,9 @@ Plot boards are Markdown files matching `*.plotboard.md` anywhere under the proj
 ### Character File Format
 
 Each active character has a direct child folder under `characters/`. Its main file
-must match the folder name (`roger-rabbit/roger-rabbit.md`). Draft folders live
+must match the folder name (`mara-vell/mara-vell.md`). Draft folders live
 under `characters/@drafts/`. Book pages use the book code as a dotted suffix, such
-as `roger-rabbit/roger-rabbit.n26.md`. Managed folder names, main filenames, and
+as `mara-vell/mara-vell.lc1.md`. Managed folder names, main filenames, and
 book-code suffixes are always ASCII-only. Other files are ignored.
 
 ```markdown

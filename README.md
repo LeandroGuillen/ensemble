@@ -35,7 +35,7 @@ Ensemble keeps your cast, your world and your plot in one folder of Markdown fil
 
 ### World
 
-- **Locations**: record places with one of nine types, from Country to Natural Feature.
+- **Locations**: record places with one of nine types, such as Country, Settlement, Building or Natural Feature.
 - **Location filters**: filter by type, book and picture, and clear the filters in one click.
 - **Location icons**: give every type its own icon.
 - **Houses**: record crests, mottos, colors, seats, members and an ordered list of reigns with joint heads.
@@ -102,25 +102,25 @@ project-folder/
 ├── ensemble.json           # Project metadata: categories, tags, books, settings, pinboards
 ├── .ensemble-trash/        # Staged deletes (exclude from backups/exports); then OS trash
 ├── characters/             # Configurable character root
-│   ├── roger-rabbit/
-│   │   ├── roger-rabbit.md       # Main file (frontmatter + description)
-│   │   └── roger-rabbit.n26.md   # Book page, keyed by book code
+│   ├── mara-vell/
+│   │   ├── mara-vell.md          # Main file (frontmatter + description)
+│   │   └── mara-vell.lc1.md      # Book page, keyed by book code
 │   ├── @drafts/                   # Draft character folders
 │   │   └── unnamed-a1b2c3/
 │   │       └── unnamed-a1b2c3.md
 │   ├── casts/                     # Cast folders
 │   │   ├── casts.json             # Cast index: names and character ids
-│   │   └── the-hall-ensemble/
+│   │   └── the-lighthouse-crew/
 │   │       └── description.md
 │   ├── concepts.md                # Concepts
 │   └── names.md                   # Name lists
 ├── locations/             # Locations, one file each
-│   └── _springfield.md
+│   └── _port-saltmere.md
 ├── houses/                 # Family and dynasty records
-│   └── house-stark/
-│       └── house-stark.md   # House frontmatter + Markdown history
+│   └── house-vell/
+│       └── house-vell.md    # House frontmatter + Markdown history
 ├── img/                    # Images, including portraits
-└── my-book.pinboard.md     # Plot board
+└── lantern-coast.pinboard.md  # Plot board
 ```
 
 Folder names come from an ASCII transliteration of the name. The file layout of Houses, Lore figures and Locations is documented in [docs/data-format.md](docs/data-format.md).

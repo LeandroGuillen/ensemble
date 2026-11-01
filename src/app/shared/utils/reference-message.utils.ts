@@ -4,7 +4,7 @@
  * @param singularLabel Label for single item (e.g. 'house')
  * @param pluralLabel Label for multiple items (e.g. 'houses')
  * @param maxShow Maximum number of names to show before truncating (default: 3)
- * @returns Formatted string like "2 houses: Stark, Tully" or "5 houses: Stark, Tully, Lannister +2 more"
+ * @returns Formatted string like "2 houses: Vell, Dunmore" or "5 houses: Vell, Dunmore, Hale +2 more"
  */
 export function formatReferenceList(
   items: { id: string; name: string }[],
