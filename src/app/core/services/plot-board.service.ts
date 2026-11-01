@@ -379,11 +379,22 @@ export class PlotBoardService {
 
     if (lines.length < 2) return { rows, cells };
 
+    // Column i maps to frontmatter threads[i - 1] when the header name agrees (the
+    // order generateFile writes). Otherwise (hand-edited or legacy files) fall back
+    // to the first not-yet-used thread with that name, so duplicate names never
+    // collapse two columns into one thread.
     const headerCells = this.splitTableRow(lines[0]);
+    const used = new Set<string>();
     const threadIds: (string | null)[] = headerCells.map((headerName, i) => {
       if (i === 0) return null;
-      const match = threads.find((t) => t.name === headerName);
-      return match?.id ?? null;
+      const positional = threads[i - 1];
+      const match =
+        positional && positional.name === headerName && !used.has(positional.id)
+          ? positional
+          : threads.find((t) => t.name === headerName && !used.has(t.id));
+      if (!match) return null;
+      used.add(match.id);
+      return match.id;
     });
 
     for (let i = 2; i < lines.length; i++) {
@@ -518,6 +529,15 @@ export class PlotBoardService {
       id = `${base}-${counter++}`;
     }
     return id;
+  }
+
+  /** `base`, or `base 2`, `base 3`… so a new thread doesn't repeat an existing name. */
+  uniqueThreadName(base: string, currentThreads: PlotThread[]): string {
+    const names = new Set(currentThreads.map((t) => t.name));
+    if (!names.has(base)) return base;
+    let n = 2;
+    while (names.has(`${base} ${n}`)) n++;
+    return `${base} ${n}`;
   }
 
   /**

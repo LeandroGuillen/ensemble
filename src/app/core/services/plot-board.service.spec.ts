@@ -357,5 +357,60 @@ describe('PlotBoardService', () => {
       expect(parsed.cells).toEqual({ '0': { main: 'Ana meets Bo' }, '1': { sub: 'Storm\nhits' } });
     });
   });
+  describe('threads with duplicate names', () => {
+    const thread = (id: string, name: string) => ({ id, name, characters: [], color: '#000000', books: [] });
+
+    it('round-trips cells and cellMeta for two threads with the same name', () => {
+      const id1 = service.generateThreadId('New Thread', []);
+      const id2 = service.generateThreadId('New Thread', [thread(id1, 'New Thread')]);
+      expect(id2).not.toBe(id1);
+      const board = {
+        threads: [thread(id1, 'New Thread'), thread(id2, 'New Thread')],
+        rows: [{ name: 'Ch 1' }, { name: 'Ch 2' }],
+        cells: { '0': { [id1]: 'Ana meets Bo', [id2]: 'The storm hits' }, '1': { [id2]: 'Bo leaves town' } },
+        cellMeta: { '0': { [id2]: { color: '#ff0000' } }, '1': { [id1]: { icon: 'star' } } },
+      };
+      const parsed = service.parseFile(service.generateFile(board as any));
+      expect(parsed.cells).toEqual(board.cells);
+      expect(parsed.cellMeta).toEqual(board.cellMeta as any);
+    });
+
+    it('handles three threads sharing a name between distinct ones', () => {
+      const board = {
+        threads: [thread('a', 'X'), thread('b', 'Y'), thread('c', 'X'), thread('d', 'X')],
+        rows: [{ name: 'Ch 1' }],
+        cells: { '0': { a: '1', b: '2', c: '3', d: '4' } },
+        cellMeta: {},
+      };
+      expect(service.parseFile(service.generateFile(board as any)).cells).toEqual(board.cells);
+    });
+
+    it('falls back to name matching when the column order differs from the frontmatter', () => {
+      const raw = [
+        '---',
+        'threads:',
+        '  - id: main',
+        '    name: Main',
+        '    characters: []',
+        '  - id: sub',
+        '    name: Sub',
+        '    characters: []',
+        '---',
+        '',
+        '|| Sub | Main |',
+        '|---|---|---|',
+        '| Ch 1 | sub text | main text |',
+      ].join('\n');
+      expect(service.parseFile(raw).cells).toEqual({ '0': { sub: 'sub text', main: 'main text' } });
+    });
+
+    it('uniqueThreadName numbers repeated default names', () => {
+      expect(service.uniqueThreadName('New Thread', [])).toBe('New Thread');
+      expect(service.uniqueThreadName('New Thread', [thread('a', 'New Thread')])).toBe('New Thread 2');
+      expect(
+        service.uniqueThreadName('New Thread', [thread('a', 'New Thread'), thread('b', 'New Thread 2')])
+      ).toBe('New Thread 3');
+    });
+  });
 });
 

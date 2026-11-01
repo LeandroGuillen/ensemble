@@ -432,7 +432,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   addThread(): void {
-    const name = 'New Thread';
+    const name = this.plotBoardService.uniqueThreadName('New Thread', this.board.threads);
     const id = this.plotBoardService.generateThreadId(name, this.board.threads);
     this.board.threads = [...this.board.threads, { id, name, characters: [] }];
     this.queueSave();
