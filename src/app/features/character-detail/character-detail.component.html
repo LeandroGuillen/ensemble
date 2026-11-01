@@ -470,6 +470,16 @@
                 (generateRequest)="generateFromPrompt($event)"
               ></app-character-prompts-editor>
 
+              @if (character) {
+                <section class="panel">
+                  <app-mentioned-in
+                    [targetId]="character.id"
+                    [targetName]="character.name"
+                    [targetAliases]="character.aliases || []"
+                  ></app-mentioned-in>
+                </section>
+              }
+
             }
 
             <!-- Book page tab -->

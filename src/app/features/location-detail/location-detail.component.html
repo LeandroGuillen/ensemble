@@ -151,6 +151,15 @@
             </div>
           </div>
 
+          @if (location) {
+            <div class="form-section">
+              <app-mentioned-in
+                [targetId]="location.id"
+                [targetName]="location.name"
+              ></app-mentioned-in>
+            </div>
+          }
+
           @if (!isNewLocation) {
             <div class="danger-zone">
               <button

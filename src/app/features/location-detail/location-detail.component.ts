@@ -42,6 +42,7 @@ import { formatThumbnailWikiLink, parseThumbnailReference, resolveThumbnailPath 
 import { ResolvedWikiLink, WikiLinkSuggestion } from '../../core/utils/wiki-links.utils';
 import { WikiLinkTargetsService } from '../../core/services/wiki-link-targets.service';
 import { MarkdownEditorComponent } from '../../shared/markdown-editor/markdown-editor.component';
+import { MentionedInComponent } from '../../shared/mentioned-in/mentioned-in.component';
 import { getBookDisplayName } from '../../core/utils/book-display.utils';
 import { LocationTypeSelectComponent } from '../../shared/location-type-select/location-type-select.component';
 import { isTrashStagingError } from '../../core/trash/trash-record-id';
@@ -56,6 +57,7 @@ import { isTrashStagingError } from '../../core/trash/trash-record-id';
     ImagePickerDialogComponent,
     LocationTypeSelectComponent,
     MarkdownEditorComponent,
+    MentionedInComponent,
   ],
   templateUrl: './location-detail.component.html',
   styleUrls: ['./location-detail.component.scss'],

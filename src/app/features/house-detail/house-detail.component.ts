@@ -15,11 +15,12 @@ import { PageHeaderComponent } from '../../shared/page-header/page-header.compon
 import { ImagePickerDialogComponent } from '../../shared/image-picker-dialog/image-picker-dialog.component';
 import { ConfirmButtonDirective } from '../../shared/confirm-button/confirm-button.directive';
 import { MarkdownEditorComponent } from '../../shared/markdown-editor/markdown-editor.component';
+import { MentionedInComponent } from '../../shared/mentioned-in/mentioned-in.component';
 import { WikiLinkTargetsService } from '../../core/services/wiki-link-targets.service';
 import { ModalService } from '../../core/services/modal.service';
 import { ResolvedWikiLink, WikiLinkSuggestion } from '../../core/utils/wiki-links.utils';
 
-@Component({ selector: 'app-house-detail', imports: [FormsModule, RouterLink, DragDropModule, PageHeaderComponent, ImagePickerDialogComponent, ConfirmButtonDirective, MarkdownEditorComponent], templateUrl: './house-detail.component.html', styleUrls: ['./house-detail.component.scss'] })
+@Component({ selector: 'app-house-detail', imports: [FormsModule, RouterLink, DragDropModule, PageHeaderComponent, ImagePickerDialogComponent, ConfirmButtonDirective, MarkdownEditorComponent, MentionedInComponent], templateUrl: './house-detail.component.html', styleUrls: ['./house-detail.component.scss'] })
 export class HouseDetailComponent implements OnInit, OnDestroy {
   private readonly toasts = inject(NotificationService);
   readonly houses = inject(HouseService);

@@ -55,6 +55,8 @@ export function resolveWikiLink<T extends WikiLinkTarget>(target: string, target
 export interface ResolvedWikiLink {
   /** resolved: unique match; missing: no match (href opens creation); ambiguous: several or unsupported matches. */
   state: 'resolved' | 'missing' | 'ambiguous';
+  /** Id of the resolved record; only present when `state` is `resolved`. */
+  id?: string;
   /** Hash route (e.g. `#/character/<id>`); absent when ambiguous. */
   href?: string;
   route: string;
@@ -77,7 +79,7 @@ export function resolveWikiLinkTarget(target: string, collections: WikiLinkColle
   const resolved = matches.length === 1 ? matches[0] : undefined;
   const destination = resolved?.collection || explicitCollections[0] || collections[0];
   if (resolved) {
-    return { state: 'resolved', href: `#/${destination.route}/${encodeURIComponent(resolved.entry.id)}`, route: destination.route, title: target };
+    return { state: 'resolved', id: resolved.entry.id, href: `#/${destination.route}/${encodeURIComponent(resolved.entry.id)}`, route: destination.route, title: target };
   }
   if (!matches.length && !target.includes('#')) {
     const creationName = explicitCollections.length
@@ -143,18 +145,24 @@ function escapeAttribute(value: string): string {
   return escapeHtml(value).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-/** Render wikilinks only in prose, leaving code, Markdown links and embeds untouched. */
-export function renderWikiLinkMarkdown<T extends WikiLinkTarget>(
-  content: string,
-  targets: T[],
-  options: WikiLinkOptions,
-  otherCollections: WikiLinkCollection[] = []
-): { html: string; missingLinks: string[] } {
-  const missingLinks = new Set<string>();
-  const collections: WikiLinkCollection[] = [{ ...options, targets }, ...otherCollections];
-  let prefix = 'ENSEMBLEWIKILINK';
-  while (content.includes(prefix)) prefix += 'X';
-  const replacements: { start: number; end: number; token: string; html: string }[] = [];
+/** A `[[wikilink]]` span found in prose. */
+export interface WikiLinkSpan {
+  /** Start offset of the `[[...]]` span in the source content. */
+  start: number;
+  /** End offset (exclusive) of the `[[...]]` span. */
+  end: number;
+  /** Link target written inside `[[...]]` (before any `|`). */
+  target: string;
+  /** Display text (after `|`, or the target when there is no `|`). */
+  label: string;
+}
+
+/**
+ * Extract `[[wikilink]]` spans from prose, leaving code, Markdown links and
+ * embeds untouched and skipping embeds (`![[...]]`) and escapes (`\[[`).
+ * Shared by the Markdown renderer and the backlink index so both see the same links.
+ */
+export function extractWikiLinks(content: string): WikiLinkSpan[] {
   const protectedRanges: { start: number; end: number }[] = [];
   const visit = (node: Root | RootContent) => {
     if (['code', 'inlineCode', 'link', 'linkReference', 'image', 'imageReference'].includes(node.type)) {
@@ -169,6 +177,7 @@ export function renderWikiLinkMarkdown<T extends WikiLinkTarget>(
   };
   visit(parser.parse(content));
   const pattern = /(?<!!|\\)\[\[([^\[\]\n|]+)(?:\|([^\[\]\n]*))?\]\]/g;
+  const spans: WikiLinkSpan[] = [];
   for (const match of content.matchAll(pattern)) {
     const start = match.index!;
     const end = start + match[0].length;
@@ -176,15 +185,33 @@ export function renderWikiLinkMarkdown<T extends WikiLinkTarget>(
     const target = match[1].trim();
     if (!target) continue;
     const label = match[2]?.trim() || target;
-    const link = resolveWikiLinkTarget(target, collections);
-    if (link.state === 'missing') missingLinks.add(target);
+    spans.push({ start, end, target, label });
+  }
+  return spans;
+}
+
+/** Render wikilinks only in prose, leaving code, Markdown links and embeds untouched. */
+export function renderWikiLinkMarkdown<T extends WikiLinkTarget>(
+  content: string,
+  targets: T[],
+  options: WikiLinkOptions,
+  otherCollections: WikiLinkCollection[] = []
+): { html: string; missingLinks: string[] } {
+  const missingLinks = new Set<string>();
+  const collections: WikiLinkCollection[] = [{ ...options, targets }, ...otherCollections];
+  let prefix = 'ENSEMBLEWIKILINK';
+  while (content.includes(prefix)) prefix += 'X';
+  const replacements: { start: number; end: number; token: string; html: string }[] = [];
+  for (const span of extractWikiLinks(content)) {
+    const link = resolveWikiLinkTarget(span.target, collections);
+    if (link.state === 'missing') missingLinks.add(span.target);
     const token = `${prefix}${replacements.length}END`;
     const html = link.state === 'resolved'
-      ? `<a href="${escapeAttribute(link.href!)}" title="${escapeAttribute(target)}">${escapeHtml(label)}</a>`
+      ? `<a href="${escapeAttribute(link.href!)}" title="${escapeAttribute(span.target)}">${escapeHtml(span.label)}</a>`
       : link.state === 'missing'
-        ? `<a class="unresolved-${link.route}-link" href="${escapeAttribute(link.href!)}" title="${escapeAttribute(link.title)}">${escapeHtml(label)}</a>`
-        : `<span class="unresolved-${link.route}-link" title="${escapeAttribute(link.title)}">${escapeHtml(label)}</span>`;
-    replacements.push({ start, end, token, html });
+        ? `<a class="unresolved-${link.route}-link" href="${escapeAttribute(link.href!)}" title="${escapeAttribute(link.title)}">${escapeHtml(span.label)}</a>`
+        : `<span class="unresolved-${link.route}-link" title="${escapeAttribute(link.title)}">${escapeHtml(span.label)}</span>`;
+    replacements.push({ start: span.start, end: span.end, token, html });
   }
   let source = content;
   for (const replacement of [...replacements].reverse()) {

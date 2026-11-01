@@ -26,6 +26,7 @@ import { combineLatest, merge } from "rxjs";
 import { ResolvedWikiLink } from '../../core/utils/wiki-links.utils';
 import { WikiLinkTargetsService } from '../../core/services/wiki-link-targets.service';
 import { MarkdownEditorComponent, WikiLinkSuggestion } from '../../shared/markdown-editor/markdown-editor.component';
+import { MentionedInComponent } from '../../shared/mentioned-in/mentioned-in.component';
 import { buildCharacterDeleteMessage } from './character-delete-message.utils';
 import { isTrashStagingError } from '../../core/trash/trash-record-id';
 import {
@@ -95,6 +96,7 @@ type CharacterCollection = 'characters' | 'lore' | 'draft';
     GeneratePortraitDialogComponent,
     CharacterHousesComponent,
     MarkdownEditorComponent,
+    MentionedInComponent,
     DatePipe,
 ],
     templateUrl: "./character-detail.component.html",

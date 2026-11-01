@@ -80,6 +80,14 @@
             aria-describedby="house-content-hint"
           ></app-markdown-editor>
         </section>
+        @if (house) {
+          <section class="panel">
+            <app-mentioned-in
+              [targetId]="house.id"
+              [targetName]="house.name"
+            ></app-mentioned-in>
+          </section>
+        }
         <section class="panel members-panel">
           <div class="section-heading">
             <h2>Members <span class="count">{{ model.characterIds.length }}</span></h2>

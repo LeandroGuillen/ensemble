@@ -1,0 +1,30 @@
+@if (visible) {
+  <details class="mentioned-in">
+    <summary class="mentioned-in-summary">Mentioned in ({{ total }})</summary>
+    <div class="mentioned-in-body">
+      @for (group of groups; track group.key) {
+        <div class="mention-group">
+          <h4 class="mention-group-label">{{ group.label }}</h4>
+          <ul class="mention-list">
+            @for (item of group.items; track $index) {
+              <li class="mention-item">
+                <a class="mention-link" [routerLink]="routerLinkFor(item)">
+                  <span class="mention-source">{{ item.sourceName }}</span>
+                  @if (item.sourcePart) {
+                    <span class="mention-part">{{ item.sourcePart }}</span>
+                  }
+                </a>
+                <p class="mention-snippet">{{ item.snippet }}</p>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+      @if (excludedCount > 0) {
+        <p class="mention-excluded">
+          {{ excludedCount }} link(s) to “{{ targetName }}” couldn’t be resolved and aren’t shown.
+        </p>
+      }
+    </div>
+  </details>
+}
