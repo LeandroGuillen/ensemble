@@ -293,4 +293,69 @@ describe('PlotBoardService', () => {
       expect(parsed.threads[1].characters).toEqual(['char-4']);
     });
   });
+  describe('table cell escaping round-trip', () => {
+    const thread = (id: string, name: string) => ({ id, name, characters: [], color: '#000000', books: [] });
+
+    const roundTrip = (board: any) => service.parseFile(service.generateFile(board));
+
+    const tricky = [
+      'Choice: stay | go',
+      'back\\slash',
+      'literal \\| escaped pipe',
+      'trailing backslash \\',
+      'double trailing \\\\',
+      'line one\nline two',
+      '| leading and trailing |',
+    ];
+
+    tricky.forEach((value) => {
+      it(`keeps cells intact: ${JSON.stringify(value)}`, () => {
+        const board = {
+          threads: [thread('a', 'A'), thread('b', 'B'), thread('c', 'C')],
+          rows: [{ name: 'Ch 1' }],
+          cells: { '0': { a: value, b: 'Letter arrives', c: 'third' } },
+          cellMeta: {},
+        };
+        const parsed = roundTrip(board);
+        expect(parsed.cells).toEqual(board.cells);
+        expect(parsed.rows.map((r) => r.name)).toEqual(['Ch 1']);
+      });
+
+      it(`keeps row and thread names intact: ${JSON.stringify(value)}`, () => {
+        const board = {
+          threads: [thread('a', value), thread('b', 'B')],
+          rows: [{ name: value }, { name: 'Ch 2' }],
+          cells: { '0': { a: 'x', b: 'y' }, '1': { a: 'z', b: 'w' } },
+          cellMeta: {},
+        };
+        const parsed = roundTrip(board);
+        expect(parsed.rows.map((r) => r.name)).toEqual([value, 'Ch 2']);
+        expect(parsed.threads.map((t) => t.name)).toEqual([value, 'B']);
+        expect(parsed.cells).toEqual(board.cells);
+      });
+    });
+
+    it('parses existing pipe-free boards exactly as before', () => {
+      const raw = [
+        '---',
+        'threads:',
+        '  - id: main',
+        '    name: Main',
+        '    characters: []',
+        '  - id: sub',
+        '    name: Sub',
+        '    characters: []',
+        '---',
+        '',
+        '|| Main | Sub |',
+        '|---|---|---|',
+        '| Ch 1 | Ana meets Bo |  |',
+        '| Ch 2 |   | Storm<br>hits |',
+      ].join('\n');
+      const parsed = service.parseFile(raw);
+      expect(parsed.rows.map((r) => r.name)).toEqual(['Ch 1', 'Ch 2']);
+      expect(parsed.cells).toEqual({ '0': { main: 'Ana meets Bo' }, '1': { sub: 'Storm\nhits' } });
+    });
+  });
 });
+

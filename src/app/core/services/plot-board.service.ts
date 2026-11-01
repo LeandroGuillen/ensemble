@@ -406,11 +406,34 @@ export class PlotBoardService {
     return { rows, cells };
   }
 
+  /**
+   * Splits a Markdown table row on unescaped pipes only. A backslash escapes the
+   * next character (`escapeCell` writes `\\` and `\|`), so `\|` stays inside the
+   * cell. Each cell is trimmed and then unescaped.
+   */
   private splitTableRow(line: string): string[] {
     const trimmed = line.trim();
-    const stripped = trimmed.startsWith('|') ? trimmed.slice(1) : trimmed;
-    const end = stripped.endsWith('|') ? stripped.slice(0, -1) : stripped;
-    return end.split('|').map((s) => this.unescapeCell(s.trim()));
+    const body = trimmed.startsWith('|') ? trimmed.slice(1) : trimmed;
+    const raw: string[] = [];
+    let cur = '';
+    let endedOnPipe = false;
+    for (let i = 0; i < body.length; i++) {
+      const ch = body[i];
+      endedOnPipe = false;
+      if (ch === '\\' && i + 1 < body.length) {
+        cur += ch + body[i + 1];
+        i++;
+      } else if (ch === '|') {
+        raw.push(cur);
+        cur = '';
+        endedOnPipe = true;
+      } else {
+        cur += ch;
+      }
+    }
+    // The closing `|` of a row ends the last cell; it does not start a new one.
+    if (!endedOnPipe) raw.push(cur);
+    return raw.map((s) => this.unescapeCell(s.trim()));
   }
 
   private escapeCell(value: string): string {
@@ -420,11 +443,9 @@ export class PlotBoardService {
       .replace(/\n/g, '<br>');
   }
 
+  /** Single pass, so `\\` followed by `|` or `<br>` is not unescaped twice. */
   private unescapeCell(value: string): string {
-    return value
-      .replace(/<br>/g, '\n')
-      .replace(/\\\|/g, '|')
-      .replace(/\\\\/g, '\\');
+    return value.replace(/\\([\\|])|<br>/g, (_m, escaped?: string) => escaped ?? '\n');
   }
 
   generateFile(board: PlotBoard): string {
