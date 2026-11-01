@@ -26,7 +26,7 @@ import { ProjectService } from './project.service';
 import { LoggingService } from './logging.service';
 import { ReferenceCleanupService } from './reference-cleanup.service';
 import { NotificationService } from './notification.service';
-import { UndoDeleteEntry, UndoDeleteService } from './undo-delete.service';
+import { createNamesakeConflictCheck, UndoDeleteEntry, UndoDeleteService } from './undo-delete.service';
 
 function normalizeLocationRelativePath(relativePath: string): string {
   return relativePath.replace(/\\/g, '/').replace(/^\/+/, '');
@@ -328,24 +328,20 @@ export class LocationService {
       const recordId = location.id;
       let referenceSnapshot: LocationReferenceSnapshot | null = null;
 
+      const hasConflict = createNamesakeConflictCheck(
+        recordId,
+        name,
+        () => this.locationsSubject.value,
+        () => !!this.getLocationById(recordId)
+      );
+
       const buildUndoEntry = (): UndoDeleteEntry => ({
         kind: 'location',
         recordId,
         name,
         referenceSnapshot,
         expiresAt: stageResult.expiresAt,
-        hasConflict: () => {
-          if (this.getLocationById(recordId)) {
-            return true;
-          }
-          const needle = name.trim().toLowerCase();
-          if (!needle) {
-            return false;
-          }
-          return this.locationsSubject.value.some(
-            (loc) => (loc.name || '').trim().toLowerCase() === needle
-          );
-        },
+        hasConflict,
         reload: async () => {
           await this.forceReloadLocations();
         },

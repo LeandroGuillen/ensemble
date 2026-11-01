@@ -34,7 +34,7 @@ import { ProjectService } from './project.service';
 import { FileWatcherService } from './file-watcher.service';
 import { LoggingService } from './logging.service';
 import { NotificationService } from './notification.service';
-import { UndoDeleteEntry, UndoDeleteService } from './undo-delete.service';
+import { createNamesakeConflictCheck, UndoDeleteEntry, UndoDeleteService } from './undo-delete.service';
 
 @Injectable({ providedIn: 'root' })
 export class HouseService {
@@ -202,24 +202,19 @@ export class HouseService {
 
       const token = stageResult.token;
       const recordId = house.id;
+      const hasConflict = createNamesakeConflictCheck(
+        recordId,
+        name,
+        () => this.subject.value,
+        () => !!this.getById(recordId)
+      );
       const buildUndoEntry = (): UndoDeleteEntry => ({
         kind: 'house',
         recordId,
         name,
         referenceSnapshot: null,
         expiresAt: stageResult.expiresAt,
-        hasConflict: () => {
-          if (this.getById(recordId)) {
-            return true;
-          }
-          const needle = name.trim().toLowerCase();
-          if (!needle) {
-            return false;
-          }
-          return this.subject.value.some(
-            (h) => (h.name || '').trim().toLowerCase() === needle
-          );
-        },
+        hasConflict,
         reload: async () => {
           await this.loadHouses(true);
         },

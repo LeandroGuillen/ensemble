@@ -30,12 +30,44 @@ export interface UndoDeleteEntry {
   notificationId?: string;
   /** Optional absolute expiry from stageForTrash; otherwise UNDO_WINDOW_MS from register. */
   expiresAt?: number;
-  /** True when a same-id / same-name record already exists in the live collection. */
+  /** True when the id is live again or a new same-name record appeared after the delete. */
   hasConflict: () => boolean;
   /** Reload the restored record from disk into the right collection. */
   reload: () => Promise<void>;
   /** Reapply the reference snapshot; skips missing targets. */
   restoreReferences: (snapshot: UndoReferenceSnapshot) => Promise<ReferenceRestoreResult>;
+}
+
+/**
+ * Builds `UndoDeleteEntry.hasConflict` for a delete. Call it at delete time.
+ *
+ * Undo conflicts when the record's id is live again, or when a record with the
+ * same (trimmed, case-insensitive) name appeared *after* the delete. Namesakes
+ * that already existed when the record was deleted (e.g. father and son both
+ * "Juan Guillen", stored as `juan-guillen/` and `juan-guillen-<id>/`) don't
+ * block Undo; a real path collision is still refused by restoreFromTrash.
+ *
+ * @param recordId id of the deleted record
+ * @param name its display name at delete time
+ * @param live current records in the same collection (read on every check)
+ * @param isIdLive true when a record with `recordId` is live
+ */
+export function createNamesakeConflictCheck(
+  recordId: string,
+  name: string,
+  live: () => ReadonlyArray<{ id: string; name?: string }>,
+  isIdLive: () => boolean
+): () => boolean {
+  const needle = (name || '').trim().toLowerCase();
+  const sameName = (r: { name?: string }) => (r.name || '').trim().toLowerCase() === needle;
+  const namesakesAtDelete = new Set(
+    needle ? live().filter((r) => r.id !== recordId && sameName(r)).map((r) => r.id) : []
+  );
+  return () => {
+    if (isIdLive()) return true;
+    if (!needle) return false;
+    return live().some((r) => r.id !== recordId && sameName(r) && !namesakesAtDelete.has(r.id));
+  };
 }
 
 const PATH_EXISTS_ERROR = 'Original path already exists';

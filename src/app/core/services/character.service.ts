@@ -45,7 +45,7 @@ import { PlotBoardService } from './plot-board.service';
 import { CastService } from './cast.service';
 import { ReferenceCleanupService } from './reference-cleanup.service';
 import { NotificationService } from './notification.service';
-import { UndoDeleteEntry, UndoDeleteService } from './undo-delete.service';
+import { createNamesakeConflictCheck, UndoDeleteEntry, UndoDeleteService } from './undo-delete.service';
 
 /** Coerces a raw frontmatter `prompts` value into a clean CharacterPrompt[]. */
 function normalizePrompts(raw: unknown): CharacterPrompt[] {
@@ -1287,24 +1287,20 @@ export class CharacterService {
       let referenceSnapshot: CharacterReferenceSnapshot | null = null;
       let cleanedRefs = false;
 
+      const hasConflict = createNamesakeConflictCheck(
+        recordId,
+        name,
+        () => collection.value,
+        () => !!this.findRecord(recordId)
+      );
+
       const buildUndoEntry = (): UndoDeleteEntry => ({
         kind,
         recordId,
         name,
         referenceSnapshot,
         expiresAt: stageResult.expiresAt,
-        hasConflict: () => {
-          if (this.findRecord(recordId)) {
-            return true;
-          }
-          const needle = name.trim().toLowerCase();
-          if (!needle) {
-            return false;
-          }
-          return collection.value.some(
-            (c) => (c.name || '').trim().toLowerCase() === needle
-          );
-        },
+        hasConflict,
         reload: async () => {
           await this.forceReloadCharacters();
         },

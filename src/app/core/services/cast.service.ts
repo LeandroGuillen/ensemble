@@ -27,7 +27,7 @@ import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
 import { LoggingService } from './logging.service';
 import { NotificationService } from './notification.service';
-import { UndoDeleteEntry, UndoDeleteService } from './undo-delete.service';
+import { createNamesakeConflictCheck, UndoDeleteEntry, UndoDeleteService } from './undo-delete.service';
 
 /** Entry for a cast in casts.json (name/characterIds live there; folder holds description + thumbnails). */
 export interface CastIndexEntry {
@@ -612,18 +612,12 @@ export class CastService {
             name,
             referenceSnapshot,
             expiresAt: stageResult.expiresAt,
-            hasConflict: () => {
-              if (this.getCastById(recordId)) {
-                return true;
-              }
-              const needle = name.trim().toLowerCase();
-              if (!needle) {
-                return false;
-              }
-              return this.castsSubject.value.some(
-                (c) => (c.name || '').trim().toLowerCase() === needle
-              );
-            },
+            hasConflict: createNamesakeConflictCheck(
+              recordId,
+              name,
+              () => this.castsSubject.value,
+              () => !!this.getCastById(recordId)
+            ),
             reload: async () => {},
             restoreReferences: async (snapshot) => {
               if (!snapshot) {

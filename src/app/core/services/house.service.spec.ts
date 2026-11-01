@@ -540,4 +540,16 @@ describe('HouseService', () => {
     });
   });
 
+  it('Undo of a House is not blocked by a namesake that existed at delete time; a new one blocks it', async () => {
+    const one = await service.createHouse(data());
+    const two = await service.createHouse(data());
+    expect(two.id).not.toBe(one.id);
+    await service.deleteHouse(two.id, two.raw);
+    const entry = undoDelete.register.calls.mostRecent().args[1];
+    expect(entry.recordId).toBe(two.id);
+    expect(entry.hasConflict()).toBeFalse();
+    await service.createHouse(data());
+    expect(entry.hasConflict()).toBeTrue();
+  });
 });
+

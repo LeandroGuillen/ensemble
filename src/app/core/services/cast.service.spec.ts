@@ -278,4 +278,18 @@ describe('Cast canvases', () => {
       0
     );
   });
+  it('Undo of a cast is not blocked by a namesake that existed at delete time; a new one blocks it', async () => {
+    await service.loadCasts(project.path);
+    const one = await service.createCast({ name: 'Court', characterIds: ['a'] });
+    const two = await service.createCast({ name: 'Court', characterIds: ['b'] });
+    // Namesakes can exist on disk (e.g. folders edited outside the app).
+    (service as any).castsSubject.next([one, { ...two, name: 'Court' }]);
+    await service.deleteCast(two.id);
+    const entry = undoRegister.calls.mostRecent().args[1];
+    expect(entry.recordId).toBe(two.id);
+    expect(entry.hasConflict()).toBeFalse();
+    (service as any).castsSubject.next([...service.getCastsSnapshot(), { ...one, id: 'cast-new', name: 'court' }]);
+    expect(entry.hasConflict()).toBeTrue();
+  });
 });
+

@@ -1713,5 +1713,39 @@ Body text
       expect(await service.planBookPageRename('lc2', 'lc2')).toEqual([]);
     });
   });
+  describe('Undo next to a namesake', () => {
+    const juan = (id: string, folder: string): Character => ({
+      id,
+      name: 'Juan Guillen',
+      category: 'main-character',
+      tags: [],
+      books: [],
+      prompts: [],
+      content: '',
+      created: new Date(),
+      modified: new Date(),
+      relativePath: `${folder}/${folder}.md`,
+      filePath: `/test/project/characters/${folder}/${folder}.md`,
+    });
+
+    it('a pre-existing namesake does not block Undo; the id or a new namesake still does', async () => {
+      const project = createValidProject();
+      projectService.getCurrentProject.and.returnValue(project);
+      (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
+      (service as any).charactersSubject.next([juan('father', 'juan-guillen'), juan('son', 'juan-guillen-6jdqcaua')]);
+
+      await service.deleteCharacter('son');
+
+      const entry = undoDeleteService.register.calls.mostRecent().args[1];
+      expect(entry.recordId).toBe('son');
+      expect(entry.hasConflict()).toBeFalse();
+
+      (service as any).charactersSubject.next([juan('father', 'juan-guillen'), juan('newcomer', 'juan-guillen-zz')]);
+      expect(entry.hasConflict()).toBeTrue();
+
+      (service as any).charactersSubject.next([juan('father', 'juan-guillen'), juan('son', 'juan-guillen-6jdqcaua')]);
+      expect(entry.hasConflict()).toBeTrue();
+    });
+  });
 });
 

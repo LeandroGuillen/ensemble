@@ -1,5 +1,5 @@
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
-import { UndoDeleteService } from './undo-delete.service';
+import { createNamesakeConflictCheck, UndoDeleteService } from './undo-delete.service';
 import { ElectronService } from './electron.service';
 import { NotificationService } from './notification.service';
 import { LoggingService } from './logging.service';
@@ -282,4 +282,33 @@ describe('UndoDeleteService', () => {
       expect(service.hasPending(`tok-expire-${i}`)).toBeFalse();
     }
   }));
+  describe('createNamesakeConflictCheck', () => {
+    it('allows Undo next to a namesake that existed at delete time', () => {
+      let live = [{ id: 'father', name: 'Juan Guillen' }, { id: 'son', name: 'Juan Guillen' }];
+      const check = createNamesakeConflictCheck('son', 'Juan Guillen', () => live, () => live.some((r) => r.id === 'son'));
+      live = live.filter((r) => r.id !== 'son');
+      expect(check()).toBeFalse();
+    });
+
+    it('refuses when the id is live again', () => {
+      let live = [{ id: 'son', name: 'Juan Guillen' }];
+      const check = createNamesakeConflictCheck('son', 'Juan Guillen', () => live, () => live.some((r) => r.id === 'son'));
+      expect(check()).toBeTrue();
+      live = [];
+      expect(check()).toBeFalse();
+    });
+
+    it('refuses when a new namesake was created after the delete (case and spaces ignored)', () => {
+      let live = [{ id: 'father', name: 'Juan Guillen' }];
+      const check = createNamesakeConflictCheck('son', 'Juan Guillen', () => live, () => false);
+      live = [...live, { id: 'newcomer', name: '  juan guillen ' }];
+      expect(check()).toBeTrue();
+    });
+
+    it('an empty name only checks the id', () => {
+      const check = createNamesakeConflictCheck('d', '', () => [{ id: 'x', name: '' }], () => false);
+      expect(check()).toBeFalse();
+    });
+  });
 });
+

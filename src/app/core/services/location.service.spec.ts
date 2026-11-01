@@ -473,4 +473,21 @@ A foggy port.`,
       );
     });
   });
+  describe('Undo next to a namesake location', () => {
+    it('a pre-existing namesake does not block Undo; a new one does', async () => {
+      projectService.getCurrentProject.and.returnValue(createValidProject());
+      const first = await service.createLocation(createFormData());
+      const second = await service.createLocation(createFormData());
+      expect(second.id).not.toBe(first.id);
+
+      await service.deleteLocation(second.id);
+      const entry = undoDeleteService.register.calls.mostRecent().args[1];
+      expect(entry.recordId).toBe(second.id);
+      expect(entry.hasConflict()).toBeFalse();
+
+      await service.createLocation(createFormData());
+      expect(entry.hasConflict()).toBeTrue();
+    });
+  });
 });
+
