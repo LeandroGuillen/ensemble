@@ -542,6 +542,23 @@ export class MetadataService {
     return updatedBook;
   }
 
+  /**
+   * Throws the same errors updateBook would if `code` clashes with another book
+   * (same code, or same character-notes file suffix). Lets callers check before
+   * touching files, so the clash, not a side effect of it, is reported.
+   */
+  assertBookCodeAvailable(bookId: string, code: string | undefined): void {
+    const books = this.metadataSubject.value?.books || [];
+    const normalized = normalizeBookCode(code);
+    this.assertUniqueBookCode(books, normalized, bookId);
+    const current = books.find((b) => b.id === bookId);
+    this.assertUniqueBookPageSuffix(books, {
+      ...(current || { name: '', color: '' }),
+      id: bookId,
+      code: normalized,
+    } as Book);
+  }
+
   private assertUniqueBookCode(
     books: Book[],
     code: string | undefined,

@@ -84,6 +84,11 @@ export class BookEditActionsService {
     // back and the book's previous metadata restored.
     const oldSuffix = bookPageSuffix(editing);
     const newSuffix = bookPageSuffix({ id: editing.id, code: data.code });
+    if (oldSuffix !== newSuffix) {
+      // A clash with another book must be reported as such, before the preflight
+      // finds that book's own notes files and blames them.
+      this.metadataService.assertBookCodeAvailable(editing.id, data.code);
+    }
     const moves =
       oldSuffix === newSuffix ? [] : await this.characterService.planBookPageRename(oldSuffix, newSuffix);
 

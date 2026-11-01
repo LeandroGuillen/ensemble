@@ -381,6 +381,18 @@ describe('MetadataService', () => {
         );
       });
 
+      it('assertBookCodeAvailable reports exact and slug clashes without saving', () => {
+        withBooks([
+          { id: 'one', name: 'One', code: 'lc1', color: '#000' },
+          { id: 'two', name: 'Two', code: 'lc2', color: '#111' },
+        ]);
+        expect(() => service.assertBookCodeAvailable('two', 'lc1')).toThrowError(/already used by another book/);
+        expect(() => service.assertBookCodeAvailable('two', 'LC1.')).toThrowError(/would share character notes files/);
+        expect(() => service.assertBookCodeAvailable('two', 'tb')).not.toThrow();
+        expect(() => service.assertBookCodeAvailable('two', '')).not.toThrow();
+        expect(projectService.updateMetadata).not.toHaveBeenCalled();
+      });
+
       it('still allows saving a book with its own code and distinct codes', async () => {
         withBooks([
           { id: 'one', name: 'One', code: 'lc1', color: '#000' },

@@ -15,7 +15,7 @@ describe('BookEditActionsService book code change', () => {
   const form = (code?: string): BookFormData => ({ name: 'Tidebreak', code, color: '#111' });
 
   beforeEach(() => {
-    metadata = jasmine.createSpyObj('MetadataService', ['addBook', 'updateBook', 'moveBook', 'removeBook']);
+    metadata = jasmine.createSpyObj('MetadataService', ['addBook', 'updateBook', 'moveBook', 'removeBook', 'assertBookCodeAvailable']);
     metadata.updateBook.and.callFake(async (id: string, updates: any) => ({ ...book, ...updates, id }));
     characters = jasmine.createSpyObj('CharacterService', [
       'planBookPageRename',
@@ -57,6 +57,14 @@ describe('BookEditActionsService book code change', () => {
     await service.save(book, form('LC2'));
     expect(characters.planBookPageRename).not.toHaveBeenCalled();
     expect(characters.applyBookPageRename).not.toHaveBeenCalled();
+  });
+
+  it('a code clash with another book is reported before any file preflight', async () => {
+    metadata.assertBookCodeAvailable.and.throwError(new Error("Book code 'LC1.' would share character notes files"));
+    await expectAsync(service.save(book, form('LC1.'))).toBeRejectedWithError(/would share character notes files/);
+    expect(metadata.assertBookCodeAvailable).toHaveBeenCalledWith('tidebreak', 'LC1.');
+    expect(characters.planBookPageRename).not.toHaveBeenCalled();
+    expect(metadata.updateBook).not.toHaveBeenCalled();
   });
 
   it('a refused preflight saves nothing', async () => {
