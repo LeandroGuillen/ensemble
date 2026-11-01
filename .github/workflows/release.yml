@@ -7,7 +7,23 @@ on:
   workflow_dispatch:
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26.4.0'
+          cache: npm
+      - run: npm ci
+      - run: npm run test:main
+      - name: Locate Chrome for headless tests
+        run: echo "CHROME_BIN=$(command -v google-chrome || command -v chromium || command -v chromium-browser)" >> "$GITHUB_ENV"
+      - name: Angular unit tests (headless)
+        run: npx ng test --watch=false --browsers=ChromeHeadless
+
   build-linux:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,6 +55,7 @@ jobs:
 
   build-mac:
     if: github.event_name == 'push'
+    needs: test
     runs-on: macos-latest
     env:
       CSC_LINK: ${{ secrets.MAC_CERTIFICATE }}

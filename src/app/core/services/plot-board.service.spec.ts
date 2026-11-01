@@ -293,6 +293,31 @@ describe('PlotBoardService', () => {
       expect(parsed.threads[1].characters).toEqual(['char-4']);
     });
   });
+  describe('parse/generate round trip', () => {
+    const thread = (id: string, name: string, color: string) => ({ id, name, characters: [id], color, books: [] });
+
+    it('preserves threads, rows, cells and cellMeta through generate then parse', () => {
+      const board = {
+        threads: [thread('a', 'Setup', '#111111'), thread('b', 'Confront', '#222222')],
+        rows: [{ name: 'Ch 1' }, { name: 'Ch 2' }],
+        cells: {
+          '0': { a: 'The letter arrives', b: 'She refuses' },
+          '1': { a: 'He leaves at dawn', b: 'The storm breaks' },
+        },
+        cellMeta: {
+          '0': { a: { icon: '★', color: '#111111' }, b: { color: '#ff0000' } },
+          '1': { a: { color: '#00ff00' } },
+        },
+      };
+      const parsed = service.parseFile(service.generateFile(board as any));
+      expect(parsed.threads.map((t) => t.name)).toEqual(['Setup', 'Confront']);
+      expect(parsed.threads.map((t) => t.color)).toEqual(['#111111', '#222222']);
+      expect(parsed.rows.map((r) => r.name)).toEqual(['Ch 1', 'Ch 2']);
+      expect(parsed.cells).toEqual(board.cells);
+      expect(parsed.cellMeta).toEqual(board.cellMeta);
+    });
+  });
+
   describe('table cell escaping round-trip', () => {
     const thread = (id: string, name: string) => ({ id, name, characters: [], color: '#000000', books: [] });
 
