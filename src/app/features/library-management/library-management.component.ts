@@ -262,8 +262,7 @@ export class LibraryManagementComponent implements OnInit {
       );
       this.cancelBookForm();
     } catch (error) {
-      this.logger.error("Failed to save book:", error);
-      this.error = `Failed to save book: ${error}`;
+      this.logger.error("Failed to save book:", error); // toasts once (see LoggingService.error)
     } finally {
       this.saving = false;
     }
@@ -281,8 +280,7 @@ export class LibraryManagementComponent implements OnInit {
       );
       this.cancelBookForm();
     } catch (error) {
-      this.logger.error("Failed to delete book:", error);
-      this.error = `Failed to delete book: ${error}`;
+      this.logger.error("Failed to delete book:", error); // toasts once (see LoggingService.error)
     } finally {
       this.saving = false;
     }
@@ -341,8 +339,7 @@ export class LibraryManagementComponent implements OnInit {
       }
       this.cancelSeriesForm();
     } catch (error) {
-      this.logger.error("Failed to save series:", error);
-      this.error = `Failed to save series: ${error}`;
+      this.logger.error("Failed to save series:", error); // toasts once (see LoggingService.error)
     } finally {
       this.saving = false;
     }
@@ -363,8 +360,7 @@ export class LibraryManagementComponent implements OnInit {
       this.notificationService.showSuccess(`Series "${series.name}" deleted`);
       this.cancelSeriesForm();
     } catch (error) {
-      this.logger.error("Failed to delete series:", error);
-      this.error = `Failed to delete series: ${error}`;
+      this.logger.error("Failed to delete series:", error); // toasts once (see LoggingService.error)
     } finally {
       this.saving = false;
     }
@@ -430,8 +426,7 @@ export class LibraryManagementComponent implements OnInit {
       }
       this.cancelSagaForm();
     } catch (error) {
-      this.logger.error("Failed to save saga:", error);
-      this.error = `Failed to save saga: ${error}`;
+      this.logger.error("Failed to save saga:", error); // toasts once (see LoggingService.error)
     } finally {
       this.saving = false;
     }
@@ -452,8 +447,7 @@ export class LibraryManagementComponent implements OnInit {
       this.notificationService.showSuccess(`Saga "${saga.name}" deleted`);
       this.cancelSagaForm();
     } catch (error) {
-      this.logger.error("Failed to delete saga:", error);
-      this.error = `Failed to delete saga: ${error}`;
+      this.logger.error("Failed to delete saga:", error); // toasts once (see LoggingService.error)
     } finally {
       this.saving = false;
     }

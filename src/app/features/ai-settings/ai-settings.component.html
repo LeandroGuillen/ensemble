@@ -1,21 +1,6 @@
 <div class="ai-settings ai-settings-panel">
     <div class="settings-content">
         <div class="settings-inner">
-            <div class="notification-container">
-                <div
-                    class="success-message"
-                    [class.visible]="successMessage"
-                >
-                    <i class="icon-check"></i>
-                    {{ successMessage || "Success" }}
-                </div>
-
-                <div class="error-message" [class.visible]="error">
-                    <i class="icon-alert-circle"></i>
-                    {{ error || "Error" }}
-                </div>
-            </div>
-
             @if (activeSection === 'ai') {
                 <form [formGroup]="aiForm" class="ai-form">
                     <div class="form-section" [settingsSearchable]="['Enable AI Features', 'language model', 'ollama', 'lm studio']">

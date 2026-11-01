@@ -43,20 +43,18 @@ export class LoggingService {
   }
 
   /**
-   * Extract user-friendly message from error
+   * Toast text: the context (`message`) plus the reason from `error`, e.g.
+   * ("Failed to save book:", Error("Code taken")) → "Failed to save book: Code taken".
+   * Falls back to whichever part exists; avoids repeating a reason that
+   * already contains the context.
    */
   private extractUserMessage(message: string, error?: any): string {
-    // If error is a string, use it
-    if (typeof error === 'string') {
-      return error;
-    }
-    
-    // If error has a message, use it
-    if (error?.message) {
-      return error.message;
-    }
-    
-    // Otherwise use the provided message
-    return message;
+    const context = (message || '').trim().replace(/[:\s]+$/, '');
+    const reason =
+      typeof error === 'string' ? error : typeof error?.message === 'string' ? error.message : '';
+    const detail = reason.trim().replace(/^(?:Error:\s+)+/, '');
+    if (!detail) return context || 'Something went wrong';
+    if (!context || detail.toLowerCase().includes(context.toLowerCase())) return detail;
+    return `${context}: ${detail}`;
   }
 }

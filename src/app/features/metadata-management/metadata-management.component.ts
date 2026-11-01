@@ -346,8 +346,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
 
       this.cancelCategoryForm();
     } catch (error) {
-      this.logger.error('Failed to save category:', error);
-      this.error = `Failed to save category: ${error}`;
+      this.logger.error('Failed to save category:', error); // toasts once (see LoggingService.error)
     } finally {
       this.saving = false;
     }
@@ -364,8 +363,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
       
       await this.metadataService.removeCategory(category.id);
     } catch (error) {
-      this.logger.error('Failed to delete category:', error);
-      this.error = `Failed to delete category: ${error}`;
+      this.logger.error('Failed to delete category:', error); // toasts once (see LoggingService.error)
     } finally {
       this.saving = false;
     }
@@ -421,8 +419,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
       
       this.cancelTagForm();
     } catch (error) {
-      this.logger.error('Failed to save tag:', error);
-      this.error = `Failed to save tag: ${error}`;
+      this.logger.error('Failed to save tag:', error); // toasts once (see LoggingService.error)
     } finally {
       this.saving = false;
     }
@@ -439,8 +436,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
       
       await this.metadataService.removeTag(tag.id);
     } catch (error) {
-      this.logger.error('Failed to delete tag:', error);
-      this.error = `Failed to delete tag: ${error}`;
+      this.logger.error('Failed to delete tag:', error); // toasts once (see LoggingService.error)
     } finally {
       this.saving = false;
     }
@@ -507,8 +503,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
           await this.backstageService.loadBackstageData();
         }
       } catch (error) {
-        this.logger.error('Failed to save settings:', error);
-        this.error = `Failed to save settings: ${error}`;
+        this.logger.error('Failed to save settings:', error); // toasts once (see LoggingService.error)
       } finally {
         this.savingSettings = false;
       }
@@ -649,8 +644,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
         defaultCharacterStyle,
       });
     } catch (error) {
-      this.logger.error('Failed to save character styles:', error);
-      this.error = `Failed to save character styles: ${error}`;
+      this.logger.error('Failed to save character styles:', error); // toasts once (see LoggingService.error)
     } finally {
       this.saving = false;
     }
@@ -727,8 +721,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
 
       await this.metadataService.saveMetadata(updatedMetadata);
     } catch (error) {
-      this.logger.error('Failed to save reordered categories:', error);
-      this.error = `Failed to save category order: ${error}`;
+      this.logger.error('Failed to save reordered categories:', error); // toasts once (see LoggingService.error)
     } finally {
       this.saving = false;
     }
@@ -761,8 +754,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
 
       await this.metadataService.saveMetadata(updatedMetadata);
     } catch (error) {
-      this.logger.error('Failed to save reordered tags:', error);
-      this.error = `Failed to save tag order: ${error}`;
+      this.logger.error('Failed to save reordered tags:', error); // toasts once (see LoggingService.error)
     } finally {
       this.saving = false;
     }

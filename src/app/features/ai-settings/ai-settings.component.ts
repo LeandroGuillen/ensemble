@@ -10,6 +10,7 @@ import {
 import { ImageWorkflow } from '../../core/interfaces/image-generation.interface';
 import { AiService, AiTestConnectionResult } from '../../core/services/ai.service';
 import { ImageGenerationService } from '../../core/services/image-generation/image-generation.service';
+import { NotificationService } from '../../core/services/notification.service';
 import type { SettingsSectionId } from '../settings/settings-section';
 import { SettingsSearchableDirective } from '../settings/settings-searchable.directive';
 
@@ -30,8 +31,6 @@ export class AiSettingsComponent implements OnInit {
   saving = false;
   testing = false;
   testResult: AiTestConnectionResult | null = null;
-  error: string | null = null;
-  successMessage: string | null = null;
   imageTesting = false;
   imageTestMessage: string | null = null;
   imageWorkflows: ImageWorkflow[] = [];
@@ -55,7 +54,8 @@ export class AiSettingsComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private aiService: AiService,
-    private imageGenerationService: ImageGenerationService
+    private imageGenerationService: ImageGenerationService,
+    private notifications: NotificationService
   ) {
     this.aiForm = this.createForm();
     const imageSettings = this.imageGenerationService.getSettings();
@@ -118,7 +118,6 @@ export class AiSettingsComponent implements OnInit {
   onImageProviderChange(): void {
     this.imageWorkflows = [];
     this.imageTestMessage = null;
-    this.error = null;
     if (this.imageProvider === 'invokeai') {
       void this.refreshImageWorkflows(false);
     } else if (this.imageProvider === 'comfyui') {
@@ -210,18 +209,15 @@ export class AiSettingsComponent implements OnInit {
 
     this.testing = true;
     this.testResult = null;
-    this.error = null;
 
     try {
-      const result = await this.aiService.testConnection();
-      this.testResult = result;
-
-      if (!result.success) {
-        this.error = result.error || 'Connection test failed';
-      }
+      // Result (success or failure) is shown inline next to the button.
+      this.testResult = await this.aiService.testConnection();
     } catch (error) {
-      this.error = error instanceof Error ? error.message : 'Unknown error during test';
-      this.testResult = { success: false, error: this.error };
+      this.testResult = {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error during test',
+      };
     } finally {
       this.testing = false;
     }
@@ -236,19 +232,16 @@ export class AiSettingsComponent implements OnInit {
     const imageSettings = this.buildImageSettings();
     const save = async () => {
       this.saving = true;
-      this.error = null;
-      this.successMessage = null;
       try {
         await this.aiService.updateAiSettings(formData);
         await this.imageGenerationService.updateSettings(imageSettings);
         if (showMessage) {
-          this.successMessage = 'Settings saved';
-          setTimeout(() => {
-            this.successMessage = null;
-          }, 1800);
+          this.notifications.showSuccess('Settings saved', 1800);
         }
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Failed to save AI settings';
+        this.notifications.showError(
+          `Failed to save AI settings: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
       } finally {
         this.saving = false;
       }
@@ -270,7 +263,6 @@ export class AiSettingsComponent implements OnInit {
 
     this.imageTesting = true;
     this.imageTestMessage = null;
-    this.error = null;
     try {
       const candidate = { ...this.buildImageSettings(), provider };
       const connection = await this.imageGenerationService.testConnection(candidate);
@@ -286,7 +278,7 @@ export class AiSettingsComponent implements OnInit {
         this.imageForm.patchValue({ defaultWorkflowId: '' });
       }
     } catch (error) {
-      this.error = error instanceof Error ? error.message : 'Failed to load InvokeAI workflows';
+      this.notifications.showError(error instanceof Error ? `Failed to load InvokeAI workflows: ${error.message}` : 'Failed to load InvokeAI workflows');
       this.imageWorkflows = [];
     } finally {
       this.imageTesting = false;
@@ -300,7 +292,6 @@ export class AiSettingsComponent implements OnInit {
 
     this.imageTesting = true;
     this.imageTestMessage = null;
-    this.error = null;
     try {
       const candidate = { ...this.buildImageSettings(), provider: 'comfyui' as const };
       const connection = await this.imageGenerationService.testConnection(candidate);
@@ -312,7 +303,7 @@ export class AiSettingsComponent implements OnInit {
         ? `Connected to ComfyUI${connection.version ? ` ${connection.version}` : ''}. ${this.imageWorkflows.length} project workflow(s).`
         : null;
     } catch (error) {
-      this.error = error instanceof Error ? error.message : 'Failed to connect to ComfyUI';
+      this.notifications.showError(error instanceof Error ? `Failed to connect to ComfyUI: ${error.message}` : 'Failed to connect to ComfyUI');
     } finally {
       this.imageTesting = false;
     }
@@ -321,7 +312,6 @@ export class AiSettingsComponent implements OnInit {
   /** Reload ComfyUI workflows from the project's comfyui-workflows/ folder. */
   async refreshComfyWorkflows(showResult = true): Promise<void> {
     this.imageWorkflowBusy = true;
-    this.error = null;
     try {
       const candidate = { ...this.buildImageSettings(), provider: 'comfyui' as const };
       this.imageWorkflows = await this.imageGenerationService.listWorkflows(candidate);
@@ -333,7 +323,7 @@ export class AiSettingsComponent implements OnInit {
         this.imageTestMessage = `Found ${this.imageWorkflows.length} project workflow(s).`;
       }
     } catch (error) {
-      this.error = error instanceof Error ? error.message : 'Failed to load project ComfyUI workflows';
+      this.notifications.showError(error instanceof Error ? `Failed to load project ComfyUI workflows: ${error.message}` : 'Failed to load project ComfyUI workflows');
       this.imageWorkflows = [];
     } finally {
       this.imageWorkflowBusy = false;
@@ -341,7 +331,6 @@ export class AiSettingsComponent implements OnInit {
   }
 
   async addComfyWorkflow(): Promise<void> {
-    this.error = null;
     this.imageTestMessage = null;
     this.imageWorkflowBusy = true;
     try {
@@ -351,7 +340,7 @@ export class AiSettingsComponent implements OnInit {
       this.imageForm.patchValue({ comfyDefaultWorkflowId: imported.id });
       this.imageTestMessage = `Added workflow "${imported.name}".`;
     } catch (error) {
-      this.error = error instanceof Error ? error.message : 'Failed to add ComfyUI workflow';
+      this.notifications.showError(error instanceof Error ? `Failed to add ComfyUI workflow: ${error.message}` : 'Failed to add ComfyUI workflow');
     } finally {
       this.imageWorkflowBusy = false;
     }
@@ -360,8 +349,6 @@ export class AiSettingsComponent implements OnInit {
   async removeComfyWorkflow(): Promise<void> {
     const workflowId = this.imageForm.value.comfyDefaultWorkflowId?.trim();
     if (!workflowId) return;
-
-    this.error = null;
     this.imageTestMessage = null;
     this.imageWorkflowBusy = true;
     try {
@@ -370,7 +357,7 @@ export class AiSettingsComponent implements OnInit {
       await this.refreshComfyWorkflows(false);
       this.imageTestMessage = `Removed workflow "${workflowId.replace(/\.json$/i, '')}".`;
     } catch (error) {
-      this.error = error instanceof Error ? error.message : 'Failed to remove ComfyUI workflow';
+      this.notifications.showError(error instanceof Error ? `Failed to remove ComfyUI workflow: ${error.message}` : 'Failed to remove ComfyUI workflow');
     } finally {
       this.imageWorkflowBusy = false;
     }
@@ -380,7 +367,6 @@ export class AiSettingsComponent implements OnInit {
   async testCloudImageConnection(): Promise<void> {
     this.imageTesting = true;
     this.imageTestMessage = null;
-    this.error = null;
     try {
       const candidate = this.buildImageSettings();
       const connection = await this.imageGenerationService.testConnection(candidate);
@@ -391,7 +377,7 @@ export class AiSettingsComponent implements OnInit {
         this.imageProviders.find((p) => p.id === candidate.provider)?.name || candidate.provider;
       this.imageTestMessage = `Connected to ${providerName}.`;
     } catch (error) {
-      this.error = error instanceof Error ? error.message : 'Connection test failed';
+      this.notifications.showError(error instanceof Error ? `Connection test failed: ${error.message}` : 'Connection test failed');
     } finally {
       this.imageTesting = false;
     }

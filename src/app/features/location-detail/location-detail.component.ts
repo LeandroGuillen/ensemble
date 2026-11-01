@@ -381,8 +381,7 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
         await this.navigateBackAfterSave();
       }
     } catch (error) {
-      this.error = `Failed to save location: ${error}`;
-      this.logger.error('Failed to save location:', error);
+      this.logger.error('Failed to save location:', error); // one toast; the banner is for load failures
     } finally {
       this.isSaving = false;
       this.cdr.markForCheck();
