@@ -8,6 +8,7 @@
  */
 const { spawn } = require('child_process');
 const path = require('path');
+const { supervise } = require('../lib/forward-signals');
 const { decodeElectronExtraArgs, buildElectronSpawn } = require('../lib/dev-server');
 
 const extras = decodeElectronExtraArgs(process.env);
@@ -25,7 +26,5 @@ const child = spawn(command, args, {
   cwd,
 });
 
-child.on('exit', (code, signal) => {
-  if (signal) process.kill(process.pid, signal);
-  process.exit(code ?? 1);
-});
+// Forward SIGINT/SIGTERM/SIGHUP to the child and exit with its code or signal.
+supervise(child);

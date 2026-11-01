@@ -2,6 +2,7 @@
 /** Run `ng serve` on ENSEMBLE_DEV_PORT (default 4200). */
 const { spawn } = require('child_process');
 const path = require('path');
+const { supervise } = require('../lib/forward-signals');
 const { buildNgServeArgv, buildNgServeCommand } = require('../lib/dev-server');
 
 const extra = process.argv.slice(2);
@@ -27,7 +28,5 @@ if (process.platform === 'win32') {
   });
 }
 
-child.on('exit', (code, signal) => {
-  if (signal) process.kill(process.pid, signal);
-  process.exit(code ?? 1);
-});
+// Forward SIGINT/SIGTERM/SIGHUP to the child and exit with its code or signal.
+supervise(child);
