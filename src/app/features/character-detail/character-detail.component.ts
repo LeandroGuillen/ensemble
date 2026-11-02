@@ -713,7 +713,7 @@ export class CharacterDetailComponent
   }
 
   async openDescriptionLink(href: string): Promise<void> {
-    if (!/^#\/(character|location|house)(?:\/|\?)/.test(href)) return;
+    if (!/^#\/(character-draft|character|location|house)(?:\/|\?)/.test(href)) return;
     const destination = href.slice(1);
     if (destination === `/character/${encodeURIComponent(this.character?.id || '')}` && !this.isDraftMode) return;
     // Unsaved changes are confirmed by the route's leave guard (`canLeave`).

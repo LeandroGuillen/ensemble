@@ -79,4 +79,11 @@ describe('MentionedInComponent', () => {
     expect(plan).toEqual(['/book', 'b-lc1']);
     expect(page).toEqual(['/character', 'c-mara']);
   });
+
+  it('routes a draft source to the draft page', () => {
+    const draft = fixture.componentInstance.routerLinkFor({
+      sourceType: 'draft', sourceId: 'd-heir', sourceName: 'Secret Heir', href: '#/character-draft/d-heir', snippet: '',
+    });
+    expect(draft).toEqual(['/character-draft', 'd-heir']);
+  });
 });

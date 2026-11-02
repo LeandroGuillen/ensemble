@@ -37,6 +37,11 @@ describe('Character description links', () => {
     expect(modal.confirm).not.toHaveBeenCalled();
   });
 
+  it('opens a draft link on the draft route', async () => {
+    await component.openDescriptionLink('#/character-draft/d-heir');
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/character-draft/d-heir');
+  });
+
   it('stays on the page for self links and ignores other hrefs', async () => {
     await component.openDescriptionLink('#/character/ada');
     await component.openDescriptionLink('https://example.com');

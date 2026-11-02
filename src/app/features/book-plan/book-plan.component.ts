@@ -665,7 +665,7 @@ export class BookPlanComponent implements OnInit, OnDestroy {
 
   async openLink(href: string): Promise<void> {
     // Missing targets would open a "New character" page; plan links often point at vault notes instead.
-    if (!/^#\/(character|location|house)\//.test(href) || href.includes('fromLink=1')) return;
+    if (!/^#\/(character-draft|character|location|house)\//.test(href) || href.includes('fromLink=1')) return;
     await this.router.navigateByUrl(href.slice(1));
   }
 

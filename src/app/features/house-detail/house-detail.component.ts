@@ -235,7 +235,7 @@ export class HouseDetailComponent implements OnInit, OnDestroy {
   }
   /** Unsaved changes are confirmed by the route's leave guard (`canLeave`). */
   async openDescriptionLink(href: string): Promise<void> {
-    if (!/^#\/(character|location|house)(?:\/|\?)/.test(href)) return;
+    if (!/^#\/(character-draft|character|location|house)(?:\/|\?)/.test(href)) return;
     const destination = href.slice(1);
     if (this.house && destination === `/house/${encodeURIComponent(this.house.id)}`) return;
     await this.router.navigateByUrl(destination);

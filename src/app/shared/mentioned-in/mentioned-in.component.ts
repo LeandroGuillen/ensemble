@@ -40,6 +40,8 @@ export class MentionedInComponent implements OnInit {
 
   routerLinkFor(item: Backlink): (string | number)[] {
     switch (item.sourceType) {
+      case 'draft':
+        return ['/character-draft', item.sourceId];
       case 'location':
         return ['/location', item.sourceId];
       case 'house':

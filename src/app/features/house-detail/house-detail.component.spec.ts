@@ -41,6 +41,7 @@ describe('House editor', () => {
       { provide: CharacterPickerService, useValue: characterPicker },
       { provide: CharacterService, useValue: {
         getReferenceCharacters: () => of([{ id: 'ned', name: 'Eddard Stark' }, { id: 'cat', name: 'Catelyn Stark' }]),
+        getDrafts: () => of([]),
         loadCharacters: async () => undefined, loadThumbnailsForCharacters: async () => undefined, getCachedThumbnail: () => null,
       } },
       { provide: LocationService, useValue: { getLocations: () => of([{ id: 'winterfell', name: 'Winterfell' }]), loadLocations: async () => undefined } },

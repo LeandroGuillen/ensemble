@@ -86,4 +86,26 @@ describe('BacklinkService', () => {
     expect(service.backlinksFor('l-port').length).toBe(1);
     expect(service.backlinksFor('c-mara').length).toBe(0);
   });
+
+  it('indexes drafts as link targets and points draft sources at the draft route', async () => {
+    const heir = {
+      id: 'd-heir', name: 'Secret Heir', draft: true,
+      content: 'Heir of [[Port Saltmere]].', books: [], relativePath: '@drafts/secret-heir/secret-heir.md',
+    };
+    service = makeService({
+      characters: {
+        getReferenceCharactersSnapshot: () => [{ ...mara, content: 'The [[Secret Heir]] sails.' }],
+        getDraftsSnapshot: () => [heir],
+        getBookPageContent: async () => null,
+      },
+    });
+    await service.rebuild();
+
+    // A mention of a draft resolves to the draft…
+    expect(service.backlinksFor('d-heir').map((b) => b.sourceName)).toEqual(['Mara Vell']);
+    // …and a mention from a draft points at the draft route, not the character route.
+    const fromDraft = service.backlinksFor('l-port')[0];
+    expect(fromDraft.sourceType).toBe('draft');
+    expect(fromDraft.href).toBe('#/character-draft/d-heir');
+  });
 });
