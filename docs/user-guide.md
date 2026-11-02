@@ -94,8 +94,9 @@ overwriting.
 
 - **Snapshots**: Settings → Backup creates a timestamped zip of the project and
   can restore it into a copy (the live project is never overwritten). Automatic
-  snapshots can run before an update migrates your storage, and are kept to a
-  limit you set.
+  snapshots can run before an update migrates your storage; they hold only the
+  text files (Markdown, JSON) an update can rewrite, not images, and are kept
+  to a limit you set.
 - **Undoable deletes**: deleting a character, draft, Lore figure, location,
   House or cast stages it and offers **Undo** for 15 seconds, then moves it to
   your system Trash. Anything in `.ensemble-trash/` is staged for deletion, so

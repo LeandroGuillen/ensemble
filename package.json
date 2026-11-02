@@ -1,6 +1,6 @@
 {
   "name": "ensemble",
-  "version": "1.22.5",
+  "version": "1.22.6",
   "description": "Character management application for writers and worldbuilders",
   "main": "main.js",
   "scripts": {
@@ -121,7 +121,6 @@
     "@codemirror/state": "^6.7.6",
     "@codemirror/view": "^6.43.15",
     "@lezer/highlight": "^1.2.5",
-    "adm-zip": "^0.6.1",
     "chokidar": "^3.5.0",
     "electron-updater": "^6.8.3",
     "js-yaml": "^4.1.0",
@@ -134,6 +133,8 @@
     "tslib": "^2.3.0",
     "unified": "^11.0.0",
     "vis-network": "^9.1.0",
+    "yauzl": "^3.4.0",
+    "yazl": "^3.3.1",
     "zone.js": "~0.15.1"
   },
   "build": {

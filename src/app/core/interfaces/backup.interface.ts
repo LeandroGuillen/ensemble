@@ -12,6 +12,8 @@ export interface BackupSnapshot {
   createdAt: string;
   /** Whether this is an automatic (retained) snapshot. */
   automatic: boolean;
+  /** Only the text files a migration can rewrite (no images); set on creation, not when listing. */
+  dataOnly?: boolean;
 }
 
 /** Result of restoring a snapshot into a fresh folder. */
