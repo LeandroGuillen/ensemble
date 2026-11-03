@@ -12,13 +12,21 @@
             {{ creating ? 'Creating…' : 'Create snapshot' }}
           </button>
           @if (lastResult) {
-            <div class="test-result success snapshot-result">
+            <div class="test-result snapshot-result" [class.success]="!lastResult.skipped?.length">
               <div>
                 <strong>{{ lastResult.name }}</strong>
                 · {{ formatSize(lastResult.size) }}
                 · {{ lastResult.fileCount }} files
               </div>
               <div class="field-hint">{{ lastResult.path }}</div>
+              @if (lastResult.skipped?.length) {
+                <div role="alert">{{ lastResult.skipped!.length }} items skipped</div>
+                <ul>
+                  @for (item of lastResult.skipped; track item.path) {
+                    <li>{{ item.path }}: {{ item.reason }}</li>
+                  }
+                </ul>
+              }
             </div>
           }
         </div>

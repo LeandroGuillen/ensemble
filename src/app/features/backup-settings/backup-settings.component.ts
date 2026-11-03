@@ -71,9 +71,13 @@ export class BackupSettingsComponent implements OnInit {
     try {
       const snapshot = await this.backupService.createSnapshot();
       this.lastResult = snapshot;
-      this.notifications.showSuccess(
-        `Snapshot created: ${snapshot.name} (${this.formatSize(snapshot.size)}).`
-      );
+      if (snapshot.skipped?.length) {
+        this.notifications.showError(`${snapshot.skipped.length} items skipped: ${snapshot.skipped.map(item => item.path).join(', ')}`);
+      } else {
+        this.notifications.showSuccess(
+          `Snapshot created: ${snapshot.name} (${this.formatSize(snapshot.size)}).`
+        );
+      }
       await this.refresh();
     } catch (error) {
       this.notifications.showError(`Couldn't create the snapshot: ${(error as Error).message}`);

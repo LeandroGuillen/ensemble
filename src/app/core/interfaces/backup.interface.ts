@@ -8,6 +8,8 @@ export interface BackupSnapshot {
   size: number;
   /** Number of project files captured. */
   fileCount: number;
+  /** Entries omitted from this snapshot, with project-relative paths. */
+  skipped?: { path: string; reason: string }[];
   /** ISO timestamp of the snapshot. */
   createdAt: string;
   /** Whether this is an automatic (retained) snapshot. */

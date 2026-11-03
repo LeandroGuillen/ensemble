@@ -69,6 +69,18 @@ describe('BackupSettingsComponent', () => {
     expect(result.textContent).toContain('2.0 KB');
   });
 
+  it('shows skipped count and paths without reporting full success', async () => {
+    const partial = { ...snapshot, skipped: [{ path: 'characters/ilse', reason: 'Broken link' }] };
+    backupService.createSnapshot.and.resolveTo(partial);
+    fixture.nativeElement.querySelector('.form-section button').click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.snapshot-result').textContent).toContain('1 items skipped');
+    expect(fixture.nativeElement.querySelector('.snapshot-result').textContent).toContain('characters/ilse');
+    expect(notifications.showError).toHaveBeenCalledWith('1 items skipped: characters/ilse');
+    expect(notifications.showSuccess).not.toHaveBeenCalled();
+  });
+
   it('restore opens a copy through ProjectService', async () => {
     const restoreButton: HTMLButtonElement = fixture.nativeElement.querySelector('.snapshot-row button');
     restoreButton.click();
