@@ -49,15 +49,15 @@ describe('BackupService', () => {
     expect(service.backupDir).toBe('/w/backups');
   });
 
-  it('defaults the backup folder to a sibling ensemble-backups dir', () => {
+  it('defaults the backup folder to excluded project-local snapshots', () => {
     projectService.getCurrentProject.and.returnValue(makeProject({}, '/w/lantern-coast'));
-    expect(service.backupDir).toBe('/w/ensemble-backups');
+    expect(service.backupDir).toBe('/w/lantern-coast/.ensemble-backup/snapshots');
   });
 
   it('createSnapshot zips into the backup folder and returns the snapshot', async () => {
     electron.createBackupSnapshot.and.resolveTo({ success: true, snapshot: { path: '/b/a.zip', name: 'a.zip', size: 10, fileCount: 2, createdAt: 'x', automatic: false } });
     const snapshot = await service.createSnapshot();
-    expect(electron.createBackupSnapshot).toHaveBeenCalledWith('/w/lantern-coast', '/w/ensemble-backups');
+    expect(electron.createBackupSnapshot).toHaveBeenCalledWith('/w/lantern-coast', '/w/lantern-coast/.ensemble-backup/snapshots');
     expect(snapshot.name).toBe('a.zip');
   });
 
@@ -69,19 +69,21 @@ describe('BackupService', () => {
   it('restoreSnapshot returns the new folder so the caller can open it', async () => {
     electron.restoreBackupSnapshot.and.resolveTo({ success: true, folderPath: '/w/x-restored', entryCount: 4, name: 'x-restored' });
     const result = await service.restoreSnapshot('/b/a.zip');
-    expect(electron.restoreBackupSnapshot).toHaveBeenCalledWith('/b/a.zip', '/w', 'lantern-coast');
+    expect(electron.restoreBackupSnapshot).toHaveBeenCalledWith('/b/a.zip', '/w', undefined);
     expect(result.folderPath).toBe('/w/x-restored');
   });
 
   it('listSnapshots returns the snapshots', async () => {
     electron.listBackupSnapshots.and.resolveTo({ success: true, snapshots: [] });
     await expectAsync(service.listSnapshots()).toBeResolvedTo([]);
+    expect(electron.listBackupSnapshots as jasmine.Spy).toHaveBeenCalledWith('/w/lantern-coast/.ensemble-backup/snapshots', '/w/lantern-coast');
   });
 
   it('prune returns removed and kept names', async () => {
     electron.pruneBackupSnapshots.and.resolveTo({ success: true, removed: ['a'], kept: ['b'] });
     const result = await service.prune('/b', 1);
     expect(result).toEqual({ removed: ['a'], kept: ['b'] });
+    expect(electron.pruneBackupSnapshots as jasmine.Spy).toHaveBeenCalledWith('/b', 1, '/w/lantern-coast');
   });
 
   it('updateSettings merges into settings.backup and persists metadata', async () => {

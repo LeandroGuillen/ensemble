@@ -8,9 +8,6 @@ import {
   BackupSettings,
 } from '../interfaces/backup.interface';
 
-/** Default folder for snapshots when the project has not chosen one. */
-export const DEFAULT_BACKUP_FOLDER_NAME = 'ensemble-backups';
-
 /** Assert a value is present, throwing a helpful message when it is not. */
 function required<T>(value: T | null | undefined, message: string): T {
   if (value == null) {
@@ -46,14 +43,13 @@ export class BackupService {
   }
 
   /**
-   * Effective backup folder: the project's chosen folder, or a sibling
-   * `ensemble-backups` folder of the project.
+   * Effective backup folder: the chosen folder, or excluded project-local snapshots.
    */
   get backupDir(): string | null {
     const projectPath = this.projectPath;
     if (!projectPath) return null;
     if (this.settings.backupFolder) return this.settings.backupFolder;
-    return this.join(this.parentOf(projectPath), DEFAULT_BACKUP_FOLDER_NAME);
+    return this.join(this.join(projectPath, '.ensemble-backup'), 'snapshots');
   }
 
   /** Persist backup settings for the current project. */
@@ -91,7 +87,7 @@ export class BackupService {
   ): Promise<BackupRestoreResult> {
     const projectPath = this.projectPath;
     const parent = destParentDir ?? (projectPath ? this.parentOf(projectPath) : null);
-    const name = restoredName ?? (projectPath ? this.basename(projectPath) : undefined);
+    const name = restoredName;
     const targetParent = required(parent, 'No project is open');
     const result = await this.electronService.restoreBackupSnapshot(zipPath, targetParent, name);
     if (!result.success || !result.folderPath) {
@@ -103,7 +99,7 @@ export class BackupService {
   /** List snapshots in the backup folder (or a given folder), newest first. */
   async listSnapshots(dir?: string): Promise<BackupSnapshot[]> {
     const target = dir ?? required(this.backupDir, 'No backup folder');
-    const result = await this.electronService.listBackupSnapshots(target);
+    const result = await this.electronService.listBackupSnapshots(target, required(this.projectPath, 'No project is open'));
     if (!result.success) {
       throw new Error(result.error || 'Could not list snapshots');
     }
@@ -112,7 +108,7 @@ export class BackupService {
 
   /** Keep only the newest `keepN` automatic snapshots in `dir`. */
   async prune(dir: string, keepN: number): Promise<{ removed: string[]; kept: string[] }> {
-    const result = await this.electronService.pruneBackupSnapshots(dir, keepN);
+    const result = await this.electronService.pruneBackupSnapshots(dir, keepN, required(this.projectPath, 'No project is open'));
     if (!result.success) {
       throw new Error(result.error || 'Could not prune snapshots');
     }
@@ -124,12 +120,6 @@ export class BackupService {
     const normalized = p.replace(/[\\/]+$/, '');
     const idx = Math.max(normalized.lastIndexOf('/'), normalized.lastIndexOf('\\'));
     return idx > 0 ? normalized.slice(0, idx) : normalized;
-  }
-
-  private basename(p: string): string {
-    const normalized = p.replace(/[\\/]+$/, '');
-    const idx = Math.max(normalized.lastIndexOf('/'), normalized.lastIndexOf('\\'));
-    return idx >= 0 ? normalized.slice(idx + 1) : normalized;
   }
 
   private join(a: string, b: string): string {

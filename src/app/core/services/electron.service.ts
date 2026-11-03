@@ -288,23 +288,25 @@ export class ElectronService {
 
   /** List the snapshots in a backup folder, newest first. */
   async listBackupSnapshots(
-    dir: string
+    dir: string,
+    projectPath?: string
   ): Promise<{ success: boolean; snapshots?: BackupSnapshot[]; error?: string }> {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
-    return await this.ipcRenderer.invoke(IpcChannels.backupListSnapshots, dir);
+    return await this.ipcRenderer.invoke(IpcChannels.backupListSnapshots, dir, projectPath);
   }
 
   /** Keep only the newest `keepN` automatic snapshots in a backup folder. */
   async pruneBackupSnapshots(
     dir: string,
-    keepN: number
+    keepN: number,
+    projectPath?: string
   ): Promise<{ success: boolean; removed?: string[]; kept?: string[]; error?: string }> {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
-    return await this.ipcRenderer.invoke(IpcChannels.backupPruneSnapshots, dir, keepN);
+    return await this.ipcRenderer.invoke(IpcChannels.backupPruneSnapshots, dir, keepN, projectPath);
   }
 
   async copyDirectoryRecursive(sourcePath: string, destPath: string): Promise<{ success: boolean; error?: string }> {
