@@ -98,6 +98,23 @@
           </ul>
         }
       </div>
+      @if (legacySnapshots.length) {
+        <div class="form-section older-snapshots">
+          <h3 class="form-section-title">Older snapshots (project not recorded)</h3>
+          <p class="field-hint">These archives may belong to another project. They can be restored into a new folder and are never automatically deleted.</p>
+          <ul class="snapshot-list">
+            @for (snapshot of legacySnapshots; track snapshot.path) {
+              <li class="snapshot-row">
+                <div class="snapshot-info">
+                  <span class="snapshot-name">{{ snapshot.legacyProjectName || 'Unknown project' }} · {{ snapshot.name }}</span>
+                  <span class="snapshot-meta">{{ formatSize(snapshot.size) }} · {{ formatDate(snapshot.createdAt) }}</span>
+                </div>
+                <button type="button" class="btn btn-secondary" (click)="restore(snapshot)" [disabled]="restoring">{{ restoring ? 'Restoring…' : 'Restore' }}</button>
+              </li>
+            }
+          </ul>
+        </div>
+      }
     </div>
   </div>
 </div>

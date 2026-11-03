@@ -51,6 +51,24 @@ describe('BackupSettingsComponent', () => {
     fixture.detectChanges();
   });
 
+  it('separates older snapshots, labels their project, and offers only restore', async () => {
+    const older = { ...snapshot, path: '/old/legacy.zip', name: 'legacy.zip', legacy: true, legacyProjectName: 'Old Novel' };
+    backupService.listSnapshots.and.resolveTo([snapshot, older]);
+    await fixture.componentInstance.refresh();
+    fixture.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    const section = fixture.nativeElement.querySelector('.older-snapshots');
+    expect(section?.textContent).toContain('Older snapshots (project not recorded)');
+    expect(section?.textContent).toContain('Old Novel');
+    expect(fixture.nativeElement.querySelectorAll('.snapshot-row').length).toBe(2);
+    const buttons = section?.querySelectorAll('button');
+    expect(buttons?.length).toBe(1);
+    buttons?.[0].click();
+    await fixture.whenStable();
+    expect(backupService.restoreSnapshot).toHaveBeenCalledWith(older.path);
+    expect(backupService.prune).not.toHaveBeenCalled();
+  });
+
   it('lists the snapshots on load', () => {
     const rows = fixture.nativeElement.querySelectorAll('.snapshot-row');
     expect(rows.length).toBe(1);

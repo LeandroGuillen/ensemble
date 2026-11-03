@@ -16,6 +16,9 @@ export interface BackupSnapshot {
   automatic: boolean;
   /** Only the text files a migration can rewrite (no images); set on creation, not when listing. */
   dataOnly?: boolean;
+  /** Unattributed archive: restore-only, never retained or pruned. */
+  legacy?: boolean;
+  legacyProjectName?: string;
 }
 
 /** Result of restoring a snapshot into a fresh folder. */

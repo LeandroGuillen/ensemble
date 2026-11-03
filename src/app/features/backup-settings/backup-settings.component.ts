@@ -22,6 +22,7 @@ export class BackupSettingsComponent implements OnInit {
   @Input() activeSection: SettingsSectionId = 'backup';
 
   snapshots: BackupSnapshot[] = [];
+  legacySnapshots: BackupSnapshot[] = [];
   lastResult: BackupSnapshot | null = null;
   creating = false;
   restoring = false;
@@ -58,9 +59,12 @@ export class BackupSettingsComponent implements OnInit {
   async refresh(): Promise<void> {
     this.loading = true;
     try {
-      this.snapshots = await this.backupService.listSnapshots();
+      const snapshots = await this.backupService.listSnapshots();
+      this.snapshots = snapshots.filter(snapshot => !snapshot.legacy);
+      this.legacySnapshots = snapshots.filter(snapshot => snapshot.legacy);
     } catch {
       this.snapshots = [];
+      this.legacySnapshots = [];
     } finally {
       this.loading = false;
     }
