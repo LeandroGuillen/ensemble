@@ -25,14 +25,19 @@ function normalizePath(value: string): string {
   return value.trim().replace(/\\/g, '/').replace(/^\.\//, '').replace(/\.md$/i, '').toLowerCase();
 }
 
+/** Record portion of a target; a heading or block fragment is only a navigation hint. */
+export function wikiLinkRecordTarget(target: string): string {
+  return target.split('#', 1)[0].trim();
+}
+
 /** Resolve only unique matches. Explicit file paths take precedence over display names. */
 function matchingTargets<T extends WikiLinkTarget>(
   target: string,
   targets: T[],
   folderName: string
 ): T[] {
-  const normalized = normalizePath(target);
-  if (!normalized || normalized.includes('#')) return [];
+  const normalized = normalizePath(wikiLinkRecordTarget(target));
+  if (!normalized) return [];
   const folder = normalizePath(folderName).replace(/\/$/, '');
   const pathMatches = targets.filter(entry => {
     const path = normalizePath(entry.relativePath);
@@ -57,6 +62,8 @@ export interface ResolvedWikiLink {
   state: 'resolved' | 'missing' | 'ambiguous';
   /** Id of the resolved record; only present when `state` is `resolved`. */
   id?: string;
+  /** Optional heading or block scroll hint, without the leading #. */
+  fragment?: string;
   /** Hash route (e.g. `#/character/<id>`); absent when ambiguous. */
   href?: string;
   route: string;
@@ -68,7 +75,7 @@ export interface ResolvedWikiLink {
  * A project folder prefix (e.g. `locations/...`) is authoritative, including for missing targets.
  */
 export function resolveWikiLinkTarget(target: string, collections: WikiLinkCollection[]): ResolvedWikiLink {
-  const normalized = normalizePath(target);
+  const normalized = normalizePath(wikiLinkRecordTarget(target));
   const explicitCollections = collections.filter(collection =>
     normalized.startsWith(normalizePath(collection.folder).replace(/\/$/, '') + '/')
   ).sort((a, b) => b.folder.length - a.folder.length);
@@ -79,7 +86,7 @@ export function resolveWikiLinkTarget(target: string, collections: WikiLinkColle
   const resolved = matches.length === 1 ? matches[0] : undefined;
   const destination = resolved?.collection || explicitCollections[0] || collections[0];
   if (resolved) {
-    return { state: 'resolved', id: resolved.entry.id, href: `#/${destination.route}/${encodeURIComponent(resolved.entry.id)}`, route: destination.route, title: target };
+    return { state: 'resolved', ...(target.includes('#') ? { fragment: target.slice(target.indexOf('#') + 1) } : {}), id: resolved.entry.id, href: `#/${destination.route}/${encodeURIComponent(resolved.entry.id)}`, route: destination.route, title: target };
   }
   if (!matches.length && !target.includes('#')) {
     const creationName = explicitCollections.length

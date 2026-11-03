@@ -3,6 +3,7 @@ import {
   WikiLinkTarget,
   extractWikiLinks,
   resolveWikiLinkTarget,
+  wikiLinkRecordTarget,
 } from './wiki-links.utils';
 
 /** Where a backlink came from. Lore and drafts are character records with a flag. */
@@ -125,7 +126,7 @@ export function buildBacklinkIndex(
 
 /** Whether a link target text refers to a record by its name or one of its aliases. */
 export function targetRefersToName(target: string, name: string, aliases: string[] = []): boolean {
-  const normalized = normalizeName(target);
+  const normalized = normalizeName(wikiLinkRecordTarget(target));
   if (!normalized) return false;
   if (normalizeName(name) === normalized) return true;
   return aliases.some((alias) => normalizeName(alias) === normalized);

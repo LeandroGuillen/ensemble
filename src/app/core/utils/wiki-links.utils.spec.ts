@@ -1,4 +1,4 @@
-import { buildWikiLinkTargets, WikiLinkCollection } from './wiki-links.utils';
+import { buildWikiLinkTargets, renderWikiLinkMarkdown, resolveWikiLink, WikiLinkCollection } from './wiki-links.utils';
 
 describe('buildWikiLinkTargets', () => {
   const characters = (targets: any[]): WikiLinkCollection =>
@@ -34,5 +34,31 @@ describe('buildWikiLinkTargets', () => {
       { id: 'b', name: 'Ash', relativePath: 'ash-2/ash-2.md' },
     ])]);
     expect(suggestions.map((s) => s.target)).toEqual(['characters/ash/ash', 'characters/ash-2/ash-2']);
+  });
+});
+
+describe('heading wiki-links', () => {
+  const targets = [{ id: 'mara', name: 'Mara Vell', relativePath: 'mara.md' }];
+  const options = { folder: 'characters', route: 'character', singular: 'Character' };
+  for (const fragment of ['History', '^block']) {
+    for (const label of ['', '|the keeper']) {
+      it(`resolves and renders ${fragment}${label}`, () => {
+        const target = `Mara Vell#${fragment}`;
+        expect(resolveWikiLink(target, targets, options.folder)).toEqual(targets[0]);
+        expect(buildWikiLinkTargets([{ ...options, targets }]).resolve(target)).toEqual(
+          jasmine.objectContaining({ state: 'resolved', id: 'mara', href: '#/character/mara', fragment }));
+        const rendered = renderWikiLinkMarkdown(`[[${target}${label}]]`, targets, options);
+        expect(rendered.html).toContain(`<a href="#/character/mara" title="${target}">${label ? 'the keeper' : target}</a>`);
+        expect(rendered.missingLinks).toEqual([]);
+      });
+    }
+  }
+  it('keeps local fragments unattributed and ordinary renderer output unchanged', () => {
+    const { resolve } = buildWikiLinkTargets([{ ...options, targets }]);
+    expect(resolve('#Local heading').state).toBe('ambiguous');
+    expect(resolve('#^block').state).toBe('ambiguous');
+    expect(renderWikiLinkMarkdown('[[Mara Vell|keeper]]', targets, options).html)
+      .toBe('<p><a href="#/character/mara" title="Mara Vell">keeper</a></p>');
+    expect(renderWikiLinkMarkdown('[[Ghost]]', targets, options).missingLinks).toEqual(['Ghost']);
   });
 });

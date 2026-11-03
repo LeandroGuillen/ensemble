@@ -159,3 +159,30 @@ describe('excludedCountFor', () => {
     expect(targetRefersToName('mara-vell.md', 'Mara Vell')).toBe(false);
   });
 });
+
+describe('heading backlinks', () => {
+  for (const fragment of ['History', '^block']) {
+    for (const label of ['', '|the keeper']) {
+      it(`attributes ${fragment}${label} with a snippet`, () => {
+        const target = `Mara Vell#${fragment}`;
+        const index = buildBacklinkIndex([doc({ content: `Meet [[${target}${label}]] today.` })], collections);
+        expect(index.byTargetId['c-mara']?.map(b => b.snippet)).toEqual([
+          `Meet [${label ? 'the keeper' : target}] today.`
+        ]);
+        expect(index.excluded).toEqual([]);
+      });
+      it(`counts unresolved ${fragment}${label} by record name and alias`, () => {
+        const index = buildBacklinkIndex([doc({ content: `[[Mara Vell#${fragment}${label}]] [[The Keeper#${fragment}${label}]] [[#${fragment}]]` })],
+          collectionsFrom({ characters: [], locations: [], houses: [] }));
+        expect(excludedCountFor(index, 'Mara Vell')).toBe(1);
+        expect(excludedCountFor(index, 'Mara Vell', ['The Keeper'])).toBe(2);
+        expect(excludedCountFor(index, '')).toBe(0);
+      });
+    }
+  }
+  it('does not attribute local headings or blocks to a record', () => {
+    const index = buildBacklinkIndex([doc({ content: '[[#Mara Vell]] [[#^block]]' })], collections);
+    expect(index.byTargetId).toEqual({});
+    expect(excludedCountFor(index, 'Mara Vell')).toBe(0);
+  });
+});
