@@ -578,19 +578,12 @@
   }
 }
 
-.edit-hint {
-  position: absolute;
-  top: var(--spacing-xs);
-  right: var(--spacing-xs);
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-  opacity: 0;
-  transition: opacity var(--transition-fast);
-  pointer-events: none;
-}
-
-.notes-view-mode:hover .edit-hint {
-  opacity: 0.5;
+.notes-help {
+  margin: var(--spacing-xs) 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  flex-shrink: 0;
 }
 
 .concept-item {

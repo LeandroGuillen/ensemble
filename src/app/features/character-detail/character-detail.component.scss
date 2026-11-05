@@ -425,8 +425,7 @@
   letter-spacing: 0.04em;
   color: var(--color-text-muted);
   text-decoration: none;
-  opacity: 0.75;
-  transition: color 0.15s ease, opacity 0.15s ease;
+  transition: color 0.15s ease;
 
   &:hover,
   &:focus-visible {

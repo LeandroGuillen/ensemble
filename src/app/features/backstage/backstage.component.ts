@@ -1,3 +1,4 @@
+import { isInteractiveKeyboardTarget } from '../../core/utils/list-keyboard.utils';
 import { NotificationService } from '../../core/services/notification.service';
 import { DestroyRef, inject, Component, OnInit, HostListener, SecurityContext } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -497,6 +498,18 @@ export class BackstageComponent implements OnInit {
     }
   }
 
+  finishEditingNotes(notes: string, restoreFocus = false): void {
+    if (!this.editingConceptNotes || this.selectedConceptIndex === null) return;
+    // Escape removes the field; ignore a subsequent blur so the edit saves once.
+    this.editingConceptNotes = false;
+    void this.updateConcept(this.selectedConceptIndex, { notes });
+    if (restoreFocus) {
+      setTimeout(() => {
+        document.querySelector<HTMLButtonElement>('.edit-notes-button')?.focus();
+      }, 0);
+    }
+  }
+
   // Toggle strikethrough on selected name
   toggleStrikethrough(index: number): void {
     if (this.selectedNameListIndex === null) return;
@@ -700,6 +713,9 @@ export class BackstageComponent implements OnInit {
   @HostListener("keydown", ["$event"])
   handleKeyDown(event: KeyboardEvent): void {
     const target = event.target as HTMLElement;
+    // Overview shortcuts must not cancel native activation of focused controls.
+    if (event.defaultPrevented ||
+        ((event.key === 'Enter' || event.key === ' ') && isInteractiveKeyboardTarget(target))) return;
     const isInput = target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
     const isEditingName = this.editingNameIndex !== null;
     const isEditingComment = this.editingCommentIndex !== null;
