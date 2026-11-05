@@ -15,8 +15,8 @@
       (click)="onCharacterClick(character)"
       role="button"
       tabindex="0"
-      (keydown.enter)="onCharacterClick(character)"
-      (keydown.space)="onCharacterClick(character); $event.preventDefault()"
+      (keydown.enter)="onCardKeydown($event, character)"
+      (keydown.space)="onCardKeydown($event, character)"
       >
       <div class="drag-preview-chip" *cdkDragPreview>
         {{ getCharacterDisplayName(character) }}

@@ -24,10 +24,12 @@ import {
   isEditableKeyboardTarget,
   moveListSelection,
   plainLetterKey,
+  isInteractiveKeyboardTarget,
 } from '../../core/utils/list-keyboard.utils';
 import { resolveThumbnailForBookStyle } from '../../core/utils/thumbnail.utils';
 import { isTrashStagingError } from '../../core/trash/trash-record-id';
 import { CharacterFilterComponent } from '../../shared/character-filter/character-filter.component';
+import { ModalFrameComponent } from '../../shared/modal-frame/modal-frame.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import {
     CharacterCompactViewComponent,
@@ -45,7 +47,8 @@ import {
     CharacterGridViewComponent,
     CharacterListViewComponent,
     CharacterCompactViewComponent,
-    CharacterGalleryViewComponent
+    CharacterGalleryViewComponent,
+    ModalFrameComponent
 ],
     templateUrl: './character-list.component.html',
     styleUrls: ['./character-list.component.scss'],
@@ -480,7 +483,7 @@ export class CharacterListComponent implements OnInit {
       return;
     }
 
-    if (event.key === 'Enter' && this.selectedCharacterIndex >= 0) {
+    if (event.key === 'Enter' && this.selectedCharacterIndex >= 0 && !isInteractiveKeyboardTarget(event.target)) {
       event.preventDefault();
       const selectedCharacter = navList[this.selectedCharacterIndex];
       if (selectedCharacter) {
@@ -663,7 +666,9 @@ export class CharacterListComponent implements OnInit {
     const displayName = this.getCharacterDisplayName(character);
     if (
       await this.modalService.confirm(
-        `Are you sure you want to delete "${displayName}"?\n\nIt will be moved to the system Trash. You can undo for 15 seconds. After that, restore it from the system Trash (links in Houses, pinboards and plot threads come back only with Undo).`
+        `Are you sure you want to delete "${displayName}"?\n\nIt will be moved to the system Trash. You can undo for 15 seconds. After that, restore it from the system Trash (links in Houses, pinboards and plot threads come back only with Undo).`,
+        character.draft ? 'Delete draft' : 'Delete character',
+        { confirmText: 'Delete', danger: true }
       )
     ) {
       try {

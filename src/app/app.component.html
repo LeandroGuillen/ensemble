@@ -1,9 +1,10 @@
 <div class="app-container">
   @if (hasProject && !isWelcomeScreen) {
+    <button type="button" class="skip-link" (click)="skipToContent()">Skip to content</button>
     <app-sidebar></app-sidebar>
   }
 
-  <main class="app-main">
+  <main class="app-main" id="main-content" tabindex="-1" #mainContent>
     <router-outlet></router-outlet>
   </main>
 

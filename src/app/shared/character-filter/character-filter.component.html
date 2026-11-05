@@ -5,7 +5,8 @@
       <input
         type="text"
         class="search-input"
-        placeholder="Filter by name..."
+        placeholder="Filter by name or a.k.a."
+        aria-label="Filter characters by name or a.k.a."
         [(ngModel)]="searchTerm"
         (input)="onSearchChange()"
         (click)="$event.stopPropagation()"
@@ -16,6 +17,7 @@
           class="clear-search-btn"
           (click)="clearSearchTerm(); $event.stopPropagation()"
           title="Clear search"
+          aria-label="Clear search"
           type="button"
           >
           <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg>
@@ -66,10 +68,10 @@
     <div class="filter-body">
       <!-- Category Filter -->
       @if (categories.length > 0) {
-        <div class="filter-section section-category">
+        <div class="filter-section section-category" role="group" aria-labelledby="character-filter-category">
           <div class="filter-label-row">
-            <label class="filter-label">Categories</label>
-            <span class="filter-hint">Selected categories are shown</span>
+            <h3 class="filter-label" id="character-filter-category">Categories</h3>
+            <span class="filter-hint">Selected are shown</span>
           </div>
           <app-multi-select-buttons
             [items]="getCategoriesAsSelectableItems()"
@@ -80,8 +82,8 @@
       }
       <!-- Tags Filter -->
       @if (tags.length > 0) {
-        <div class="filter-section section-tags">
-          <label class="filter-label">Tags</label>
+        <div class="filter-section section-tags" role="group" aria-labelledby="character-filter-tags">
+          <h3 class="filter-label" id="character-filter-tags">Tags</h3>
           <app-multi-select-buttons
             [items]="getTagsAsSelectableItems()"
             [selectedIds]="selectedTags"
@@ -91,8 +93,8 @@
       }
       <!-- Cast Filter -->
       @if (casts.length > 0) {
-        <div class="filter-section section-cast">
-          <label class="filter-label">Cast</label>
+        <div class="filter-section section-cast" role="group" aria-labelledby="character-filter-cast">
+          <h3 class="filter-label" id="character-filter-cast">Cast</h3>
           <div class="single-select-options">
             <app-category-toggle
               [options]="getCastToggleOptions()"
@@ -104,15 +106,15 @@
         </div>
       }
       @if (houses.length > 0) {
-        <div class="filter-section section-house">
-          <label class="filter-label">House</label>
+        <div class="filter-section section-house" role="group" aria-labelledby="character-filter-house">
+          <h3 class="filter-label" id="character-filter-house">House</h3>
           <app-category-toggle [options]="getHouseToggleOptions()" [selectedValue]="selectedHouse" emptyLabel="All" (valueChange)="houseChange.emit($event)" />
         </div>
       }
       <!-- Book Filter -->
       @if (books.length > 0) {
-        <div class="filter-section section-book">
-          <label class="filter-label">Book</label>
+        <div class="filter-section section-book" role="group" aria-labelledby="character-filter-book">
+          <h3 class="filter-label" id="character-filter-book">Book</h3>
           <div class="single-select-options">
             <app-category-toggle
               [options]="getBookToggleOptions()"
@@ -134,8 +136,8 @@
         </div>
       }
       <!-- Picture Filter -->
-      <div class="filter-section section-pictures">
-        <label class="filter-label">Pictures</label>
+      <div class="filter-section section-pictures" role="group" aria-labelledby="character-filter-pictures">
+        <h3 class="filter-label" id="character-filter-pictures">Pictures</h3>
         <app-category-toggle
           [options]="pictureFilterOptions"
           [selectedValue]="selectedPictureFilter"

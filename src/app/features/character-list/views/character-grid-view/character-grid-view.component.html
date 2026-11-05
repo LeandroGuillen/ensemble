@@ -15,8 +15,8 @@
       (click)="onCharacterClick(character)"
       role="button"
       tabindex="0"
-      (keydown.enter)="onCharacterClick(character)"
-      (keydown.space)="onCharacterClick(character); $event.preventDefault()"
+      (keydown.enter)="onCardKeydown($event, character)"
+      (keydown.space)="onCardKeydown($event, character)"
       >
       <div class="drag-preview-chip" *cdkDragPreview>
         {{ getCharacterDisplayName(character) }}
@@ -50,33 +50,26 @@
             <span class="pov-star" [style.color]="povBadgeColor" title="Point of view character" aria-label="Point of view character"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#star" /></svg></span>
           }
         </h3>
-        <p
-          class="character-category"
-          [style.color]="getCategoryColor(getDisplayCategoryId(character))"
-          >
+        <p class="character-category">
+          <span
+            class="category-dot"
+            aria-hidden="true"
+            [style.background-color]="getCategoryColor(getDisplayCategoryId(character))"
+          ></span>
           {{ getCategoryName(getDisplayCategoryId(character)) }}
         </p>
         @if (character.tags.length > 0) {
-          <div class="character-tags">
-            @for (tag of getCharacterTagsInOrder(character); track tag) {
-              <span
-                class="tag"
-                [style.background-color]="tag.color"
-                [style.color]="'white'"
-                >
+          <ul class="character-tags" aria-label="Tags">
+            @for (tag of getCharacterTagsInOrder(character); track tag.id) {
+              <li class="tag-chip">
+                <span class="tag-dot" aria-hidden="true" [style.background-color]="tag.color"></span>
                 {{ tag.name }}
-              </span>
+              </li>
             }
-          </div>
+          </ul>
         }
         @if (character.content) {
-          <p class="character-description">
-            {{
-            character.content.length > 120
-            ? character.content.substring(0, 120) + "..."
-            : character.content
-            }}
-          </p>
+          <p class="character-description">{{ character.content | excerpt:150 }}</p>
         }
       </div>
       <div class="character-actions">
@@ -84,7 +77,7 @@
           class="icon-btn"
           (click)="onCharacterClickWithStop(character, $event)"
           title="Edit character"
-          aria-label="Edit character"
+          [attr.aria-label]="'Edit ' + getCharacterDisplayName(character)"
           >
           <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#edit" /></svg>
         </button>
@@ -92,7 +85,7 @@
           class="icon-btn delete-btn"
           (click)="onCharacterDelete(character, $event)"
           title="Delete character"
-          aria-label="Delete character"
+          [attr.aria-label]="'Delete ' + getCharacterDisplayName(character)"
           >
           <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#trash" /></svg>
         </button>

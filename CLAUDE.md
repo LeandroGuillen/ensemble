@@ -34,7 +34,7 @@ Located in `src/app/core/services/`:
 - **PinboardService**: Manages pinboard data (nodes/edges) across multiple pinboards stored in `ensemble.json`
 - **PlotBoardService**: Discovers and manages plot-board Markdown files anywhere under the project (`*.pinboard.md`, plus legacy `*.plotboard.md`)
 - **BookPlanService**: Loads, autosaves (1s idle) and watches a book's plan file (`Book.plan.path`); external edits reload when there are no unsaved changes, otherwise they surface as a conflict
-- **BookEditActionsService**: Create/update/delete books from the Edit Book modal; shared by the Library and the book page
+- **BookEditActionsService**: Create/update/delete books from the Edit Book modal; shared by the Books page (`/library`) and the book page
 - **MetadataService**: Validates characters against project metadata (categories/tags)
 - **FileWatcherService**: Monitors work folder for external file changes (using chokidar)
 - **WikiLinkTargetsService**: `[[wikilink]]` resolver and completion entries (characters, locations, Houses) for the Markdown description editors
@@ -268,7 +268,7 @@ All routes defined in `src/app/app.routes.ts`:
 - `/settings` - Settings (General, Appearance, Backup, Categories, Tags, Character Styles, AI, Image Generation)
 - `/metadata` - Manage categories/tags
 - `/ai-settings` - AI provider configuration
-- `/library` - Library management (clicking a book opens `/book/:id`)
+- `/library` - Books page (series, sagas and books; clicking a book opens `/book/:id`)
 - `/book/:id` - Book page: the book's plan (outline + focused Markdown editor, `?line=` jumps); "Edit book…" opens the Edit Book modal
 - `/concepts` - Concepts (titled notes in `concepts.md`)
 - `/names` - Name lists

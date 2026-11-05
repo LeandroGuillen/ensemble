@@ -74,13 +74,13 @@
         transform: translateY(-50%);
         background: none;
         border: none;
-        color: var(--color-text-muted);
+        color: var(--color-text-secondary);
         font-size: 16px;
         line-height: 1;
         cursor: pointer;
         padding: 0;
-        width: 18px;
-        height: 18px;
+        width: 24px;
+        height: 24px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -162,10 +162,8 @@
     padding: 0 10px;
     height: 100%;
     border-radius: 0;
-    font-size: 11px;
+    font-size: 0.75rem;
     font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
     cursor: pointer;
     transition: color 0.15s ease, background 0.15s ease;
 
@@ -200,7 +198,7 @@
       flex: 1 1 auto;
       min-width: 0;
       overflow: hidden;
-      background: var(--color-bg-primary);
+      background: var(--color-bg-tertiary);
       border: 1px solid var(--color-border);
       border-radius: var(--radius-md);
 
@@ -215,7 +213,8 @@
     padding: 0 var(--spacing-sm);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    font-size: 0.6875rem;
+    color: var(--color-text-secondary);
+    font-size: 0.8125rem;
     white-space: nowrap;
   }
 }
@@ -245,11 +244,13 @@
     position: relative;
 
     .filter-label {
-      font-size: 10px;
+      margin: 0;
+      font-family: inherit;
+      font-size: 0.8125rem;
       font-weight: 600;
-      color: var(--color-text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      line-height: 1.3;
+      letter-spacing: 0;
+      color: var(--color-text-primary);
     }
 
     .filter-label-row {
@@ -261,7 +262,7 @@
 
     .filter-hint {
       color: var(--color-text-muted);
-      font-size: 0.6875rem;
+      font-size: 0.75rem;
       white-space: nowrap;
     }
 

@@ -10,10 +10,15 @@
     display: block;
     margin-bottom: var(--spacing-xs);
     font-size: 0.8125rem;
-    font-weight: 500;
+    font-weight: 600;
+    color: var(--color-text-primary);
+  }
+
+  .form-help {
+    margin: 0 0 var(--spacing-sm);
     color: var(--color-text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+    font-size: 0.8125rem;
+    line-height: 1.5;
   }
 
   .form-control {

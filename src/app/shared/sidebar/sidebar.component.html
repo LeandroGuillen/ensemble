@@ -1,4 +1,4 @@
-<aside class="sidebar" [class.collapsed]="isCollapsed">
+<aside class="sidebar" [class.collapsed]="isCollapsed" aria-label="Main navigation">
   <!-- Brand / Project Selector -->
   <div class="sidebar-top">
     <button class="collapse-toggle" (click)="toggleCollapse()" [title]="isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'" [attr.aria-label]="isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'" [attr.aria-expanded]="!isCollapsed">
@@ -6,18 +6,29 @@
         <use href="#icon-chevrons-right"></use>
       </svg>
     </button>
-    <div class="sidebar-brand" (click)="selectProject()" title="Change Project">
+    <button
+      type="button"
+      class="sidebar-brand"
+      (click)="selectProject()"
+      [title]="currentProjectName ? 'Switch project (current: ' + currentProjectName + ')' : 'Open a project'"
+      [attr.aria-label]="currentProjectName ? 'Switch project. Current project: ' + currentProjectName : 'Open a project'"
+      >
       <img
         src="assets/icon.svg"
-        alt="Ensemble"
+        alt=""
         class="brand-icon"
         width="32"
         height="32"
         />
       @if (!isCollapsed) {
-        <span class="brand-text">Ensemble</span>
+        <span class="brand-copy">
+          <span class="brand-text">Ensemble</span>
+          @if (currentProjectName) {
+            <span class="brand-project">{{ currentProjectName }}</span>
+          }
+        </span>
       }
-    </div>
+    </button>
   </div>
 
   <!-- Search / Command Palette -->
@@ -41,8 +52,8 @@
     <button
       class="sidebar-new-character"
       (click)="openNewDraft()"
-      title="New Character (N)"
-      aria-label="New Character"
+      title="New draft in the Drawer"
+      aria-label="New character draft"
       >
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
@@ -73,6 +84,7 @@
             <button
               class="nav-item"
               [class.active]="item.route && isActive(item.route)"
+              [attr.aria-current]="item.route && isActive(item.route) ? 'page' : null"
               (click)="handleItemClick(item)"
               [title]="isCollapsed ? item.title : ''"
               [attr.aria-label]="item.label"
@@ -114,7 +126,7 @@
           <use href="#icon-settings"></use>
         </svg>
       </button>
-      <button class="footer-btn shortcuts-control" (click)="openShortcuts()" title="Keyboard Shortcuts" aria-label="Shortcuts">
+      <button class="footer-btn shortcuts-control" (click)="openShortcuts()" title="Keyboard shortcuts" aria-label="Keyboard shortcuts">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <use href="#icon-keyboard"></use>
         </svg>
@@ -123,8 +135,8 @@
         class="footer-btn theme-control"
         [class.active]="themeMenuOpen"
         (click)="toggleThemeMenu($event)"
-        title="Theme"
-        aria-label="Theme"
+        title="Theme and skin"
+        aria-label="Theme and skin"
         aria-haspopup="menu"
         [attr.aria-expanded]="themeMenuOpen"
       >

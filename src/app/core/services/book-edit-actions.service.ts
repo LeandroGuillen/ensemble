@@ -114,7 +114,9 @@ export class BookEditActionsService {
   async confirmAndDelete(book: Book): Promise<boolean> {
     if (
       !(await this.modalService.confirm(
-        `Are you sure you want to delete the book "${getBookDisplayName(book)}"?\n\nThis will remove the book from all characters that reference it. Characters themselves will not be deleted.`
+        `Are you sure you want to delete the book "${getBookDisplayName(book)}"?\n\nThis will remove the book from all characters that reference it. Characters themselves will not be deleted.`,
+        'Delete book',
+        { confirmText: 'Delete book', danger: true }
       ))
     ) {
       return false;

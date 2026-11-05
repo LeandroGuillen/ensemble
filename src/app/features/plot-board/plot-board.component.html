@@ -310,7 +310,7 @@
                         </span>
                       }
                       @if (getCellValue(rowIdx, thread.id)) {
-                        <span class="event-text">{{ getCellValue(rowIdx, thread.id) }}</span>
+                        <span class="event-text">{{ getCellValue(rowIdx, thread.id) | wikiText }}</span>
                       }
                     </div>
                   }

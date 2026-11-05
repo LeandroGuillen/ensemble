@@ -27,6 +27,7 @@ import { LoggingService } from '../../core/services/logging.service';
 import { ColorPaletteService } from '../../core/services/color-palette.service';
 import { PlotBoard, PlotCellMeta, PlotRow, PlotThread } from '../../core/interfaces/plot-board.interface';
 import { Character } from '../../core/interfaces/character.interface';
+import { WikiTextPipe } from '../../shared/pipes/excerpt.pipe';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { EmojiPickerComponent } from '../../shared/emoji-picker/emoji-picker.component';
 import { ConfirmButtonDirective } from '../../shared/confirm-button/confirm-button.directive';
@@ -48,6 +49,7 @@ export type ZoomLevel = 1 | 2 | 3;
     PlotBoardSidebarComponent,
     ThreadToolbarComponent,
     CellEditorPopoverComponent,
+    WikiTextPipe,
   ],
   providers: [PlotBoardReorderService, ThreadToolbarService],
   templateUrl: './plot-board.component.html',

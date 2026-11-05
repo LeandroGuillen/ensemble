@@ -1,3 +1,4 @@
+import { ExcerptPipe } from "../../../../shared/pipes/excerpt.pipe";
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 
 import { DragDropModule } from '@angular/cdk/drag-drop';
@@ -9,7 +10,7 @@ import { FadeOverflowDirective } from '../../../../shared/fade-overflow.directiv
 
 @Component({
     selector: 'app-character-list-view',
-    imports: [DragDropModule, FadeOverflowDirective],
+    imports: [DragDropModule, FadeOverflowDirective, ExcerptPipe],
     templateUrl: './character-list-view.component.html',
     styleUrls: ['./character-list-view.component.scss']
 })
@@ -79,6 +80,15 @@ export class CharacterListViewComponent {
 
   isCharacterSelected(characterId: string): boolean {
     return this.selectedCharacterIds.includes(characterId);
+  }
+
+  /** Enter/Space open the card only when the card itself has focus, not one of its buttons. */
+  onCardKeydown(event: Event, character: Character): void {
+    if (event.target !== event.currentTarget) {
+      return;
+    }
+    event.preventDefault();
+    this.onCharacterClick(character);
   }
 
   onCharacterClick(character: Character): void {

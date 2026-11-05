@@ -1,9 +1,10 @@
 @if (visible) {
   <app-modal-frame
     [title]="title"
+    [describedById]="messageId"
     (closed)="onClose()"
   >
-    <p class="confirmation-message">{{ message }}</p>
+    <p class="confirmation-message" [id]="messageId">{{ message }}</p>
     <div class="modal-actions">
       <button
         type="button"

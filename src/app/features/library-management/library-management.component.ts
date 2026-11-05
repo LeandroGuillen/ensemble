@@ -344,7 +344,9 @@ export class LibraryManagementComponent implements OnInit {
   async deleteSeries(series: Series): Promise<void> {
     if (
       !(await this.modalService.confirm(
-        `Delete series "${series.name}"?\n\nIts sagas will be removed. Books will become ungrouped.`
+        `Delete series "${series.name}"?\n\nIts sagas will be removed. Books will become ungrouped.`,
+        'Delete series',
+        { confirmText: 'Delete series', danger: true }
       ))
     ) {
       return;
@@ -430,7 +432,9 @@ export class LibraryManagementComponent implements OnInit {
   async deleteSaga(saga: Saga): Promise<void> {
     if (
       !(await this.modalService.confirm(
-        `Delete saga "${saga.name}"?\n\nBooks in this saga will stay in the series.`
+        `Delete saga "${saga.name}"?\n\nBooks in this saga will stay in the series.`,
+        'Delete saga',
+        { confirmText: 'Delete saga', danger: true }
       ))
     ) {
       return;

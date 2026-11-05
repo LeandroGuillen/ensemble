@@ -16,8 +16,8 @@
       (click)="onCharacterClick(character)"
       role="button"
       tabindex="0"
-      (keydown.enter)="onCharacterClick(character)"
-      (keydown.space)="onCharacterClick(character); $event.preventDefault()"
+      (keydown.enter)="onCardKeydown($event, character)"
+      (keydown.space)="onCardKeydown($event, character)"
       >
       <div class="drag-preview-chip" *cdkDragPreview>
         {{ getCharacterDisplayName(character) }}
@@ -52,21 +52,15 @@
           <span
             class="compact-item-category"
             appFadeOverflow
-            [style.color]="getCategoryColor(getDisplayCategoryId(character))"
           >
+            <span class="category-dot" aria-hidden="true" [style.background-color]="getCategoryColor(getDisplayCategoryId(character))"></span>
             {{ getCategoryName(getDisplayCategoryId(character)) }}
           </span>
         </div>
         @if (character.tags.length > 0) {
           <div class="compact-item-tags" appCompactOverflowTags>
             @for (tag of getCharacterTagsInOrder(character); track tag.id) {
-              <span
-                class="tag tag-xs"
-                [style.background-color]="tag.color"
-                [style.color]="'white'"
-                >
-                {{ tag.name }}
-              </span>
+              <span class="tag tag-xs tag-neutral"><span class="tag-dot" aria-hidden="true" [style.background-color]="tag.color"></span>{{ tag.name }}</span>
             }
             <span class="tag-overflow" hidden aria-hidden="true"></span>
           </div>

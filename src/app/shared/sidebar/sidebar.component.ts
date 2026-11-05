@@ -40,6 +40,11 @@ export class SidebarComponent implements OnInit {
   currentProjectName = '';
   currentRoute = '';
   private routeBeforeSettings = '/characters';
+  /** Window width from which the labelled sidebar is shown by default. */
+  static readonly AUTO_EXPAND_MIN_WIDTH = 1280;
+  /** Below this width the sidebar folds to icons so content keeps its room. */
+  static readonly AUTO_COLLAPSE_MAX_WIDTH = 1100;
+  private narrowWindow = false;
   isCollapsed = true;
   appVersion = '';
   updateStatus: UpdateStatus = { status: 'idle' };
@@ -65,7 +70,7 @@ export class SidebarComponent implements OnInit {
     },
     {
       id: 'references',
-      label: 'References',
+      label: 'World & story',
       items: [
         { icon: 'book', label: 'Books', route: '/library', title: 'Books' },
         { icon: 'shield', label: 'Houses', route: '/houses', title: 'Houses' },
@@ -104,7 +109,10 @@ export class SidebarComponent implements OnInit {
       .subscribe(status => { this.updateStatus = status; });
 
     this.projectService.currentProject$.subscribe((project: any) => {
-      this.currentProjectName = project?.name || '';
+      const folderName = typeof project?.path === 'string'
+        ? project.path.split(/[\\/]/).filter(Boolean).pop() || ''
+        : '';
+      this.currentProjectName = project?.metadata?.projectName || project?.name || folderName;
     });
 
     this.router.events
@@ -116,10 +124,20 @@ export class SidebarComponent implements OnInit {
         this.currentRoute = event.urlAfterRedirects;
       });
 
-    // Load saved collapse state
-    const saved = localStorage.getItem('sidebar-collapsed');
-    if (saved !== null) {
-      this.isCollapsed = saved === 'true';
+    // Load saved collapse state. Without a saved choice, show labels when
+    // the window has room for them so destinations are readable on first use.
+    let saved: string | null = null;
+    try {
+      saved = localStorage.getItem('sidebar-collapsed');
+    } catch {
+      saved = null;
+    }
+    this.isCollapsed = saved !== null
+      ? saved === 'true'
+      : typeof window !== 'undefined' && window.innerWidth < SidebarComponent.AUTO_EXPAND_MIN_WIDTH;
+    this.narrowWindow = typeof window !== 'undefined' && window.innerWidth < SidebarComponent.AUTO_COLLAPSE_MAX_WIDTH;
+    if (this.narrowWindow) {
+      this.isCollapsed = true;
     }
 
   }
@@ -133,7 +151,7 @@ export class SidebarComponent implements OnInit {
   }
 
   isActive(route: string): boolean {
-    // A book page belongs to the Library.
+    // A book page belongs to Books.
     if (route === '/library' && this.currentRoute.startsWith('/book/')) return true;
     return this.currentRoute.startsWith(route);
   }
@@ -158,6 +176,23 @@ export class SidebarComponent implements OnInit {
   @HostListener('window:resize')
   onWindowResize(): void {
     this.closeThemeMenu();
+    const narrow = window.innerWidth < SidebarComponent.AUTO_COLLAPSE_MAX_WIDTH;
+    if (narrow === this.narrowWindow) {
+      return;
+    }
+    this.narrowWindow = narrow;
+    if (narrow) {
+      // Fold to icons temporarily; the saved preference is left untouched.
+      this.isCollapsed = true;
+    } else {
+      let saved: string | null = null;
+      try {
+        saved = localStorage.getItem('sidebar-collapsed');
+      } catch {
+        saved = null;
+      }
+      this.isCollapsed = saved !== null ? saved === 'true' : window.innerWidth < SidebarComponent.AUTO_EXPAND_MIN_WIDTH;
+    }
   }
 
   @HostListener('document:keydown', ['$event'])

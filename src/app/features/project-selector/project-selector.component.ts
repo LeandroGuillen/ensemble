@@ -264,7 +264,11 @@ export class ProjectSelectorComponent implements OnInit {
    * Clears all recent projects
    */
   async clearRecentProjects(): Promise<void> {
-    if (await this.modalService.confirm('Are you sure you want to clear all recent projects?')) {
+    if (await this.modalService.confirm(
+      'The list of recent projects will be emptied. Project folders on disk are not changed.',
+      'Clear recent projects',
+      { confirmText: 'Clear list' }
+    )) {
       this.projectService.clearRecentProjects();
       this.recentProjects = [];
     }

@@ -6,8 +6,8 @@
     role="dialog"
     aria-modal="true"
     [attr.aria-labelledby]="resolvedTitleId"
+    [attr.aria-describedby]="describedById || null"
     cdkTrapFocus
-    [cdkTrapFocusAutoCapture]="true"
     (click)="onDialogClick($event)"
   >
     <div class="modal-header">
@@ -17,8 +17,9 @@
           type="button"
           class="close-btn"
           (click)="close()"
-          aria-label="Close"
-        >&times;</button>
+          aria-label="Close dialog"
+          title="Close (Esc)"
+        ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
       }
     </div>
     <div class="modal-body">

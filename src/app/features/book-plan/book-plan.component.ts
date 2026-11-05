@@ -1,7 +1,7 @@
 import { Component, DestroyRef, ElementRef, HostListener, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { combineLatest } from 'rxjs';
 import { Book, Saga, Series } from '../../core/interfaces/project.interface';
 import { Character } from '../../core/interfaces/character.interface';
@@ -58,6 +58,7 @@ const SLIDE_IN_MS = 340;
   selector: 'app-book-plan',
   imports: [
     FormsModule,
+    RouterLink,
     PageHeaderComponent,
     MarkdownEditorComponent,
     BookEditorComponent,

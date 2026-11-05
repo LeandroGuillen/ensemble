@@ -5,10 +5,11 @@ import { Character, Tag, Category } from "../../../../core/interfaces";
 import { MetadataHelperService } from "../../../../core/services/metadata-helper.service";
 import { resolveEffectiveCategory } from "../../../../core/utils/character-category.utils";
 import { getCharacterDisplayName } from "../../../../core/utils/character-display.utils";
+import { ExcerptPipe } from "../../../../shared/pipes/excerpt.pipe";
 
 @Component({
     selector: "app-character-grid-view",
-    imports: [DragDropModule],
+    imports: [DragDropModule, ExcerptPipe],
     templateUrl: "./character-grid-view.component.html",
     styleUrls: ["./character-grid-view.component.scss"]
 })
@@ -72,6 +73,15 @@ export class CharacterGridViewComponent {
 
   getCharacterLink(character: Character): string[] {
     return ['/character', encodeURIComponent(character.id)];
+  }
+
+  /** Enter/Space open the card only when the card itself has focus, not one of its buttons. */
+  onCardKeydown(event: Event, character: Character): void {
+    if (event.target !== event.currentTarget) {
+      return;
+    }
+    event.preventDefault();
+    this.onCharacterClick(character);
   }
 
   onCharacterClick(character: Character): void {

@@ -110,8 +110,8 @@
   background: var(--color-bg-tertiary);
   color: var(--color-text-secondary);
   cursor: pointer;
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 0.8125rem;
+  font-weight: 500;
 
   &:hover {
     color: var(--color-text-primary);
@@ -119,9 +119,9 @@
   }
 
   &.active {
-    border-color: var(--color-accent-muted);
-    background: var(--color-accent-subtle);
-    color: var(--color-accent-primary);
+    border-color: var(--selected-ring);
+    background: var(--selected-bg);
+    color: var(--selected-fg);
   }
 }
 
@@ -166,7 +166,7 @@
   background: transparent;
   color: var(--color-text-primary);
   font-family: inherit;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   cursor: pointer;
   color-scheme: dark;
 
@@ -182,14 +182,15 @@
 }
 
 .compact-direction-btn {
-  width: 28px;
-  height: 28px;
-  margin-right: 3px;
+  width: 30px;
+  height: 30px;
+  margin-right: 2px;
   padding: 0;
   border: 0;
   border-radius: var(--radius-sm);
-  background: var(--color-accent-primary);
-  color: var(--color-text-inverse);
+  background: var(--selected-bg);
+  color: var(--selected-fg);
+  box-shadow: inset 0 0 0 1px var(--selected-ring);
   cursor: pointer;
   font-weight: 700;
 }
@@ -212,7 +213,7 @@
   }
 
   span {
-    font-size: 0.75rem;
+    font-size: 0.8125rem;
   }
 }
 
@@ -232,11 +233,10 @@
 }
 
 .toolbar-label {
-  color: var(--color-text-muted);
-  font-size: 0.6875rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  margin-right: 2px;
 }
 
 .toolbar-spacer {
@@ -270,12 +270,9 @@
 }
 
 .view-toggle-text .toggle-option {
-  padding: 0 14px;
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
+  padding: 0 12px;
+  font-size: 0.8125rem;
   font-weight: 500;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
   line-height: 1;
 }
 
@@ -355,8 +352,8 @@
   }
 
   .drawer-drop-target.drag-over.active {
-    color: var(--color-text-inverse);
-    outline-color: var(--color-text-inverse);
+    color: var(--selected-fg);
+    outline-color: var(--color-accent-primary);
   }
 
   .drawer-drop-target.pulsing {
@@ -376,7 +373,7 @@
   }
 
   .drawer-drop-target.pulsing.active {
-    --drop-glow: color-mix(in srgb, var(--color-text-inverse) 35%, transparent);
+    --drop-glow: color-mix(in srgb, var(--color-accent-primary) 45%, transparent);
   }
 }
 
@@ -464,7 +461,7 @@
   background: transparent;
   border: none;
   border-radius: calc(var(--radius-md) - 2px);
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   cursor: pointer;
   transition: all var(--transition-fast);
 
@@ -478,9 +475,9 @@
   }
 
   &.active {
-    background: var(--color-accent-primary);
-    color: var(--color-text-inverse);
-    box-shadow: 0 2px 4px rgba(229, 168, 85, 0.2);
+    background: var(--selected-bg);
+    color: var(--selected-fg);
+    box-shadow: inset 0 0 0 1px var(--selected-ring);
   }
 
   &:disabled {

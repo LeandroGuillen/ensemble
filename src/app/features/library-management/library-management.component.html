@@ -1,7 +1,7 @@
 <div class="library-management">
-  <app-page-header [title]="'Library'">
+  <app-page-header [title]="'Books'">
     <div class="page-actions">
-      <div class="view-toggle view-toggle-text">
+      <div class="view-toggle view-toggle-text" role="group" aria-label="Book view">
         <button
           class="toggle-option"
           [class.active]="viewMode === 'gallery'"
@@ -25,15 +25,15 @@
         (click)="showAddSeriesForm()"
         [disabled]="saving"
       >
-        Add Series
+        New Series
       </button>
       <button
         class="btn btn-secondary"
         (click)="showAddSagaForm()"
         [disabled]="saving || seriesList.length === 0"
-        title="{{ seriesList.length === 0 ? 'Create a series first' : 'Add saga' }}"
+        title="{{ seriesList.length === 0 ? 'Create a series first' : 'New saga' }}"
       >
-        Add Saga
+        New Saga
       </button>
       <button
         class="btn btn-primary add-book-btn"
@@ -41,7 +41,7 @@
         [disabled]="saving"
       >
         <svg class="ui-icon plus-glyph" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
-        Add Book
+        New Book
       </button>
     </div>
   </app-page-header>
@@ -106,8 +106,9 @@
                         draggable="false"
                         (click)="showAddSagaForm(group.series.id)"
                         [disabled]="saving"
+                        [attr.aria-label]="'New saga in ' + group.series.name"
                       >
-                        + Saga
+                        New saga
                       </button>
                       <button
                         type="button"
@@ -115,6 +116,7 @@
                         draggable="false"
                         (click)="showEditSeriesForm(group.series)"
                         [disabled]="saving"
+                        [attr.aria-label]="'Edit series ' + group.series.name"
                       >
                         Edit
                       </button>
@@ -124,6 +126,7 @@
                         draggable="false"
                         (click)="deleteSeries(group.series)"
                         [disabled]="saving"
+                        [attr.aria-label]="'Delete series ' + group.series.name"
                       >
                         Delete
                       </button>

@@ -46,7 +46,7 @@
   border-radius: var(--radius-full);
   color: var(--color-text-muted);
   font-family: var(--font-mono);
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 500;
   cursor: pointer;
   transition: color var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast);
@@ -79,7 +79,7 @@
   border: 1px solid rgba(229, 168, 85, 0.25);
   border-radius: var(--radius-full);
   color: var(--color-accent-secondary);
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -342,7 +342,7 @@
   }
 
   .hero-thumb-hint {
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     opacity: 0.7;
@@ -387,7 +387,7 @@
   }
 
   .style-strip-label {
-    font-size: 0.625rem;
+    font-size: 0.6875rem;
     letter-spacing: 0.04em;
     text-transform: uppercase;
     max-width: 100%;
@@ -419,7 +419,7 @@
 .add-style-link {
   display: inline-block;
   margin-top: 2px;
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   letter-spacing: 0.04em;
   color: var(--color-text-muted);
   text-decoration: none;
@@ -499,11 +499,9 @@
 
 .form-label {
   display: block;
-  font-size: 0.6875rem;
+  font-size: 0.8125rem;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--color-text-muted);
+  color: var(--color-text-primary);
   margin-bottom: var(--spacing-xs);
 }
 
@@ -635,7 +633,7 @@
     border-radius: var(--radius-full);
     background: transparent;
     color: var(--color-text-muted);
-    font-size: 0.625rem;
+    font-size: 0.6875rem;
     line-height: 1;
     cursor: pointer;
     transition: color var(--transition-fast), background-color var(--transition-fast);
@@ -711,9 +709,9 @@
   }
 
   &.active {
-    background: var(--color-accent-primary);
-    color: var(--color-text-inverse);
-    box-shadow: 0 2px 4px rgba(229, 168, 85, 0.2);
+    background: var(--selected-bg);
+    color: var(--selected-fg);
+    box-shadow: inset 0 0 0 1px var(--selected-ring);
   }
 }
 
@@ -725,7 +723,7 @@
   background: transparent;
   border: none;
   border-radius: var(--radius-sm);
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   font-family: inherit;
   font-size: 0.8125rem;
   font-weight: 500;
@@ -739,9 +737,9 @@
   }
 
   &.active {
-    background: var(--color-accent-primary);
-    color: var(--color-text-inverse);
-    box-shadow: 0 2px 4px rgba(229, 168, 85, 0.2);
+    background: var(--selected-bg);
+    color: var(--selected-fg);
+    box-shadow: inset 0 0 0 1px var(--selected-ring);
   }
 
   &:disabled {
@@ -753,6 +751,7 @@
   padding-right: var(--spacing-xs);
 
   &.active {
+    background: transparent;
     box-shadow: none;
   }
 
@@ -821,11 +820,9 @@
 
 .add-book-popover-title {
   padding: var(--spacing-xs) var(--spacing-sm) var(--spacing-sm);
-  color: var(--color-text-muted);
-  font-size: 0.6875rem;
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .add-book-option {
@@ -985,12 +982,10 @@
 
 .description-title {
   margin: 0;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   font-family: var(--font-sans);
-  font-size: 0.6875rem;
+  font-size: 0.875rem;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
 }
 
 
@@ -1002,7 +997,7 @@
 
 .char-count {
   font-family: var(--font-mono);
-  font-size: 0.625rem;
+  font-size: 0.6875rem;
   color: var(--color-text-muted);
   letter-spacing: 0.04em;
 }
@@ -1041,16 +1036,14 @@
 
 .meta-group-title {
   font-family: var(--font-sans);
-  font-size: 0.6875rem;
+  font-size: 0.875rem;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--color-text-secondary);
+  color: var(--color-text-primary);
   margin: 0;
 }
 
 .meta-group-hint {
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   color: var(--color-text-muted);
   font-style: italic;
 }
@@ -1296,13 +1289,14 @@
 
 .collection-option {
   flex: 1 1 0;
+  min-height: 28px;
   padding: 4px 8px;
   background: transparent;
   border: none;
   border-radius: calc(var(--radius-sm) - 1px);
   color: var(--color-text-secondary);
   font: inherit;
-  font-size: 12px;
+  font-size: 0.8125rem;
   font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
@@ -1314,8 +1308,9 @@
   }
 
   &.active {
-    background-color: var(--color-accent-primary);
-    color: white;
+    background-color: var(--selected-bg);
+    color: var(--selected-fg);
+    box-shadow: inset 0 0 0 1px var(--selected-ring);
     font-weight: 600;
   }
 

@@ -198,11 +198,11 @@
 .duplicate-btn {
   flex-shrink: 0;
   background: transparent;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   border: none;
   font-size: 1rem;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -221,11 +221,11 @@
 .remove-btn {
   flex-shrink: 0;
   background: transparent;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   border: none;
   font-size: 1.25rem;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;

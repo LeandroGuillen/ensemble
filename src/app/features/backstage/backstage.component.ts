@@ -568,7 +568,11 @@ export class BackstageComponent implements OnInit {
   }
 
   async deleteConcept(index: number): Promise<void> {
-    if (await this.modalService.confirm("Are you sure you want to delete this concept?")) {
+    if (await this.modalService.confirm(
+      "This concept will be removed from concepts.md.",
+      "Delete concept",
+      { confirmText: "Delete", danger: true }
+    )) {
       try {
         await this.backstageService.deleteConcept(index);
         // Clear selection if deleted item was selected
@@ -627,7 +631,11 @@ export class BackstageComponent implements OnInit {
   }
 
   async deleteNameList(index: number): Promise<void> {
-    if (await this.modalService.confirm("Are you sure you want to delete this name list?")) {
+    if (await this.modalService.confirm(
+      "This name list and all its names will be removed.",
+      "Delete name list",
+      { confirmText: "Delete", danger: true }
+    )) {
       try {
         await this.backstageService.deleteNameList(index);
         // Clear selection if deleted item was selected

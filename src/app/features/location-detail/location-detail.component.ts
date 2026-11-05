@@ -14,7 +14,7 @@ import {
 import { combineLatest, debounceTime } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Location as AngularLocation } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   FormsModule,
   ReactiveFormsModule,
@@ -52,6 +52,7 @@ import { isTrashStagingError } from '../../core/trash/trash-record-id';
   imports: [
     FormsModule,
     ReactiveFormsModule,
+    RouterLink,
     PageHeaderComponent,
     MultiSelectButtonsComponent,
     ImagePickerDialogComponent,
@@ -394,7 +395,9 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
     }
     if (
       !(await this.modalService.confirm(
-        `Are you sure you want to delete the location "${this.location.name}"?\n\nIt will be moved to the system Trash. You can undo for 15 seconds.`
+        `Are you sure you want to delete the location "${this.location.name}"?\n\nIt will be moved to the system Trash. You can undo for 15 seconds.`,
+        'Delete location',
+        { confirmText: 'Delete location', danger: true }
       ))
     ) {
       return;

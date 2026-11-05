@@ -54,14 +54,27 @@
 }
 
 @media (max-width: 1024px) {
+  /* Title and actions share a row while they fit, then wrap; the toolbar
+     always takes its own row. Avoids a three-row header on narrow windows. */
   .page-header {
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--spacing-md);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm) var(--spacing-md);
     padding: var(--spacing-md) var(--spacing-lg);
   }
 
+  .header-left {
+    flex: 1 1 auto;
+  }
+
   .header-right {
-    grid-column: 1;
+    flex: 0 1 auto;
+    margin-left: auto;
+    flex-wrap: wrap;
+  }
+
+  .header-toolbar {
+    flex: 1 1 100%;
   }
 }
 

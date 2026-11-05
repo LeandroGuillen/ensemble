@@ -234,7 +234,7 @@
           (click)="refreshCharacters()"
           [disabled]="!currentProject || isLoading"
           title="Refresh characters"
-          aria-label="Refresh"
+          aria-label="Refresh characters"
           >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="23 4 23 10 17 10"></polyline>
@@ -345,44 +345,33 @@
         }
         <!-- Cast Name Form Dialog -->
         @if (showCastNameForm) {
-          <div
-            class="cast-name-form-overlay"
-            (click)="cancelCastForm()"
-            >
-            <div class="cast-name-form" (click)="$event.stopPropagation()">
-              <div class="form-header">
-                <h3>Create New Cast</h3>
-                <button class="btn-close" (click)="cancelCastForm()" aria-label="Close"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg></button>
-              </div>
-              <div class="form-body">
-                <p class="form-help">
-                  Enter a name for this cast ({{ selectedCharacterIds.length }}
-                  characters selected)
-                </p>
-                <input
-                  type="text"
-                  [(ngModel)]="newCastName"
-                  placeholder="e.g., Chapter 1 Cast, Battle Scene"
-                  class="form-control"
-                  (keyup.enter)="saveSelectionAsCast()"
-                  (keyup.escape)="cancelCastForm()"
-                  autofocus
-                  />
-              </div>
-              <div class="form-actions">
-                <button class="btn btn-secondary" (click)="cancelCastForm()">
-                  Cancel
-                </button>
-                <button
-                  class="btn btn-primary"
-                  (click)="saveSelectionAsCast()"
-                  [disabled]="!newCastName || newCastName.trim() === ''"
-                  >
-                  Create Cast
-                </button>
-              </div>
+          <app-modal-frame title="Save selection as cast" (closed)="cancelCastForm()">
+            <label class="form-label" for="new-cast-name">Cast name</label>
+            <p class="form-help" id="new-cast-name-help">
+              {{ selectedCharacterIds.length }} {{ selectedCharacterIds.length === 1 ? 'character' : 'characters' }} will be added to the new cast.
+            </p>
+            <input
+              id="new-cast-name"
+              type="text"
+              [(ngModel)]="newCastName"
+              placeholder="e.g., Chapter 1 Cast, Battle Scene"
+              class="form-control"
+              aria-describedby="new-cast-name-help"
+              (keyup.enter)="saveSelectionAsCast()"
+              autofocus
+              />
+            <div class="modal-actions">
+              <button type="button" class="btn btn-secondary" (click)="cancelCastForm()">Cancel</button>
+              <button
+                type="button"
+                class="btn btn-primary"
+                (click)="saveSelectionAsCast()"
+                [disabled]="!newCastName || newCastName.trim() === ''"
+                >
+                Create Cast
+              </button>
             </div>
-          </div>
+          </app-modal-frame>
         }
       </div>
     }

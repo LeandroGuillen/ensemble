@@ -26,7 +26,7 @@ export const rosePineTheme: Theme = {
     // Text colors
     textPrimary: '#e0def4',
     textSecondary: '#908caa',
-    textMuted: '#6e6a86',
+    textMuted: '#8b87a4',
     textInverse: '#191724',
 
     // Border colors
