@@ -1,5 +1,9 @@
 <div class="book-plan" [style.--book-color]="book?.color">
   <app-page-header [title]="bookTitle">
+    <a pageHeaderPrefix class="header-back-link" routerLink="/library" aria-label="Back to Books">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+      <span>Books</span>
+    </a>
     @if (book?.code) {
       <span pageHeaderPrefix class="book-code">{{ book?.code }}</span>
     }
@@ -30,16 +34,22 @@
   } @else if (!book) {
     <div class="plan-empty">
       <p>This book doesn't exist anymore.</p>
-      <button type="button" class="btn btn-secondary" (click)="backToLibrary()">Back to Library</button>
+      <button type="button" class="btn btn-secondary" (click)="backToLibrary()">Back to Books</button>
     </div>
   } @else if (!state) {
     <div class="plan-empty">
       <h2>No plan yet</h2>
       <p>
-        A plan is a Markdown file with <code>#</code> phases, <code>## 2180 - Title</code> chapters and
-        <code>###</code> scenes. Add <code>PoV: &lt;character id&gt; &lt;name&gt;</code> below a chapter heading
-        to set its point of view.
+        A plan is a Markdown outline of this book’s phases, chapters and scenes. Create a new plan file,
+        or link a Markdown file you already have.
       </p>
+      <details class="plan-format-help">
+        <summary>Plan file format</summary>
+        <p>
+          Use <code>#</code> for phases, <code>## 2180 - Title</code> for chapters and <code>###</code> for scenes.
+          Add <code>PoV: &lt;character id&gt; &lt;name&gt;</code> below a chapter heading to set its point of view.
+        </p>
+      </details>
       <div class="plan-empty-actions">
         <button type="button" class="btn btn-primary" (click)="createPlanFile()">
           Create {{ book.code || book.id }}.plan.md

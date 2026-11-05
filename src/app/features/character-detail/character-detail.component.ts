@@ -1035,6 +1035,41 @@ export class CharacterDetailComponent
     this.navigateBack();
   }
 
+  /** User choice for the "File & collection" disclosure (null = automatic). */
+  private advancedOpenChoice: boolean | null = null;
+
+  /**
+   * Folded by default. Opens on its own for drafts (promotion lives there) and
+   * whenever a collection change is pending, so a pending move is never hidden.
+   */
+  get advancedOpen(): boolean {
+    if (this.collectionChangeHint) return true;
+    return this.advancedOpenChoice ?? this.isDraftMode;
+  }
+
+  onAdvancedToggle(event: Event): void {
+    const open = (event.target as HTMLDetailsElement | null)?.open ?? false;
+    if (open !== this.advancedOpen) this.advancedOpenChoice = open;
+  }
+
+  /** Singular collection name for the disclosure summary. */
+  get collectionLabelSingular(): string {
+    const option = this.collectionOptions.find(o => o.id === this.collection);
+    return option?.name ?? '';
+  }
+
+  /** Name of the list this record belongs to, shown in the header back link. */
+  get collectionLabel(): string {
+    return this.isDraftMode ? 'Drawer' : this.isLoreMode ? 'Lore' : 'Characters';
+  }
+
+  /** Header back link: always returns to this record's collection in the Characters page. */
+  backToCollection(): void {
+    void this.router.navigate(['/characters'], {
+      queryParams: this.isDraftMode ? { drawer: 'true' } : this.isLoreMode ? { lore: 'true' } : undefined,
+    });
+  }
+
   private navigateBack(): void {
     // Check if we have a valid previous route within the app
     // The issue: when opening directly to a character page, there's no in-app history
@@ -1767,7 +1802,11 @@ export class CharacterDetailComponent
       { characterService: this.characterService, logger: this.logger }
     );
 
-    const confirmed = await this.modalService.confirm(confirmMessage);
+    const confirmed = await this.modalService.confirm(
+      confirmMessage,
+      this.isDraftMode ? 'Delete draft' : this.isLoreMode ? 'Delete Lore figure' : 'Delete character',
+      { confirmText: 'Delete', danger: true }
+    );
 
     if (!confirmed) {
       return;

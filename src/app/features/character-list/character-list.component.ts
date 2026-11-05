@@ -24,10 +24,12 @@ import {
   isEditableKeyboardTarget,
   moveListSelection,
   plainLetterKey,
+  isInteractiveKeyboardTarget,
 } from '../../core/utils/list-keyboard.utils';
 import { resolveThumbnailForBookStyle } from '../../core/utils/thumbnail.utils';
 import { isTrashStagingError } from '../../core/trash/trash-record-id';
 import { CharacterFilterComponent } from '../../shared/character-filter/character-filter.component';
+import { ModalFrameComponent } from '../../shared/modal-frame/modal-frame.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import {
     CharacterCompactViewComponent,
@@ -45,7 +47,8 @@ import {
     CharacterGridViewComponent,
     CharacterListViewComponent,
     CharacterCompactViewComponent,
-    CharacterGalleryViewComponent
+    CharacterGalleryViewComponent,
+    ModalFrameComponent
 ],
     templateUrl: './character-list.component.html',
     styleUrls: ['./character-list.component.scss'],
@@ -460,6 +463,12 @@ export class CharacterListComponent implements OnInit {
 
   @HostListener('document:keydown', ['$event'])
   handleKeyboardEvent(event: KeyboardEvent): void {
+    if (event.key === 'Escape' && this.filtersOverlayOpen && !event.defaultPrevented &&
+        !document.querySelector('.modal-overlay, .command-palette-backdrop, .shortcuts-backdrop')) {
+      event.preventDefault();
+      this.closeFiltersOverlay();
+      return;
+    }
     if (isEditableKeyboardTarget(event.target)) {
       return;
     }
@@ -480,7 +489,7 @@ export class CharacterListComponent implements OnInit {
       return;
     }
 
-    if (event.key === 'Enter' && this.selectedCharacterIndex >= 0) {
+    if (event.key === 'Enter' && this.selectedCharacterIndex >= 0 && !isInteractiveKeyboardTarget(event.target)) {
       event.preventDefault();
       const selectedCharacter = navList[this.selectedCharacterIndex];
       if (selectedCharacter) {
@@ -663,7 +672,9 @@ export class CharacterListComponent implements OnInit {
     const displayName = this.getCharacterDisplayName(character);
     if (
       await this.modalService.confirm(
-        `Are you sure you want to delete "${displayName}"?\n\nIt will be moved to the system Trash. You can undo for 15 seconds. After that, restore it from the system Trash (links in Houses, pinboards and plot threads come back only with Undo).`
+        `Are you sure you want to delete "${displayName}"?\n\nIt will be moved to the system Trash. You can undo for 15 seconds. After that, restore it from the system Trash (links in Houses, pinboards and plot threads come back only with Undo).`,
+        character.draft ? 'Delete draft' : 'Delete character',
+        { confirmText: 'Delete', danger: true }
       )
     ) {
       try {
@@ -765,9 +776,69 @@ export class CharacterListComponent implements OnInit {
     await this.projectService.saveFilterExpandedState(expanded);
   }
 
+  /** Below this width the filter panel floats over the list instead of taking a column. */
+  static readonly FILTER_OVERLAY_MAX_WIDTH = 1100;
+  narrowFilters = typeof window !== 'undefined' && window.innerWidth < CharacterListComponent.FILTER_OVERLAY_MAX_WIDTH;
+  /** Narrow windows only: filter drawer open over the list (temporary, never saved). */
+  filtersOverlayOpen = false;
+
+  /** Whether the filter panel is showing, in either layout. */
+  get filtersVisible(): boolean {
+    return this.narrowFilters ? this.filtersOverlayOpen : this.filtersSidebarOpen;
+  }
+
+  /** Number of filters narrowing the list (search, hidden categories, tags, cast, House, book, PoV, pictures). */
+  get activeFilterCount(): number {
+    let n = 0;
+    if (this.searchTerm.trim()) n++;
+    if (this.enabledCategoryIds.length < this.categories.length) n++;
+    n += this.selectedTags.length;
+    if (this.selectedCast) n++;
+    if (this.selectedHouse) n++;
+    if (this.selectedBook) n++;
+    if (this.povOnly && !this.drawerMode) n++;
+    if (this.selectedPictureFilter) n++;
+    return n;
+  }
+
+  get filterToggleLabel(): string {
+    const n = this.activeFilterCount;
+    const action = this.filtersVisible ? 'Hide filters' : 'Show filters';
+    return n === 0 ? action : `${action} (${n} active)`;
+  }
+
+  @HostListener('window:resize')
+  onWindowResizeForFilters(): void {
+    const narrow = window.innerWidth < CharacterListComponent.FILTER_OVERLAY_MAX_WIDTH;
+    if (narrow !== this.narrowFilters) {
+      this.narrowFilters = narrow;
+      this.filtersOverlayOpen = false;
+    }
+  }
+
   toggleFiltersSidebar(): void {
+    if (this.narrowFilters) {
+      this.filtersOverlayOpen = !this.filtersOverlayOpen;
+      if (this.filtersOverlayOpen) {
+        setTimeout(() => {
+          (document.querySelector('#character-filters-sidebar input') as HTMLElement | null)?.focus();
+        }, 0);
+      }
+      return;
+    }
     this.filtersSidebarOpen = !this.filtersSidebarOpen;
     localStorage.setItem('characterFiltersSidebarOpen', String(this.filtersSidebarOpen));
+  }
+
+  closeFiltersOverlay(returnFocus = true): void {
+    if (!this.filtersOverlayOpen) return;
+    this.filtersOverlayOpen = false;
+    if (returnFocus) {
+      setTimeout(() => {
+        const toggles = Array.from(document.querySelectorAll<HTMLElement>('.header-filter-toggle'));
+        toggles.find(el => el.offsetParent !== null)?.focus();
+      }, 0);
+    }
   }
 
   clearFilters(): void {

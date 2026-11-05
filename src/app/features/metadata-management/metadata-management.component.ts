@@ -792,7 +792,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
   }
 
   async resetBaseColors(): Promise<void> {
-    if (!(await this.modalService.confirm('Reset all base colors to defaults? Your custom base colors will be replaced.'))) {
+    if (!(await this.modalService.confirm('Your custom base colors will be replaced with the defaults.', 'Reset base colors', { confirmText: 'Reset colors', danger: true }))) {
       return;
     }
     try {
@@ -824,7 +824,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
   }
 
   async removeExtraColor(color: string): Promise<void> {
-    if (!(await this.modalService.confirm(`Remove color ${color}?`))) {
+    if (!(await this.modalService.confirm(`${color} will be removed from the palette.`, 'Remove color', { confirmText: 'Remove', danger: true }))) {
       return;
     }
     try {
@@ -858,7 +858,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
     if (!this.currentTheme) {
       return;
     }
-    if (!(await this.modalService.confirm(`Remove color overrides for ${this.currentTheme.name} theme?`))) {
+    if (!(await this.modalService.confirm(`Color overrides for the ${this.currentTheme.name} theme will be removed.`, 'Remove overrides', { confirmText: 'Remove overrides', danger: true }))) {
       return;
     }
     try {

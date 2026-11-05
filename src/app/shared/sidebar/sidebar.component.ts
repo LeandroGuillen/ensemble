@@ -40,6 +40,17 @@ export class SidebarComponent implements OnInit {
   currentProjectName = '';
   currentRoute = '';
   private routeBeforeSettings = '/characters';
+  /** Window width from which the labelled sidebar is shown by default. */
+  static readonly AUTO_EXPAND_MIN_WIDTH = 1280;
+  /** Below this width the sidebar folds to icons so content keeps its room;
+   *  expanding it there opens the labels over the content instead of pushing it. */
+  static readonly AUTO_COLLAPSE_MAX_WIDTH = 1100;
+  /** True while the window is narrower than AUTO_COLLAPSE_MAX_WIDTH. */
+  narrowWindow = false;
+  /** Labels shown over the content in a narrow window (temporary, never saved). */
+  overlayOpen = false;
+  /** Explicit user choice from the toggle; null = follow the window width. */
+  private savedCollapsed: boolean | null = null;
   isCollapsed = true;
   appVersion = '';
   updateStatus: UpdateStatus = { status: 'idle' };
@@ -65,7 +76,7 @@ export class SidebarComponent implements OnInit {
     },
     {
       id: 'references',
-      label: 'References',
+      label: 'World & story',
       items: [
         { icon: 'book', label: 'Books', route: '/library', title: 'Books' },
         { icon: 'shield', label: 'Houses', route: '/houses', title: 'Houses' },
@@ -104,7 +115,10 @@ export class SidebarComponent implements OnInit {
       .subscribe(status => { this.updateStatus = status; });
 
     this.projectService.currentProject$.subscribe((project: any) => {
-      this.currentProjectName = project?.name || '';
+      const folderName = typeof project?.path === 'string'
+        ? project.path.split(/[\\/]/).filter(Boolean).pop() || ''
+        : '';
+      this.currentProjectName = project?.metadata?.projectName || project?.name || folderName;
     });
 
     this.router.events
@@ -114,14 +128,13 @@ export class SidebarComponent implements OnInit {
           this.routeBeforeSettings = this.currentRoute || '/characters';
         }
         this.currentRoute = event.urlAfterRedirects;
+        // A temporary overlay closes once the user has picked a destination.
+        this.overlayOpen = false;
+        this.applyLayout();
       });
 
-    // Load saved collapse state
-    const saved = localStorage.getItem('sidebar-collapsed');
-    if (saved !== null) {
-      this.isCollapsed = saved === 'true';
-    }
-
+    this.savedCollapsed = this.readSavedPreference();
+    this.applyLayout();
   }
 
   private async loadAppVersion(): Promise<void> {
@@ -132,10 +145,35 @@ export class SidebarComponent implements OnInit {
     }
   }
 
+  /** Detail and create routes belong to the collection the user came from. */
+  private static readonly SECTION_PREFIXES: Record<string, string[]> = {
+    '/characters': ['/characters', '/character/', '/character?', '/character-draft'],
+    '/library': ['/library', '/book/'],
+    '/houses': ['/houses', '/house/', '/house?'],
+    '/locations': ['/locations', '/location/', '/location?'],
+    '/casts': ['/casts', '/cast/'],
+  };
+
   isActive(route: string): boolean {
-    // A book page belongs to the Library.
-    if (route === '/library' && this.currentRoute.startsWith('/book/')) return true;
-    return this.currentRoute.startsWith(route);
+    const url = this.currentRoute;
+    const prefixes = SidebarComponent.SECTION_PREFIXES[route] ?? [route];
+    const exactCreate = route.replace(/s$/, '');
+    return prefixes.some(prefix => url.startsWith(prefix)) || (exactCreate !== route && url === exactCreate);
+  }
+
+  /** `page` on the collection itself, `location` while inside one of its pages. */
+  ariaCurrent(route: string): 'page' | 'location' | null {
+    if (!this.isActive(route)) return null;
+    const path = this.currentRoute.split(/[?#]/)[0];
+    return path === route ? 'page' : 'location';
+  }
+
+  /** Tooltip / name that says where you are inside a section. */
+  itemTitle(item: NavItem): string {
+    if (item.route && this.ariaCurrent(item.route) === 'location') {
+      return `${item.title} (back to the list)`;
+    }
+    return item.title;
   }
 
   navigateTo(route: string): void {
@@ -158,6 +196,50 @@ export class SidebarComponent implements OnInit {
   @HostListener('window:resize')
   onWindowResize(): void {
     this.closeThemeMenu();
+    this.applyLayout();
+  }
+
+  /**
+   * Re-derives the sidebar state from the window width and the saved choice.
+   * Runs at start-up and on every resize, so a window that grows past the
+   * threshold gains labels (and loses them again) without a reload, while an
+   * explicit choice from the toggle always wins in windows that have room.
+   */
+  private applyLayout(): void {
+    const width = typeof window !== 'undefined' ? window.innerWidth : SidebarComponent.AUTO_EXPAND_MIN_WIDTH;
+    this.narrowWindow = width < SidebarComponent.AUTO_COLLAPSE_MAX_WIDTH;
+    if (this.narrowWindow) {
+      this.isCollapsed = !this.overlayOpen;
+      return;
+    }
+    this.overlayOpen = false;
+    this.isCollapsed = this.savedCollapsed !== null
+      ? this.savedCollapsed
+      : width < SidebarComponent.AUTO_EXPAND_MIN_WIDTH;
+  }
+
+  private readSavedPreference(): boolean | null {
+    try {
+      const saved = localStorage.getItem('sidebar-collapsed');
+      return saved === null ? null : saved === 'true';
+    } catch {
+      return null;
+    }
+  }
+
+  get isOverlay(): boolean {
+    return this.narrowWindow && this.overlayOpen;
+  }
+
+  get toggleLabel(): string {
+    if (this.isOverlay) return 'Close sidebar';
+    return this.isCollapsed ? 'Expand sidebar' : 'Collapse sidebar';
+  }
+
+  closeOverlay(): void {
+    if (!this.overlayOpen) return;
+    this.overlayOpen = false;
+    this.applyLayout();
   }
 
   @HostListener('document:keydown', ['$event'])
@@ -165,6 +247,11 @@ export class SidebarComponent implements OnInit {
     if (event.key === 'Escape' && this.themeMenuOpen) {
       event.preventDefault();
       this.closeThemeMenu();
+      return;
+    }
+    if (event.key === 'Escape' && this.isOverlay && !event.defaultPrevented) {
+      event.preventDefault();
+      this.closeOverlay();
       return;
     }
     if (event.key !== 'Escape' || !this.isInSettings || event.defaultPrevented ||
@@ -192,8 +279,19 @@ export class SidebarComponent implements OnInit {
   }
 
   toggleCollapse(): void {
-    this.isCollapsed = !this.isCollapsed;
-    localStorage.setItem('sidebar-collapsed', String(this.isCollapsed));
+    if (this.narrowWindow) {
+      // Narrow window: peek at the labels over the content; nothing is saved.
+      this.overlayOpen = !this.overlayOpen;
+      this.applyLayout();
+      return;
+    }
+    this.savedCollapsed = !this.isCollapsed;
+    try {
+      localStorage.setItem('sidebar-collapsed', String(this.savedCollapsed));
+    } catch {
+      // Storage unavailable: the choice still applies for this session.
+    }
+    this.applyLayout();
   }
 
   toggleThemeMenu(event: MouseEvent): void {

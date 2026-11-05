@@ -82,8 +82,8 @@
     color: var(--color-text-primary);
   }
 
-  &:focus {
-    outline: 2px solid var(--color-accent-primary);
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring-color);
     outline-offset: 2px;
   }
 }

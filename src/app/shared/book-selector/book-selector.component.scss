@@ -23,7 +23,7 @@
   right: 8px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 10px;
+  font-size: 0.6875rem;
   color: var(--color-text-secondary);
   transition: transform 0.15s ease;
   pointer-events: none;
@@ -348,7 +348,7 @@
 }
 
 .character-count {
-  font-size: 10px;
+  font-size: 0.6875rem;
   font-weight: 400;
   color: var(--color-text-secondary);
 }

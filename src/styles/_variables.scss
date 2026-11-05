@@ -19,7 +19,7 @@
   /* Text Colors */
   --color-text-primary: #f2f4f7;
   --color-text-secondary: #a0a8b8;
-  --color-text-muted: #6b7280;
+  --color-text-muted: #838a99;
   --color-text-inverse: #0c0f14;
 
   /* Borders */
@@ -32,6 +32,19 @@
   --color-warning: #fbbf24;
   --color-error: #f87171;
   --color-info: #60a5fa;
+
+  /* Selected state for segmented controls, chips and navigation.
+     A tinted surface with an accent ring keeps the solid accent fill
+     reserved for the primary action on each screen. */
+  --selected-bg: color-mix(in srgb, var(--color-accent-primary) 18%, var(--color-bg-elevated));
+  --selected-fg: var(--color-text-primary);
+  --selected-ring: color-mix(in srgb, var(--color-accent-primary) 65%, transparent);
+
+  /* Keyboard focus. Deliberately NOT the accent: selected/current items are
+     accent-tinted, so focus uses the primary text colour (near-white on dark
+     themes, near-black on light ones) with an offset, and never reads as
+     "selected". Skins may still restyle it. */
+  --focus-ring-color: var(--color-text-primary);
 
   /* Shadows */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);

@@ -90,7 +90,7 @@
   }
 
   &:focus-visible {
-    outline: 2px solid var(--color-accent-primary);
+    outline: 2px solid var(--focus-ring-color);
     outline-offset: -2px;
   }
 }
@@ -316,6 +316,12 @@
 
 .thread-icon-btn,
 .row-icon-btn {
+  // Native buttons (keyboard reachable); reset UA chrome.
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  border-radius: var(--radius-sm);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -346,8 +352,16 @@
   opacity: 0.6;
 }
 
-.row-label:hover .plot-icon-placeholder {
+.row-label:hover .plot-icon-placeholder,
+.row-label:focus-within .plot-icon-placeholder,
+.thread-name-cluster:focus-within .plot-icon-placeholder {
   opacity: 0.6;
+}
+
+// Keyboard focus must never land on an invisible control.
+.thread-icon-btn:focus-visible .plot-icon-placeholder,
+.row-icon-btn:focus-visible .plot-icon-placeholder {
+  opacity: 1;
 }
 
 .thread-name {
@@ -468,7 +482,7 @@
   border-radius: var(--radius-sm);
   color: var(--color-error);
   cursor: pointer;
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 500;
   white-space: nowrap;
   transition: all var(--transition-fast);
@@ -494,6 +508,9 @@
 }
 
 .character-thumb {
+  padding: 0;
+  font: inherit;
+  color: inherit;
   position: relative;
   z-index: 1;
   display: inline-flex;
@@ -532,7 +549,7 @@
   border-radius: 50%;
   background: var(--color-error);
   color: #fff;
-  font-size: 10px;
+  font-size: 0.6875rem;
   font-weight: 700;
   line-height: 14px;
   text-align: center;
@@ -551,7 +568,7 @@
 }
 
 .thumb-fallback {
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--color-text-muted);
   text-transform: uppercase;
@@ -635,7 +652,8 @@
   transition: opacity var(--transition-fast);
 }
 
-.row-label:hover .row-remove {
+.row-label:hover .row-remove,
+.row-label:focus-within .row-remove {
   opacity: 1;
 }
 
@@ -822,7 +840,7 @@
   }
 
   .event-text {
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
   }
 
   .empty-cell-target {
@@ -840,7 +858,7 @@
   }
 
   .thread-name {
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
   }
 
   .linked-characters {
@@ -866,7 +884,7 @@
   }
 
   .row-name {
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
   }
 
   .row-remove {
@@ -903,4 +921,11 @@
     height: 28px;
     border-width: 1px;
   }
+}
+
+.thread-name--draggable:focus-visible,
+.row-name--draggable:focus-visible {
+  outline: 2px solid var(--focus-ring-color);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
 }

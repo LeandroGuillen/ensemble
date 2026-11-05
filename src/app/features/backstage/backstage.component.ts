@@ -1,3 +1,4 @@
+import { isInteractiveKeyboardTarget } from '../../core/utils/list-keyboard.utils';
 import { NotificationService } from '../../core/services/notification.service';
 import { DestroyRef, inject, Component, OnInit, HostListener, SecurityContext } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -497,6 +498,18 @@ export class BackstageComponent implements OnInit {
     }
   }
 
+  finishEditingNotes(notes: string, restoreFocus = false): void {
+    if (!this.editingConceptNotes || this.selectedConceptIndex === null) return;
+    // Escape removes the field; ignore a subsequent blur so the edit saves once.
+    this.editingConceptNotes = false;
+    void this.updateConcept(this.selectedConceptIndex, { notes });
+    if (restoreFocus) {
+      setTimeout(() => {
+        document.querySelector<HTMLButtonElement>('.edit-notes-button')?.focus();
+      }, 0);
+    }
+  }
+
   // Toggle strikethrough on selected name
   toggleStrikethrough(index: number): void {
     if (this.selectedNameListIndex === null) return;
@@ -568,7 +581,11 @@ export class BackstageComponent implements OnInit {
   }
 
   async deleteConcept(index: number): Promise<void> {
-    if (await this.modalService.confirm("Are you sure you want to delete this concept?")) {
+    if (await this.modalService.confirm(
+      "This concept will be removed from concepts.md.",
+      "Delete concept",
+      { confirmText: "Delete", danger: true }
+    )) {
       try {
         await this.backstageService.deleteConcept(index);
         // Clear selection if deleted item was selected
@@ -627,7 +644,11 @@ export class BackstageComponent implements OnInit {
   }
 
   async deleteNameList(index: number): Promise<void> {
-    if (await this.modalService.confirm("Are you sure you want to delete this name list?")) {
+    if (await this.modalService.confirm(
+      "This name list and all its names will be removed.",
+      "Delete name list",
+      { confirmText: "Delete", danger: true }
+    )) {
       try {
         await this.backstageService.deleteNameList(index);
         // Clear selection if deleted item was selected
@@ -692,6 +713,9 @@ export class BackstageComponent implements OnInit {
   @HostListener("keydown", ["$event"])
   handleKeyDown(event: KeyboardEvent): void {
     const target = event.target as HTMLElement;
+    // Overview shortcuts must not cancel native activation of focused controls.
+    if (event.defaultPrevented ||
+        ((event.key === 'Enter' || event.key === ' ') && isInteractiveKeyboardTarget(target))) return;
     const isInput = target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
     const isEditingName = this.editingNameIndex !== null;
     const isEditingComment = this.editingCommentIndex !== null;

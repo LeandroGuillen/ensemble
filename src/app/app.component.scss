@@ -18,3 +18,30 @@
   min-height: 0;
   min-width: 0;
 }
+
+// Visible only when focused: first Tab stop on every page with the sidebar.
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 2000;
+  padding: 8px 14px;
+  border: 1px solid var(--color-accent-primary);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transform: translateY(-200%);
+
+  &:focus,
+  &:focus-visible {
+    transform: none;
+  }
+}
+
+.app-main:focus {
+  outline: none;
+}

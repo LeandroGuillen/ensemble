@@ -29,7 +29,7 @@ import { HouseService } from '../../core/services/house.service';
     .house-link { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 104px; max-width: 100%; padding: 4px; border-radius: var(--radius-md); color: var(--color-accent-primary); text-decoration: none; font-size: 0.75rem; text-align: center; overflow-wrap: anywhere; }
     .house-link:hover { background: var(--color-bg-secondary); }
     .house-link:hover .house-name { text-decoration: underline; }
-    .house-link:focus-visible { outline: 2px solid var(--color-accent-primary); outline-offset: 2px; }
+    .house-link:focus-visible { outline: 2px solid var(--focus-ring-color); outline-offset: 2px; }
     .house-image { display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-secondary); overflow: hidden; }
     .house-image img { width: 100%; height: 100%; object-fit: contain; }
     .house-image .ui-icon { width: 24px; height: 24px; color: var(--color-text-secondary); }

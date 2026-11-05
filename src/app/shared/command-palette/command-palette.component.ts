@@ -33,6 +33,10 @@ export class CommandPaletteComponent implements OnInit {
   placeholder = 'Type a command or search...';
   enterLabel = 'Execute';
   promptMode = false;
+  readonly listId = 'command-palette-results';
+
+  /** Element focused before the palette opened; focus returns there on close. */
+  private returnFocusTo: HTMLElement | null = null;
 
   /** When false, hover must not move selection (keyboard / scroll under cursor). */
   private pointerSelectEnabled = false;
@@ -48,7 +52,15 @@ export class CommandPaletteComponent implements OnInit {
     this.commandPaletteService.isOpen$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((isOpen) => {
+        const wasOpen = this.isOpen;
         this.isOpen = isOpen;
+        if (isOpen && !wasOpen) {
+          const active = document.activeElement;
+          this.returnFocusTo = active instanceof HTMLElement && active !== document.body ? active : null;
+        }
+        if (!isOpen && wasOpen) {
+          this.restoreFocus();
+        }
         if (isOpen) {
           this.searchQuery = '';
           this.selectedIndex = 0;
@@ -88,6 +100,11 @@ export class CommandPaletteComponent implements OnInit {
     if (!this.isOpen) return;
 
     switch (event.key) {
+      case 'Tab':
+        // Modal: the search field is the only stop; keep focus inside.
+        event.preventDefault();
+        this.searchInput?.nativeElement.focus();
+        break;
       case 'Escape':
         event.preventDefault();
         this.close();
@@ -120,6 +137,41 @@ export class CommandPaletteComponent implements OnInit {
         event.preventDefault();
         this.executeSelectedCommand();
         break;
+    }
+  }
+
+  get dialogLabel(): string {
+    return this.promptMode ? 'Enter a value' : 'Search and commands';
+  }
+
+  optionId(index: number): string {
+    return `command-palette-option-${index}`;
+  }
+
+  get activeOptionId(): string | null {
+    return this.filteredCommands.length > 0 && this.selectedIndex < this.filteredCommands.length
+      ? this.optionId(this.selectedIndex)
+      : null;
+  }
+
+  /** Polite announcement of how many results the current query has. */
+  get resultAnnouncement(): string {
+    if (this.promptMode) return '';
+    const n = this.filteredCommands.length;
+    if (n === 0) return this.searchQuery.trim() ? 'No matches' : '';
+    return n === 1 ? '1 result' : `${n} results`;
+  }
+
+  private restoreFocus(): void {
+    const target = this.returnFocusTo;
+    this.returnFocusTo = null;
+    if (target && target.isConnected) {
+      setTimeout(() => {
+        // Only return focus when nothing else claimed it (e.g. a navigation focusing a page).
+        if (document.activeElement === document.body || document.activeElement === null) {
+          target.focus({ preventScroll: true });
+        }
+      }, 0);
     }
   }
 

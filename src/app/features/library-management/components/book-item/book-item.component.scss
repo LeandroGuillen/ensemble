@@ -1,4 +1,10 @@
 .book-container {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: inherit;
   cursor: pointer;
   position: relative;
   width: 15rem;
@@ -20,6 +26,7 @@
 }
 
 .book {
+  display: block;
   position: relative;
   width: 100%;
   height: 100%;
@@ -28,7 +35,8 @@
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.book-container:hover .book {
+.book-container:hover .book,
+.book-container:focus-visible .book {
   transform: rotateY(10deg);
 }
 
@@ -167,4 +175,10 @@
   .page-layer {
     pointer-events: none;
   }
+}
+
+// Keep focus visible on the projected cover, above its 3D decorative layers.
+.book-container:focus-visible .book-cover {
+  outline: 3px solid var(--focus-ring-color);
+  outline-offset: 4px;
 }

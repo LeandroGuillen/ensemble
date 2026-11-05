@@ -9,6 +9,7 @@ import {
   isEditableKeyboardTarget,
   moveListSelection,
   plainLetterKey,
+  isInteractiveKeyboardTarget,
 } from '../../core/utils/list-keyboard.utils';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 
@@ -100,7 +101,7 @@ export class HouseListComponent implements OnInit {
       return;
     }
 
-    if (event.key === 'Enter' && this.selectedHouseIndex >= 0) {
+    if (event.key === 'Enter' && this.selectedHouseIndex >= 0 && !isInteractiveKeyboardTarget(event.target)) {
       event.preventDefault();
       const selected = list[this.selectedHouseIndex];
       if (selected) {

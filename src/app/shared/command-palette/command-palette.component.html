@@ -1,35 +1,61 @@
 @if (isOpen) {
   <div class="command-palette-backdrop" (click)="onBackdropClick()">
-    <div class="command-palette" (click)="onPaletteClick($event)">
+    <div
+      class="command-palette"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="dialogLabel"
+      (click)="onPaletteClick($event)">
       <div class="command-search">
+        <svg class="command-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="M21 21l-4.35-4.35"></path>
+        </svg>
         <input
           #searchInput
           type="text"
           class="command-search-input"
+          role="combobox"
+          aria-autocomplete="list"
+          [attr.aria-expanded]="filteredCommands.length > 0"
+          [attr.aria-controls]="listId"
+          [attr.aria-activedescendant]="activeOptionId"
+          [attr.aria-label]="placeholder"
           [placeholder]="placeholder"
           [(ngModel)]="searchQuery"
           (input)="onSearchChange()"
-          autocomplete="off">
-        <span class="command-search-hint">ESC to close</span>
+          autocomplete="off"
+          spellcheck="false">
+        <button type="button" class="command-close" tabindex="-1" (click)="close()" title="Close (Esc)" aria-label="Close search">
+          <kbd aria-hidden="true">Esc</kbd>
+        </button>
       </div>
+      <p class="sr-only" role="status" aria-live="polite">{{ resultAnnouncement }}</p>
       @if (filteredCommands.length > 0) {
         <div
           class="command-list"
           #commandList
+          role="listbox"
+          [id]="listId"
+          [attr.aria-label]="dialogLabel + ' results'"
           (mousemove)="onListMouseMove($event)">
           @for (command of filteredCommands; track command.id; let i = $index) {
             <div
               class="command-item"
+              role="option"
+              [id]="optionId(i)"
+              [attr.aria-selected]="i === selectedIndex"
               [class.selected]="i === selectedIndex"
               (mouseenter)="onItemMouseEnter(i)"
+              (mousedown)="$event.preventDefault()"
               (click)="executeCommand(command)">
               @if (command.thumbnail) {
                 <div class="command-thumbnail">
-                  <img [src]="command.thumbnail" [alt]="command.label">
+                  <img [src]="command.thumbnail" alt="">
                 </div>
               }
               @if (!command.thumbnail && !command.icon && command.metadata) {
-                <div class="command-thumbnail-placeholder">
+                <div class="command-thumbnail-placeholder" aria-hidden="true">
                   {{ command.label.charAt(0) }}
                 </div>
               }
@@ -56,10 +82,10 @@
       }
       @if (!promptMode && filteredCommands.length === 0 && searchQuery) {
         <div class="command-empty">
-          <p>No commands found</p>
+          <p>No matches for “{{ searchQuery.trim() }}”</p>
         </div>
       }
-      <div class="command-footer">
+      <div class="command-footer" aria-hidden="true">
         <div class="command-shortcuts">
           <span class="shortcut-item"><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
           <span class="shortcut-item"><kbd>PgUp</kbd><kbd>PgDn</kbd> Jump</span>

@@ -1,8 +1,12 @@
 <div class="house-page">
   <app-page-header [title]="house ? house.name : 'New House'">
-    @if (dirty) { <span class="unsaved">● Unsaved</span> }
-    <a class="btn btn-ghost" routerLink="/houses">Back to Houses</a>
-    <button class="btn btn-primary" (click)="save()" [disabled]="saving || pickingMember || loading || conflict || deleted || !model.name.trim()">{{ saving ? 'Saving…' : house ? 'Save Changes' : 'Create House' }}</button>
+    <a pageHeaderPrefix class="header-back-link" routerLink="/houses" aria-label="Back to Houses">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+      <span>Houses</span>
+    </a>
+    @if (dirty) { <span class="dirty-pill" title="You have unsaved changes">● Unsaved</span> }
+    <button type="button" class="btn btn-ghost" (click)="cancel()" [disabled]="saving" title="Cancel (ESC)">Cancel <kbd class="shortcut-hint">ESC</kbd></button>
+    <button type="button" class="btn btn-primary" (click)="save()" [disabled]="saving || pickingMember || loading || conflict || deleted || !model.name.trim()" title="Save (Ctrl+Enter)">{{ saving ? 'Saving…' : house ? 'Save Changes' : 'Create House' }} <kbd class="shortcut-hint">⌃↵</kbd></button>
   </app-page-header>
   <main>
     @if (loading) { <p class="empty">Loading House…</p> }
@@ -210,8 +214,8 @@
                 </div>
                 <div class="book-tags" role="group" [attr.aria-label]="'Book references for reign ' + (model.leadership.indexOf(entry) + 1)">
                   <span class="hint">Book references</span>
-                  @for (book of books; track book.id) { <button class="book-tag" [class.selected]="entry.books.includes(book.id)" [attr.aria-pressed]="entry.books.includes(book.id)" [style.--book-color]="book.color" (click)="toggleBook(entry, book.id)">{{ bookName(book) }}</button> }
-                  @for (id of missingBooks(entry); track id) { <button class="book-tag missing selected" (click)="toggleBook(entry, id)" [attr.aria-label]="'Remove missing book reference ' + id">Missing book ({{ id }}) ×</button> }
+                  @for (book of books; track book.id) { <button type="button" class="book-tag" [class.selected]="entry.books.includes(book.id)" [attr.aria-pressed]="entry.books.includes(book.id)" (click)="toggleBook(entry, book.id)"><span class="tag-dot" aria-hidden="true" [style.background-color]="book.color"></span>{{ bookName(book) }}@if (entry.books.includes(book.id)) {<svg class="book-tag-check" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>}</button> }
+                  @for (id of missingBooks(entry); track id) { <button type="button" class="book-tag missing selected" (click)="toggleBook(entry, id)" [attr.aria-label]="'Remove missing book reference ' + id">Missing book ({{ id }}) ×</button> }
                   @if (!entry.books.length) { <span class="hint">Books unspecified</span> }
                 </div>
               </article>
@@ -219,7 +223,7 @@
           </div>
           }
         </section>
-        @if (house) { <div class="delete-house"><button class="btn btn-ghost" appConfirmButton confirmLabel="Confirm delete House" (confirmed)="delete()" [disabled]="conflict">Delete House</button><span class="hint">Characters and crest files are kept.</span></div> }
+        @if (house) { <div class="delete-house"><button type="button" class="btn btn-ghost" (click)="confirmDelete()" [disabled]="conflict">Delete House</button><span class="hint">Characters and crest files are kept.</span></div> }
       </fieldset>
     }
   </main>

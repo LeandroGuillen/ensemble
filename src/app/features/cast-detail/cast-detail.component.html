@@ -184,13 +184,8 @@
                     </div>
                     <div class="character-card-info">
                       <div class="character-card-name">{{ character.name }}</div>
-                      <div
-                        class="character-card-category"
-                    [style.background-color]="
-                      getCategoryColor(character.category)
-                    "
-                        [style.color]="getCategoryTextColor(character.category)"
-                        >
+                      <div class="character-card-category">
+                        <span class="category-dot" aria-hidden="true" [style.background-color]="getCategoryColor(character.category)"></span>
                         {{ getCategoryName(character.category) }}
                       </div>
                     </div>
@@ -272,13 +267,8 @@
                     </div>
                     <div class="character-card-info">
                       <div class="character-card-name">{{ character.name }}</div>
-                      <div
-                        class="character-card-category"
-                    [style.background-color]="
-                      getCategoryColor(character.category)
-                    "
-                        [style.color]="getCategoryTextColor(character.category)"
-                        >
+                      <div class="character-card-category">
+                        <span class="category-dot" aria-hidden="true" [style.background-color]="getCategoryColor(character.category)"></span>
                         {{ getCategoryName(character.category) }}
                       </div>
                     </div>

@@ -21,14 +21,14 @@
 
 .panel-subtitle {
   display: block;
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
   letter-spacing: 0.02em;
 }
 
 .form-label {
   display: block;
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -104,6 +104,13 @@
 }
 
 .prompts-list-name {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  padding: 4px 0;
+  cursor: pointer;
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
@@ -210,4 +217,49 @@
   .prompts-body {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+.prompts-summary {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  margin: 0;
+  cursor: pointer;
+  list-style: none;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  .panel-title {
+    margin: 0 0 2px;
+  }
+}
+
+.prompts-panel[open] > .prompts-summary {
+  margin-bottom: var(--spacing-md);
+}
+
+.prompts-chevron {
+  width: 16px;
+  height: 16px;
+  margin-top: 6px;
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+  transition: transform var(--transition-fast);
+
+  .prompts-panel[open] > .prompts-summary & {
+    transform: rotate(90deg);
+  }
+}
+
+.prompts-count {
+  font-family: var(--font-sans, inherit);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.prompts-panel:not([open]) {
+  padding-block: var(--spacing-md);
 }

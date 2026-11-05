@@ -24,14 +24,18 @@
         <button
           type="button"
           class="header-filter-toggle header-filter-toggle--compact"
-          [class.active]="filtersSidebarOpen"
+          [class.active]="filtersVisible"
           (click)="toggleFiltersSidebar()"
-          [attr.aria-expanded]="filtersSidebarOpen"
+          [attr.aria-expanded]="filtersVisible"
           aria-controls="character-filters-sidebar"
-          title="Toggle filters"
+          [attr.aria-label]="filterToggleLabel"
+          [title]="filterToggleLabel"
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16M7 12h10M10 19h4"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16M7 12h10M10 19h4"/></svg>
           <span>Filters</span>
+          @if (activeFilterCount > 0) {
+            <span class="filter-count" aria-hidden="true">{{ activeFilterCount }}</span>
+          }
         </button>
 
         <div class="compact-select-control">
@@ -70,29 +74,20 @@
           </select>
         </div>
 
-        <button
-          type="button"
-          class="compact-view-button"
-          (click)="toggleViewMode()"
-          [title]="'Current view: ' + viewMode + '. Click for next view.'"
-          [attr.aria-label]="'Current view: ' + viewMode + '. Click for next view.'"
-        >
-          @switch (viewMode) {
-            @case ('gallery') {
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
-            }
-            @case ('grid') {
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="6" height="5" rx="1"/><rect x="9" y="2" width="6" height="5" rx="1"/><rect x="1" y="9" width="6" height="5" rx="1"/><rect x="9" y="9" width="6" height="5" rx="1"/></svg>
-            }
-            @case ('list') {
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="4" height="4" rx="1"/><rect x="7" y="2" width="8" height="2" rx="1"/><rect x="7" y="5" width="6" height="1" rx=".5"/><rect x="1" y="10" width="4" height="4" rx="1"/><rect x="7" y="10" width="8" height="2" rx="1"/><rect x="7" y="13" width="6" height="1" rx=".5"/></svg>
-            }
-            @default {
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg>
-            }
-          }
-          <span>{{ viewMode }}</span>
-        </button>
+        <div class="compact-select-control">
+          <span class="toolbar-label">View</span>
+          <select
+            class="compact-select"
+            [ngModel]="viewMode"
+            (ngModelChange)="setViewMode($event)"
+            aria-label="Character view"
+          >
+            <option value="grid">Grid</option>
+            <option value="list">List</option>
+            <option value="compact">Compact</option>
+            <option value="gallery">Gallery</option>
+          </select>
+        </div>
 
         @if (characterStyles.length > 1) {
           <select
@@ -134,14 +129,18 @@
         <button
           type="button"
           class="header-filter-toggle"
-          [class.active]="filtersSidebarOpen"
+          [class.active]="filtersVisible"
           (click)="toggleFiltersSidebar()"
-          [attr.aria-expanded]="filtersSidebarOpen"
+          [attr.aria-expanded]="filtersVisible"
           aria-controls="character-filters-sidebar"
-          title="Toggle filters"
+          [attr.aria-label]="filterToggleLabel"
+          [title]="filterToggleLabel"
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16M7 12h10M10 19h4"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16M7 12h10M10 19h4"/></svg>
           <span>Filters</span>
+          @if (activeFilterCount > 0) {
+            <span class="filter-count" aria-hidden="true">{{ activeFilterCount }}</span>
+          }
         </button>
 
         <div class="toolbar-control">
@@ -234,7 +233,7 @@
           (click)="refreshCharacters()"
           [disabled]="!currentProject || isLoading"
           title="Refresh characters"
-          aria-label="Refresh"
+          aria-label="Refresh characters"
           >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="23 4 23 10 17 10"></polyline>
@@ -259,14 +258,20 @@
 
   <div class="characters-body">
     @if (currentProject) {
+      @if (narrowFilters && filtersOverlayOpen) {
+        <div class="filters-scrim" aria-hidden="true" (click)="closeFiltersOverlay(false)"></div>
+      }
       <div
         class="filters-sidebar-anim"
-        [@characterFiltersSidebar]="filtersSidebarOpen ? 'open' : 'closed'"
+        [class.filters-overlay]="narrowFilters"
+        [@characterFiltersSidebar]="filtersVisible ? 'open' : 'closed'"
         >
         <aside
           class="filters-sidebar"
           id="character-filters-sidebar"
-          [attr.aria-hidden]="!filtersSidebarOpen"
+          aria-label="Character filters"
+          [attr.aria-hidden]="!filtersVisible"
+          [inert]="!filtersVisible"
           >
         <div class="filters-sidebar-content">
           <app-character-filter
@@ -301,7 +306,7 @@
       </div>
     }
 
-    <main class="characters-main" [class.filters-collapsed]="!filtersSidebarOpen">
+    <main class="characters-main" [class.filters-collapsed]="!filtersVisible">
   <!-- Loading State -->
   @if (isLoading) {
     <div class="loading-state">
@@ -345,44 +350,33 @@
         }
         <!-- Cast Name Form Dialog -->
         @if (showCastNameForm) {
-          <div
-            class="cast-name-form-overlay"
-            (click)="cancelCastForm()"
-            >
-            <div class="cast-name-form" (click)="$event.stopPropagation()">
-              <div class="form-header">
-                <h3>Create New Cast</h3>
-                <button class="btn-close" (click)="cancelCastForm()" aria-label="Close"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg></button>
-              </div>
-              <div class="form-body">
-                <p class="form-help">
-                  Enter a name for this cast ({{ selectedCharacterIds.length }}
-                  characters selected)
-                </p>
-                <input
-                  type="text"
-                  [(ngModel)]="newCastName"
-                  placeholder="e.g., Chapter 1 Cast, Battle Scene"
-                  class="form-control"
-                  (keyup.enter)="saveSelectionAsCast()"
-                  (keyup.escape)="cancelCastForm()"
-                  autofocus
-                  />
-              </div>
-              <div class="form-actions">
-                <button class="btn btn-secondary" (click)="cancelCastForm()">
-                  Cancel
-                </button>
-                <button
-                  class="btn btn-primary"
-                  (click)="saveSelectionAsCast()"
-                  [disabled]="!newCastName || newCastName.trim() === ''"
-                  >
-                  Create Cast
-                </button>
-              </div>
+          <app-modal-frame title="Save selection as cast" (closed)="cancelCastForm()">
+            <label class="form-label" for="new-cast-name">Cast name</label>
+            <p class="form-help" id="new-cast-name-help">
+              {{ selectedCharacterIds.length }} {{ selectedCharacterIds.length === 1 ? 'character' : 'characters' }} will be added to the new cast.
+            </p>
+            <input
+              id="new-cast-name"
+              type="text"
+              [(ngModel)]="newCastName"
+              placeholder="e.g., Chapter 1 Cast, Battle Scene"
+              class="form-control"
+              aria-describedby="new-cast-name-help"
+              (keyup.enter)="saveSelectionAsCast()"
+              autofocus
+              />
+            <div class="modal-actions">
+              <button type="button" class="btn btn-secondary" (click)="cancelCastForm()">Cancel</button>
+              <button
+                type="button"
+                class="btn btn-primary"
+                (click)="saveSelectionAsCast()"
+                [disabled]="!newCastName || newCastName.trim() === ''"
+                >
+                Create Cast
+              </button>
             </div>
-          </div>
+          </app-modal-frame>
         }
       </div>
     }
@@ -401,19 +395,11 @@
                   <div
                     class="category-group"
                     >
-                    <div
-                      class="category-tab"
-                      [style.background-color]="metadataHelper.getCategoryColor(group.categoryId)"
-            [style.color]="
-              getContrastTextColor(metadataHelper.getCategoryColor(group.categoryId))
-            "
-                      >
-                      <div class="category-label-content">
-                        <span class="category-name">{{
-                          metadataHelper.getCategoryName(group.categoryId)
-                        }}</span>
-                      </div>
-                    </div>
+                    <h2 class="category-tab">
+                      <span class="category-dot" aria-hidden="true" [style.background-color]="metadataHelper.getCategoryColor(group.categoryId)"></span>
+                      <span class="category-name">{{ metadataHelper.getCategoryName(group.categoryId) }}</span>
+                      <span class="category-count">{{ group.characters.length }}</span>
+                    </h2>
                     <div
                       class="category-content group-content-tinted"
                       [style.--group-color]="metadataHelper.getCategoryColor(group.categoryId)"
@@ -526,15 +512,11 @@
                 >
                 @for (group of getGroupedByTag(); track group; let gi = $index) {
                   <div class="category-group">
-                    <div
-                      class="category-tab"
-                      [style.background-color]="metadataHelper.getTagColor(group.tagId)"
-                      [style.color]="getContrastTextColor(metadataHelper.getTagColor(group.tagId))"
-                      >
-                      <div class="category-label-content">
-                        <span class="category-name">{{ metadataHelper.getTagName(group.tagId) }}</span>
-                      </div>
-                    </div>
+                    <h2 class="category-tab">
+                      <span class="category-dot" aria-hidden="true" [style.background-color]="metadataHelper.getTagColor(group.tagId)"></span>
+                      <span class="category-name">{{ metadataHelper.getTagName(group.tagId) }}</span>
+                      <span class="category-count">{{ group.characters.length }}</span>
+                    </h2>
                     <div
                       class="category-content group-content-tinted"
                       [style.--group-color]="metadataHelper.getTagColor(group.tagId)"
@@ -617,15 +599,11 @@
               <div class="grouped-view">
                 @for (group of getGroupedByCast(); track group.castId; let gi = $index) {
                   <div class="category-group">
-                    <div
-                      class="category-tab"
-                      [style.background-color]="metadataHelper.getCastColor(group.castId)"
-                      [style.color]="getContrastTextColor(metadataHelper.getCastColor(group.castId))"
-                      >
-                      <div class="category-label-content">
-                        <span class="category-name">{{ metadataHelper.getCastName(group.castId) }}</span>
-                      </div>
-                    </div>
+                    <h2 class="category-tab">
+                      <span class="category-dot" aria-hidden="true" [style.background-color]="metadataHelper.getCastColor(group.castId)"></span>
+                      <span class="category-name">{{ metadataHelper.getCastName(group.castId) }}</span>
+                      <span class="category-count">{{ group.characters.length }}</span>
+                    </h2>
                     <div
                       class="category-content group-content-tinted"
                       [style.--group-color]="metadataHelper.getCastColor(group.castId)"
@@ -700,15 +678,11 @@
               <div class="grouped-view">
                 @for (group of getGroupedByBook(); track group.bookId; let gi = $index) {
                   <div class="category-group">
-                    <div
-                      class="category-tab"
-                      [style.background-color]="metadataHelper.getBookColor(group.bookId)"
-                      [style.color]="getContrastTextColor(metadataHelper.getBookColor(group.bookId))"
-                      >
-                      <div class="category-label-content">
-                        <span class="category-name">{{ metadataHelper.getBookName(group.bookId) }}</span>
-                      </div>
-                    </div>
+                    <h2 class="category-tab">
+                      <span class="category-dot" aria-hidden="true" [style.background-color]="metadataHelper.getBookColor(group.bookId)"></span>
+                      <span class="category-name">{{ metadataHelper.getBookName(group.bookId) }}</span>
+                      <span class="category-count">{{ group.characters.length }}</span>
+                    </h2>
                     <div
                       class="category-content group-content-tinted"
                       [style.--group-color]="metadataHelper.getBookColor(group.bookId)"

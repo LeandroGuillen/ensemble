@@ -1,11 +1,12 @@
 // Character Grid
 .character-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: var(--spacing-lg);
 }
 
-// Selected character highlighting
+// Selected character highlighting (arrow-key cursor). Accent colour; keyboard
+// focus uses the separate --focus-ring-color so the two never look alike.
 .character-item.selected {
   outline: 2px solid var(--color-accent-primary);
   outline-offset: 2px;
@@ -22,11 +23,23 @@
   flex-direction: column;
 
   &:hover {
-    transform: translateY(-4px);
-    border-color: var(--color-accent-primary);
+    transform: translateY(-2px);
+    border-color: var(--color-border-light);
 
     .character-actions {
       opacity: 1;
+    }
+  }
+
+  // Keyboard users see the card actions the moment focus enters the card
+  // (no fade, so the focused button is never half-transparent), and the card
+  // edge picks up the focus colour so the owning card is obvious.
+  &:focus-within {
+    border-color: var(--focus-ring-color);
+
+    .character-actions {
+      opacity: 1;
+      transition: none;
     }
   }
 
@@ -40,7 +53,9 @@
 .character-thumbnail {
   position: relative;
   width: 100%;
-  height: 200px;
+  // 3:2 keeps head-and-shoulders portraits recognisable while leaving room
+  // for name, category, tags and summary in the same card.
+  aspect-ratio: 3 / 2;
   background: linear-gradient(135deg, var(--color-bg-tertiary), var(--color-bg-elevated));
   overflow: hidden;
 
@@ -48,6 +63,8 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    // Portraits are usually framed head-and-shoulders: keep faces in view.
+    object-position: 50% 22%;
   }
 
   .thumbnail-placeholder {
@@ -67,7 +84,7 @@
 }
 
 .character-info {
-  padding: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg) var(--spacing-lg);
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -95,28 +112,55 @@
 }
 
 .character-category {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   font-size: 0.8125rem;
   font-weight: 500;
   margin: 0 0 var(--spacing-sm) 0;
-  color: var(--color-accent-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  color: var(--color-text-secondary);
+}
+
+.category-dot,
+.tag-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
 .character-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  margin-bottom: var(--spacing-sm);
+  gap: 6px;
+  margin: 0 0 var(--spacing-sm);
+  padding: 0;
+  list-style: none;
+}
 
-  .tag {
-    font-size: 0.7rem;
-    padding: 2px 8px;
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 22px;
+  padding: 2px 9px 2px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.2;
+
+  .tag-dot {
+    width: 7px;
+    height: 7px;
   }
 }
 
 .character-description {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   line-height: 1.5;
   color: var(--color-text-secondary);
   margin: 0;
@@ -139,9 +183,19 @@
 
   .icon-btn {
     pointer-events: auto; // Buttons remain clickable when visible
-    background-color: rgba(10, 14, 26, 0.8);
+    min-width: 32px;
+    min-height: 32px;
+    background-color: color-mix(in srgb, var(--color-bg-primary) 85%, transparent);
+    color: var(--color-text-primary);
     backdrop-filter: blur(4px);
     border: 1px solid var(--color-border);
+
+    // Over a portrait the ring needs a dark halo to stay visible.
+    &:focus-visible {
+      outline: 2px solid var(--focus-ring-color);
+      outline-offset: 2px;
+      box-shadow: 0 0 0 5px color-mix(in srgb, var(--color-bg-primary) 80%, transparent);
+    }
 
     &:hover {
       background-color: var(--color-bg-tertiary);
@@ -155,10 +209,22 @@
   }
 }
 
+// Short windows (e.g. 800×600): flatter portraits and a two-line summary so a
+// whole row of cards, text included, fits in the visible list.
+@media (max-height: 760px) {
+  .character-thumbnail {
+    aspect-ratio: 2 / 1;
+  }
+
+  .character-description {
+    -webkit-line-clamp: 2;
+  }
+}
+
 // Responsive Design
 @media (max-width: 1200px) {
   .character-grid {
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   }
 }
 

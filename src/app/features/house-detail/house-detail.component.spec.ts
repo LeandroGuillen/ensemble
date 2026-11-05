@@ -6,6 +6,7 @@ import { House, HouseFormData } from '../../core/interfaces/house.interface';
 import { HouseService } from '../../core/services/house.service';
 import { CharacterPickerService, CharacterService, ImagePickerService, LocationService, ProjectService } from '../../core/services';
 import { ElectronService } from '../../core/services/electron.service';
+import { ModalService } from '../../core/services/modal.service';
 
 function house(): House {
   return {
@@ -184,6 +185,32 @@ describe('House editor', () => {
       return true;
     });
     await component.delete();
+    expect(navigate).toHaveBeenCalledWith(['/houses']);
+  });
+
+  it('asks with an explicit "Delete House" dialog before deleting, and does nothing on Cancel', async () => {
+    service.deleteHouse.and.resolveTo();
+    const confirm = spyOn(TestBed.inject(ModalService), 'confirm').and.resolveTo(false);
+    const button = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+      .find(b => b.textContent?.trim() === 'Delete House')!;
+    button.click();
+    await fixture.whenStable();
+    expect(confirm).toHaveBeenCalledWith(jasmine.stringContaining('House Stark'), 'Delete House', jasmine.objectContaining({ confirmText: 'Delete', danger: true }));
+    expect(service.deleteHouse).not.toHaveBeenCalled();
+
+    confirm.and.resolveTo(true);
+    await component.confirmDelete();
+    expect(service.deleteHouse).toHaveBeenCalledWith('stark', 'revision-one');
+  });
+
+  it('offers Cancel/Escape back to the Houses list like the other editors', () => {
+    const navigate = TestBed.inject(Router).navigate as jasmine.Spy;
+    const cancel = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+      .find(b => b.textContent?.includes('Cancel'))!;
+    expect(cancel).toBeTruthy();
+    const escape = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true });
+    component.onKey(escape);
+    expect(escape.defaultPrevented).toBeTrue();
     expect(navigate).toHaveBeenCalledWith(['/houses']);
   });
 

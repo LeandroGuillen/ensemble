@@ -1,4 +1,4 @@
-import { DestroyRef, Injector, NgZone, inject, Component, OnInit, HostListener } from "@angular/core";
+import { DestroyRef, ElementRef, Injector, NgZone, inject, Component, OnInit, HostListener, ViewChild } from "@angular/core";
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterOutlet, NavigationEnd } from "@angular/router";
 
@@ -26,6 +26,7 @@ import { Book } from "./core/interfaces/project.interface";
 })
 export class AppComponent implements OnInit {
   title = "Ensemble";
+  @ViewChild('mainContent') private mainContent?: ElementRef<HTMLElement>;
   hasProject = false;
   isWelcomeScreen = false;
   private projectLoadedAndReady = false;
@@ -65,6 +66,20 @@ export class AppComponent implements OnInit {
     private fileWatcherService: FileWatcherService,
     private injector: Injector,
   ) {}
+
+
+  /** Keyboard bypass for the navigation sidebar: move focus to the page heading. */
+  skipToContent(): void {
+    const main = this.mainContent?.nativeElement;
+    if (!main) return;
+    const heading = main.querySelector<HTMLElement>('h1');
+    if (heading) {
+      heading.setAttribute('tabindex', '-1');
+      heading.focus();
+    } else {
+      main.focus();
+    }
+  }
 
   async ngOnInit() {
     // Main process close/quit/reload asks us to flush book-plan leave first.

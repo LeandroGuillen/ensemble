@@ -76,6 +76,31 @@ export class CharacterFilterComponent {
     private metadataHelper: MetadataHelperService
   ) {}
 
+  /**
+   * Less-used filters (Cast, House, Pictures) start folded so the panel reads
+   * as Categories + Tags + Book first. A section with a value always opens,
+   * and stays open after the value is cleared until the user folds it.
+   */
+  private readonly openSections = new Set<string>();
+
+  isSectionOpen(id: 'cast' | 'house' | 'pictures'): boolean {
+    const active = id === 'cast' ? !!this.selectedCast
+      : id === 'house' ? !!this.selectedHouse
+      : !!this.selectedPictureFilter;
+    if (active) this.openSections.add(id);
+    return this.openSections.has(id);
+  }
+
+  onSectionToggle(id: string, event: Event): void {
+    const open = (event.target as HTMLDetailsElement | null)?.open ?? false;
+    if (open) this.openSections.add(id);
+    else this.openSections.delete(id);
+  }
+
+  getHouseName(houseId: string): string {
+    return this.houses.find(house => house.id === houseId)?.name || 'House';
+  }
+
   toggleExpanded(): void {
     this.isExpanded = !this.isExpanded;
     this.expandedChange.emit(this.isExpanded);

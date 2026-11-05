@@ -54,4 +54,23 @@ describe('LocationTypeSelectComponent', () => {
     fixture.detectChanges();
     expect(trigger.disabled).toBeTrue();
   });
+
+  it('lets Ctrl+Enter through to the editor (Save) instead of opening the list', () => {
+    const fixture = TestBed.createComponent(TestHost);
+    fixture.detectChanges();
+    const trigger: HTMLButtonElement = fixture.nativeElement.querySelector('button');
+    let reachedDocument = false;
+    const listener = () => { reachedDocument = true; };
+    document.addEventListener('keydown', listener);
+    try {
+      const event = new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, bubbles: true, cancelable: true });
+      trigger.dispatchEvent(event);
+      fixture.detectChanges();
+      expect(event.defaultPrevented).toBeFalse();
+      expect(reachedDocument).toBeTrue();
+      expect(trigger.getAttribute('aria-expanded')).toBe('false');
+    } finally {
+      document.removeEventListener('keydown', listener);
+    }
+  });
 });

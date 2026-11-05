@@ -82,6 +82,15 @@ export class CharacterCompactViewComponent {
     return this.selectedCharacterIds.includes(characterId);
   }
 
+  /** Enter/Space open the card only when the card itself has focus, not one of its buttons. */
+  onCardKeydown(event: Event, character: Character): void {
+    if (event.target !== event.currentTarget) {
+      return;
+    }
+    event.preventDefault();
+    this.onCharacterClick(character);
+  }
+
   onCharacterClick(character: Character): void {
     if (this.dragInProgress) {
       return;

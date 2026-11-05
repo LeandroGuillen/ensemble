@@ -1,12 +1,13 @@
-<div class="category-toggle">
+<div class="category-toggle" role="group">
   <button
     type="button"
     class="toggle-option"
     [class.active]="selectedValue === ''"
     [class.outlined]="outlinedValue === ''"
     [class.error]="error"
+    [attr.aria-pressed]="selectedValue === ''"
     (click)="onOptionClick('', $event)"
-    [title]="outlinedValue === '' && outlinedTooltip ? outlinedTooltip : (emptyLabel === 'All' ? 'Show all categories' : 'No category')"
+    [title]="outlinedValue === '' && outlinedTooltip ? outlinedTooltip : (emptyLabel === 'All' ? 'Show all' : 'No category')"
     >
     {{ emptyLabel }}
   </button>
@@ -17,10 +18,13 @@
       [class.active]="selectedValue === option.id"
       [class.outlined]="outlinedValue === option.id"
       [class.error]="error"
-      [style.--option-color]="option.color || null"
+      [attr.aria-pressed]="selectedValue === option.id"
       (click)="onOptionClick(option.id, $event)"
       [title]="getOptionTitle(option)"
       >
+      @if (option.color) {
+        <span class="option-dot" aria-hidden="true" [style.background-color]="option.color"></span>
+      }
       {{ option.name }}
     </button>
   }

@@ -17,6 +17,20 @@ export function isEditableKeyboardTarget(target: EventTarget | null): boolean {
   return !!target.closest('[contenteditable="true"]');
 }
 
+/**
+ * True when Enter/Space on this target already activates a control of its own
+ * (a button, link, card or menu item). List-level "open the highlighted item"
+ * shortcuts must leave those keys to the focused control.
+ */
+export function isInteractiveKeyboardTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement) || target === document.body) {
+    return false;
+  }
+  return !!target.closest(
+    'button, a[href], summary, [role="button"], [role="link"], [role="menuitem"], [role="menuitemradio"], [role="option"], [role="tab"]'
+  );
+}
+
 /** True when Ctrl, Alt, or Meta is held (single-letter shortcuts must ignore these). */
 export function hasShortcutModifier(event: Pick<KeyboardEvent, 'ctrlKey' | 'altKey' | 'metaKey'>): boolean {
   return event.ctrlKey || event.altKey || event.metaKey;

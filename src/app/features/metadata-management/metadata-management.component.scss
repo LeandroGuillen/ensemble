@@ -216,11 +216,9 @@
   > label:not(.checkbox-label) {
     display: block;
     margin-bottom: var(--spacing-xs);
-    color: var(--color-text-secondary);
-    font-weight: 500;
-    font-size: 0.8125rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+    color: var(--color-text-primary);
+    font-weight: 600;
+    font-size: 0.875rem;
   }
 
   .field-error {
@@ -231,7 +229,8 @@
 
   .form-help {
     display: block;
-    color: var(--color-text-muted);
+    max-width: 40rem;
+    color: var(--color-text-secondary);
     font-size: 0.8125rem;
     margin-top: var(--spacing-xs);
     line-height: 1.5;
@@ -239,7 +238,7 @@
 
   .form-control {
     width: 100%;
-    max-width: 28rem;
+    max-width: 36rem;
     padding: var(--spacing-sm) var(--spacing-md);
     background: var(--color-bg-tertiary);
     border: 1px solid var(--color-border);
@@ -612,7 +611,7 @@
           align-items: center;
           background: var(--color-accent-subtle);
           color: var(--color-accent-primary);
-          font-size: 0.625rem;
+          font-size: 0.6875rem;
           padding: 2px 8px;
           border-radius: var(--radius-full);
           font-weight: 600;
@@ -1221,4 +1220,29 @@
 .character-styles-hint {
   display: block;
   margin-top: var(--spacing-sm);
+}
+
+// Wide Settings panel: label (and its help) on the left, field on the right,
+// so forms use the width instead of a narrow column beside empty space.
+@container settings-panel (min-width: 720px) {
+  .metadata-panel .settings-fields {
+    max-width: 54rem;
+  }
+
+  .metadata-panel .settings-fields .form-group:has(> label:first-child:not(.checkbox-label)) {
+    display: grid;
+    grid-template-columns: minmax(10rem, 15rem) minmax(0, 36rem);
+    column-gap: var(--spacing-xl);
+    align-items: start;
+
+    > label:first-child {
+      grid-column: 1;
+      grid-row: 1 / span 4;
+      padding-top: 0.55rem;
+    }
+
+    > :not(label:first-child) {
+      grid-column: 2;
+    }
+  }
 }

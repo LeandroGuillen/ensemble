@@ -122,6 +122,8 @@
                       #threadNameRow
                       (mouseenter)="onThreadNameRowEnter(thread.id, threadNameRow)"
                       (mouseleave)="onThreadNameRowLeave(thread.id)"
+                      (focusin)="onThreadNameRowEnter(thread.id, threadNameRow)"
+                      (focusout)="onThreadNameRowFocusOut(thread.id, $event)"
                     >
                       <div
                         class="thread-name-cluster"
@@ -130,19 +132,25 @@
                         <div
                           class="thread-icon-picker-anchor"
                           [class.thread-icon-picker-anchor--empty]="!thread.icon"
+                          (keydown.escape)="closeIconPicker($event, threadIconBtn)"
                         >
-                          <span
+                          <button
+                            #threadIconBtn
+                            type="button"
                             class="thread-icon-btn thread-icon-picker-area"
                             (click)="toggleThreadIconPicker(thread.id); $event.stopPropagation()"
-                            [attr.title]="thread.icon ? 'Change icon' : null"
+                            [attr.title]="thread.icon ? 'Change icon' : 'Add icon'"
+                            [attr.aria-label]="(thread.icon ? 'Change icon for thread ' : 'Add icon to thread ') + thread.name"
+                            aria-haspopup="dialog"
+                            [attr.aria-expanded]="showThreadIconPicker === thread.id"
                           >
                             @if (thread.icon) {
-                              <span>{{ thread.icon }}</span>
+                              <span aria-hidden="true">{{ thread.icon }}</span>
                             }
                             @if (!thread.icon) {
                               <svg class="ui-icon plot-icon-placeholder" aria-hidden="true"><use href="assets/ui-icons.svg#smile" /></svg>
                             }
-                          </span>
+                          </button>
                           @if (showThreadIconPicker === thread.id) {
                             <div class="icon-picker-dropdown thread-icon-picker-area">
                               <app-emoji-picker
@@ -161,6 +169,14 @@
                             (dragstart)="reorder.onThreadNameDragStart($event, ti, editingThreadName)"
                             (dragend)="reorder.onThreadNameDragEnd($event)"
                             (dblclick)="startEditThreadName(thread.id); $event.preventDefault()"
+                            tabindex="0"
+                            role="button"
+                            [attr.data-thread-id]="thread.id"
+                            [attr.aria-label]="'Thread ' + thread.name + '. Enter to rename, Up arrow for thread actions'"
+                            (keydown.arrowup)="focusThreadToolbar(thread.id, $event)"
+                            (keydown.enter)="startEditThreadName(thread.id); $event.preventDefault()"
+                            (keydown.f2)="startEditThreadName(thread.id); $event.preventDefault()"
+                            (keydown.space)="startEditThreadName(thread.id); $event.preventDefault()"
                             [attr.title]="threadNameHoverTitle(thread)"
                           >
                             {{ thread.name }}
@@ -182,10 +198,12 @@
                   @if (getThreadCharacters(thread.id).length > 0) {
                     <div class="linked-characters">
                       @for (char of getThreadCharacters(thread.id); track char) {
-                        <span
+                        <button
+                          type="button"
                           class="character-thumb"
                           [class.pending-removal]="isCharacterPendingRemoval(thread.id, char.id)"
                           [title]="isCharacterPendingRemoval(thread.id, char.id) ? 'Click again to remove ' + char.name : char.name"
+                          [attr.aria-label]="isCharacterPendingRemoval(thread.id, char.id) ? 'Confirm: remove ' + char.name + ' from ' + thread.name : char.name + ' (in ' + thread.name + '). Activate twice to remove'"
                           (click)="onCharacterThumbClick(thread.id, char.id); $event.stopPropagation()"
                         >
                           @if (getCharacterThumbnail(char.id)) {
@@ -203,7 +221,7 @@
                           @if (isCharacterPendingRemoval(thread.id, char.id)) {
                             <span class="thumb-remove-badge"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg></span>
                           }
-                        </span>
+                        </button>
                       }
                     </div>
                   }
@@ -220,19 +238,24 @@
                 (drop)="onRowLabelDrop($event, rowIdx)"
               >
                 <div class="row-label-content">
-                  <div class="row-icon-picker-anchor">
-                    <span
+                  <div class="row-icon-picker-anchor" (keydown.escape)="closeIconPicker($event, rowIconBtn)">
+                    <button
+                      #rowIconBtn
+                      type="button"
                       class="row-icon-btn row-icon-picker-area"
                       (click)="toggleRowIconPicker(rowIdx); $event.stopPropagation()"
                       [title]="row.icon ? 'Change icon' : 'Add icon'"
+                      [attr.aria-label]="(row.icon ? 'Change icon for row ' : 'Add icon to row ') + row.name"
+                      aria-haspopup="dialog"
+                      [attr.aria-expanded]="showRowIconPicker === rowIdx"
                     >
                       @if (row.icon) {
-                        <span>{{ row.icon }}</span>
+                        <span aria-hidden="true">{{ row.icon }}</span>
                       }
                       @if (!row.icon) {
                         <svg class="ui-icon plot-icon-placeholder" aria-hidden="true"><use href="assets/ui-icons.svg#smile" /></svg>
                       }
-                    </span>
+                    </button>
                     @if (showRowIconPicker === rowIdx) {
                       <div class="icon-picker-dropdown row-icon-picker-area">
                         <app-emoji-picker
@@ -251,6 +274,12 @@
                       (dragstart)="reorder.onRowNameDragStart($event, rowIdx, editingRowName)"
                       (dragend)="reorder.onRowNameDragEnd($event)"
                       (dblclick)="startEditRowName(rowIdx); $event.preventDefault()"
+                      tabindex="0"
+                      role="button"
+                      [attr.aria-label]="'Row ' + row.name + '. Press Enter to rename'"
+                      (keydown.enter)="startEditRowName(rowIdx); $event.preventDefault()"
+                      (keydown.f2)="startEditRowName(rowIdx); $event.preventDefault()"
+                      (keydown.space)="startEditRowName(rowIdx); $event.preventDefault()"
                       [attr.title]="rowNameHoverTitle(row)"
                     >
                       {{ row.name }}
@@ -269,12 +298,9 @@
                   <button
                     type="button"
                     class="btn-icon-sm btn-danger row-remove"
-                    appConfirmButton
-                    confirmLabel="Confirm delete"
-                    armedClass="confirm-delete-btn"
-                    (armedChange)="onRowDeleteArmed(rowIdx, $event)"
-                    (confirmed)="confirmDeleteRow(rowIdx); $event.stopPropagation()"
-                    title="Remove row"
+                    (click)="askDeleteRow(rowIdx); $event.stopPropagation()"
+                    title="Delete row"
+                    [attr.aria-label]="'Delete row ' + row.name"
                   >
                     &times;
                   </button>
@@ -310,7 +336,7 @@
                         </span>
                       }
                       @if (getCellValue(rowIdx, thread.id)) {
-                        <span class="event-text">{{ getCellValue(rowIdx, thread.id) }}</span>
+                        <span class="event-text">{{ getCellValue(rowIdx, thread.id) | wikiText }}</span>
                       }
                     </div>
                   }
@@ -358,6 +384,7 @@
       (addCharacter)="addCharacterToThread($event)"
       (requestDelete)="requestDeleteThread($event)"
       (confirmDelete)="confirmDeleteThread($event)"
+      (deleteRequested)="askDeleteThread($event)"
     />
   }
 </div>

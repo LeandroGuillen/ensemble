@@ -1,16 +1,17 @@
-<div class="multi-select-buttons" [class.compact]="compact">
+<div class="multi-select-buttons" [class.compact]="compact" role="group" [attr.aria-label]="label || null">
   @for (item of items; track item.id) {
     <button
       type="button"
       class="select-button"
       [class.active]="isItemSelected(item.id)"
-      [style.background-color]="isItemSelected(item.id) ? item.color : 'transparent'"
-      [style.color]="isItemSelected(item.id) ? (item.activeTextColor || 'white') : item.color"
-      [style.border-color]="item.color"
       [attr.aria-pressed]="isItemSelected(item.id)"
       (click)="onItemToggle(item.id)"
       >
-      {{ item.name }}
+      <span class="select-dot" aria-hidden="true" [style.background-color]="item.color"></span>
+      <span class="select-name">{{ item.name }}</span>
+      @if (isItemSelected(item.id)) {
+        <svg class="select-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+      }
     </button>
   }
 </div>

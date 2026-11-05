@@ -26,7 +26,7 @@ export const sepiaTheme: Theme = {
     // Text colors - Warm creams and light browns
     textPrimary: '#f5f0e8',
     textSecondary: '#d4c5b0',
-    textMuted: '#9d8e7a',
+    textMuted: '#ac9d89',
     textInverse: '#1a1612',
 
     // Border colors - Subtle brown separations

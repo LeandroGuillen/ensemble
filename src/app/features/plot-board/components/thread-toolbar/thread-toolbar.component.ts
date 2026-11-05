@@ -2,12 +2,11 @@ import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 
 import { PlotThread } from '../../../../core/interfaces/plot-board.interface';
 import { ColorSwatchPickerComponent } from '../../../../shared/color-swatch-picker/color-swatch-picker.component';
-import { ConfirmButtonDirective } from '../../../../shared/confirm-button/confirm-button.directive';
 import { ThreadToolbarService } from './thread-toolbar.service';
 
 @Component({
   selector: 'app-thread-toolbar',
-  imports: [ColorSwatchPickerComponent, ConfirmButtonDirective],
+  imports: [ColorSwatchPickerComponent],
   templateUrl: './thread-toolbar.component.html',
   styleUrls: ['./thread-toolbar.component.scss'],
 })
@@ -25,6 +24,8 @@ export class ThreadToolbarComponent {
   @Output() addCharacter = new EventEmitter<string>();
   @Output() requestDelete = new EventEmitter<string>();
   @Output() confirmDelete = new EventEmitter<string>();
+  /** Delete pressed: the board asks with the shared confirmation dialog. */
+  @Output() deleteRequested = new EventEmitter<string>();
 
   onToolbarMouseEnter(threadId: string): void {
     this.toolbar.onToolbarMouseEnter(threadId);
@@ -63,6 +64,28 @@ export class ThreadToolbarComponent {
     } else if (this.confirmDeleteThreadId === threadId) {
       this.requestDelete.emit('');
     }
+  }
+
+  onDeleteClick(threadId: string, event: Event): void {
+    event.stopPropagation();
+    this.deleteRequested.emit(threadId);
+  }
+
+  /** Keyboard users keep the toolbar while focus is inside it. */
+  onToolbarFocusOut(threadId: string, event: FocusEvent): void {
+    const next = event.relatedTarget as Node | null;
+    const toolbar = event.currentTarget as HTMLElement | null;
+    if (next && toolbar?.contains(next)) return;
+    this.onToolbarMouseLeave(threadId);
+  }
+
+  /** Escape returns to the thread name the toolbar belongs to. */
+  onToolbarEscape(threadId: string, event: Event): void {
+    if (this.showThreadColorPicker === threadId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const name = document.querySelector<HTMLElement>(`.thread-name[data-thread-id="${CSS.escape(threadId)}"]`);
+    name?.focus();
   }
 
   onConfirmDelete(threadId: string, event: Event): void {

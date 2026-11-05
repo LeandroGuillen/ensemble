@@ -5,10 +5,11 @@ import { Character, Tag, Category } from "../../../../core/interfaces";
 import { MetadataHelperService } from "../../../../core/services/metadata-helper.service";
 import { resolveEffectiveCategory } from "../../../../core/utils/character-category.utils";
 import { getCharacterDisplayName } from "../../../../core/utils/character-display.utils";
+import { ExcerptPipe } from "../../../../shared/pipes/excerpt.pipe";
 
 @Component({
     selector: "app-character-grid-view",
-    imports: [DragDropModule],
+    imports: [DragDropModule, ExcerptPipe],
     templateUrl: "./character-grid-view.component.html",
     styleUrls: ["./character-grid-view.component.scss"]
 })

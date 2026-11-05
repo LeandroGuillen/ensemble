@@ -3,6 +3,34 @@ $sidebar-width-collapsed: 60px;
 $transition-duration: 250ms;
 $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
 
+:host {
+  display: flex;
+  flex-shrink: 0;
+}
+
+// Narrow window, labels requested: the sidebar floats over the page while
+// this spacer keeps the icon rail's width so the content does not jump.
+.sidebar-rail-spacer {
+  width: $sidebar-width-collapsed;
+  flex-shrink: 0;
+}
+
+.sidebar-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 1090;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.sidebar.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 1100;
+  box-shadow: var(--shadow-xl);
+}
+
 .sidebar {
   width: $sidebar-width-expanded;
   height: 100vh;
@@ -54,12 +82,17 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
   align-items: center;
   gap: var(--spacing-sm);
   min-height: 40px;
+  max-width: calc(#{$sidebar-width-expanded} - 56px);
   padding: 6px var(--spacing-sm);
+  border: 0;
   border-radius: var(--radius-lg);
   cursor: pointer;
   transition: all var(--transition-base);
   overflow: hidden;
   background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
 
   &:hover {
     background: var(--color-bg-tertiary);
@@ -79,6 +112,24 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
     width: 28px;
     height: 28px;
     transition: all var(--transition-base);
+  }
+
+  .brand-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  .brand-project {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--color-text-secondary);
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.1;
   }
 
   .brand-text {
@@ -111,12 +162,12 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
 .sidebar-search {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
-  padding: var(--spacing-sm) var(--spacing-xs);
-  background: transparent;
-  border: none;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-sm);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   cursor: pointer;
   transition: all var(--transition-fast);
   min-height: 36px;
@@ -129,7 +180,6 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
     width: 16px;
     height: 16px;
     flex-shrink: 0;
-    opacity: 0.55;
     transition: all var(--transition-fast);
   }
 
@@ -146,11 +196,11 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
     background: transparent;
     border: none;
     border-radius: var(--radius-sm);
-    font-size: 0.6875rem;
-    font-family: var(--font-mono, monospace);
+    font-size: 0.75rem;
+    font-family: inherit;
     color: var(--color-text-muted);
+    box-shadow: none;
     white-space: nowrap;
-    opacity: 0.7;
   }
 
   &:hover {
@@ -174,6 +224,8 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
     justify-content: center;
     padding: var(--spacing-sm);
     flex: 1;
+    background: transparent;
+    border-color: transparent;
   }
 }
 
@@ -185,15 +237,17 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
   padding: var(--spacing-sm);
   background: transparent;
   border: none;
+  min-width: 36px;
+  min-height: 36px;
   border-radius: var(--radius-md);
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   cursor: pointer;
   transition: all var(--transition-fast);
   flex-shrink: 0;
 
   svg {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
   }
 
   &:hover {
@@ -290,13 +344,11 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .section-label {
-    font-size: 0.625rem;
+    font-size: 0.75rem;
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.01em;
     color: var(--color-text-muted);
     white-space: nowrap;
-    opacity: 0.7;
   }
 
   .section-divider {
@@ -361,18 +413,33 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
     }
   }
 
+  // Current page: tinted surface, accent ring and accent icon. The solid
+  // accent fill stays reserved for each page's primary action.
+  // A left accent bar (not a ring) marks the place, so it never resembles
+  // the keyboard focus outline.
   &.active {
-    background: linear-gradient(135deg, var(--color-accent-primary) 0%, var(--color-accent-dark) 100%);
-    color: var(--color-text-inverse);
-    box-shadow: 0 2px 8px rgba(229, 168, 85, 0.25);
+    background: var(--selected-bg);
+    color: var(--selected-fg);
+    box-shadow: inset 3px 0 0 var(--color-accent-primary);
 
     .nav-icon {
       opacity: 1;
-      color: var(--color-text-inverse);
+      color: var(--color-accent-primary);
     }
 
-    &:hover {
-      box-shadow: 0 4px 12px rgba(229, 168, 85, 0.35);
+    .nav-label {
+      font-weight: 600;
+    }
+  }
+
+  // Inside a collection's page (a character, a House, a book…): same marker,
+  // lighter tint, so "you are within Characters" reads differently from
+  // "you are on the Characters list".
+  &.active.active-parent {
+    background: color-mix(in srgb, var(--color-accent-primary) 9%, transparent);
+
+    .nav-label {
+      font-weight: 500;
     }
   }
 
@@ -387,12 +454,9 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
 .sidebar-version {
   padding: var(--spacing-xs) var(--spacing-md) var(--spacing-sm);
   color: var(--color-text-muted);
-  font-family: var(--font-mono, monospace);
-  font-size: 0.6875rem;
-  letter-spacing: 0.02em;
+  font-size: 0.75rem;
   white-space: nowrap;
   text-align: center;
-  opacity: 0.75;
 }
 
 .sidebar-footer {
@@ -410,12 +474,14 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
     padding: var(--spacing-sm) var(--spacing-sm);
     background: transparent;
     border: none;
+    min-height: 36px;
+    min-width: 36px;
+    justify-content: center;
     border-radius: var(--radius-md);
-    color: var(--color-text-muted);
+    color: var(--color-text-secondary);
     cursor: pointer;
     transition: all var(--transition-fast);
     flex-shrink: 1;
-    min-width: 0;
 
     svg {
       width: 18px;
@@ -473,7 +539,7 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
     &.update-busy { cursor: progress; }
 
     &:focus-visible {
-      outline: 2px solid var(--color-accent-primary);
+      outline: 2px solid var(--focus-ring-color);
       outline-offset: 2px;
     }
 
@@ -628,7 +694,7 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
 .theme-menu-heading {
   padding: 2px var(--spacing-sm);
   color: var(--color-text-muted);
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -765,4 +831,49 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
   height: 14px;
   flex-shrink: 0;
   color: var(--color-accent-primary);
+}
+
+// Short windows (e.g. 800×600): tighten the icon rail so every destination
+// stays visible without scrolling the navigation.
+@media (max-height: 720px) {
+  .sidebar.collapsed {
+    .sidebar-top {
+      height: 84px;
+    }
+
+    .sidebar-brand {
+      top: 42px;
+    }
+
+    .sidebar-search-row {
+      margin-bottom: 2px;
+      gap: 0;
+    }
+
+    .sidebar-search,
+    .sidebar-new-character {
+      min-height: 32px;
+      padding: 6px;
+    }
+
+    .nav-section:not(:last-child) {
+      margin-bottom: 2px;
+      padding-bottom: 2px;
+    }
+
+    .section-header.collapsed {
+      padding: 4px;
+      min-height: 10px;
+    }
+
+    .nav-item {
+      min-height: 32px;
+      padding: 6px;
+    }
+
+    .sidebar-footer .footer-btn {
+      min-height: 30px;
+      padding: 6px;
+    }
+  }
 }

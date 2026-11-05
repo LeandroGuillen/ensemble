@@ -181,6 +181,14 @@
             <div class="detail-panel">
               <div class="detail-header">
                 <div class="detail-actions">
+                  @if (!editingConceptNotes) {
+                    <button
+                      type="button"
+                      class="btn btn-secondary btn-sm edit-notes-button"
+                      [attr.aria-label]="'Edit notes for ' + (getSelectedConcept()?.title || 'Untitled concept')"
+                      (click)="toggleEditNotes()"
+                    >Edit notes</button>
+                  }
                   <button
                     class="btn btn-secondary btn-sm"
                     (click)="startDraftFromConcept(getSelectedConcept()!)"
@@ -209,18 +217,20 @@
                 @if (!editingConceptNotes) {
                   <div class="notes-view-mode" (click)="toggleEditNotes()">
                     <div class="markdown-content" [innerHTML]="renderMarkdown(getSelectedConcept()?.notes)"></div>
-                    <div class="edit-hint">Click to edit</div>
                   </div>
                 }
                 @if (editingConceptNotes) {
                   <textarea
                     class="form-control notes-textarea"
                     [value]="getSelectedConcept()?.notes || ''"
-                    (blur)="updateConcept(selectedConceptIndex!, { notes: $any($event.target).value }); editingConceptNotes = false"
-                    (keydown.escape)="editingConceptNotes = false"
+                    [attr.aria-label]="'Notes for ' + (getSelectedConcept()?.title || 'Untitled concept')"
+                    aria-describedby="concept-notes-help"
+                    (blur)="finishEditingNotes($any($event.target).value)"
+                    (keydown.escape)="$event.preventDefault(); $event.stopPropagation(); finishEditingNotes($any($event.target).value, true)"
                     placeholder="Jot down your ideas here... (Markdown supported)"
                     #notesTextarea
                   ></textarea>
+                  <p id="concept-notes-help" class="notes-help">Changes save when you leave this field. Esc finishes editing.</p>
                 }
               </div>
             </div>

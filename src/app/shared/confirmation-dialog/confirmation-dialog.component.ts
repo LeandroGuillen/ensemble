@@ -1,6 +1,8 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { ModalFrameComponent } from '../modal-frame/modal-frame.component';
 
+let nextConfirmationId = 0;
+
 @Component({
   selector: 'app-confirmation-dialog',
   imports: [ModalFrameComponent],
@@ -17,6 +19,8 @@ export class ConfirmationDialogComponent {
   @Input() secondaryText = '';
   @Input() confirmButtonClass = 'btn-primary';
   @Input() danger = false;
+
+  readonly messageId = `confirmation-message-${++nextConfirmationId}`;
 
   @Output() visibleChange = new EventEmitter<boolean>();
   @Output() confirm = new EventEmitter<void>();

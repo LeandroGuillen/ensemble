@@ -70,6 +70,11 @@ export class LocationTypeSelectComponent implements ControlValueAccessor {
       this.close();
       return;
     }
+    // Ctrl/Cmd+Enter is the editor's Save shortcut: commit any open choice and let it through.
+    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+      if (this.open) this.select(this.activeIndex);
+      return;
+    }
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       event.stopPropagation();

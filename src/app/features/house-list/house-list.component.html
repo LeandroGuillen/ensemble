@@ -1,10 +1,18 @@
 <div class="houses-page">
   <app-page-header title="Houses">
     <div class="actions">
-      <input class="form-control" type="search" aria-label="Search houses" placeholder="Search houses…" [(ngModel)]="search" />
-      <button class="btn btn-secondary" (click)="refresh()" [disabled]="loading">Refresh</button>
-      <button type="button" class="btn btn-primary" (click)="createNewHouse()">New House</button>
-      <kbd class="shortcut-hint">N</kbd>
+      <button type="button" class="icon-btn" (click)="refresh()" [disabled]="loading" title="Refresh houses" aria-label="Refresh houses"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#refresh" /></svg></button>
+      <button type="button" class="btn btn-primary" (click)="createNewHouse()" title="New House (N)">
+        <svg class="ui-icon plus-glyph" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
+        New House
+        <kbd class="shortcut-hint">N</kbd>
+      </button>
+    </div>
+    <div pageHeaderToolbar class="house-toolbar">
+      <input class="form-control house-search" type="search" aria-label="Search houses" placeholder="Search houses by name or motto…" [(ngModel)]="search" />
+      @if (!loading) {
+        <span class="result-count" aria-live="polite">{{ filtered.length }} {{ filtered.length === 1 ? 'House' : 'Houses' }}</span>
+      }
     </div>
   </app-page-header>
   <main>
@@ -35,8 +43,7 @@
             <div class="card-body">
               <h2>{{ house.name }}</h2>
               @if (house.motto) { <p class="motto">“{{ house.motto }}”</p> }
-              <div class="meta"><span>{{ house.characterIds.length }} members</span><span>{{ house.leadership.length }} reigns</span></div>
-              <div class="colors">@for (color of house.colors; track $index) { <span [style.background]="color" [title]="color"></span> }</div>
+              <div class="meta"><span>{{ house.characterIds.length }} {{ house.characterIds.length === 1 ? 'member' : 'members' }}</span><span>{{ house.leadership.length }} {{ house.leadership.length === 1 ? 'reign' : 'reigns' }}</span></div>
             </div>
           </a>
         }

@@ -218,6 +218,22 @@ export class HouseDetailComponent implements OnInit, OnDestroy {
     const id = this.house?.id || this.route.snapshot.paramMap.get('id');
     try { await this.houses.loadHouses(true); await this.open(id); } catch (error) { this.toasts.showError(String(error)); }
   }
+  /** Explicit dialog, same pattern as every other delete (title + "Delete" verb + Undo toast). */
+  async confirmDelete(): Promise<void> {
+    if (!this.house || this.saving || this.pickingMember || this.conflict) return;
+    const ok = await this.modal.confirm(
+      `Delete "${this.house.name}"?\n\nThe House file moves to the system Trash. Its characters and crest image are kept. You can undo for 15 seconds.`,
+      'Delete House',
+      { confirmText: 'Delete', danger: true }
+    );
+    if (ok) await this.delete();
+  }
+
+  /** Header Cancel / Esc: leave for the Houses list (unsaved changes are confirmed by the leave guard). */
+  cancel(): void {
+    void this.router.navigate(['/houses']);
+  }
+
   async delete(): Promise<void> {
     if (!this.house || this.saving || this.pickingMember || this.conflict) return;
     this.saving = true;
@@ -255,7 +271,14 @@ export class HouseDetailComponent implements OnInit, OnDestroy {
   }
   @HostListener('window:beforeunload', ['$event']) beforeUnload(event: BeforeUnloadEvent): void { if (this.dirty) event.preventDefault(); }
   @HostListener('document:keydown', ['$event']) onKey(event: KeyboardEvent): void {
-    if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && !this.showPicker && !this.pickingMember) { event.preventDefault(); void this.save(); }
+    if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && !this.showPicker && !this.pickingMember) { event.preventDefault(); void this.save(); return; }
+    // Same as the character and location editors: Escape leaves (the description
+    // editor and dialogs handle their own Escape first and mark it handled).
+    if (event.key === 'Escape' && !event.defaultPrevented && !this.showPicker && !this.pickingMember && !this.saving &&
+        !document.querySelector('.modal-overlay, .command-palette-backdrop, .shortcuts-backdrop, .image-picker-overlay')) {
+      event.preventDefault();
+      this.cancel();
+    }
   }
   ngOnDestroy(): void { ++this.request; this.picker.close(); }
 }

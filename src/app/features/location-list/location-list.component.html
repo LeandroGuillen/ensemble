@@ -1,5 +1,6 @@
 <div class="location-list">
   <app-page-header [title]="'Locations'">
+    <button class="icon-btn" (click)="refreshLocations()" title="Refresh locations" aria-label="Refresh locations"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#refresh" /></svg></button>
     <button
       class="btn btn-primary"
       (click)="createNewLocation()"
@@ -102,8 +103,6 @@
           List
         </button>
       </div>
-
-      <button class="btn btn-secondary btn-icon" (click)="refreshLocations()" title="Refresh" aria-label="Refresh locations"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#refresh" /></svg></button>
     </div>
   </app-page-header>
 
@@ -152,7 +151,13 @@
               class="location-card location-item"
               [attr.data-index]="i"
               [class.selected]="selectedLocationIndex === i"
+              role="button"
+              tabindex="0"
+              [attr.aria-label]="'Open ' + location.name"
+              (focus)="selectedLocationIndex = i"
               (click)="editLocation(location)"
+              (keydown.enter)="editLocation(location); $event.preventDefault(); $event.stopPropagation()"
+              (keydown.space)="editLocation(location); $event.preventDefault(); $event.stopPropagation()"
             >
               <div class="location-thumbnail">
                 @if (getLocationThumbnail(location)) {
@@ -168,13 +173,7 @@
                 <div class="location-meta-row">
                   <span class="type-pill">{{ getTypeLabel(location.type) }}</span>
                   @for (book of getLocationBooks(location); track book.id) {
-                    <span
-                      class="book-pill"
-                      [style.background-color]="book.color"
-                      [style.color]="getBookTextColor(book.color)"
-                    >
-                      {{ getBookLabel(book) }}
-                    </span>
+                    <span class="book-pill"><span class="tag-dot" aria-hidden="true" [style.background-color]="book.color"></span>{{ getBookLabel(book) }}</span>
                   }
                 </div>
               </div>
@@ -190,7 +189,13 @@
               class="location-list-item location-item"
               [attr.data-index]="i"
               [class.selected]="selectedLocationIndex === i"
+              role="button"
+              tabindex="0"
+              [attr.aria-label]="'Open ' + location.name"
+              (focus)="selectedLocationIndex = i"
               (click)="editLocation(location)"
+              (keydown.enter)="editLocation(location); $event.preventDefault(); $event.stopPropagation()"
+              (keydown.space)="editLocation(location); $event.preventDefault(); $event.stopPropagation()"
             >
               <div class="location-thumbnail-small">
                 @if (getLocationThumbnail(location)) {
@@ -206,13 +211,7 @@
                 <div class="location-meta-row location-meta-row--end">
                   <span class="type-pill">{{ getTypeLabel(location.type) }}</span>
                   @for (book of getLocationBooks(location); track book.id) {
-                    <span
-                      class="book-pill"
-                      [style.background-color]="book.color"
-                      [style.color]="getBookTextColor(book.color)"
-                    >
-                      {{ getBookLabel(book) }}
-                    </span>
+                    <span class="book-pill"><span class="tag-dot" aria-hidden="true" [style.background-color]="book.color"></span>{{ getBookLabel(book) }}</span>
                   }
                 </div>
               </div>

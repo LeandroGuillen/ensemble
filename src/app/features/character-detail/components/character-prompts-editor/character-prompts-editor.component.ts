@@ -9,6 +9,13 @@ import { CharacterPrompt } from '../../../../core/interfaces';
   styleUrls: ['./character-prompts-editor.component.scss'],
 })
 export class CharacterPromptsEditorComponent implements OnChanges {
+  /** Folded by default; stays as the user leaves it for this editor instance. */
+  promptsOpen = false;
+
+  onPanelToggle(event: Event): void {
+    this.promptsOpen = (event.target as HTMLDetailsElement | null)?.open ?? false;
+  }
+
   @Input() prompts: CharacterPrompt[] = [];
   @Output() promptsChange = new EventEmitter<CharacterPrompt[]>();
 

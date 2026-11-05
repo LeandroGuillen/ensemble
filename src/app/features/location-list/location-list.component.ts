@@ -19,6 +19,7 @@ import {
   isEditableKeyboardTarget,
   moveListSelection,
   plainLetterKey,
+  isInteractiveKeyboardTarget,
 } from '../../core/utils/list-keyboard.utils';
 
 @Component({
@@ -136,7 +137,7 @@ export class LocationListComponent implements OnInit {
       return;
     }
 
-    if (event.key === 'Enter' && this.selectedLocationIndex >= 0) {
+    if (event.key === 'Enter' && this.selectedLocationIndex >= 0 && !isInteractiveKeyboardTarget(event.target)) {
       event.preventDefault();
       const selected = this.filteredLocations[this.selectedLocationIndex];
       if (selected) {
