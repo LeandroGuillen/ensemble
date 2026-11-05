@@ -1361,3 +1361,6 @@
     text-decoration: underline;
   }
 }
+
+.infobox-danger summary { cursor: pointer; min-height: 36px; padding-block: 8px; color: var(--color-text-secondary); }
+.infobox-danger .danger-link { min-height: 36px; }

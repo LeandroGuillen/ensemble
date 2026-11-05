@@ -3,6 +3,7 @@
     @if (book?.code) {
       <span pageHeaderPrefix class="book-code">{{ book?.code }}</span>
     }
+    <button pageHeaderPrefix type="button" class="btn btn-ghost" (click)="backToLibrary()">← Books</button>
     <div class="header-actions">
       @if (state) {
         <span class="save-status" [class.warn]="state.conflict !== null || state.error">{{ saveStatus }}</span>
@@ -35,11 +36,12 @@
   } @else if (!state) {
     <div class="plan-empty">
       <h2>No plan yet</h2>
-      <p>
+      <p>Organize your story into phases, chapters and scenes.</p>
+      <details><summary>Plan file format</summary><p>
         A plan is a Markdown file with <code>#</code> phases, <code>## 2180 - Title</code> chapters and
         <code>###</code> scenes. Add <code>PoV: &lt;character id&gt; &lt;name&gt;</code> below a chapter heading
         to set its point of view.
-      </p>
+      </p></details>
       <div class="plan-empty-actions">
         <button type="button" class="btn btn-primary" (click)="createPlanFile()">
           Create {{ book.code || book.id }}.plan.md

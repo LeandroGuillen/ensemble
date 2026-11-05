@@ -244,3 +244,9 @@
   white-space: nowrap;
   flex: 0 1 auto;
 }
+
+
+.compact-item-category { color: var(--color-text-secondary) !important; text-transform: none; letter-spacing: 0; font-size: 13px; }
+.compact-item-category::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--chip-color); margin-right: 6px; }
+
+@container (max-width: 650px) { .character-compact-view.two-columns, .character-compact-view { grid-template-columns: minmax(0, 1fr) !important; } }

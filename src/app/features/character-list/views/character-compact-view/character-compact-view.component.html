@@ -16,8 +16,7 @@
       (click)="onCharacterClick(character)"
       role="button"
       tabindex="0"
-      (keydown.enter)="onCharacterClick(character)"
-      (keydown.space)="onCharacterClick(character); $event.preventDefault()"
+      (keydown)="onCardKeydown($event, character)"
       >
       <div class="drag-preview-chip" *cdkDragPreview>
         {{ getCharacterDisplayName(character) }}
@@ -52,7 +51,7 @@
           <span
             class="compact-item-category"
             appFadeOverflow
-            [style.color]="getCategoryColor(getDisplayCategoryId(character))"
+            [style.--chip-color]="getCategoryColor(getDisplayCategoryId(character))"
           >
             {{ getCategoryName(getDisplayCategoryId(character)) }}
           </span>
@@ -62,8 +61,8 @@
             @for (tag of getCharacterTagsInOrder(character); track tag.id) {
               <span
                 class="tag tag-xs"
-                [style.background-color]="tag.color"
-                [style.color]="'white'"
+                [style.--chip-color]="tag.color"
+
                 >
                 {{ tag.name }}
               </span>

@@ -177,4 +177,24 @@ describe('SidebarComponent update control', () => {
     expect(button.querySelector('use')?.getAttribute('href')).toBe('#icon-power');
     expect(button.getAttribute('aria-label')).toBe('Restart to apply update v9.9.9');
   });
+  it('keeps an explicit collapse choice when the window changes size', () => {
+    const component = fixture.componentInstance;
+    component.isCollapsed = false;
+    component.toggleCollapse();
+    component.onWindowResize();
+    expect(component.isCollapsed).toBeTrue();
+    component.toggleCollapse();
+    component.onWindowResize();
+    expect(component.isCollapsed).toBeFalse();
+  });
+
+  it('marks the owning destination on detail routes', () => {
+    const component = fixture.componentInstance;
+    for (const [path, parent] of [['/character/a', '/characters'], ['/location/a', '/locations'], ['/house/a', '/houses'], ['/cast/a', '/casts'], ['/book/a', '/library']]) {
+      component.currentRoute = path;
+      expect(component.isActive(parent)).withContext(path).toBeTrue();
+      expect(component.isActive('/names')).toBeFalse();
+    }
+  });
+
 });

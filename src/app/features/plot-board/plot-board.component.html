@@ -131,10 +131,10 @@
                           class="thread-icon-picker-anchor"
                           [class.thread-icon-picker-anchor--empty]="!thread.icon"
                         >
-                          <span
+                          <button type="button"
                             class="thread-icon-btn thread-icon-picker-area"
                             (click)="toggleThreadIconPicker(thread.id); $event.stopPropagation()"
-                            [attr.title]="thread.icon ? 'Change icon' : null"
+                            [attr.aria-label]="'Change icon for ' + thread.name"
                           >
                             @if (thread.icon) {
                               <span>{{ thread.icon }}</span>
@@ -142,7 +142,7 @@
                             @if (!thread.icon) {
                               <svg class="ui-icon plot-icon-placeholder" aria-hidden="true"><use href="assets/ui-icons.svg#smile" /></svg>
                             }
-                          </span>
+                          </button>
                           @if (showThreadIconPicker === thread.id) {
                             <div class="icon-picker-dropdown thread-icon-picker-area">
                               <app-emoji-picker

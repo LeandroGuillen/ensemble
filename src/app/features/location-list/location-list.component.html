@@ -170,8 +170,8 @@
                   @for (book of getLocationBooks(location); track book.id) {
                     <span
                       class="book-pill"
-                      [style.background-color]="book.color"
-                      [style.color]="getBookTextColor(book.color)"
+                      [style.--chip-color]="book.color"
+
                     >
                       {{ getBookLabel(book) }}
                     </span>
@@ -208,8 +208,8 @@
                   @for (book of getLocationBooks(location); track book.id) {
                     <span
                       class="book-pill"
-                      [style.background-color]="book.color"
-                      [style.color]="getBookTextColor(book.color)"
+                      [style.--chip-color]="book.color"
+
                     >
                       {{ getBookLabel(book) }}
                     </span>

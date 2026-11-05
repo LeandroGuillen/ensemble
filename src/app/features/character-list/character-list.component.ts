@@ -460,7 +460,9 @@ export class CharacterListComponent implements OnInit {
 
   @HostListener('document:keydown', ['$event'])
   handleKeyboardEvent(event: KeyboardEvent): void {
-    if (isEditableKeyboardTarget(event.target)) {
+    if (event.defaultPrevented || isEditableKeyboardTarget(event.target) ||
+        (event.target instanceof Element && !!event.target.closest('button, a, select, [role=button], [role=combobox], [role=dialog]')) ||
+        document.querySelector('.modal-overlay, .command-palette-backdrop')) {
       return;
     }
 

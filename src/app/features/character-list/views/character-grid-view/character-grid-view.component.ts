@@ -40,6 +40,13 @@ export class CharacterGridViewComponent {
   @Output() dragStarted = new EventEmitter<void>();
   @Output() dragEnded = new EventEmitter<void>();
 
+  onCardKeydown(event: KeyboardEvent, character: Character): void {
+    if (event.target !== event.currentTarget || !['Enter', ' '].includes(event.key)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.onCharacterClick(character);
+  }
+
   private dragInProgress = false;
 
   constructor(public metadataHelper: MetadataHelperService) {}
@@ -92,6 +99,7 @@ export class CharacterGridViewComponent {
   }
 
   onCharacterDelete(character: Character, event: Event): void {
+    event.stopPropagation();
     this.characterDelete.emit({ character, event });
   }
 

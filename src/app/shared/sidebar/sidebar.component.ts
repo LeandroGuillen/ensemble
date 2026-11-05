@@ -40,7 +40,8 @@ export class SidebarComponent implements OnInit {
   currentProjectName = '';
   currentRoute = '';
   private routeBeforeSettings = '/characters';
-  isCollapsed = false;
+  private collapseChoice: boolean | null = null;
+  isCollapsed = window.innerWidth < 1100;
   appVersion = '';
   updateStatus: UpdateStatus = { status: 'idle' };
   updateActionPending = false;
@@ -119,7 +120,8 @@ export class SidebarComponent implements OnInit {
     // Load saved collapse state
     const saved = localStorage.getItem('sidebar-collapsed');
     if (saved !== null) {
-      this.isCollapsed = saved === 'true';
+      this.collapseChoice = saved === 'true';
+      this.isCollapsed = this.collapseChoice;
     }
 
   }
@@ -133,6 +135,12 @@ export class SidebarComponent implements OnInit {
   }
 
   isActive(route: string): boolean {
+    const parents: Record<string, string> = {
+      '/characters': '/character', '/locations': '/location', '/houses': '/house', '/casts': '/cast'
+    };
+    const path = this.currentRoute.split(/[?#]/)[0];
+    const parent = parents[route];
+    if (parent && (path === parent || path.startsWith(parent + '/') || path.startsWith(parent + '-draft'))) return true;
     // A book page belongs to the Library.
     if (route === '/library' && this.currentRoute.startsWith('/book/')) return true;
     return this.currentRoute.startsWith(route);
@@ -158,6 +166,7 @@ export class SidebarComponent implements OnInit {
   @HostListener('window:resize')
   onWindowResize(): void {
     this.closeThemeMenu();
+    this.isCollapsed = this.collapseChoice ?? window.innerWidth < 1100;
   }
 
   @HostListener('document:keydown', ['$event'])
@@ -193,6 +202,7 @@ export class SidebarComponent implements OnInit {
 
   toggleCollapse(): void {
     this.isCollapsed = !this.isCollapsed;
+    this.collapseChoice = this.isCollapsed;
     localStorage.setItem('sidebar-collapsed', String(this.isCollapsed));
   }
 

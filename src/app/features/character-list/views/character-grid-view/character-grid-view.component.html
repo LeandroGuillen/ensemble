@@ -16,8 +16,7 @@
       role="button"
       [attr.aria-label]="'Open ' + getCharacterDisplayName(character)"
       tabindex="0"
-      (keydown.enter)="$event.target === $event.currentTarget && onCharacterClick(character)"
-      (keydown.space)="$event.target === $event.currentTarget && onCharacterClick(character); $event.preventDefault()"
+      (keydown)="onCardKeydown($event, character)"
       >
       <div class="drag-preview-chip" *cdkDragPreview>
         {{ getCharacterDisplayName(character) }}
@@ -53,7 +52,7 @@
         </h3>
         <p
           class="character-category"
-          [style.color]="getCategoryColor(getDisplayCategoryId(character))"
+          [style.--chip-color]="getCategoryColor(getDisplayCategoryId(character))"
           >
           {{ getCategoryName(getDisplayCategoryId(character)) }}
         </p>
@@ -62,8 +61,8 @@
             @for (tag of getCharacterTagsInOrder(character); track tag) {
               <span
                 class="tag"
-                [style.background-color]="tag.color"
-                [style.color]="'white'"
+                [style.--chip-color]="tag.color"
+
                 >
                 {{ tag.name }}
               </span>

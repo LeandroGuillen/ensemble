@@ -107,8 +107,21 @@ export class ThemeService {
     // Apply text colors
     root.style.setProperty('--color-text-primary', colors.textPrimary);
     root.style.setProperty('--color-text-secondary', colors.textSecondary);
-    // Secondary labels must remain readable on every theme's control surfaces.
-    root.style.setProperty('--color-text-muted', colors.textSecondary);
+    // Retain the hierarchy tier, lifting it only as far as readability requires.
+    const rgb = (hex: string) => hex.match(/[a-f\d]{2}/gi)!.map(v => parseInt(v, 16));
+    const luminance = (values: number[]) => values.map(v => {
+      const s = v / 255;
+      return s <= .04045 ? s / 12.92 : Math.pow((s + .055) / 1.055, 2.4);
+    }).reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0);
+    const surfaces = [colors.bgPrimary, colors.bgSecondary, colors.bgTertiary, colors.bgElevated, colors.bgHover].map(v => luminance(rgb(v)));
+    const muted = rgb(colors.textMuted), primary = rgb(colors.textPrimary);
+    let readable = muted;
+    for (let step = 0; step <= 100; step++) {
+      readable = muted.map((v, i) => Math.round(v + (primary[i] - v) * step / 100));
+      const l = luminance(readable);
+      if (surfaces.every(bg => (Math.max(l, bg) + .05) / (Math.min(l, bg) + .05) >= 4.5)) break;
+    }
+    root.style.setProperty('--color-text-muted', '#' + readable.map(v => v.toString(16).padStart(2, '0')).join(''));
     root.style.setProperty('--color-text-inverse', colors.textInverse);
 
     // Apply border colors

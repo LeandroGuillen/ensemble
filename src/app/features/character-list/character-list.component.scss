@@ -999,3 +999,22 @@
   .filters-sidebar { width: 210px; }
 }
 .view-toggle-text .toggle-option { font-family: var(--font-sans); font-size: 13px; letter-spacing: 0; text-transform: none; }
+
+
+.characters-main { container-type: inline-size; }
+.scrollable-content, .content-wrapper { min-width: 0; }
+@media (max-width: 1100px) {
+  .filters-sidebar { width: 200px; }
+  .filters-sidebar-content { padding: 12px; }
+}
+@media (max-width: 850px) {
+  .characters-body { flex-direction: column; }
+  .filters-sidebar-anim { flex-shrink: 1; max-height: 180px; }
+  .filters-sidebar { width: 100%; height: auto; border-right: 0; border-bottom: 1px solid var(--color-border); }
+  .filters-sidebar-content { overflow-y: auto; }
+}
+@media (max-width: 850px) {
+  .filters-sidebar-anim:has([aria-hidden="false"]) { width: 100% !important; max-height: 150px; }
+  .filters-sidebar-anim:has([aria-hidden="true"]) { display: none; }
+  .filters-sidebar-content { display: block; }
+}

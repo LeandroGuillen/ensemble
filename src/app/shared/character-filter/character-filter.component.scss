@@ -370,3 +370,13 @@
 .character-filter.sidebar-mode .clear-all-btn { font-size: 12px; }
 .filter-body .filter-section .filter-label-row { flex-wrap: wrap; }
 .filter-body .filter-section .filter-hint { white-space: normal; }
+
+
+.advanced-filters summary { cursor: pointer; min-height: 36px; padding: 8px 0; color: var(--color-text-secondary); font-weight: 600; }
+.advanced-filters .filter-section { margin-top: 16px; }
+.filter-label { text-transform: none; letter-spacing: 0; font-size: 13px; }
+@media (max-width: 850px) {
+  .character-filter.sidebar-mode { width: 100%; }
+  .sidebar-mode .filter-body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding-top: 12px; }
+  .sidebar-mode .advanced-filters { grid-column: 1 / -1; }
+}

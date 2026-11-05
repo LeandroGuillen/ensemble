@@ -1,10 +1,16 @@
 @if (isOpen) {
   <div class="command-palette-backdrop" (click)="onBackdropClick()">
-    <div class="command-palette" (click)="onPaletteClick($event)">
+    <div class="command-palette" role="dialog" aria-modal="true" aria-label="Search and commands" (click)="onPaletteClick($event)">
       <div class="command-search">
         <input
           #searchInput
           type="text"
+          aria-label="Search commands and project"
+          [attr.role]="promptMode ? null : 'combobox'"
+          aria-autocomplete="list"
+          [attr.aria-expanded]="!promptMode"
+          [attr.aria-controls]="promptMode ? null : 'palette-results'"
+          [attr.aria-activedescendant]="filteredCommands.length ? 'palette-option-' + selectedIndex : null"
           class="command-search-input"
           [placeholder]="placeholder"
           [(ngModel)]="searchQuery"
@@ -12,14 +18,16 @@
           autocomplete="off">
         <span class="command-search-hint">ESC to close</span>
       </div>
-      @if (filteredCommands.length > 0) {
+      @if (!promptMode) {
         <div
-          class="command-list"
+          class="command-list" id="palette-results" role="listbox" aria-label="Results"
           #commandList
           (mousemove)="onListMouseMove($event)">
           @for (command of filteredCommands; track command.id; let i = $index) {
             <div
-              class="command-item"
+              class="command-item" role="option"
+              [id]="'palette-option-' + i"
+              [attr.aria-selected]="i === selectedIndex"
               [class.selected]="i === selectedIndex"
               (mouseenter)="onItemMouseEnter(i)"
               (click)="executeCommand(command)">
@@ -59,6 +67,7 @@
           <p>No commands found</p>
         </div>
       }
+      <div class="sr-only" role="status" aria-live="polite">{{ filteredCommands.length }} results</div>
       <div class="command-footer">
         <div class="command-shortcuts">
           <span class="shortcut-item"><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>

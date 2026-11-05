@@ -1,5 +1,6 @@
 <div class="character-detail">
   <app-page-header [title]="isDraftMode ? (isEditing ? 'Edit Character Draft' : 'New Character Draft') : isLoreMode ? (isEditing ? 'Edit Lore Figure' : 'New Lore Figure') : (isEditing ? 'Edit Character' : 'New Character')">
+    <button pageHeaderPrefix type="button" class="btn btn-ghost" (click)="onCancel()">← Characters</button>
     <div pageHeaderSuffix class="header-meta">
       @if (isEditing && character) {
         <button
@@ -403,7 +404,7 @@
               </div>
 
               @if (isEditing) {
-                <div class="infobox-danger">
+                <details class="infobox-danger"><summary>Record details</summary>
                   @if (character?.created || character?.modified) {
                     <p class="infobox-dates">
                       @if (character?.created) { <span>Created {{ character!.created | date: 'mediumDate' }}</span> }
@@ -417,7 +418,7 @@
                     [disabled]="isSaving || savingBookPageId"
                     [title]="'Delete ' + (isDraftMode ? 'draft' : 'character')"
                   >Delete {{ isDraftMode ? 'draft' : 'character' }}</button>
-                </div>
+                </details>
               }
             </aside>
 

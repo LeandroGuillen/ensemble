@@ -1,5 +1,6 @@
 <div class="location-detail">
   <app-page-header [title]="isNewLocation ? 'New Location' : 'Edit Location'">
+    <button pageHeaderPrefix type="button" class="btn btn-ghost" (click)="cancel()">← Locations</button>
     @if (locationForm.dirty) {
       <span class="dirty-pill" title="You have unsaved changes">● Unsaved</span>
     }

@@ -773,3 +773,8 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
 .section-label { letter-spacing: .04em; }
 .nav-item.active { box-shadow: inset 3px 0 var(--color-accent-primary); }
 .sidebar-nav { min-height: 0; overflow-y: auto; }
+
+
+.nav-item.active { background: var(--color-accent-subtle); color: var(--color-text-primary); box-shadow: inset 3px 0 var(--color-accent-primary); }
+
+.nav-item.active .nav-icon { color: var(--color-accent-primary); }

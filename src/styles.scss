@@ -705,3 +705,17 @@ input::placeholder, textarea::placeholder { color: var(--color-text-secondary); 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
+
+
+/* Metadata colors remain useful as keys without carrying readable text. */
+.tag, .tag-sm, .tag-xs {
+  background: var(--color-bg-tertiary) !important;
+  color: var(--color-text-primary) !important;
+  font-size: 12px !important;
+  line-height: 1.5;
+  border: 1px solid var(--color-border);
+  border-inline-start: 3px solid var(--chip-color, var(--color-border));
+}
+button:focus-visible, a:focus-visible, [tabindex="0"]:focus-visible {
+  outline: 3px solid var(--color-accent-primary); outline-offset: 2px;
+}

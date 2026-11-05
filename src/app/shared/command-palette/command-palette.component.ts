@@ -25,6 +25,7 @@ export class CommandPaletteComponent implements OnInit {
   @ViewChild('searchInput') searchInput?: ElementRef<HTMLInputElement>;
   @ViewChild('commandList') commandList?: ElementRef<HTMLDivElement>;
 
+  private previousFocus: HTMLElement | null = null;
   isOpen = false;
   searchQuery = '';
   commands: Command[] = [];
@@ -48,6 +49,8 @@ export class CommandPaletteComponent implements OnInit {
     this.commandPaletteService.isOpen$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((isOpen) => {
+        if (isOpen && !this.isOpen) this.previousFocus = document.activeElement as HTMLElement;
+        if (!isOpen && this.isOpen && this.previousFocus?.isConnected) this.previousFocus.focus();
         this.isOpen = isOpen;
         if (isOpen) {
           this.searchQuery = '';
@@ -87,6 +90,11 @@ export class CommandPaletteComponent implements OnInit {
   handleKeyboardEvent(event: KeyboardEvent): void {
     if (!this.isOpen) return;
 
+    if (event.key === 'Tab') {
+      event.preventDefault();
+      this.searchInput?.nativeElement.focus();
+      return;
+    }
     switch (event.key) {
       case 'Escape':
         event.preventDefault();

@@ -39,6 +39,13 @@ export class CharacterListViewComponent {
   @Output() characterSelectionToggle = new EventEmitter<string>();
   @Output() dragStarted = new EventEmitter<void>();
   @Output() dragEnded = new EventEmitter<void>();
+  onCardKeydown(event: KeyboardEvent, character: Character): void {
+    if (event.target !== event.currentTarget || !['Enter', ' '].includes(event.key)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.onCharacterClick(character);
+  }
+
   private dragInProgress = false;
 
   constructor(public metadataHelper: MetadataHelperService) {}

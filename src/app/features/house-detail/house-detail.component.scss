@@ -116,3 +116,5 @@ label { display: block; color: var(--color-text-secondary); font-size: 13px; mar
 .crest-image:hover .crest-remove,
 .crest-image:focus-within .crest-remove { opacity: 1; }
 .succession { scroll-margin-top: 24px; &:focus-visible { outline: 2px solid var(--color-accent-primary); outline-offset: 3px; } }
+
+.color-remove, .remove-color, .color-chip button { min-width: 32px; min-height: 32px; }

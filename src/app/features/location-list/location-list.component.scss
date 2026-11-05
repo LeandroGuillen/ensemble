@@ -399,3 +399,7 @@ app-page-header {
     letter-spacing: normal;
   }
 }
+
+.toolbar-label { text-transform: none; letter-spacing: 0; font-size: 13px; }
+
+.book-pill { background: var(--color-bg-tertiary); color: var(--color-text-primary); border-inline-start: 3px solid var(--chip-color, var(--color-border)); font-size: 12px; }

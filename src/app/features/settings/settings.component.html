@@ -81,6 +81,7 @@
                         type="button"
                         class="settings-nav-item settings-nav-child"
                         [class.active]="activeSection === child.id"
+                        [attr.aria-current]="activeSection === child.id ? 'page' : null"
                         (click)="selectSection(child.id)"
                       >
                         <span class="settings-nav-label">{{ child.label }}</span>
@@ -96,6 +97,7 @@
                 type="button"
                 class="settings-nav-item"
                 [class.active]="activeSection === entry.id"
+                [attr.aria-current]="activeSection === entry.id ? 'page' : null"
                 (click)="selectSection(entry.id)"
               >
                 <span class="settings-nav-label">{{ entry.label }}</span>

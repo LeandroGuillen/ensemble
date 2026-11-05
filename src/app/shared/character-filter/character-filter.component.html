@@ -6,6 +6,7 @@
         type="text"
         class="search-input"
         placeholder="Filter by name..."
+        aria-label="Filter characters by name or alias"
         [(ngModel)]="searchTerm"
         (input)="onSearchChange()"
         (click)="$event.stopPropagation()"
@@ -89,6 +90,8 @@
           ></app-multi-select-buttons>
         </div>
       }
+      <details class="advanced-filters" [open]="selectedCast || selectedHouse || selectedBook || selectedPictureFilter || povOnly">
+        <summary>More filters</summary>
       <!-- Cast Filter -->
       @if (casts.length > 0) {
         <div class="filter-section section-cast">
@@ -143,6 +146,7 @@
           (valueChange)="onPictureFilterChange($event)"
         ></app-category-toggle>
       </div>
+      </details>
     </div>
   }
 </div>

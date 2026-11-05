@@ -67,3 +67,6 @@
 
 .category-toggle .toggle-option { min-height: 36px; font-size: 13px; }
 .category-toggle .toggle-option.active { color: var(--color-text-inverse); }
+
+.category-toggle .toggle-option { color: var(--color-text-secondary); }
+.category-toggle .toggle-option.active { color: var(--color-text-primary); background: var(--color-accent-subtle); box-shadow: inset 0 -2px var(--color-accent-primary); }
