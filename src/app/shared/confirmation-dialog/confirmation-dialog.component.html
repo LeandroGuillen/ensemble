@@ -1,15 +1,16 @@
 @if (visible) {
   <app-modal-frame
     [title]="title"
+    [describedById]="messageId"
     (closed)="onClose()"
   >
-    <p class="confirmation-message">{{ message }}</p>
+    <p class="confirmation-message" [id]="messageId">{{ message }}</p>
     <div class="modal-actions">
       <button
         type="button"
         class="btn btn-secondary"
         (click)="onCancel()"
-        autofocus
+        cdkFocusInitial
       >
         {{ cancelText }}
       </button>
@@ -27,7 +28,7 @@
         [class]="'btn ' + (danger ? 'btn-danger' : confirmButtonClass)"
         (click)="onConfirm()"
       >
-        {{ confirmText }}
+        {{ danger && confirmText === 'Confirm' ? 'Delete' : confirmText }}
       </button>
     </div>
   </app-modal-frame>

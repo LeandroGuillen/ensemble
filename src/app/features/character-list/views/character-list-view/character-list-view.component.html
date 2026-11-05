@@ -75,9 +75,7 @@
         @if (character.content) {
           <p class="list-item-description">
             {{
-            character.content.length > 150
-            ? character.content.substring(0, 150) + '...'
-            : character.content
+            contentSummary(character.content, 180)
             }}
           </p>
         }

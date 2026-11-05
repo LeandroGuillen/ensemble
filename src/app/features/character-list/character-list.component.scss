@@ -987,3 +987,15 @@
     width: auto;
   }
 }
+
+.filters-sidebar { width: 240px; }
+.toolbar-label { font-size: 13px; letter-spacing: 0; text-transform: none; }
+.header-display-controls { gap: 12px 20px; }
+@media (max-width: 1100px) {
+  .header-display-controls--wide { display: none; }
+  .header-display-controls--compact { display: flex; flex-wrap: wrap; }
+}
+@media (max-width: 850px) {
+  .filters-sidebar { width: 210px; }
+}
+.view-toggle-text .toggle-option { font-family: var(--font-sans); font-size: 13px; letter-spacing: 0; text-transform: none; }

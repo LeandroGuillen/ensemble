@@ -14,9 +14,10 @@
       [attr.data-nav-index]="navIndexOffset + i"
       (click)="onCharacterClick(character)"
       role="button"
+      [attr.aria-label]="'Open ' + getCharacterDisplayName(character)"
       tabindex="0"
-      (keydown.enter)="onCharacterClick(character)"
-      (keydown.space)="onCharacterClick(character); $event.preventDefault()"
+      (keydown.enter)="$event.target === $event.currentTarget && onCharacterClick(character)"
+      (keydown.space)="$event.target === $event.currentTarget && onCharacterClick(character); $event.preventDefault()"
       >
       <div class="drag-preview-chip" *cdkDragPreview>
         {{ getCharacterDisplayName(character) }}
@@ -72,9 +73,7 @@
         @if (character.content) {
           <p class="character-description">
             {{
-            character.content.length > 120
-            ? character.content.substring(0, 120) + "..."
-            : character.content
+            contentSummary(character.content, 160)
             }}
           </p>
         }

@@ -107,7 +107,8 @@ export class ThemeService {
     // Apply text colors
     root.style.setProperty('--color-text-primary', colors.textPrimary);
     root.style.setProperty('--color-text-secondary', colors.textSecondary);
-    root.style.setProperty('--color-text-muted', colors.textMuted);
+    // Secondary labels must remain readable on every theme's control surfaces.
+    root.style.setProperty('--color-text-muted', colors.textSecondary);
     root.style.setProperty('--color-text-inverse', colors.textInverse);
 
     // Apply border colors

@@ -41,3 +41,24 @@
     }
   }
 }
+
+/* Color remains a category cue; selection is also expressed by a check mark. */
+.multi-select-buttons {
+  padding: 4px;
+  .select-button {
+    min-height: 36px;
+    background: transparent !important;
+    color: var(--color-text-secondary) !important;
+    border-color: transparent !important;
+    border-radius: var(--radius-sm);
+    text-align: left;
+    white-space: normal;
+    &::before { content: '○'; display: inline-block; width: 18px; }
+    &.active {
+      background: var(--color-accent-subtle) !important;
+      color: var(--color-text-primary) !important;
+      &::before { content: '✓'; color: var(--color-accent-primary); }
+    }
+    &:hover { transform: none; background: var(--color-bg-hover) !important; }
+  }
+}

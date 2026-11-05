@@ -6,7 +6,7 @@
         <use href="#icon-chevrons-right"></use>
       </svg>
     </button>
-    <div class="sidebar-brand" (click)="selectProject()" title="Change Project">
+    <button type="button" class="sidebar-brand" (click)="selectProject()" title="Change project" aria-label="Change project">
       <img
         src="assets/icon.svg"
         alt="Ensemble"
@@ -17,7 +17,7 @@
       @if (!isCollapsed) {
         <span class="brand-text">Ensemble</span>
       }
-    </div>
+    </button>
   </div>
 
   <!-- Search / Command Palette -->
@@ -76,6 +76,7 @@
               (click)="handleItemClick(item)"
               [title]="isCollapsed ? item.title : ''"
               [attr.aria-label]="item.label"
+              [attr.aria-current]="item.route && isActive(item.route) ? 'page' : null"
               >
               <svg class="nav-icon" [attr.data-icon]="item.icon">
                 <use [attr.href]="'#icon-' + item.icon"></use>

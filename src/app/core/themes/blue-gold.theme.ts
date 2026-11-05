@@ -26,7 +26,7 @@ export const blueGoldTheme: Theme = {
     // Text colors
     textPrimary: '#f2f4f7',
     textSecondary: '#a0a8b8',
-    textMuted: '#6b7280',
+    textMuted: '#9aa5b8',
     textInverse: '#0c0f14',
 
     // Border colors

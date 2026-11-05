@@ -188,3 +188,20 @@
   white-space: nowrap;
   flex: 0 1 auto;
 }
+
+.character-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 20px; }
+.character-thumbnail { height: 176px; }
+.character-thumbnail img { object-position: center 25%; }
+.character-info { padding: 20px; gap: 4px; }
+.character-name { font-size: 20px; }
+.character-category { text-transform: none; letter-spacing: 0; color: var(--color-text-secondary) !important; }
+.character-description { font-size: 14px; line-height: 1.65; }
+.character-tags .tag {
+  background: var(--color-bg-tertiary) !important;
+  color: var(--color-text-secondary) !important;
+  font-size: 12px; padding: 3px 9px;
+}
+.character-card:hover { transform: none; }
+.character-card:focus-within .character-actions { opacity: 1; }
+.character-actions { position: static; opacity: 1; padding: 0 20px 16px; justify-content: flex-end; }
+.character-actions .icon-btn { background: var(--color-bg-tertiary); color: var(--color-text-secondary); }

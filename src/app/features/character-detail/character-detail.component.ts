@@ -1767,7 +1767,7 @@ export class CharacterDetailComponent
       { characterService: this.characterService, logger: this.logger }
     );
 
-    const confirmed = await this.modalService.confirm(confirmMessage);
+    const confirmed = await this.modalService.confirm(confirmMessage, 'Delete character', { confirmText: 'Delete', danger: true });
 
     if (!confirmed) {
       return;

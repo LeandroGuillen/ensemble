@@ -363,3 +363,10 @@
     }
   }
 }
+
+.filter-body .filter-section .filter-label { font-size: 13px; letter-spacing: 0; text-transform: none; color: var(--color-text-primary); }
+.filter-body .filter-section .filter-hint { font-size: 12px; }
+.sidebar-mode .filter-body { gap: 20px; }
+.character-filter.sidebar-mode .clear-all-btn { font-size: 12px; }
+.filter-body .filter-section .filter-label-row { flex-wrap: wrap; }
+.filter-body .filter-section .filter-hint { white-space: normal; }

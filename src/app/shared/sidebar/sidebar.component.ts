@@ -40,7 +40,7 @@ export class SidebarComponent implements OnInit {
   currentProjectName = '';
   currentRoute = '';
   private routeBeforeSettings = '/characters';
-  isCollapsed = true;
+  isCollapsed = false;
   appVersion = '';
   updateStatus: UpdateStatus = { status: 'idle' };
   updateActionPending = false;

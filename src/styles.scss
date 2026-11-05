@@ -677,3 +677,31 @@
     to { opacity: 1; transform: scale(1); }
   }
 }
+
+/* Shared workspace rhythm. Theme and skin tokens remain the source of appearance. */
+button, input, select, textarea { font: inherit; }
+button:not(:disabled), a, input, select, textarea { touch-action: manipulation; }
+.btn, .btn-sm, .icon-btn, .btn-icon, .control-btn, .toggle-option,
+.filter-select, .compact-select, .header-filter-toggle {
+  min-height: 36px;
+}
+.icon-btn, .btn-icon { min-width: 36px; }
+input::placeholder, textarea::placeholder { color: var(--color-text-secondary); opacity: 1; }
+.toolbar-label, .filter-label, .form-label, .setting-description,
+.settings-description, .help-text { font-size: 0.8125rem; line-height: 1.5; }
+.page-header .view-toggle-text .toggle-option {
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.page-header .view-toggle, .page-header .column-toggle { height: auto; min-height: 42px; }
+.page-header .page-actions { flex-wrap: wrap; }
+.modal-dialog { max-height: calc(100dvh - 40px); }
+.modal-body { overflow-y: auto; min-height: 0; }
+.modal-header h3 { font-size: 1.25rem; }
+.modal-actions { gap: 12px; flex-wrap: wrap; }
+.close-btn { min-width: 40px; min-height: 40px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}

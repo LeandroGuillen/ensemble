@@ -64,3 +64,6 @@
     }
   }
 }
+
+.category-toggle .toggle-option { min-height: 36px; font-size: 13px; }
+.category-toggle .toggle-option.active { color: var(--color-text-inverse); }

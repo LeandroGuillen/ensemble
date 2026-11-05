@@ -1,6 +1,8 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { ModalFrameComponent } from '../modal-frame/modal-frame.component';
 
+let nextConfirmationId = 0;
+
 @Component({
   selector: 'app-confirmation-dialog',
   imports: [ModalFrameComponent],
@@ -8,6 +10,7 @@ import { ModalFrameComponent } from '../modal-frame/modal-frame.component';
   styleUrls: ['./confirmation-dialog.component.scss'],
 })
 export class ConfirmationDialogComponent {
+  readonly messageId = `confirmation-message-${++nextConfirmationId}`;
   @Input() visible = false;
   @Input() title = 'Confirm';
   @Input() message = 'Are you sure?';

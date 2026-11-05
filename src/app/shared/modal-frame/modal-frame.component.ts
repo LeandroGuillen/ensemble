@@ -22,6 +22,7 @@ let nextModalTitleId = 0;
 export class ModalFrameComponent implements AfterViewInit, OnDestroy {
   @Input() title = '';
   @Input() labelledById = '';
+  @Input() describedById = '';
   @Input() dialogClass = '';
   @Input() closeOnBackdrop = true;
   @Input() closeOnEscape = true;

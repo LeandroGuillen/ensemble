@@ -1,3 +1,4 @@
+import { contentSummary } from '../../../../core/utils/content-summary.utils';
 import { Component, Input, Output, EventEmitter } from "@angular/core";
 
 import { DragDropModule } from '@angular/cdk/drag-drop';
@@ -13,6 +14,7 @@ import { getCharacterDisplayName } from "../../../../core/utils/character-displa
     styleUrls: ["./character-grid-view.component.scss"]
 })
 export class CharacterGridViewComponent {
+  readonly contentSummary = contentSummary;
   readonly getCharacterDisplayName = getCharacterDisplayName;
   @Input() characters: Character[] = [];
   @Input() categories: Category[] = [];

@@ -1,3 +1,4 @@
+import { contentSummary } from '../../../../core/utils/content-summary.utils';
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 
 import { DragDropModule } from '@angular/cdk/drag-drop';
@@ -14,6 +15,7 @@ import { FadeOverflowDirective } from '../../../../shared/fade-overflow.directiv
     styleUrls: ['./character-list-view.component.scss']
 })
 export class CharacterListViewComponent {
+  readonly contentSummary = contentSummary;
   readonly getCharacterDisplayName = getCharacterDisplayName;
   @Input() characters: Character[] = [];
   @Input() categories: Category[] = [];
