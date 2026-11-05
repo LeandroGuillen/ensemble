@@ -212,7 +212,7 @@
   opacity: 0.6;
 
   &:hover {
-    background: rgba(229, 168, 85, 0.1);
+    background: var(--color-accent-subtle);
     color: var(--color-accent-primary);
     opacity: 1;
   }
@@ -421,7 +421,7 @@
   &:focus {
     outline: none;
     border-color: var(--color-accent-primary);
-    box-shadow: 0 0 0 3px rgba(229, 168, 85, 0.1);
+    box-shadow: 0 0 0 3px var(--color-accent-subtle);
   }
 
   &.form-control-readonly {

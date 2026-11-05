@@ -52,8 +52,12 @@
           <span
             class="compact-item-category"
             appFadeOverflow
-            [style.color]="getCategoryColor(getDisplayCategoryId(character))"
           >
+            <span
+              class="category-dot"
+              aria-hidden="true"
+              [style.background-color]="getCategoryColor(getDisplayCategoryId(character))"
+            ></span>
             {{ getCategoryName(getDisplayCategoryId(character)) }}
           </span>
         </div>
@@ -63,7 +67,7 @@
               <span
                 class="tag tag-xs"
                 [style.background-color]="tag.color"
-                [style.color]="'white'"
+                [style.color]="contrastTextColor(tag.color)"
                 >
                 {{ tag.name }}
               </span>

@@ -72,8 +72,8 @@
 
   // Subtle pattern
   background: 
-    linear-gradient(90deg, transparent 0%, rgba(229, 168, 85, 0.02) 50%, transparent 100%),
-    repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(229, 168, 85, 0.01) 2px, rgba(229, 168, 85, 0.01) 4px);
+    linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--color-accent-primary) 2%, transparent) 50%, transparent 100%),
+    repeating-linear-gradient(90deg, transparent, transparent 2px, color-mix(in srgb, var(--color-accent-primary) 1%, transparent) 2px, color-mix(in srgb, var(--color-accent-primary) 1%, transparent) 4px);
   border-radius: var(--radius-lg);
 
   // Shelf edge
@@ -417,10 +417,10 @@
 
 .loose-label {
   margin: var(--spacing-md) 0 var(--spacing-xs);
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   color: var(--color-text-muted);
 }
 
@@ -581,7 +581,7 @@
     width: 3px;
     height: 100%;
     background: var(--color-accent-primary);
-    box-shadow: 0 0 12px rgba(229, 168, 85, 0.4);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--color-accent-primary) 40%, transparent);
     z-index: 10;
     border-radius: var(--radius-xs);
   }
@@ -682,7 +682,7 @@
 
 .book-row-status {
   flex-shrink: 0;
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.04em;

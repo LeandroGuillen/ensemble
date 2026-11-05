@@ -255,7 +255,9 @@ export class CastListComponent implements OnInit {
 
     if (
       await this.modalService.confirm(
-        `Are you sure you want to delete the cast "${cast.name}"?\n\nThis will not delete the characters themselves.\n\nIt will be moved to the system Trash. You can undo for 15 seconds.`
+        `Are you sure you want to delete the cast "${cast.name}"?\n\nThis will not delete the characters themselves.\n\nIt will be moved to the system Trash. You can undo for 15 seconds.`,
+        'Delete Cast',
+        { confirmText: 'Delete', danger: true }
       )
     ) {
       try {

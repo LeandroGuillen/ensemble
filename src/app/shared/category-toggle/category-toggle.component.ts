@@ -1,4 +1,5 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { contrastTextColor } from '../../core/utils/color-contrast.utils';
 
 
 export interface ToggleOption {
@@ -15,6 +16,7 @@ export interface ToggleOption {
     styleUrls: ['./category-toggle.component.scss']
 })
 export class CategoryToggleComponent {
+  readonly contrastTextColor = contrastTextColor;
   @Input() options: ToggleOption[] = [];
   @Input() selectedValue: string = '';
   @Input() emptyLabel: string = 'All'; // "All" or "None" depending on context

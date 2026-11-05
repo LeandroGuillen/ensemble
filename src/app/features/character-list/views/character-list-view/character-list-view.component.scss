@@ -43,7 +43,7 @@
 
   &.selected {
     border-color: var(--color-accent-primary);
-    background-color: rgba(229, 168, 85, 0.1);
+    background-color: var(--color-accent-subtle);
     box-shadow: 0 0 0 1px var(--color-accent-primary);
   }
 }
@@ -127,8 +127,12 @@
 }
 
 .list-item-category {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-size: 0.75rem;
   font-weight: 500;
+  color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   flex: 0 10 auto;
@@ -162,9 +166,17 @@
   max-width: 50%;
 
   .tag-sm {
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
     padding: 2px 6px;
   }
+}
+
+.category-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+  background: var(--color-text-muted);
 }
 
 .list-item-description {
@@ -201,8 +213,8 @@
 // Multi-selected state
 .character-item.multi-selected {
   border-color: var(--color-accent-primary);
-  background-color: rgba(229, 168, 85, 0.08);
-  box-shadow: 0 0 0 2px rgba(229, 168, 85, 0.2);
+  background-color: color-mix(in srgb, var(--color-accent-primary) 8%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent-primary) 20%, transparent);
 }
 
 // Responsive breakpoint for reverting to single column

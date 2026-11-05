@@ -257,7 +257,7 @@
     &:focus {
       outline: none;
       border-color: var(--color-accent-primary);
-      box-shadow: 0 0 0 3px rgba(229, 168, 85, 0.1);
+      box-shadow: 0 0 0 3px var(--color-accent-subtle);
     }
 
     &.error {
@@ -539,7 +539,7 @@
       left: 0;
       right: 0;
       height: 48px;
-      background: rgba(229, 168, 85, 0.05);
+      background: color-mix(in srgb, var(--color-accent-primary) 5%, transparent);
       border-radius: var(--radius-sm);
     }
   }
@@ -578,7 +578,7 @@
     min-width: 0;
 
     &:hover {
-      background: rgba(229, 168, 85, 0.05);
+      background: color-mix(in srgb, var(--color-accent-primary) 5%, transparent);
     }
 
     .item-color {
@@ -942,7 +942,7 @@
 
   &.drag-over {
     min-height: 48px;
-    background: rgba(229, 168, 85, 0.05);
+    background: color-mix(in srgb, var(--color-accent-primary) 5%, transparent);
     border-radius: var(--radius-sm);
   }
 }
@@ -1115,7 +1115,7 @@
   &:focus {
     outline: none;
     border-color: var(--color-accent-primary);
-    box-shadow: 0 0 0 2px rgba(229, 168, 85, 0.1);
+    box-shadow: 0 0 0 2px var(--color-accent-subtle);
   }
 }
 

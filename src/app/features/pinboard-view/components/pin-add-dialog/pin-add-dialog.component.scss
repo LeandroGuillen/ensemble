@@ -37,7 +37,7 @@
     background: linear-gradient(135deg, var(--color-accent-primary) 0%, var(--color-accent-dark) 100%);
     border-color: var(--color-accent-primary);
     transform: translateX(4px);
-    box-shadow: 0 2px 8px rgba(229, 168, 85, 0.3);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-accent-primary) 30%, transparent);
     color: var(--color-text-inverse);
 
     .character-name {

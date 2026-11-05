@@ -140,7 +140,7 @@
   &:focus {
     outline: none;
     border-color: var(--color-accent-primary);
-    box-shadow: 0 0 0 3px rgba(229, 168, 85, 0.1);
+    box-shadow: 0 0 0 3px var(--color-accent-subtle);
   }
 
   &.error {
@@ -182,7 +182,7 @@ select.form-control {
     border-radius: 50%;
     background: var(--color-accent-primary);
     cursor: pointer;
-    box-shadow: 0 2px 6px rgba(229, 168, 85, 0.3);
+    box-shadow: 0 2px 6px color-mix(in srgb, var(--color-accent-primary) 30%, transparent);
     transition: all var(--transition-fast);
 
     &:hover {
@@ -197,7 +197,7 @@ select.form-control {
     background: var(--color-accent-primary);
     cursor: pointer;
     border: none;
-    box-shadow: 0 2px 6px rgba(229, 168, 85, 0.3);
+    box-shadow: 0 2px 6px color-mix(in srgb, var(--color-accent-primary) 30%, transparent);
   }
 }
 

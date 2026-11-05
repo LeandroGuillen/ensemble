@@ -12,6 +12,7 @@ import { ElectronService } from "../../core/services/electron.service";
 import { LoggingService } from "../../core/services/logging.service";
 import { ModalService } from "../../core/services/modal.service";
 import { escapeHtml, markdownToHtml } from "../../core/utils/markdown.utils";
+import { plainTextSummary } from "../../core/utils/character-display.utils";
 import {
   CharacterConcept,
   NameList,
@@ -30,6 +31,7 @@ type BackstageMode = "concepts" | "nameLists";
     styleUrls: ["./backstage.component.scss"]
 })
 export class BackstageComponent implements OnInit {
+  readonly plainTextSummary = plainTextSummary;
   private readonly toasts = inject(NotificationService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -568,7 +570,7 @@ export class BackstageComponent implements OnInit {
   }
 
   async deleteConcept(index: number): Promise<void> {
-    if (await this.modalService.confirm("Are you sure you want to delete this concept?")) {
+    if (await this.modalService.confirm("Are you sure you want to delete this concept?", "Delete Concept", { confirmText: 'Delete', danger: true })) {
       try {
         await this.backstageService.deleteConcept(index);
         // Clear selection if deleted item was selected
@@ -627,7 +629,7 @@ export class BackstageComponent implements OnInit {
   }
 
   async deleteNameList(index: number): Promise<void> {
-    if (await this.modalService.confirm("Are you sure you want to delete this name list?")) {
+    if (await this.modalService.confirm("Are you sure you want to delete this name list?", "Delete Name List", { confirmText: 'Delete', danger: true })) {
       try {
         await this.backstageService.deleteNameList(index);
         // Clear selection if deleted item was selected

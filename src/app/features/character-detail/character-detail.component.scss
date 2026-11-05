@@ -76,7 +76,7 @@
   height: 28px;
   padding: 0 var(--spacing-sm);
   background: var(--color-accent-subtle);
-  border: 1px solid rgba(229, 168, 85, 0.25);
+  border: 1px solid color-mix(in srgb, var(--color-accent-primary) 25%, transparent);
   border-radius: var(--radius-full);
   color: var(--color-accent-secondary);
   font-size: 0.6875rem;
@@ -523,7 +523,7 @@
   &:focus {
     outline: none;
     border-color: var(--color-accent-primary);
-    box-shadow: 0 0 0 3px rgba(229, 168, 85, 0.12);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent-primary) 12%, transparent);
   }
 
   &.error {
@@ -592,7 +592,7 @@
     background: var(--color-accent-subtle);
     border-color: var(--color-accent-primary);
     transform: scale(1.04);
-    box-shadow: 0 0 16px rgba(229, 168, 85, 0.25);
+    box-shadow: 0 0 16px color-mix(in srgb, var(--color-accent-primary) 25%, transparent);
   }
 
   &:active:not(:disabled) { transform: scale(0.96); }
@@ -713,7 +713,7 @@
   &.active {
     background: var(--color-accent-primary);
     color: var(--color-text-inverse);
-    box-shadow: 0 2px 4px rgba(229, 168, 85, 0.2);
+    box-shadow: 0 2px 4px color-mix(in srgb, var(--color-accent-primary) 20%, transparent);
   }
 }
 
@@ -741,7 +741,7 @@
   &.active {
     background: var(--color-accent-primary);
     color: var(--color-text-inverse);
-    box-shadow: 0 2px 4px rgba(229, 168, 85, 0.2);
+    box-shadow: 0 2px 4px color-mix(in srgb, var(--color-accent-primary) 20%, transparent);
   }
 
   &:disabled {

@@ -5,6 +5,7 @@ import { Character, Tag, Category } from '../../../../core/interfaces';
 import { MetadataHelperService } from '../../../../core/services/metadata-helper.service';
 import { resolveEffectiveCategory } from '../../../../core/utils/character-category.utils';
 import { getCharacterDisplayName } from '../../../../core/utils/character-display.utils';
+import { contrastTextColor } from '../../../../core/utils/color-contrast.utils';
 import { CompactOverflowTagsDirective } from './compact-overflow-tags.directive';
 import { FadeOverflowDirective } from '../../../../shared/fade-overflow.directive';
 
@@ -16,6 +17,7 @@ import { FadeOverflowDirective } from '../../../../shared/fade-overflow.directiv
 })
 export class CharacterCompactViewComponent {
   readonly getCharacterDisplayName = getCharacterDisplayName;
+  readonly contrastTextColor = contrastTextColor;
   @Input() characters: Character[] = [];
   @Input() categories: Category[] = [];
   @Input() tags: Tag[] = [];

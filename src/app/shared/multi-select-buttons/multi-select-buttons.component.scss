@@ -11,15 +11,28 @@
     cursor: pointer;
     transition: all var(--transition-fast);
     user-select: none;
-    border: 1px solid;
+    border: 1px solid var(--color-border);
     background: transparent;
+    color: var(--color-text-secondary);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     font-size: 0.8125rem;
-    padding: 3px 10px;
+    padding: 5px 10px;
     border-radius: var(--radius-lg);
+
+    .select-swatch {
+      width: 8px;
+      height: 8px;
+      border-radius: var(--radius-full);
+      flex-shrink: 0;
+    }
 
     &:hover {
       transform: translateY(-1px);
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      color: var(--color-text-primary);
+      border-color: var(--color-border-light);
     }
 
     &:active {
@@ -28,6 +41,10 @@
 
     &.active {
       font-weight: 500;
+
+      .select-swatch {
+        display: none;
+      }
     }
   }
 
@@ -36,8 +53,13 @@
     padding: 2px 4px;
 
     .select-button {
-      padding: 2px 8px;
+      padding: 4px 8px;
       font-size: 0.75rem;
+
+      .select-swatch {
+        width: 6px;
+        height: 6px;
+      }
     }
   }
 }

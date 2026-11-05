@@ -1,4 +1,5 @@
 import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
+import { contrastTextColor } from '../../core/utils/color-contrast.utils';
 
 
 export interface SelectableItem {
@@ -40,5 +41,10 @@ export class MultiSelectButtonsComponent {
 
   isItemSelected(itemId: string): boolean {
     return (this.selectedIds || []).includes(itemId);
+  }
+
+  /** Readable text color for a selected pill: consumer override, else luminance-based. */
+  activeTextColor(item: SelectableItem): string {
+    return item.activeTextColor || contrastTextColor(item.color);
   }
 }

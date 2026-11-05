@@ -1,5 +1,6 @@
 <div class="book-plan" [style.--book-color]="book?.color">
   <app-page-header [title]="bookTitle">
+    <button pageHeaderPrefix type="button" class="btn btn-ghost" (click)="backToLibrary()">Back to Books</button>
     @if (book?.code) {
       <span pageHeaderPrefix class="book-code">{{ book?.code }}</span>
     }
@@ -30,15 +31,13 @@
   } @else if (!book) {
     <div class="plan-empty">
       <p>This book doesn't exist anymore.</p>
-      <button type="button" class="btn btn-secondary" (click)="backToLibrary()">Back to Library</button>
+      <button type="button" class="btn btn-secondary" (click)="backToLibrary()">Back to Books</button>
     </div>
   } @else if (!state) {
     <div class="plan-empty">
       <h2>No plan yet</h2>
       <p>
-        A plan is a Markdown file with <code>#</code> phases, <code>## 2180 - Title</code> chapters and
-        <code>###</code> scenes. Add <code>PoV: &lt;character id&gt; &lt;name&gt;</code> below a chapter heading
-        to set its point of view.
+        A plan holds your phases, chapters and scenes in one Markdown file stored next to the book.
       </p>
       <div class="plan-empty-actions">
         <button type="button" class="btn btn-primary" (click)="createPlanFile()">
@@ -46,6 +45,14 @@
         </button>
         <button type="button" class="btn btn-secondary" (click)="openBookEditor()">Choose an existing file…</button>
       </div>
+      <details class="plan-format-help">
+        <summary>How plan files are structured</summary>
+        <p>
+          A plan is a Markdown file with <code>#</code> phases, <code>## 2180 - Title</code> chapters and
+          <code>###</code> scenes. Add <code>PoV: &lt;character id&gt; &lt;name&gt;</code> below a chapter heading
+          to set its point of view.
+        </p>
+      </details>
     </div>
   } @else {
     <div class="plan-layout" [class.outline-right]="outlineSide === 'right'">

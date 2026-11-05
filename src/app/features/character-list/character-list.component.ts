@@ -663,7 +663,9 @@ export class CharacterListComponent implements OnInit {
     const displayName = this.getCharacterDisplayName(character);
     if (
       await this.modalService.confirm(
-        `Are you sure you want to delete "${displayName}"?\n\nIt will be moved to the system Trash. You can undo for 15 seconds. After that, restore it from the system Trash (links in Houses, pinboards and plot threads come back only with Undo).`
+        `Are you sure you want to delete "${displayName}"?\n\nIt will be moved to the system Trash. You can undo for 15 seconds. After that, restore it from the system Trash (links in Houses, pinboards and plot threads come back only with Undo).`,
+        this.drawerMode ? 'Delete Draft' : this.loreMode ? 'Delete Lore Figure' : 'Delete Character',
+        { confirmText: 'Delete', danger: true }
       )
     ) {
       try {

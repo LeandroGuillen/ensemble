@@ -92,6 +92,28 @@
   margin-top: var(--spacing-lg);
 }
 
+.plan-format-help {
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border-subtle);
+
+  summary {
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    font-size: 0.875rem;
+
+    &:hover {
+      color: var(--color-text-primary);
+    }
+  }
+
+  p {
+    margin: var(--spacing-sm) 0 0;
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+  }
+}
+
 .plan-layout {
   flex: 1;
   min-height: 0;

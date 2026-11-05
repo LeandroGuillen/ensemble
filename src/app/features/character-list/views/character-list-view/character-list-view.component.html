@@ -53,8 +53,12 @@
             <span
               class="list-item-category"
               appFadeOverflow
-              [style.color]="getCategoryColor(getDisplayCategoryId(character))"
             >
+              <span
+                class="category-dot"
+                aria-hidden="true"
+                [style.background-color]="getCategoryColor(getDisplayCategoryId(character))"
+              ></span>
               {{ getCategoryName(getDisplayCategoryId(character)) }}
             </span>
           </div>
@@ -64,7 +68,7 @@
                 <span
                   class="tag tag-sm"
                   [style.background-color]="tag.color"
-                  [style.color]="'white'"
+                  [style.color]="contrastTextColor(tag.color)"
                   >
                   {{ tag.name }}
                 </span>
@@ -74,11 +78,7 @@
         </div>
         @if (character.content) {
           <p class="list-item-description">
-            {{
-            character.content.length > 150
-            ? character.content.substring(0, 150) + '...'
-            : character.content
-            }}
+            {{ plainTextSummary(character.content, 150) }}
           </p>
         }
       </div>

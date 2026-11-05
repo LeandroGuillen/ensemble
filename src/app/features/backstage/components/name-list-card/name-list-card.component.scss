@@ -15,7 +15,7 @@
 }
 
 .name-list-card.selected {
-  background: rgba(229, 168, 85, 0.05);
+  background: color-mix(in srgb, var(--color-accent-primary) 5%, transparent);
   border-left: 3px solid var(--color-accent-primary);
   padding-left: var(--spacing-sm);
 }
@@ -23,7 +23,7 @@
 .name-list-card.focused {
   background: var(--color-bg-elevated);
   border: 2px solid var(--color-accent-primary);
-  box-shadow: 0 4px 12px rgba(229, 168, 85, 0.15);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--color-accent-primary) 15%, transparent);
   padding: var(--spacing-md);
   margin: var(--spacing-md) 0;
   z-index: 10;
@@ -113,11 +113,11 @@
 }
 
 .name-item:hover {
-  background: rgba(229, 168, 85, 0.02);
+  background: color-mix(in srgb, var(--color-accent-primary) 2%, transparent);
 }
 
 .name-item.selected {
-  background: rgba(229, 168, 85, 0.08);
+  background: color-mix(in srgb, var(--color-accent-primary) 8%, transparent);
   border-left: 2px solid var(--color-accent-primary);
   padding-left: var(--spacing-sm);
 }

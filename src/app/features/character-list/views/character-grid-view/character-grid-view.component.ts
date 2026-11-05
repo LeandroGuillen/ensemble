@@ -4,7 +4,8 @@ import { DragDropModule } from '@angular/cdk/drag-drop';
 import { Character, Tag, Category } from "../../../../core/interfaces";
 import { MetadataHelperService } from "../../../../core/services/metadata-helper.service";
 import { resolveEffectiveCategory } from "../../../../core/utils/character-category.utils";
-import { getCharacterDisplayName } from "../../../../core/utils/character-display.utils";
+import { getCharacterDisplayName, plainTextSummary } from "../../../../core/utils/character-display.utils";
+import { contrastTextColor } from "../../../../core/utils/color-contrast.utils";
 
 @Component({
     selector: "app-character-grid-view",
@@ -14,6 +15,8 @@ import { getCharacterDisplayName } from "../../../../core/utils/character-displa
 })
 export class CharacterGridViewComponent {
   readonly getCharacterDisplayName = getCharacterDisplayName;
+  readonly plainTextSummary = plainTextSummary;
+  readonly contrastTextColor = contrastTextColor;
   @Input() characters: Character[] = [];
   @Input() categories: Category[] = [];
   @Input() tags: Tag[] = [];

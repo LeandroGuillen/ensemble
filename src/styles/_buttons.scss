@@ -34,10 +34,10 @@
   .btn-primary {
     background: linear-gradient(135deg, var(--color-accent-primary) 0%, var(--color-accent-dark) 100%);
     color: var(--color-text-inverse);
-    box-shadow: 0 2px 8px rgba(229, 168, 85, 0.25);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-accent-primary) 25%, transparent);
 
     &:hover:not(:disabled) {
-      box-shadow: 0 4px 16px rgba(229, 168, 85, 0.35);
+      box-shadow: 0 4px 16px color-mix(in srgb, var(--color-accent-primary) 35%, transparent);
       filter: brightness(1.08);
     }
   }

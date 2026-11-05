@@ -18,6 +18,7 @@
       [class.outlined]="outlinedValue === option.id"
       [class.error]="error"
       [style.--option-color]="option.color || null"
+      [style.--option-contrast]="option.color ? contrastTextColor(option.color) : null"
       (click)="onOptionClick(option.id, $event)"
       [title]="getOptionTitle(option)"
       >

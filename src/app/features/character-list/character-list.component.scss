@@ -182,9 +182,9 @@
 }
 
 .compact-direction-btn {
-  width: 28px;
-  height: 28px;
-  margin-right: 3px;
+  width: 32px;
+  height: 32px;
+  margin-right: 2px;
   padding: 0;
   border: 0;
   border-radius: var(--radius-sm);
@@ -233,7 +233,7 @@
 
 .toolbar-label {
   color: var(--color-text-muted);
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -367,11 +367,11 @@
   @keyframes drawer-drop-pulse {
     0%,
     100% {
-      box-shadow: 0 0 0 0 var(--drop-glow, rgba(229, 168, 85, 0.45));
+      box-shadow: 0 0 0 0 var(--drop-glow, color-mix(in srgb, var(--color-accent-primary) 45%, transparent));
     }
 
     50% {
-      box-shadow: 0 0 10px 2px var(--drop-glow, rgba(229, 168, 85, 0.45));
+      box-shadow: 0 0 10px 2px var(--drop-glow, color-mix(in srgb, var(--color-accent-primary) 45%, transparent));
     }
   }
 
@@ -425,8 +425,8 @@
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  width: 20px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   border: 0;
   border-radius: 3px;
@@ -480,7 +480,7 @@
   &.active {
     background: var(--color-accent-primary);
     color: var(--color-text-inverse);
-    box-shadow: 0 2px 4px rgba(229, 168, 85, 0.2);
+    box-shadow: 0 2px 4px color-mix(in srgb, var(--color-accent-primary) 20%, transparent);
   }
 
   &:disabled {
@@ -586,7 +586,7 @@
     &:focus {
       outline: none;
       border-color: var(--color-accent-primary);
-      box-shadow: 0 0 0 3px rgba(229, 168, 85, 0.1);
+      box-shadow: 0 0 0 3px var(--color-accent-subtle);
     }
 
     option {
@@ -605,7 +605,7 @@
   background: linear-gradient(135deg, var(--color-accent-primary) 0%, var(--color-accent-dark) 100%);
   border-radius: var(--radius-lg);
   margin-top: var(--spacing-sm);
-  box-shadow: 0 4px 12px rgba(229, 168, 85, 0.25);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--color-accent-primary) 25%, transparent);
 
   .selection-count {
     flex: 1;
@@ -705,7 +705,7 @@
 
   &.drop-active {
     border-color: var(--color-accent-primary);
-    background: rgba(229, 168, 85, 0.08);
+    background: color-mix(in srgb, var(--color-accent-primary) 8%, transparent);
   }
 
   &.drop-disabled {
@@ -747,8 +747,8 @@
 }
 
 ::ng-deep .drag-preview-chip {
-  background: rgba(229, 168, 85, 0.55);
-  border: 2px solid rgba(229, 168, 85, 0.95);
+  background: color-mix(in srgb, var(--color-accent-primary) 55%, transparent);
+  border: 2px solid var(--color-accent-primary);
   color: var(--color-text-primary);
   border-radius: var(--radius-lg);
   padding: 10px 14px;
@@ -871,7 +871,7 @@
       &:focus {
         outline: none;
         border-color: var(--color-accent-primary);
-        box-shadow: 0 0 0 3px rgba(229, 168, 85, 0.1);
+        box-shadow: 0 0 0 3px var(--color-accent-subtle);
       }
     }
   }

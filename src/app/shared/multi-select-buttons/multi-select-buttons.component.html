@@ -4,12 +4,13 @@
       type="button"
       class="select-button"
       [class.active]="isItemSelected(item.id)"
-      [style.background-color]="isItemSelected(item.id) ? item.color : 'transparent'"
-      [style.color]="isItemSelected(item.id) ? (item.activeTextColor || 'white') : item.color"
-      [style.border-color]="item.color"
+      [style.background-color]="isItemSelected(item.id) ? item.color : null"
+      [style.color]="isItemSelected(item.id) ? activeTextColor(item) : null"
+      [style.border-color]="isItemSelected(item.id) ? item.color : null"
       [attr.aria-pressed]="isItemSelected(item.id)"
       (click)="onItemToggle(item.id)"
       >
+      <span class="select-swatch" [style.background-color]="item.color" aria-hidden="true"></span>
       {{ item.name }}
     </button>
   }

@@ -357,7 +357,7 @@
   outline: none;
   background: var(--color-bg-elevated);
   border-color: var(--color-accent-primary);
-  box-shadow: 0 0 0 3px rgba(229, 168, 85, 0.1);
+  box-shadow: 0 0 0 3px var(--color-accent-subtle);
 }
 
 .character-name {

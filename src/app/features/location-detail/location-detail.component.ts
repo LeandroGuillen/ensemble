@@ -394,7 +394,9 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
     }
     if (
       !(await this.modalService.confirm(
-        `Are you sure you want to delete the location "${this.location.name}"?\n\nIt will be moved to the system Trash. You can undo for 15 seconds.`
+        `Are you sure you want to delete the location "${this.location.name}"?\n\nIt will be moved to the system Trash. You can undo for 15 seconds.`,
+        'Delete Location',
+        { confirmText: 'Delete', danger: true }
       ))
     ) {
       return;

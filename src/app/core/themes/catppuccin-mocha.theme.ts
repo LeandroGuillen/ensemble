@@ -26,7 +26,7 @@ export const catppuccinMochaTheme: Theme = {
     // Text colors - Text, subtext, overlay
     textPrimary: '#cdd6f4',
     textSecondary: '#a6adc8',
-    textMuted: '#7f849c',
+    textMuted: '#979baf',
     textInverse: '#11111b',
 
     // Border colors

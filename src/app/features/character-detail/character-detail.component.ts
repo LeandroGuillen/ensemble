@@ -1767,7 +1767,11 @@ export class CharacterDetailComponent
       { characterService: this.characterService, logger: this.logger }
     );
 
-    const confirmed = await this.modalService.confirm(confirmMessage);
+    const confirmed = await this.modalService.confirm(
+      confirmMessage,
+      this.isDraftMode ? 'Delete Draft' : this.isLoreMode ? 'Delete Lore Figure' : 'Delete Character',
+      { confirmText: 'Delete', danger: true }
+    );
 
     if (!confirmed) {
       return;

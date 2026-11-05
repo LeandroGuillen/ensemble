@@ -242,6 +242,7 @@ export class CharacterFilterComponent {
 
   hasActiveFilters(): boolean {
     return !!(
+      this.searchTerm ||
       this.enabledCategoryIds.length < this.categories.length ||
       this.selectedTags.length > 0 ||
       this.selectedCast ||

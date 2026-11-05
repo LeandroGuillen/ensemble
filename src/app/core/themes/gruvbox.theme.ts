@@ -26,7 +26,7 @@ export const gruvboxTheme: Theme = {
     // Text colors - Warm parchment
     textPrimary: '#ebdbb2',
     textSecondary: '#d5c4a1',
-    textMuted: '#928374',
+    textMuted: '#aca195',
     textInverse: '#1d2021',
 
     // Border colors

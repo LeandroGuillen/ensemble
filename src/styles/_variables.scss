@@ -14,12 +14,12 @@
   --color-accent-secondary: #f0c074;
   --color-accent-dark: #c48b3a;
   --color-accent-muted: #8b6b33;
-  --color-accent-subtle: rgba(229, 168, 85, 0.1);
+  --color-accent-subtle: var(--color-accent-subtle);
 
   /* Text Colors */
   --color-text-primary: #f2f4f7;
   --color-text-secondary: #a0a8b8;
-  --color-text-muted: #6b7280;
+  --color-text-muted: #8a909b;
   --color-text-inverse: #0c0f14;
 
   /* Borders */
@@ -38,7 +38,7 @@
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
   --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.45);
-  --shadow-glow: 0 0 24px rgba(229, 168, 85, 0.25);
+  --shadow-glow: 0 0 24px color-mix(in srgb, var(--color-accent-primary) 25%, transparent);
   --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.25), 0 0 1px rgba(0, 0, 0, 0.3);
 
   /* Transitions */

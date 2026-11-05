@@ -40,7 +40,7 @@ export class SidebarComponent implements OnInit {
   currentProjectName = '';
   currentRoute = '';
   private routeBeforeSettings = '/characters';
-  isCollapsed = true;
+  isCollapsed = false;
   appVersion = '';
   updateStatus: UpdateStatus = { status: 'idle' };
   updateActionPending = false;
@@ -116,10 +116,13 @@ export class SidebarComponent implements OnInit {
         this.currentRoute = event.urlAfterRedirects;
       });
 
-    // Load saved collapse state
+    // Load saved collapse state. First run: show labeled navigation on wide
+    // windows so destinations are discoverable, but keep content room when narrow.
     const saved = localStorage.getItem('sidebar-collapsed');
     if (saved !== null) {
       this.isCollapsed = saved === 'true';
+    } else {
+      this.isCollapsed = window.innerWidth < 1100;
     }
 
   }

@@ -52,8 +52,12 @@
         </h3>
         <p
           class="character-category"
-          [style.color]="getCategoryColor(getDisplayCategoryId(character))"
           >
+          <span
+            class="category-dot"
+            aria-hidden="true"
+            [style.background-color]="getCategoryColor(getDisplayCategoryId(character))"
+            ></span>
           {{ getCategoryName(getDisplayCategoryId(character)) }}
         </p>
         @if (character.tags.length > 0) {
@@ -62,7 +66,7 @@
               <span
                 class="tag"
                 [style.background-color]="tag.color"
-                [style.color]="'white'"
+                [style.color]="contrastTextColor(tag.color)"
                 >
                 {{ tag.name }}
               </span>
@@ -71,11 +75,7 @@
         }
         @if (character.content) {
           <p class="character-description">
-            {{
-            character.content.length > 120
-            ? character.content.substring(0, 120) + "..."
-            : character.content
-            }}
+            {{ plainTextSummary(character.content, 120) }}
           </p>
         }
       </div>

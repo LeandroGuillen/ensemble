@@ -1,8 +1,13 @@
 <div class="houses-page">
   <app-page-header title="Houses">
     <div class="actions">
-      <input class="form-control" type="search" aria-label="Search houses" placeholder="Search houses…" [(ngModel)]="search" />
-      <button class="btn btn-secondary" (click)="refresh()" [disabled]="loading">Refresh</button>
+      <div class="search-box">
+        <input class="search-input" type="search" aria-label="Search houses" placeholder="Search houses…" [(ngModel)]="search" />
+        @if (search) {
+          <button class="search-clear" type="button" (click)="search = ''" title="Clear search" aria-label="Clear search"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg></button>
+        }
+      </div>
+      <button class="btn btn-secondary btn-icon" (click)="refresh()" [disabled]="loading" title="Refresh" aria-label="Refresh houses"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#refresh" /></svg></button>
       <button type="button" class="btn btn-primary" (click)="createNewHouse()">New House</button>
       <kbd class="shortcut-hint">N</kbd>
     </div>

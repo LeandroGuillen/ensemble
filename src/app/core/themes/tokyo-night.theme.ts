@@ -26,7 +26,7 @@ export const tokyoNightTheme: Theme = {
     // Text colors - Cool lavender-whites
     textPrimary: '#c0caf5',
     textSecondary: '#a9b1d6',
-    textMuted: '#737aa2',
+    textMuted: '#8f95b5',
     textInverse: '#16161e',
 
     // Border colors
