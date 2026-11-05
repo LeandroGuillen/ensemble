@@ -253,3 +253,74 @@
   white-space: nowrap;
   flex: 0 1 auto;
 }
+
+// ---- Prompts view -----------------------------------------------------------
+
+.list-item-prompts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  cursor: default;
+}
+
+.prompt-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  max-width: 100%;
+  padding: 0 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+
+  .ui-icon {
+    flex: 0 0 auto;
+    width: 12px;
+    height: 12px;
+    color: var(--color-accent-primary);
+  }
+
+  &:hover:not(:disabled) {
+    border-color: var(--color-accent-primary);
+  }
+}
+
+.prompt-chip-count {
+  font-size: 0.6875rem;
+  color: var(--color-text-muted);
+}
+
+.prompt-chip-add {
+  background: transparent;
+  border-style: dashed;
+  color: var(--color-text-secondary);
+}
+
+.prompt-none {
+  font-size: 0.75rem;
+  font-style: italic;
+  color: var(--color-text-muted);
+}
+
+.list-item-prompt-images {
+  display: flex;
+  gap: 4px;
+  flex: 0 0 auto;
+  align-self: center;
+}
+
+.prompt-image {
+  width: 44px;
+  height: 44px;
+}

@@ -477,15 +477,14 @@
 
               </div>
 
-              <app-character-prompts-editor
-                [prompts]="prompts"
-                (promptsChange)="onPromptsChange($event)"
-                (dirty)="onPromptsDirty()"
-                [imageGenerationEnabled]="imageGenerationEnabled"
-                [generatingPromptIndex]="generatingPromptIndex"
-                [thumbnailOutputDirectory]="thumbnailOutputDirectory"
-                (generateRequest)="generateFromPrompt($event)"
-              ></app-character-prompts-editor>
+              @if (character) {
+                <app-character-linked-prompts
+                  [character]="character"
+                  [imageGenerationEnabled]="imageGenerationEnabled"
+                  [generatingKey]="generatingPromptKey"
+                  (generateRequest)="generateFromPrompt($event)"
+                ></app-character-linked-prompts>
+              }
 
               @if (character) {
                 <section class="panel">

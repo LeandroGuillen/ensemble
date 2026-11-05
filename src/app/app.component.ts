@@ -5,6 +5,7 @@ import { Router, RouterOutlet, NavigationEnd } from "@angular/router";
 import { Title } from "@angular/platform-browser";
 import { HouseCommandService } from "./core/services/house-command.service";
 import { HouseService } from "./core/services/house.service";
+import { PromptService } from "./core/services/prompt.service";
 import { ProjectService, ElectronService, ThemeService, SkinService, LoggingService, ZoomService, AddNameCommandService, AddConceptCommandService, CharacterCommandService, CharacterService, LocationCommandService, LocationService, FileWatcherService } from "./core/services";
 import { filter } from "rxjs/operators";
 import { remapCharacterRoute } from "./core/utils/character-id.utils";
@@ -61,6 +62,7 @@ export class AppComponent implements OnInit {
     private characterService: CharacterService,
     private locationCommandService: LocationCommandService,
     private locationService: LocationService,
+    private promptService: PromptService,
     private houseService: HouseService,
     private houseCommandService: HouseCommandService,
     private fileWatcherService: FileWatcherService,
@@ -132,6 +134,7 @@ export class AppComponent implements OnInit {
         const folders = project ? [
           project.metadata.settings?.charactersFolder?.trim() || 'characters',
           project.metadata.settings?.locationsFolder?.trim() || 'locations',
+          project.metadata.settings?.promptsFolder?.trim() || 'prompts',
           'houses',
           // Book plan files can live anywhere in the project; watch each file directly.
           ...(project.metadata.books || [])
@@ -176,6 +179,10 @@ export class AppComponent implements OnInit {
           void this.houseService.loadHouses().catch(error => this.logger.error('Failed to load houses', error));
           void this.locationService.loadLocations(project.path).catch((error) => {
             this.logger.error('Failed to load locations for command palette', error);
+          });
+          // Also starts the one-time move of character-frontmatter prompts into prompt files.
+          void this.promptService.ensureLoaded().catch((error) => {
+            this.logger.error('Failed to load prompts', error);
           });
         } else {
           this.characterCommandService.deactivate();

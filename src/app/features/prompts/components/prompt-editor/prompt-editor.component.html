@@ -1,0 +1,210 @@
+<div class="prompt-editor">
+  <header class="editor-header">
+    <div class="editor-title">
+      <h2 class="editor-name">{{ file.name }}</h2>
+      <span class="editor-path" [title]="file.filePath">{{ file.folder ? file.folder + '/' : '' }}{{ file.name }}.md</span>
+    </div>
+    <div class="editor-actions">
+      <span class="save-state" [class.error]="saveError" aria-live="polite">
+        @if (saveError) {
+          Not saved: {{ saveError }}
+        } @else if (saving) {
+          Saving…
+        } @else if (dirty) {
+          Unsaved changes
+        } @else {
+          Saved
+        }
+      </span>
+      <button type="button" class="btn btn-ghost btn-sm" (click)="requestRename()" title="Rename or move to another folder">Rename / Move</button>
+      <button type="button" class="btn btn-ghost btn-sm" (click)="openInExternalEditor()" title="Open the file in your default editor">Open file</button>
+      <button type="button" class="btn btn-ghost btn-sm" (click)="showInFolder()" title="Show the file in your file manager">Show in folder</button>
+      <button type="button" class="icon-btn danger" (click)="requestDelete()" title="Delete prompt" aria-label="Delete prompt">
+        <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#trash" /></svg>
+      </button>
+    </div>
+  </header>
+
+  <section class="editor-meta">
+    <div class="meta-row">
+      <span class="meta-label">Linked to</span>
+      <div class="chips">
+        @for (id of draft.characters; track id) {
+          <span class="chip chip-character" [class.missing]="isMissingCharacter(id)">
+            <button type="button" class="chip-link" (click)="openCharacter.emit(id)" [disabled]="isMissingCharacter(id)" title="Open character">
+              <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#user" /></svg>
+              {{ characterName(id) }}
+            </button>
+            <button type="button" class="chip-remove" (click)="removeCharacter(id)" aria-label="Unlink character">×</button>
+          </span>
+        }
+        @for (id of draft.locations; track id) {
+          <span class="chip chip-location">
+            <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#map-pin" /></svg>
+            {{ locationName(id) }}
+            <button type="button" class="chip-remove" (click)="removeLocation(id)" aria-label="Unlink location">×</button>
+          </span>
+        }
+        <button type="button" class="chip-add" (click)="linkCharacter()" title="Link a character">
+          <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
+          Character
+        </button>
+        @if (locations.length) {
+          <button type="button" class="chip-add" (click)="linkLocation()" title="Link a location">
+            <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
+            Location
+          </button>
+        }
+      </div>
+    </div>
+    <div class="meta-row">
+      <span class="meta-label">Tags</span>
+      <div class="chips">
+        @for (tag of draft.tags; track tag) {
+          <span class="chip chip-tag">{{ tag }}<button type="button" class="chip-remove" (click)="removeTag(tag)" [attr.aria-label]="'Remove tag ' + tag">×</button></span>
+        }
+        <input
+          class="tag-input"
+          type="text"
+          [(ngModel)]="tagDraft"
+          (keydown)="onTagKeydown($event)"
+          (blur)="addTag()"
+          placeholder="Add tag…"
+          aria-label="Add tag"
+        />
+      </div>
+    </div>
+  </section>
+
+  <ng-template #sectionBody let-section let-index="index">
+    <textarea
+      class="notes-input"
+      rows="2"
+      [(ngModel)]="section.notes"
+      (ngModelChange)="changed()"
+      placeholder="Notes (Markdown)…"
+      aria-label="Notes"
+    ></textarea>
+
+    @if (section.prompt !== null) {
+      <div class="block">
+        <div class="block-head">
+          <span class="block-label">Prompt</span>
+          <span class="block-actions">
+            <button type="button" class="btn btn-ghost btn-sm" (click)="copy(section.prompt)" [disabled]="!section.prompt">Copy</button>
+            <button type="button" class="icon-btn" (click)="removeBlock(section, 'prompt')" title="Remove prompt block" aria-label="Remove prompt block">×</button>
+          </span>
+        </div>
+        <textarea
+          class="block-input"
+          rows="5"
+          [(ngModel)]="section.prompt"
+          (ngModelChange)="changed()"
+          placeholder="Prompt text…"
+          aria-label="Prompt"
+          spellcheck="false"
+        ></textarea>
+      </div>
+    }
+    @if (section.negative !== null) {
+      <div class="block block-negative">
+        <div class="block-head">
+          <span class="block-label">Negative</span>
+          <span class="block-actions">
+            <button type="button" class="btn btn-ghost btn-sm" (click)="copy(section.negative, 'Negative prompt')" [disabled]="!section.negative">Copy</button>
+            <button type="button" class="icon-btn" (click)="removeBlock(section, 'negative')" title="Remove negative block" aria-label="Remove negative block">×</button>
+          </span>
+        </div>
+        <textarea
+          class="block-input"
+          rows="3"
+          [(ngModel)]="section.negative"
+          (ngModelChange)="changed()"
+          placeholder="What you don't want to see…"
+          aria-label="Negative prompt"
+          spellcheck="false"
+        ></textarea>
+      </div>
+    }
+
+    <div class="images">
+      @for (image of section.images; track image + $index; let i = $index) {
+        <div class="image-tile">
+          <button type="button" class="image-open" (click)="openLightbox(section.images, i)" [title]="image">
+            <app-prompt-image [path]="image"></app-prompt-image>
+          </button>
+          <button type="button" class="image-remove" (click)="removeImage(section, i)" aria-label="Detach image" title="Detach image (the file stays)">×</button>
+        </div>
+      }
+    </div>
+
+    <div class="section-add">
+      @if (section.prompt === null) {
+        <button type="button" class="btn btn-ghost btn-sm" (click)="addBlock(section, 'prompt')">+ Prompt</button>
+      }
+      @if (section.negative === null) {
+        <button type="button" class="btn btn-ghost btn-sm" (click)="addBlock(section, 'negative')">+ Negative</button>
+      }
+      <button type="button" class="btn btn-ghost btn-sm" (click)="openImagePicker(index)">+ Image from project</button>
+      <button type="button" class="btn btn-ghost btn-sm" (click)="attachFromFiles(index)">+ Image from file…</button>
+    </div>
+  </ng-template>
+
+  <section class="section-card section-main">
+    <ng-container *ngTemplateOutlet="sectionBody; context: { $implicit: mainSection, index: 0 }"></ng-container>
+  </section>
+
+  @for (section of variantSections; track $index; let i = $index; let last = $last) {
+    <section class="section-card">
+      <div class="variant-head">
+        <input
+          class="variant-name"
+          type="text"
+          [(ngModel)]="section.name"
+          (ngModelChange)="changed()"
+          placeholder="Variant name"
+          aria-label="Variant name"
+        />
+        <span class="variant-actions">
+          <button type="button" class="icon-btn" (click)="moveVariant(i + 1, -1)" [disabled]="i === 0" title="Move up" aria-label="Move variant up">
+            <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#arrow-up" /></svg>
+          </button>
+          <button type="button" class="icon-btn" (click)="moveVariant(i + 1, 1)" [disabled]="last" title="Move down" aria-label="Move variant down">
+            <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#arrow-down" /></svg>
+          </button>
+          <button type="button" class="icon-btn danger" (click)="removeVariant(i + 1)" title="Remove variant" aria-label="Remove variant">
+            <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#trash" /></svg>
+          </button>
+        </span>
+      </div>
+      <ng-container *ngTemplateOutlet="sectionBody; context: { $implicit: section, index: i + 1 }"></ng-container>
+    </section>
+  }
+
+  <button type="button" class="btn btn-secondary add-variant" (click)="addVariant()">+ Add variant</button>
+</div>
+
+@if (lightbox) {
+  <div class="lightbox" role="dialog" aria-modal="true" aria-label="Image preview" (click)="closeLightbox()">
+    <div class="lightbox-frame" (click)="$event.stopPropagation()">
+      <app-prompt-image class="lightbox-image" [path]="lightbox.images[lightbox.index]"></app-prompt-image>
+      <div class="lightbox-bar">
+        <span class="lightbox-path">{{ lightbox.images[lightbox.index] }}</span>
+        <span class="lightbox-count">{{ lightbox.index + 1 }} / {{ lightbox.images.length }}</span>
+        <button type="button" class="btn btn-ghost btn-sm" (click)="showImageInFolder(lightbox.images[lightbox.index])">Show in folder</button>
+        <button type="button" class="btn btn-ghost btn-sm" (click)="closeLightbox()">Close</button>
+      </div>
+      @if (lightbox.images.length > 1) {
+        <button type="button" class="lightbox-nav prev" (click)="stepLightbox(-1)" aria-label="Previous image">‹</button>
+        <button type="button" class="lightbox-nav next" (click)="stepLightbox(1)" aria-label="Next image">›</button>
+      }
+    </div>
+  </div>
+}
+
+<app-image-picker-dialog
+  [visible]="showImagePicker"
+  (visibleChange)="showImagePicker = $event"
+  (imageSelected)="onImagePicked($event)"
+  (closed)="closeImagePicker()"
+></app-image-picker-dialog>

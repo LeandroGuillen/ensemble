@@ -39,7 +39,6 @@ import {
   ImageWorkflow,
   ProjectImage,
   Tag,
-  CharacterPrompt,
 } from "../../core/interfaces";
 import {
   AiService,
@@ -76,7 +75,7 @@ import {
 import { CharacterHousesComponent } from "../../shared/character-houses/character-houses.component";
 import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
 import { ImagePickerDialogComponent } from "../../shared/image-picker-dialog/image-picker-dialog.component";
-import { CharacterPromptsEditorComponent } from "./components/character-prompts-editor/character-prompts-editor.component";
+import { CharacterLinkedPromptsComponent, CharacterPromptGenerateRequest } from "./components/character-linked-prompts/character-linked-prompts.component";
 import { GeneratePortraitDialogComponent } from "./components/generate-portrait-dialog/generate-portrait-dialog.component";
 
 /** Where a character lives; changed from the infobox and applied on save. */
@@ -92,7 +91,7 @@ type CharacterCollection = 'characters' | 'lore' | 'draft';
     MultiSelectButtonsComponent,
     PageHeaderComponent,
     ImagePickerDialogComponent,
-    CharacterPromptsEditorComponent,
+    CharacterLinkedPromptsComponent,
     GeneratePortraitDialogComponent,
     CharacterHousesComponent,
     MarkdownEditorComponent,
@@ -194,10 +193,8 @@ export class CharacterDetailComponent
   private imageWorkflows: ImageWorkflow[] = [];
   private selectedImageWorkflowId = '';
 
-  /** Image-generation prompts for this character. The first one is the default. */
-  prompts: CharacterPrompt[] = [];
-  /** Set while a quick-generate from a character prompt is in progress. */
-  generatingPromptIndex: number | null = null;
+  /** Variant key (see CharacterLinkedPromptsComponent) while a quick-generate runs. */
+  generatingPromptKey: string | null = null;
 
   /** Alternative names (a.k.a.'s) for this character. */
   aliases: string[] = [];
@@ -341,7 +338,6 @@ export class CharacterDetailComponent
           this.bookTagsMap = {};
           this.bookThumbnailsMap = {};
           this.thumbnailPreviewUrls = new Map();
-          this.prompts = [];
           this.contentTabs = [{ id: 'main', label: 'General' }];
           this.cdr.markForCheck();
         }
@@ -576,7 +572,6 @@ export class CharacterDetailComponent
         this.bookThumbnailsMap = { ...(this.character.bookThumbnails || {}) };
         await this.refreshThumbnailPreviews('main');
 
-        this.prompts = (this.character.prompts || []).map((p) => ({ ...p }));
         this.aliases = [...(this.character.aliases || [])];
 
         this.activeContentTab = 'main';
@@ -914,7 +909,6 @@ export class CharacterDetailComponent
       bookTags: normalizeBookTags(this.bookTagsMap, books),
       thumbnails: { ...this.thumbnailsMap },
       bookThumbnails: normalizeBookThumbnailsMap(this.bookThumbnailsMap, books),
-      prompts: this.prompts.map((prompt) => ({ ...prompt })),
       content: this.characterForm.value.content || '',
     };
   }
@@ -1633,19 +1627,10 @@ export class CharacterDetailComponent
     return this.getThumbnailOutputDirectory();
   }
 
-  onPromptsChange(prompts: CharacterPrompt[]): void {
-    this.prompts = prompts;
-  }
-
-  onPromptsDirty(): void {
-    this.characterForm.markAsDirty();
-    this.cdr.markForCheck();
-  }
-
-  async generateFromPrompt(prompt: CharacterPrompt): Promise<void> {
+  async generateFromPrompt(prompt: CharacterPromptGenerateRequest): Promise<void> {
     if (!this.imageGenerationEnabled || !prompt.positive.trim()) return;
-    if (this.generatingPromptIndex !== null) return;
-    this.generatingPromptIndex = this.prompts.indexOf(prompt);
+    if (this.generatingPromptKey !== null) return;
+    this.generatingPromptKey = prompt.key;
     this.pickerTargetStyleId = this.selectedStyleId || this.defaultCharacterStyle || this.characterStyles[0]?.id || '';
     this.pickerTargetBookId = this.activeBookId;
     this.error = null;
@@ -1674,7 +1659,7 @@ export class CharacterDetailComponent
     } catch (error) {
       this.notificationService.showError(error instanceof Error ? error.message : 'Failed to generate image');
     } finally {
-      this.generatingPromptIndex = null;
+      this.generatingPromptKey = null;
       this.cdr.markForCheck();
     }
   }

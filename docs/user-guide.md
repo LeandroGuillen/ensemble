@@ -67,6 +67,21 @@ its own description. Each cast has a **pinboard**: a graph where characters are
 pins joined by labelled, coloured connections. Pinboards are stored in
 `ensemble.json` and are a quick way to map relationships at a glance.
 
+## Prompts
+
+**Prompts** is a repository for image and text prompts. Each prompt is a
+Markdown file under the prompts folder (`prompts/` by default, changeable in
+Settings → General), organized in any subfolders you like. A file can hold
+several **variants** (one per `##` heading), each with a prompt, an optional
+negative prompt, notes and the images it produced. Link a prompt to characters
+and locations from its editor; the character page lists the prompts linked to
+it, and the Characters page's **Prompts** view (also reached from **By
+character** on the Prompts page) shows each character's prompts, with the usual
+filters and sorting plus a Prompts with/without filter. Search matches the prompt text itself, so "pointy ears" finds every elf.
+
+Prompts that used to live in a character's frontmatter (`prompts:`) are moved
+automatically into `prompts/characters/<name>.md`, linked to that character.
+
 ## Plot boards
 
 A **plot board** lays your plot out as a grid: threads across the top, rows down

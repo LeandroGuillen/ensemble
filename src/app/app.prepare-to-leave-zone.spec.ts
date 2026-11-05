@@ -23,6 +23,7 @@ import {
 } from './core/services';
 import { HouseCommandService } from './core/services/house-command.service';
 import { HouseService } from './core/services/house.service';
+import { PromptService } from './core/services/prompt.service';
 import { CommandPaletteService } from './shared/command-palette/command-palette.service';
 import { ConfirmationDialogComponent } from './shared/confirmation-dialog/confirmation-dialog.component';
 import { KeyboardShortcutsService } from './shared/keyboard-shortcuts-dialog/keyboard-shortcuts.service';
@@ -107,6 +108,7 @@ describe('AppComponent prepare-to-leave zone', () => {
         },
         { provide: LocationService, useValue: { loadLocations: () => Promise.resolve() } },
         { provide: HouseService, useValue: { loadHouses: () => Promise.resolve() } },
+        { provide: PromptService, useValue: { ensureLoaded: () => Promise.resolve() } },
         {
           provide: HouseCommandService,
           useValue: { activate: () => undefined, deactivate: () => undefined },

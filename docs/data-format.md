@@ -1,6 +1,6 @@
 # Data format
 
-How Ensemble stores Houses, Lore figures and Locations on disk. See the [README](../README.md) for the project overview.
+How Ensemble stores Houses, Lore figures, Locations and Prompts on disk. See the [README](../README.md) for the project overview.
 
 ## File and folder names
 
@@ -56,3 +56,44 @@ The Locations page displays type badges in grid and list views. Search matches
 names, descriptions, book names, and type labels. Type, book, and picture filters
 can be combined; their selections are remembered, and Clear Filters resets them.
 The toolbar wraps below the page title as space becomes limited.
+
+## Prompts
+
+Prompt files are any `*.md` under the prompts folder (`settings.promptsFolder`,
+default `prompts`), scanned recursively. The file name is the prompt's name and
+subfolders are free-form organization. Links live in the prompt file only; a
+character's prompts are the files whose `characters` list holds its ID.
+
+````markdown
+---
+characters: [m0k3r5abc123]   # stable character IDs (optional)
+locations: [m0k3r5loc001]    # stable location IDs (optional)
+tags: [pony, portrait]       # free-form (optional)
+created: "2026-11-05T10:00:00Z"
+modified: "2026-11-05T10:00:00Z"
+---
+Notes in plain Markdown.
+
+```prompt
+1woman, solo, score_9, (long blonde braids)+, {sad|happy}
+```
+```negative
+child
+```
+![[img/gen/dessir-1.png]]
+
+## with clothes
+```prompt
+1woman, solo, white buttoned shirt
+```
+````
+
+- Text before the first `##` is the main section; each `##` heading starts a named variant.
+- Within a section, the first ` ```prompt ` and ` ```negative ` blocks are the prompt and
+  negative prompt. Fenced blocks keep prompt syntax exactly as written.
+- Lines made only of `![[path]]` embeds attach images (project-relative paths) to that
+  section. Images picked from outside the project are copied to `prompts/_images/`.
+- Anything else (other code blocks, `###` headings, prose) is kept as the section's notes.
+  When Ensemble saves a section it writes notes first, then the blocks, then the images.
+- Unknown frontmatter keys are preserved.
+

@@ -74,7 +74,8 @@ export class SidebarComponent implements OnInit {
         { icon: 'users', label: 'Characters', route: '/characters', title: 'Characters' },
         { icon: 'lightbulb', label: 'Concepts', route: '/concepts', title: 'Concepts' },
         { icon: 'type', label: 'Names', route: '/names', title: 'Names' },
-        { icon: 'theater', label: 'Casts', route: '/casts', title: 'Casts' }
+        { icon: 'theater', label: 'Casts', route: '/casts', title: 'Casts' },
+        { icon: 'sparkles', label: 'Prompts', route: '/prompts', title: 'Prompts' }
       ]
     },
     {

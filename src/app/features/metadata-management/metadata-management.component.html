@@ -910,6 +910,23 @@
                   }
                   <small class="form-help">Relative path from project root where location files are stored (default: locations).</small>
                 </div>
+                <div class="form-group" [settingsSearchable]="['Prompts Folder', 'image prompts', 'path', settings?.promptsFolder || 'prompts']">
+                  <label for="promptsFolder">Prompts Folder</label>
+                  <input
+                    type="text"
+                    id="promptsFolder"
+                    formControlName="promptsFolder"
+                    class="form-control"
+                    placeholder="prompts"
+                    [class.error]="getFieldError(settingsForm, 'promptsFolder')"
+                    />
+                  @if (getFieldError(settingsForm, 'promptsFolder')) {
+                    <div class="field-error">
+                      {{ getFieldError(settingsForm, 'promptsFolder') }}
+                    </div>
+                  }
+                  <small class="form-help">Relative path from project root where prompt files are stored (default: prompts).</small>
+                </div>
                 <div class="form-group" [settingsSearchable]="['Casts Folder', 'path', settings?.castsFolder || 'characters/casts']">
                   <label for="castsFolder">Casts Folder</label>
                   <input

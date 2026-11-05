@@ -12,6 +12,7 @@ import { ProjectIconService } from '../../core/services/project-icon.service';
 import { CharacterService } from '../../core/services/character.service';
 import { CastService } from '../../core/services/cast.service';
 import { LocationService } from '../../core/services/location.service';
+import { PromptService } from '../../core/services/prompt.service';
 import { BackstageService } from '../../core/services/backstage.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { SkinService } from '../../core/services/skin.service';
@@ -134,6 +135,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
     private characterService: CharacterService,
     private castService: CastService,
     private locationService: LocationService,
+    private promptService: PromptService,
     private backstageService: BackstageService,
     private themeService: ThemeService,
     private skinService: SkinService,
@@ -163,6 +165,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
       defaultCategory: ['', Validators.required],
       charactersFolder: ['', [Validators.maxLength(200)]],
       locationsFolder: ['', [Validators.maxLength(200)]],
+      promptsFolder: ['', [Validators.maxLength(200)]],
       castsFolder: ['', [Validators.maxLength(200)]],
       namesFile: ['', [Validators.maxLength(500)]],
       imagesFolder: ['', [Validators.maxLength(200)]],
@@ -341,6 +344,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
           defaultCategory: this.settings.defaultCategory,
           charactersFolder: this.settings.charactersFolder ?? 'characters',
           locationsFolder: this.settings.locationsFolder ?? 'locations',
+          promptsFolder: this.settings.promptsFolder ?? 'prompts',
           castsFolder: this.settings.castsFolder ?? 'characters/casts',
           namesFile: this.settings.namesFile ?? 'characters/names.md',
           imagesFolder: this.settings.imagesFolder ?? 'img',
@@ -520,6 +524,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
         // Normalize empty paths to their defaults.
         const charactersFolder = formData.charactersFolder?.trim() || 'characters';
         const locationsFolder = formData.locationsFolder?.trim() || 'locations';
+        const promptsFolder = formData.promptsFolder?.trim() || 'prompts';
         const castsFolder = formData.castsFolder?.trim() || 'characters/casts';
         const namesFile = formData.namesFile?.trim() || 'characters/names.md';
         const imagesFolder = formData.imagesFolder?.trim() || 'img';
@@ -531,6 +536,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
           ...formData,
           charactersFolder,
           locationsFolder,
+          promptsFolder,
           castsFolder,
           namesFile,
           imagesFolder,
@@ -547,6 +553,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
 
         const previousCharactersFolder = previousSettings?.charactersFolder?.trim() || 'characters';
         const previousLocationsFolder = previousSettings?.locationsFolder?.trim() || 'locations';
+        const previousPromptsFolder = previousSettings?.promptsFolder?.trim() || 'prompts';
         const previousCastsFolder = previousSettings?.castsFolder?.trim() || 'characters/casts';
         const previousNamesFile = previousSettings?.namesFile?.trim() || 'characters/names.md';
         await this.metadataService.updateSettings(settingsUpdate);
@@ -556,6 +563,9 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
         }
         if (locationsFolder !== previousLocationsFolder) {
           await this.locationService.forceReloadLocations();
+        }
+        if (promptsFolder !== previousPromptsFolder) {
+          await this.promptService.forceReload();
         }
         if (castsFolder !== previousCastsFolder) {
           await this.castService.forceReloadCasts();

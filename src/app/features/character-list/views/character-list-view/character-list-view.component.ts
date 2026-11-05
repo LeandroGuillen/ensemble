@@ -1,5 +1,12 @@
 import { ExcerptPipe } from "../../../../shared/pipes/excerpt.pipe";
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, DestroyRef, Input, Output, EventEmitter, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Router } from '@angular/router';
+import { PromptFile } from '../../../../core/interfaces/prompt.interface';
+import { PromptService } from '../../../../core/services/prompt.service';
+import { LoggingService } from '../../../../core/services/logging.service';
+import { promptVariants } from '../../../../core/utils/prompt-file.utils';
+import { PromptImageComponent } from '../../../../shared/prompt-image/prompt-image.component';
 
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { Character, Tag, Category } from '../../../../core/interfaces';
@@ -8,13 +15,16 @@ import { resolveEffectiveCategory } from '../../../../core/utils/character-categ
 import { getCharacterDisplayName } from '../../../../core/utils/character-display.utils';
 import { FadeOverflowDirective } from '../../../../shared/fade-overflow.directive';
 
+/** Prompt images shown per character row in the Prompts view. */
+const PROMPT_IMAGES_PER_ROW = 4;
+
 @Component({
     selector: 'app-character-list-view',
-    imports: [DragDropModule, FadeOverflowDirective, ExcerptPipe],
+    imports: [DragDropModule, FadeOverflowDirective, ExcerptPipe, PromptImageComponent],
     templateUrl: './character-list-view.component.html',
     styleUrls: ['./character-list-view.component.scss']
 })
-export class CharacterListViewComponent {
+export class CharacterListViewComponent implements OnInit {
   readonly getCharacterDisplayName = getCharacterDisplayName;
   @Input() characters: Character[] = [];
   @Input() categories: Category[] = [];
@@ -34,13 +44,72 @@ export class CharacterListViewComponent {
   /** Color for the PoV badge pill. */
   @Input() povBadgeColor = 'var(--color-accent-primary)';
 
+  /** Prompts view: show each character's linked prompt files and their images. */
+  @Input() showPrompts = false;
+
   @Output() characterClick = new EventEmitter<Character>();
   @Output() characterSelectionToggle = new EventEmitter<string>();
   @Output() dragStarted = new EventEmitter<void>();
   @Output() dragEnded = new EventEmitter<void>();
   private dragInProgress = false;
 
-  constructor(public metadataHelper: MetadataHelperService) {}
+  private promptsByCharacter = new Map<string, PromptFile[]>();
+  creatingPromptFor: string | null = null;
+
+  constructor(
+    public metadataHelper: MetadataHelperService,
+    private promptService: PromptService,
+    private router: Router,
+    private logger: LoggingService,
+    private destroyRef: DestroyRef
+  ) {}
+
+  ngOnInit(): void {
+    this.promptService.prompts$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((files) => {
+      const byCharacter = new Map<string, PromptFile[]>();
+      for (const file of files) {
+        for (const id of file.characters) {
+          const list = byCharacter.get(id);
+          if (list) list.push(file);
+          else byCharacter.set(id, [file]);
+        }
+      }
+      this.promptsByCharacter = byCharacter;
+    });
+  }
+
+  promptsFor(character: Character): PromptFile[] {
+    return this.promptsByCharacter.get(character.id) ?? [];
+  }
+
+  promptImagesFor(character: Character): string[] {
+    return this.promptsFor(character)
+      .flatMap((file) => file.sections.flatMap((section) => section.images))
+      .slice(0, PROMPT_IMAGES_PER_ROW);
+  }
+
+  variantCount(file: PromptFile): number {
+    return promptVariants(file).length;
+  }
+
+  openPrompt(file: PromptFile, event: Event): void {
+    event.stopPropagation();
+    void this.router.navigate(['/prompts'], { queryParams: { path: file.relativePath } });
+  }
+
+  async newPrompt(character: Character, event: Event): Promise<void> {
+    event.stopPropagation();
+    if (this.creatingPromptFor) return;
+    this.creatingPromptFor = character.id;
+    try {
+      const file = await this.promptService.createPromptForCharacter(character);
+      await this.router.navigate(['/prompts'], { queryParams: { path: file.relativePath } });
+    } catch (error) {
+      this.logger.error('Could not create the prompt', error);
+    } finally {
+      this.creatingPromptFor = null;
+    }
+  }
 
   /** Highlight by occurrence in the flattened nav list, not by character id. */
   isOccurrenceSelected(localIndex: number): boolean {

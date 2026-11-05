@@ -1,0 +1,83 @@
+@let linked = (linked$ | async) ?? [];
+<!-- Prompts are secondary to the description: folded by default, with the
+     count in the summary so the section still says what it holds. -->
+<details class="panel prompts-panel" [open]="open" (toggle)="onToggle($event)">
+  <summary class="panel-header prompts-summary">
+    <svg class="prompts-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span class="prompts-summary-text">
+      <h3 class="panel-title">Prompts <span class="prompts-count">{{ linked.length }}</span></h3>
+      <span class="panel-subtitle">Prompt files linked to this character, kept in the Prompts section</span>
+    </span>
+  </summary>
+
+  <div class="prompts-body">
+    @for (item of linked; track item.file.relativePath) {
+      <article class="linked-prompt">
+        <header class="linked-prompt-header">
+          <button type="button" class="linked-prompt-name" (click)="openPrompt(item.file)" title="Open in Prompts">
+            {{ item.file.name }}
+            @if (item.file.folder) {
+              <span class="linked-prompt-folder">{{ item.file.folder }}/</span>
+            }
+          </button>
+          <button
+            type="button"
+            class="icon-btn linked-prompt-unlink"
+            [disabled]="busy"
+            (click)="unlink(item.file)"
+            title="Unlink from this character (the prompt file stays)"
+            aria-label="Unlink prompt"
+          ><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg></button>
+        </header>
+
+        @for (variant of item.variants; track variant.key) {
+          <div class="linked-variant">
+            <div class="linked-variant-head">
+              <span class="linked-variant-name">{{ variant.label }}</span>
+              <span class="linked-variant-actions">
+                <button type="button" class="btn btn-ghost btn-sm" (click)="copy(variant.section.prompt)" title="Copy prompt">Copy</button>
+                @if (variant.section.negative) {
+                  <button type="button" class="btn btn-ghost btn-sm" (click)="copy(variant.section.negative)" title="Copy negative prompt">Copy negative</button>
+                }
+                <button
+                  type="button"
+                  class="btn btn-secondary btn-sm"
+                  [disabled]="!imageGenerationEnabled || generatingKey !== null || !variant.section.prompt?.trim()"
+                  [title]="generateTitle(variant)"
+                  (click)="generate(variant)"
+                >
+                  @if (generatingKey === variant.key) {
+                    <span class="spinner spinner-sm"></span> Generating…
+                  } @else {
+                    Generate
+                  }
+                </button>
+              </span>
+            </div>
+            <p class="linked-variant-text">{{ variant.section.prompt }}</p>
+          </div>
+        } @empty {
+          <p class="linked-prompt-empty">No prompt text yet. <button type="button" class="link-btn" (click)="openPrompt(item.file)">Open it to write one</button>.</p>
+        }
+
+        @if (item.images.length) {
+          <div class="linked-images">
+            @for (image of item.images.slice(0, maxImages); track $index) {
+              <app-prompt-image class="linked-image" [path]="image"></app-prompt-image>
+            }
+            @if (item.images.length > maxImages) {
+              <button type="button" class="linked-images-more" (click)="openPrompt(item.file)">+{{ item.images.length - maxImages }}</button>
+            }
+          </div>
+        }
+      </article>
+    } @empty {
+      <p class="prompts-empty">No prompts linked to this character yet.</p>
+    }
+
+    <div class="prompts-actions">
+      <button type="button" class="btn btn-secondary" [disabled]="busy" (click)="createPrompt()">+ New prompt</button>
+      <button type="button" class="btn btn-ghost" [disabled]="busy" (click)="linkExisting()">Link existing prompt…</button>
+    </div>
+  </div>
+</details>

@@ -30,7 +30,6 @@ describe('Character detail save', () => {
       bookTagsMap: {},
       bookThumbnailsMap: {},
       thumbnailsMap: {},
-      prompts: [],
       characterService,
       notificationService: notification,
       router,

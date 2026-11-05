@@ -1,0 +1,13 @@
+@use '../../../../shared/pinboard-create-dialog/pinboard-create-dialog.component.scss';
+
+.form-help {
+  display: block;
+  margin-top: var(--spacing-xs);
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+
+  code {
+    font-family: var(--font-mono);
+    color: var(--color-text-secondary);
+  }
+}

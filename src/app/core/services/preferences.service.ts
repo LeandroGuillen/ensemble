@@ -5,16 +5,19 @@ import { Injectable } from '@angular/core';
  *
  * Provides type-safe access to localStorage with proper serialization.
  */
+/** Character list views; `prompts` is the List view with each character's linked prompts. */
+export type CharacterViewMode = 'grid' | 'list' | 'compact' | 'gallery' | 'prompts';
+
 @Injectable({
   providedIn: 'root'
 })
 export class PreferencesService {
   // Character list view preferences
-  getViewMode(): 'grid' | 'list' | 'compact' | 'gallery' {
+  getViewMode(): CharacterViewMode {
     return (localStorage.getItem('characterViewMode') as any) || 'grid';
   }
 
-  setViewMode(mode: 'grid' | 'list' | 'compact' | 'gallery'): void {
+  setViewMode(mode: CharacterViewMode): void {
     localStorage.setItem('characterViewMode', mode);
   }
 

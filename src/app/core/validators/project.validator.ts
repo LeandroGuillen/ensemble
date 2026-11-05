@@ -694,6 +694,28 @@ export class ProjectValidator {
       }
     }
 
+    if (settings.promptsFolder !== undefined && settings.promptsFolder !== null) {
+      if (typeof settings.promptsFolder !== 'string') {
+        errors.push({
+          field: 'promptsFolder',
+          message: 'Prompts folder must be a string',
+          code: 'INVALID_TYPE'
+        });
+      } else if (settings.promptsFolder.includes('..')) {
+        errors.push({
+          field: 'promptsFolder',
+          message: 'Prompts folder cannot contain parent path (..)',
+          code: 'INVALID_VALUE'
+        });
+      } else if (/[<>:"|?*]/.test(settings.promptsFolder)) {
+        errors.push({
+          field: 'promptsFolder',
+          message: 'Prompts folder contains invalid characters',
+          code: 'INVALID_VALUE'
+        });
+      }
+    }
+
     if (settings.castsFolder !== undefined && settings.castsFolder !== null) {
       if (typeof settings.castsFolder !== 'string') {
         errors.push({

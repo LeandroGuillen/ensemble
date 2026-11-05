@@ -1,0 +1,40 @@
+@if (visible) {
+  <app-modal-frame [title]="title" (closed)="close()">
+    <form (ngSubmit)="submit()">
+      <div class="form-group">
+        <label for="promptPath">Name</label>
+        <input
+          type="text"
+          id="promptPath"
+          class="form-control"
+          [(ngModel)]="value"
+          name="promptPath"
+          placeholder="e.g. places/Academia"
+          list="promptFolders"
+          autofocus
+          required
+          maxlength="200"
+          spellcheck="false"
+        />
+        <datalist id="promptFolders">
+          @for (folder of folders; track folder) {
+            <option [value]="folder + '/'"></option>
+          }
+        </datalist>
+        <small class="form-help">
+          Use <code>/</code> to put it in a folder.
+          @if (preview) {
+            Saved as <code>{{ preview }}</code>
+          }
+        </small>
+      </div>
+      @if (error) {
+        <div class="error-message">{{ error }}</div>
+      }
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" (click)="close()">Cancel</button>
+        <button type="submit" class="btn btn-primary">{{ confirmText }}</button>
+      </div>
+    </form>
+  </app-modal-frame>
+}

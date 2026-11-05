@@ -1,0 +1,160 @@
+<div class="prompts-page">
+  <app-page-header [title]="'Prompts'">
+    <button class="icon-btn" (click)="refresh()" title="Rescan the prompts folder" aria-label="Refresh prompts"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#refresh" /></svg></button>
+    <button class="icon-btn" (click)="openPromptsFolder()" [title]="'Open ' + promptsFolderLabel + '/ in your file manager'" aria-label="Open prompts folder"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#folder" /></svg></button>
+    <button class="btn btn-primary" (click)="openNewDialog()" title="New prompt">
+      <svg class="ui-icon plus-glyph" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
+      New Prompt
+    </button>
+    <div pageHeaderToolbar class="page-actions">
+      <div class="search-box">
+        <input
+          type="text"
+          [(ngModel)]="searchTerm"
+          placeholder="Search prompt text, names, tags…"
+          aria-label="Search prompts"
+          class="search-input"
+        />
+        @if (searchTerm) {
+          <button class="search-clear" (click)="searchTerm = ''" title="Clear search" aria-label="Clear search"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg></button>
+        }
+      </div>
+      <button type="button" class="btn btn-secondary by-character" (click)="openCharactersView()" title="Open the Characters page in Prompts view, with its filters and sorting">
+        <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#users" /></svg>
+        By character
+      </button>
+    </div>
+  </app-page-header>
+
+  <div class="library">
+      <nav class="tree-pane" aria-label="Prompt folders">
+        @if (searching) {
+          <div class="tree-heading">{{ searchResults.length }} match{{ searchResults.length === 1 ? '' : 'es' }}</div>
+          <ul class="tree-list">
+            @for (file of searchResults; track file.relativePath) {
+              <li>
+                <button type="button" class="tree-file" [class.active]="file.relativePath === selectedPath" (click)="selectFile(file)">
+                  <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#file-text" /></svg>
+                  <span class="tree-label">{{ file.name }}</span>
+                  @if (file.folder) {
+                    <span class="tree-folder-hint">{{ file.folder }}</span>
+                  }
+                </button>
+              </li>
+            }
+          </ul>
+        } @else {
+          <button type="button" class="tree-root" [class.active]="!selectedPath && selectedFolder === ''" (click)="selectFolder('')">
+            <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#folder" /></svg>
+            <span class="tree-label">{{ promptsFolderLabel }}</span>
+            <span class="tree-count">{{ tree.total }}</span>
+          </button>
+          <ng-container *ngTemplateOutlet="folderTpl; context: { $implicit: tree, depth: 1 }"></ng-container>
+        }
+      </nav>
+
+      <main class="content-pane">
+        @if (selectedFile; as file) {
+          <app-prompt-editor
+            [file]="file"
+            [characters]="linkTargets"
+            [locations]="locations"
+            (renameRequest)="openRenameDialog($event)"
+            (deleteRequest)="deletePrompt($event)"
+            (openCharacter)="openCharacter($event)"
+          ></app-prompt-editor>
+        } @else if (loading && files.length === 0) {
+          <div class="empty-state"><div class="spinner spinner-lg"></div><p>Loading prompts…</p></div>
+        } @else if (files.length === 0) {
+          <div class="empty-state">
+            <h2>No prompts yet</h2>
+            <p>
+              Prompts are Markdown files in <code>{{ promptsFolderLabel }}/</code>. Organize them in any folders,
+              link them to characters or locations, and attach the images they produced.
+            </p>
+            <button class="btn btn-primary" (click)="openNewDialog()">New Prompt</button>
+          </div>
+        } @else {
+          @if (!searching && selectedFolder) {
+            <h2 class="grid-title">{{ selectedFolder }}</h2>
+          }
+          <div class="card-grid">
+            @for (file of gridFiles; track file.relativePath) {
+              <button type="button" class="prompt-card" (click)="selectFile(file)">
+                <div class="card-cover">
+                  @if (cover(file); as image) {
+                    <app-prompt-image class="card-cover-image" [path]="image"></app-prompt-image>
+                  } @else {
+                    <span class="card-cover-initial">{{ file.name.charAt(0).toUpperCase() }}</span>
+                  }
+                </div>
+                <div class="card-body">
+                  <div class="card-name">{{ file.name }}</div>
+                  @if (file.folder && (searching || file.folder !== selectedFolder)) {
+                    <div class="card-folder">{{ file.folder }}</div>
+                  }
+                  @if (linkNames(file).length) {
+                    <div class="card-links">{{ linkNames(file).join(' · ') }}</div>
+                  }
+                  @if (excerpt(file)) {
+                    <p class="card-excerpt">{{ excerpt(file) }}</p>
+                  }
+                  <div class="card-footer">
+                    @if (variantCount(file) > 1) {
+                      <span class="card-badge">{{ variantCount(file) }} variants</span>
+                    }
+                    @for (tag of file.tags; track tag) {
+                      <span class="card-tag">{{ tag }}</span>
+                    }
+                  </div>
+                </div>
+              </button>
+            } @empty {
+              <p class="empty-inline">No prompts match.</p>
+            }
+          </div>
+        }
+      </main>
+    </div>
+</div>
+
+<ng-template #folderTpl let-node let-depth="depth">
+  <ul class="tree-list">
+    @for (folder of node.folders; track folder.path) {
+      <li>
+        <div class="tree-folder-row" [style.--depth]="depth">
+          <button type="button" class="tree-toggle" (click)="toggleFolder(folder.path, $event)" [attr.aria-expanded]="!collapsed.has(folder.path)" [attr.aria-label]="(collapsed.has(folder.path) ? 'Expand ' : 'Collapse ') + folder.name">
+            <svg class="ui-icon" [class.open]="!collapsed.has(folder.path)" aria-hidden="true"><use href="assets/ui-icons.svg#chevron-right" /></svg>
+          </button>
+          <button type="button" class="tree-folder" [class.active]="!selectedPath && selectedFolder === folder.path" (click)="selectFolder(folder.path)">
+            <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#folder" /></svg>
+            <span class="tree-label">{{ folder.name }}</span>
+            <span class="tree-count">{{ folder.total }}</span>
+          </button>
+        </div>
+        @if (!collapsed.has(folder.path)) {
+          <ng-container *ngTemplateOutlet="folderTpl; context: { $implicit: folder, depth: depth + 1 }"></ng-container>
+        }
+      </li>
+    }
+    @for (file of node.files; track file.relativePath) {
+      <li>
+        <button type="button" class="tree-file" [style.--depth]="depth" [class.active]="file.relativePath === selectedPath" (click)="selectFile(file)">
+          <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#file-text" /></svg>
+          <span class="tree-label">{{ file.name }}</span>
+        </button>
+      </li>
+    }
+  </ul>
+</ng-template>
+
+<app-prompt-path-dialog
+  [visible]="!!dialog"
+  [title]="dialog?.mode === 'rename' ? 'Rename or move prompt' : 'New prompt'"
+  [confirmText]="dialog?.mode === 'rename' ? 'Rename' : 'Create'"
+  [initialValue]="dialog?.initial ?? ''"
+  [folders]="folders"
+  [promptsFolderLabel]="promptsFolderLabel"
+  (submitted)="onDialogSubmit($event)"
+  (closed)="closeDialog()"
+></app-prompt-path-dialog>

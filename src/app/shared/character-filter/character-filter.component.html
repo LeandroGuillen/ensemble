@@ -161,6 +161,22 @@
           ></app-category-toggle>
         </div>
       </details>
+      <!-- Prompt Filter -->
+      <details class="filter-section filter-disclosure section-prompts" [open]="isSectionOpen('prompts')" (toggle)="onSectionToggle('prompts', $event)">
+        <summary class="filter-disclosure-summary">
+          <svg class="filter-disclosure-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <h3 class="filter-label" id="character-filter-prompts">Prompts</h3>
+          <span class="filter-current" [class.is-set]="!!selectedPromptFilter">{{ selectedPromptFilter === 'with' ? 'With' : selectedPromptFilter === 'without' ? 'Without' : 'All' }}</span>
+        </summary>
+        <div role="group" aria-labelledby="character-filter-prompts">
+          <app-category-toggle
+            [options]="promptFilterOptions"
+            [selectedValue]="selectedPromptFilter"
+            [emptyLabel]="'All'"
+            (valueChange)="onPromptFilterChange($event)"
+          ></app-category-toggle>
+        </div>
+      </details>
     </div>
   }
 </div>

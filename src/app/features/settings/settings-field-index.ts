@@ -65,6 +65,13 @@ export const SETTINGS_FIELD_INDEX: SettingsFieldIndex[] = [
     valueKeys: ['locationsFolder'],
   },
   {
+    id: 'prompts-folder',
+    section: 'general',
+    label: 'Prompts Folder',
+    keywords: ['prompts folder', 'image prompts', 'path', 'directory'],
+    valueKeys: ['promptsFolder'],
+  },
+  {
     id: 'casts-folder',
     section: 'general',
     label: 'Casts Folder',

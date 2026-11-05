@@ -184,6 +184,8 @@ export interface ProjectSettings {
   charactersFolder?: string;
   /** Relative path from project root for location files (default: 'locations') */
   locationsFolder?: string;
+  /** Relative path from project root for prompt files (default: 'prompts') */
+  promptsFolder?: string;
   /** Relative path from project root for the casts folder (default: 'characters/casts') */
   castsFolder?: string;
   /** Relative path from project root for the names/list file (default: 'characters/names.md') */

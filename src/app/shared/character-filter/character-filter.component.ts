@@ -47,6 +47,8 @@ export class CharacterFilterComponent {
   @Input() selectedBook = '';
   @Input() selectedPictureFilter: '' | 'with' | 'without' = '';
   @Input() povOnly = false;
+  /** '' = all, 'with' = linked to at least one prompt file, 'without' = none. */
+  @Input() selectedPromptFilter: '' | 'with' | 'without' = '';
   @Input() allowPov = true;
   @Input() isExpanded = false;
   @Input() sidebar = false;
@@ -59,12 +61,18 @@ export class CharacterFilterComponent {
   @Output() bookChange = new EventEmitter<string>();
   @Output() pictureFilterChange = new EventEmitter<'' | 'with' | 'without'>();
   @Output() povOnlyChange = new EventEmitter<boolean>();
+  @Output() promptFilterChange = new EventEmitter<'' | 'with' | 'without'>();
   @Output() clearFilters = new EventEmitter<void>();
   @Output() expandedChange = new EventEmitter<boolean>();
 
   readonly pictureFilterOptions: ToggleOption[] = [
     { id: 'with', name: 'With', tooltip: 'Characters that have a portrait for the current style' },
     { id: 'without', name: 'Without', tooltip: 'Characters missing a portrait for the current style' },
+  ];
+
+  readonly promptFilterOptions: ToggleOption[] = [
+    { id: 'with', name: 'With', tooltip: 'Characters linked to at least one prompt' },
+    { id: 'without', name: 'Without', tooltip: 'Characters with no linked prompt' },
   ];
 
   readonly povFilterOptions: ToggleOption[] = [
@@ -83,9 +91,10 @@ export class CharacterFilterComponent {
    */
   private readonly openSections = new Set<string>();
 
-  isSectionOpen(id: 'cast' | 'house' | 'pictures'): boolean {
+  isSectionOpen(id: 'cast' | 'house' | 'pictures' | 'prompts'): boolean {
     const active = id === 'cast' ? !!this.selectedCast
       : id === 'house' ? !!this.selectedHouse
+      : id === 'prompts' ? !!this.selectedPromptFilter
       : !!this.selectedPictureFilter;
     if (active) this.openSections.add(id);
     return this.openSections.has(id);
@@ -155,6 +164,11 @@ export class CharacterFilterComponent {
   onPictureFilterChange(value: string): void {
     const next = value === 'with' || value === 'without' ? value : '';
     this.pictureFilterChange.emit(next);
+  }
+
+  onPromptFilterChange(value: string): void {
+    const next = value === 'with' || value === 'without' ? value : '';
+    this.promptFilterChange.emit(next);
   }
 
   onPovFilterChange(value: string): void {
@@ -262,6 +276,12 @@ export class CharacterFilterComponent {
       filters.push('Without pictures');
     }
 
+    if (this.selectedPromptFilter === 'with') {
+      filters.push('With prompts');
+    } else if (this.selectedPromptFilter === 'without') {
+      filters.push('Without prompts');
+    }
+
     return filters.length > 0 ? filters.join(' • ') : 'No filters applied';
   }
 
@@ -273,7 +293,8 @@ export class CharacterFilterComponent {
       this.selectedHouse ||
       this.selectedBook ||
       this.povOnly ||
-      this.selectedPictureFilter
+      this.selectedPictureFilter ||
+      this.selectedPromptFilter
     );
   }
 }

@@ -17,6 +17,7 @@ export const LEGACY_METADATA_JSON_FILE = 'metadata.json';
 export const DEFAULT_CHARACTERS_FOLDER = 'characters';
 export const DEFAULT_LOCATIONS_FOLDER = 'locations';
 export const DEFAULT_IMAGES_FOLDER = 'img';
+export const DEFAULT_PROMPTS_FOLDER = 'prompts';
 
 export const DEFAULT_CHARACTER_STYLE_ID = 'default';
 

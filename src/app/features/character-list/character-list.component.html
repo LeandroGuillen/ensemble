@@ -86,6 +86,7 @@
             <option value="list">List</option>
             <option value="compact">Compact</option>
             <option value="gallery">Gallery</option>
+            <option value="prompts">Prompts</option>
           </select>
         </div>
 
@@ -104,7 +105,7 @@
         }
 
         <div class="header-layout-utilities">
-          @if (viewMode === 'list' || viewMode === 'compact') {
+          @if (viewMode === 'list' || viewMode === 'compact' || viewMode === 'prompts') {
             <div class="column-toggle" aria-label="Column count">
               <button class="toggle-option" [class.active]="columns === 1" (click)="setColumns(1)" title="Single column" aria-label="Single column"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="1" width="12" height="14" rx="1" /></svg></button>
               <button class="toggle-option" [class.active]="columns === 2" (click)="setColumns(2)" title="Two columns" aria-label="Two columns"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6.5" height="14" rx="1" /><rect x="8.5" y="1" width="6.5" height="14" rx="1" /></svg></button>
@@ -185,6 +186,9 @@
           <button class="toggle-option" [class.active]="viewMode === 'compact'" (click)="setViewMode('compact')" title="Compact view" aria-label="Compact view">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg>
           </button>
+          <button class="toggle-option" [class.active]="viewMode === 'prompts'" (click)="setViewMode('prompts')" title="Prompts view: each character with its linked prompts" aria-label="Prompts view">
+            <svg class="ui-icon" aria-hidden="true" width="16" height="16"><use href="assets/ui-icons.svg#sparkles" /></svg>
+          </button>
         </div>
 
         @if (characterStyles.length > 1) {
@@ -203,7 +207,7 @@
         }
 
         <div class="header-layout-utilities">
-          @if (viewMode === 'list' || viewMode === 'compact') {
+          @if (viewMode === 'list' || viewMode === 'compact' || viewMode === 'prompts') {
             <div class="column-toggle" aria-label="Column count">
               <button class="toggle-option" [class.active]="columns === 1" (click)="setColumns(1)" title="Single column" aria-label="Single column"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="1" width="12" height="14" rx="1" /></svg></button>
               <button class="toggle-option" [class.active]="columns === 2" (click)="setColumns(2)" title="Two columns" aria-label="Two columns"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6.5" height="14" rx="1" /><rect x="8.5" y="1" width="6.5" height="14" rx="1" /></svg></button>
@@ -298,6 +302,8 @@
             (castChange)="selectedCast = $event; onCastChange()"
             (bookChange)="selectedBook = $event; onBookChange()"
             (pictureFilterChange)="selectedPictureFilter = $event; onPictureFilterChange()"
+            [selectedPromptFilter]="selectedPromptFilter"
+            (promptFilterChange)="selectedPromptFilter = $event; onPromptFilterChange()"
             (povOnlyChange)="onPovOnlyChange($event)"
             (clearFilters)="clearFilters()"
           ></app-character-filter>
@@ -440,8 +446,9 @@
                         ></app-character-grid-view>
                       }
                       <!-- List View -->
-                      @if (viewMode === 'list') {
+                      @if (viewMode === 'list' || viewMode === 'prompts') {
                         <app-character-list-view
+                          [showPrompts]="viewMode === 'prompts'"
                           [characters]="group.characters"
                           [categories]="categories"
                           [categoryContextBookId]="selectedBook"
@@ -538,8 +545,9 @@
                         ></app-character-grid-view>
                       }
                       <!-- List View -->
-                      @if (viewMode === 'list') {
+                      @if (viewMode === 'list' || viewMode === 'prompts') {
                         <app-character-list-view
+                          [showPrompts]="viewMode === 'prompts'"
                           [characters]="group.characters"
                           [categories]="categories"
                           [categoryContextBookId]="selectedBook"
@@ -623,8 +631,9 @@
                           (characterDelete)="onViewCharacterDelete($event)"
                         ></app-character-grid-view>
                       }
-                      @if (viewMode === 'list') {
+                      @if (viewMode === 'list' || viewMode === 'prompts') {
                         <app-character-list-view
+                          [showPrompts]="viewMode === 'prompts'"
                           [characters]="group.characters"
                           [categories]="categories"
                           [categoryContextBookId]="selectedBook"
@@ -702,8 +711,9 @@
                           (characterDelete)="onViewCharacterDelete($event)"
                         ></app-character-grid-view>
                       }
-                      @if (viewMode === 'list') {
+                      @if (viewMode === 'list' || viewMode === 'prompts') {
                         <app-character-list-view
+                          [showPrompts]="viewMode === 'prompts'"
                           [characters]="group.characters"
                           [categories]="categories"
                           [categoryContextBookId]="selectedBook"
@@ -781,8 +791,9 @@
                   ></app-character-grid-view>
                 }
                 <!-- List View -->
-                @if (filteredCharacters.length > 0 && viewMode === 'list') {
+                @if (filteredCharacters.length > 0 && (viewMode === 'list' || viewMode === 'prompts')) {
                   <app-character-list-view
+                    [showPrompts]="viewMode === 'prompts'"
                     [characters]="filteredCharacters"
                     [dndEnabled]="!drawerMode"
                     [categories]="categories"

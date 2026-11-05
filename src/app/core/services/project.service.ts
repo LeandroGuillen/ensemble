@@ -25,6 +25,7 @@ import {
   DEFAULT_CHARACTERS_FOLDER,
   DEFAULT_LOCATIONS_FOLDER,
   DEFAULT_IMAGES_FOLDER,
+  DEFAULT_PROMPTS_FOLDER,
   DEFAULT_CASTS_FOLDER,
   DEFAULT_NAMES_FILE,
   DEFAULT_CATEGORIES,
@@ -105,6 +106,17 @@ export class ProjectService {
     const project = requireProject(this.currentProjectSubject.value);
     const folder = project.metadata?.settings?.locationsFolder?.trim() || DEFAULT_LOCATIONS_FOLDER;
     const normalized = normalizeRelativeFolder(folder, DEFAULT_LOCATIONS_FOLDER);
+    return pathJoin(project.path, normalized);
+  }
+
+  /**
+   * Returns the absolute path to the prompts folder for the current project.
+   * Uses settings.promptsFolder if set, otherwise defaults to 'prompts'.
+   */
+  getPromptsFolderPath(): string {
+    const project = requireProject(this.currentProjectSubject.value);
+    const folder = project.metadata?.settings?.promptsFolder?.trim() || DEFAULT_PROMPTS_FOLDER;
+    const normalized = normalizeRelativeFolder(folder, DEFAULT_PROMPTS_FOLDER);
     return pathJoin(project.path, normalized);
   }
 

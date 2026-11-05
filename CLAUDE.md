@@ -33,6 +33,7 @@ Located in `src/app/core/services/`:
 - **LocationService**: CRUD operations for location files (`_*.md`), recursive scan under `locations/`, flat-file format
 - **CastService**: CRUD operations for cast folders under the casts folder
 - **PinboardService**: Manages pinboard data (nodes/edges) across multiple pinboards stored in `ensemble.json`
+- **PromptService**: Prompt repository: every `*.md` under the prompts folder (`settings.promptsFolder`, default `prompts`). Files are addressed by path relative to that folder; links to characters/locations live in the prompt file (`promptsForCharacter()` derives the reverse). Format parsed/serialized by `prompt-file.utils.ts`. Also moves legacy character-frontmatter `prompts:` into `prompts/characters/<name>.md` on load
 - **PlotBoardService**: Discovers and manages plot-board Markdown files anywhere under the project (`*.pinboard.md`, plus legacy `*.plotboard.md`)
 - **BookPlanService**: Loads, autosaves (1s idle) and watches a book's plan file (`Book.plan.path`); external edits reload when there are no unsaved changes, otherwise they surface as a conflict
 - **BookEditActionsService**: Create/update/delete books from the Edit Book modal; shared by the Books page (`/library`) and the book page
@@ -136,6 +137,8 @@ project-folder/
 ├── comfyui-workflows/      # ComfyUI API-format workflow JSON (optional; image generation)
 ├── locations/              # Location files (recursively scanned)
 │   └── _<slug>.md          # Location file (e.g., "_grey-harbor.md")
+├── prompts/                # Prompt files in any subfolders (configurable; see docs/data-format.md)
+│   └── _images/            # Images attached from outside the project
 ├── houses/                 # House folders (one folder per House)
 │   └── <house-slug>/
 │       └── <house-slug>.md # House frontmatter + Markdown history
@@ -275,6 +278,7 @@ All routes defined in `src/app/app.routes.ts`:
 - `/names` - Name lists
 - `/backstage` - Backstage (concept/name generation)
 - `/plot-board` - Plot boards (with optional path param)
+- `/prompts` - Prompts library (folder tree, editor, `?path=` opens a file). The per-character overview is the Characters page's Prompts view (`/characters?view=prompts`), which also has a Prompts with/without filter
 - `/casts` - Cast list
 - `/cast/:id` - Cast detail (with a `pinboard` sub-route)
 - `/locations` - Location list with search/filter

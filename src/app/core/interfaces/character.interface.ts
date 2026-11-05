@@ -25,7 +25,11 @@ export interface Character {
   thumbnails?: Record<string, string>;
   /** Optional per-book map of character-style id → opaque wiki-link / path string. */
   bookThumbnails?: Record<string, Record<string, string>>;
-  prompts: CharacterPrompt[]; // Image-generation prompts; first is the default
+  /**
+   * Legacy frontmatter prompts, read only so PromptService can move them into
+   * the prompts folder. Empty once migrated; new prompts live in prompt files.
+   */
+  prompts: CharacterPrompt[];
   content: string; // Full markdown body below frontmatter
   created: Date;
   modified: Date;
@@ -49,7 +53,8 @@ export interface CharacterFormData {
   thumbnails?: Record<string, string>;
   /** Optional per-book map of character-style id → opaque wiki-link / path string. */
   bookThumbnails?: Record<string, Record<string, string>>;
-  prompts: CharacterPrompt[];
+  /** Legacy: prompts now live in prompt files. Omit to keep what is stored. */
+  prompts?: CharacterPrompt[];
   content: string;
 }
 

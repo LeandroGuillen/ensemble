@@ -379,6 +379,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
       zoomPercent: `${this.zoomService.getZoomPercent()}%`,
       charactersFolder: settings?.charactersFolder || 'characters',
       locationsFolder: settings?.locationsFolder || 'locations',
+      promptsFolder: settings?.promptsFolder || 'prompts',
       castsFolder: settings?.castsFolder || 'characters/casts',
       namesFile: settings?.namesFile || 'characters/names.md',
       imagesFolder: settings?.imagesFolder || 'img',

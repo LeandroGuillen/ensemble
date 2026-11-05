@@ -1226,6 +1226,19 @@ export class CharacterService {
   /**
    * Count affected resources for a character deletion (for confirmation dialog)
    */
+  /**
+   * Drops legacy frontmatter `prompts` once PromptService has moved them into a
+   * prompt file. Leaves `modified` alone: this is a storage migration, not an edit.
+   */
+  async clearLegacyPrompts(id: string): Promise<void> {
+    const existing = this.findRecord(id);
+    if (!existing || !existing.prompts?.length) return;
+    const subject = this.collectionFor(existing);
+    const updated: Character = { ...existing, prompts: [] };
+    await this.saveCharacterToFile(updated);
+    subject.next(subject.value.map((c) => (c.id === id ? updated : c)));
+  }
+
   async countCharacterReferences(id: string): Promise<{
     houses: { id: string; name: string }[];
     casts: { id: string; name: string }[];

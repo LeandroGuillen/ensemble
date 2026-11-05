@@ -12,7 +12,8 @@ import { Book, Cast, Category, Character, CharacterStyle, Project, Tag } from '.
 import { CastService, CharacterEditDialogService, CharacterService, LoggingService, MetadataService, NotificationService, ProjectService } from '../../core/services';
 import { MetadataHelperService } from '../../core/services/metadata-helper.service';
 import { ModalService } from '../../core/services/modal.service';
-import { PreferencesService } from '../../core/services/preferences.service';
+import { CharacterViewMode, PreferencesService } from '../../core/services/preferences.service';
+import { PromptService } from '../../core/services/prompt.service';
 import {
   isEffectiveCategoryEnabled,
   resolveEffectiveCategory,
@@ -91,6 +92,10 @@ export class CharacterListComponent implements OnInit {
   selectedCast = '';
   selectedBook = '';
   selectedPictureFilter: '' | 'with' | 'without' = '';
+  /** '' = all, 'with' / 'without' = has / lacks a linked prompt file. */
+  selectedPromptFilter: '' | 'with' | 'without' = '';
+  /** IDs of characters linked from at least one prompt file. */
+  private promptLinkedIds = new Set<string>();
   povOnly = false;
   /** Character IDs that should show a PoV badge under current book context. */
   povCharacterIdSet = new Set<string>();
@@ -114,7 +119,7 @@ export class CharacterListComponent implements OnInit {
   thumbnailDataUrls: Map<string, string> = new Map();
   thumbnailModificationTimes: Map<string, string> = new Map();
   isLoading = false;
-  viewMode: 'grid' | 'list' | 'compact' | 'gallery' = 'grid'; // Toggle between grid (cards), list, compact, and gallery view
+  viewMode: CharacterViewMode = 'grid'; // Toggle between grid (cards), list, compact, and gallery view
   columns: 1 | 2 = 2; // Column count for views
   sortBy: 'name' | 'category' = 'name';
   sortDirection: 'asc' | 'desc' = 'asc';
@@ -145,6 +150,7 @@ export class CharacterListComponent implements OnInit {
     public metadataHelper: MetadataHelperService,
     private modalService: ModalService,
     private preferences: PreferencesService,
+    private promptService: PromptService,
     private characterEditDialog: CharacterEditDialogService,
     private cdr: ChangeDetectorRef,
     private logger: LoggingService,
@@ -310,6 +316,11 @@ export class CharacterListComponent implements OnInit {
       this.draftCharacters = drafts;
       this.updateDisplayedCollection();
     });
+    this.promptService.prompts$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(files => {
+      this.promptLinkedIds = new Set(files.flatMap(file => file.characters));
+      if (this.selectedPromptFilter && this.collectionInitialized) this.applyFilters();
+    });
+    void this.promptService.ensureLoaded();
     this.characterService.getLoreFigures().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(figures => {
       this.loreFigures = figures;
       this.updateDisplayedCollection();
@@ -320,6 +331,8 @@ export class CharacterListComponent implements OnInit {
       if (this.collectionInitialized) this.saveCollectionFilters();
       this.collection = next;
       this.restoreCollectionFilters();
+      // The Prompts page links here with ?view=prompts.
+      if (params.get('view') === 'prompts') this.viewMode = 'prompts';
       this.collectionInitialized = true;
       this.filterProjectPath = this.currentProject?.path;
       this.updateDisplayedCollection();
@@ -356,7 +369,7 @@ export class CharacterListComponent implements OnInit {
     localStorage.setItem(this.collectionFilterKey, JSON.stringify({
       searchTerm: this.searchTerm, disabledCategoryIds: this.disabledCategoryIds,
       selectedTags: this.selectedTags, selectedCast: this.selectedCast, selectedHouse: this.selectedHouse,
-      selectedBook: this.selectedBook, selectedPictureFilter: this.selectedPictureFilter, povOnly: this.povOnly,
+      selectedBook: this.selectedBook, selectedPictureFilter: this.selectedPictureFilter, selectedPromptFilter: this.selectedPromptFilter, povOnly: this.povOnly,
       groupBy: this.groupBy, sortBy: this.sortBy, sortDirection: this.sortDirection,
       viewMode: this.viewMode, columns: this.columns, galleryThumbnailSize: this.galleryThumbnailSize,
     }));
@@ -378,13 +391,14 @@ export class CharacterListComponent implements OnInit {
     this.selectedHouse = text(raw['selectedHouse']);
     this.selectedBook = text(raw['selectedBook']);
     this.selectedPictureFilter = raw['selectedPictureFilter'] === 'with' || raw['selectedPictureFilter'] === 'without' ? raw['selectedPictureFilter'] : '';
+    this.selectedPromptFilter = raw['selectedPromptFilter'] === 'with' || raw['selectedPromptFilter'] === 'without' ? raw['selectedPromptFilter'] : '';
     this.povOnly = !this.drawerMode && raw['povOnly'] === true;
     const group = raw['groupBy'];
     this.groupBy = group === 'category' || group === 'tag' || group === 'cast' || group === 'book' ? group : 'none';
     this.sortBy = raw['sortBy'] === 'category' ? 'category' : 'name';
     this.sortDirection = raw['sortDirection'] === 'desc' ? 'desc' : 'asc';
     const view = raw['viewMode'];
-    this.viewMode = view === 'list' || view === 'compact' || view === 'gallery' ? view : 'grid';
+    this.viewMode = view === 'list' || view === 'compact' || view === 'gallery' || view === 'prompts' ? view : 'grid';
     this.columns = raw['columns'] === 1 ? 1 : 2;
     this.galleryThumbnailSize = raw['galleryThumbnailSize'] === 'small' || raw['galleryThumbnailSize'] === 'big' ? raw['galleryThumbnailSize'] : 'medium';
     this.recomputePovBadgeState();
@@ -760,6 +774,10 @@ export class CharacterListComponent implements OnInit {
     this.applyFilters();
   }
 
+  onPromptFilterChange(): void {
+    this.applyFilters();
+  }
+
   onPovOnlyChange(povOnly: boolean): void {
     this.povOnly = povOnly;
     if (povOnly) {
@@ -798,6 +816,7 @@ export class CharacterListComponent implements OnInit {
     if (this.selectedBook) n++;
     if (this.povOnly && !this.drawerMode) n++;
     if (this.selectedPictureFilter) n++;
+    if (this.selectedPromptFilter) n++;
     return n;
   }
 
@@ -850,6 +869,7 @@ export class CharacterListComponent implements OnInit {
     this.selectedHouse = '';
     this.selectedBook = '';
     this.selectedPictureFilter = '';
+    this.selectedPromptFilter = '';
     this.povOnly = false;
     // Clear saved filter state
     localStorage.removeItem('characterSearchTerm');
@@ -963,6 +983,13 @@ export class CharacterListComponent implements OnInit {
           return false;
         }
         if (this.selectedPictureFilter === 'without' && hasPicture) {
+          return false;
+        }
+      }
+
+      if (this.selectedPromptFilter) {
+        const hasPrompt = this.promptLinkedIds.has(character.id);
+        if (this.selectedPromptFilter === 'with' ? !hasPrompt : hasPrompt) {
           return false;
         }
       }
@@ -1137,6 +1164,12 @@ getFilterSummary(): string {
       filters.push('without pictures');
     }
 
+    if (this.selectedPromptFilter === 'with') {
+      filters.push('with prompts');
+    } else if (this.selectedPromptFilter === 'without') {
+      filters.push('without prompts');
+    }
+
     return filters.length > 0 ? `Filtered by ${filters.join(', ')}` : '';
   }
 
@@ -1158,6 +1191,8 @@ getFilterSummary(): string {
       this.viewMode = 'compact';
     } else if (this.viewMode === 'compact') {
       this.viewMode = 'gallery';
+    } else if (this.viewMode === 'gallery') {
+      this.viewMode = 'prompts';
     } else {
       this.viewMode = 'grid';
     }
@@ -1165,7 +1200,7 @@ getFilterSummary(): string {
     this.saveCollectionFilters();
   }
 
-  setViewMode(mode: 'grid' | 'list' | 'compact' | 'gallery'): void {
+  setViewMode(mode: CharacterViewMode): void {
     this.viewMode = mode;
     this.preferences.setViewMode(this.viewMode);
     this.saveCollectionFilters();

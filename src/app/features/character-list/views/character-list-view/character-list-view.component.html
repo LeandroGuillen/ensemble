@@ -66,10 +66,32 @@
             </div>
           }
         </div>
-        @if (character.content) {
+        @if (showPrompts) {
+          <div class="list-item-prompts" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()" (keydown.space)="$event.stopPropagation()">
+            @for (file of promptsFor(character); track file.relativePath) {
+              <button type="button" class="prompt-chip" (click)="openPrompt(file, $event)" [title]="'Open prompt ' + file.relativePath">
+                <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#sparkles" /></svg>
+                {{ file.name }}
+                @if (variantCount(file) > 1) {
+                  <span class="prompt-chip-count">{{ variantCount(file) }}</span>
+                }
+              </button>
+            } @empty {
+              <span class="prompt-none">No prompts</span>
+            }
+            <button type="button" class="prompt-chip prompt-chip-add" [disabled]="creatingPromptFor === character.id" (click)="newPrompt(character, $event)" title="New prompt for this character">+ Prompt</button>
+          </div>
+        } @else if (character.content) {
           <p class="list-item-description">{{ character.content | excerpt:180 }}</p>
         }
       </div>
+      @if (showPrompts && promptImagesFor(character).length) {
+        <div class="list-item-prompt-images" aria-hidden="true">
+          @for (image of promptImagesFor(character); track $index) {
+            <app-prompt-image class="prompt-image" [path]="image"></app-prompt-image>
+          }
+        </div>
+      }
     </div>
   }
 </div>

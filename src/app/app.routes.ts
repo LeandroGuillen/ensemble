@@ -146,6 +146,14 @@ export const routes: Routes = [
     ],
   },
   {
+    path: "prompts",
+    loadComponent: () =>
+      import("./features/prompts/prompts.component").then(
+        (m) => m.PromptsComponent
+      ),
+    canActivate: [projectGuard],
+  },
+  {
     path: "casts",
     loadComponent: () =>
       import("./features/cast-list/cast-list.component").then(
