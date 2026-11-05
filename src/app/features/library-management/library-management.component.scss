@@ -605,6 +605,10 @@
 }
 
 .book-row {
+  width: 100%;
+  font: inherit;
+  color: var(--color-text-primary);
+  text-align: left;
   display: flex;
   align-items: center;
   gap: var(--spacing-md);

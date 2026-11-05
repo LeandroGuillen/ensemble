@@ -1,4 +1,6 @@
-<div
+<button
+  type="button"
+  [attr.aria-label]="'Open book ' + getAccessibleLabel()"
   class="book-container"
   [class.dragging]="isDragging"
   draggable="true"
@@ -6,25 +8,25 @@
   (dragstart)="onDragStart($event)"
   (dragend)="onDragEnd()"
 >
-  <div class="book">
-    <div class="book-cover" [style.background]="getBookGradient()">
-      <div class="book-title">{{ getCoverTitle() }}</div>
-      <div class="ornament"></div>
+  <span class="book">
+    <span class="book-cover" [style.background]="getBookGradient()">
+      <span class="book-title">{{ getCoverTitle() }}</span>
+      <span class="ornament"></span>
       @if (getCoverSubtitle()) {
-        <div class="book-author">{{ getCoverSubtitle() }}</div>
+        <span class="book-author">{{ getCoverSubtitle() }}</span>
       }
-    </div>
-    <div class="book-spine" [style.background]="getSpineGradient()">
-      <div class="spine-text">{{ getSpineLabel().toUpperCase() }}</div>
-    </div>
+    </span>
+    <span class="book-spine" [style.background]="getSpineGradient()">
+      <span class="spine-text">{{ getSpineLabel().toUpperCase() }}</span>
+    </span>
 
-    <div class="book-back" [style.background]="getBackGradient()"></div>
+    <span class="book-back" [style.background]="getBackGradient()"></span>
 
-    <div class="book-pages">
-      <div class="page-layer"></div>
-      <div class="page-layer"></div>
-      <div class="page-layer"></div>
-      <div class="page-layer"></div>
-    </div>
-  </div>
-</div>
+    <span class="book-pages">
+      <span class="page-layer"></span>
+      <span class="page-layer"></span>
+      <span class="page-layer"></span>
+      <span class="page-layer"></span>
+    </span>
+  </span>
+</button>

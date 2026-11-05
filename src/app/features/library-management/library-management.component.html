@@ -450,7 +450,9 @@
         (drop)="onShelfDrop($event, placement, books.length)"
       >
         @for (book of books; track book.id; let i = $index) {
-          <div
+          <button
+            type="button"
+            [attr.aria-label]="'Open book ' + getBookTitle(book)"
             class="book-row"
             draggable="true"
             [class.selected]="selectedBook?.id === book.id"
@@ -465,8 +467,8 @@
               class="book-color-swatch"
               [style.background]="book.color"
             ></span>
-            <div class="book-row-main">
-              <div class="book-row-title-line">
+            <span class="book-row-main">
+              <span class="book-row-title-line">
                 @if (book.code) {
                   <span class="book-row-code">{{ book.code }}</span>
                 }
@@ -476,12 +478,12 @@
                     getStatusLabel(book.status)
                   }}</span>
                 }
-              </div>
+              </span>
               @if (book.description) {
                 <span class="book-row-description">{{ book.description }}</span>
               }
-            </div>
-          </div>
+            </span>
+          </button>
         }
         @if (books.length === 0) {
           <div class="shelf-empty-hint list-hint">Drop books here</div>

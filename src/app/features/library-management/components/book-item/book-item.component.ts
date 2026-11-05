@@ -3,6 +3,7 @@ import { Book } from "@app/core";
 import { LoggingService } from "@app/core/services/logging.service";
 import {
   getBookCoverTitle,
+  getBookDisplayName,
   getBookSpineLabel,
   getBookSubtitle,
 } from "@app/core/utils/book-display.utils";
@@ -29,6 +30,10 @@ export class BookItemComponent {
     if (!this.isDragging) {
       this.bookClick.emit(this.book);
     }
+  }
+
+  getAccessibleLabel(): string {
+    return getBookDisplayName(this.book);
   }
 
   getCoverTitle(): string {
