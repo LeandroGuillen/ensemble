@@ -93,9 +93,13 @@
       }
       <!-- Cast Filter -->
       @if (casts.length > 0) {
-        <div class="filter-section section-cast" role="group" aria-labelledby="character-filter-cast">
-          <h3 class="filter-label" id="character-filter-cast">Cast</h3>
-          <div class="single-select-options">
+        <details class="filter-section filter-disclosure section-cast" [open]="isSectionOpen('cast')" (toggle)="onSectionToggle('cast', $event)">
+          <summary class="filter-disclosure-summary">
+            <svg class="filter-disclosure-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <h3 class="filter-label" id="character-filter-cast">Cast</h3>
+            <span class="filter-current" [class.is-set]="!!selectedCast">{{ selectedCast ? getCastName(selectedCast) : 'All' }}</span>
+          </summary>
+          <div class="single-select-options" role="group" aria-labelledby="character-filter-cast">
             <app-category-toggle
               [options]="getCastToggleOptions()"
               [selectedValue]="selectedCast"
@@ -103,13 +107,19 @@
               (valueChange)="onCastDropdownChange($event)"
             ></app-category-toggle>
           </div>
-        </div>
+        </details>
       }
       @if (houses.length > 0) {
-        <div class="filter-section section-house" role="group" aria-labelledby="character-filter-house">
-          <h3 class="filter-label" id="character-filter-house">House</h3>
-          <app-category-toggle [options]="getHouseToggleOptions()" [selectedValue]="selectedHouse" emptyLabel="All" (valueChange)="houseChange.emit($event)" />
-        </div>
+        <details class="filter-section filter-disclosure section-house" [open]="isSectionOpen('house')" (toggle)="onSectionToggle('house', $event)">
+          <summary class="filter-disclosure-summary">
+            <svg class="filter-disclosure-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <h3 class="filter-label" id="character-filter-house">House</h3>
+            <span class="filter-current" [class.is-set]="!!selectedHouse">{{ selectedHouse ? getHouseName(selectedHouse) : 'All' }}</span>
+          </summary>
+          <div role="group" aria-labelledby="character-filter-house">
+            <app-category-toggle [options]="getHouseToggleOptions()" [selectedValue]="selectedHouse" emptyLabel="All" (valueChange)="houseChange.emit($event)" />
+          </div>
+        </details>
       }
       <!-- Book Filter -->
       @if (books.length > 0) {
@@ -136,15 +146,21 @@
         </div>
       }
       <!-- Picture Filter -->
-      <div class="filter-section section-pictures" role="group" aria-labelledby="character-filter-pictures">
-        <h3 class="filter-label" id="character-filter-pictures">Pictures</h3>
-        <app-category-toggle
-          [options]="pictureFilterOptions"
-          [selectedValue]="selectedPictureFilter"
-          [emptyLabel]="'All'"
-          (valueChange)="onPictureFilterChange($event)"
-        ></app-category-toggle>
-      </div>
+      <details class="filter-section filter-disclosure section-pictures" [open]="isSectionOpen('pictures')" (toggle)="onSectionToggle('pictures', $event)">
+        <summary class="filter-disclosure-summary">
+          <svg class="filter-disclosure-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <h3 class="filter-label" id="character-filter-pictures">Pictures</h3>
+          <span class="filter-current" [class.is-set]="!!selectedPictureFilter">{{ selectedPictureFilter === 'with' ? 'With' : selectedPictureFilter === 'without' ? 'Without' : 'All' }}</span>
+        </summary>
+        <div role="group" aria-labelledby="character-filter-pictures">
+          <app-category-toggle
+            [options]="pictureFilterOptions"
+            [selectedValue]="selectedPictureFilter"
+            [emptyLabel]="'All'"
+            (valueChange)="onPictureFilterChange($event)"
+          ></app-category-toggle>
+        </div>
+      </details>
     </div>
   }
 </div>

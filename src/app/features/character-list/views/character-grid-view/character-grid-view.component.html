@@ -13,10 +13,6 @@
       [attr.data-character-id]="character.id"
       [attr.data-nav-index]="navIndexOffset + i"
       (click)="onCharacterClick(character)"
-      role="button"
-      tabindex="0"
-      (keydown.enter)="onCardKeydown($event, character)"
-      (keydown.space)="onCardKeydown($event, character)"
       >
       <div class="drag-preview-chip" *cdkDragPreview>
         {{ getCharacterDisplayName(character) }}
@@ -72,9 +68,12 @@
           <p class="character-description">{{ character.content | excerpt:150 }}</p>
         }
       </div>
-      <div class="character-actions">
+      <!-- Card actions are the keyboard route into the card: native buttons, no
+           wrapper role or key handling, so Enter and Space behave as usual. -->
+      <div class="character-actions" role="group" [attr.aria-label]="getCharacterDisplayName(character) + ' actions'">
         <button
-          class="icon-btn"
+          type="button"
+          class="icon-btn edit-btn"
           (click)="onCharacterClickWithStop(character, $event)"
           title="Edit character"
           [attr.aria-label]="'Edit ' + getCharacterDisplayName(character)"
@@ -82,6 +81,7 @@
           <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#edit" /></svg>
         </button>
         <button
+          type="button"
           class="icon-btn delete-btn"
           (click)="onCharacterDelete(character, $event)"
           title="Delete character"

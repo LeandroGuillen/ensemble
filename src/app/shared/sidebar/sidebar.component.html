@@ -1,7 +1,12 @@
-<aside class="sidebar" [class.collapsed]="isCollapsed" aria-label="Main navigation">
+@if (isOverlay) {
+  <!-- Keeps the icon rail's room while the labelled sidebar floats over the page. -->
+  <div class="sidebar-rail-spacer" aria-hidden="true"></div>
+  <div class="sidebar-scrim" aria-hidden="true" (click)="closeOverlay()"></div>
+}
+<aside class="sidebar" [class.collapsed]="isCollapsed" [class.overlay]="isOverlay" aria-label="Main navigation">
   <!-- Brand / Project Selector -->
   <div class="sidebar-top">
-    <button class="collapse-toggle" (click)="toggleCollapse()" [title]="isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'" [attr.aria-label]="isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'" [attr.aria-expanded]="!isCollapsed">
+    <button type="button" class="collapse-toggle" (click)="toggleCollapse()" [title]="toggleLabel" [attr.aria-label]="toggleLabel" [attr.aria-expanded]="!isCollapsed">
       <svg class="toggle-icon" [class.rotated]="!isCollapsed">
         <use href="#icon-chevrons-right"></use>
       </svg>
@@ -84,9 +89,10 @@
             <button
               class="nav-item"
               [class.active]="item.route && isActive(item.route)"
-              [attr.aria-current]="item.route && isActive(item.route) ? 'page' : null"
+              [class.active-parent]="item.route && ariaCurrent(item.route) === 'location'"
+              [attr.aria-current]="item.route ? ariaCurrent(item.route) : null"
               (click)="handleItemClick(item)"
-              [title]="isCollapsed ? item.title : ''"
+              [title]="isCollapsed || (item.route && ariaCurrent(item.route) === 'location') ? itemTitle(item) : ''"
               [attr.aria-label]="item.label"
               >
               <svg class="nav-icon" [attr.data-icon]="item.icon">

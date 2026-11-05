@@ -40,6 +40,12 @@
   --selected-fg: var(--color-text-primary);
   --selected-ring: color-mix(in srgb, var(--color-accent-primary) 65%, transparent);
 
+  /* Keyboard focus. Deliberately NOT the accent: selected/current items are
+     accent-tinted, so focus uses the primary text colour (near-white on dark
+     themes, near-black on light ones) with an offset, and never reads as
+     "selected". Skins may still restyle it. */
+  --focus-ring-color: var(--color-text-primary);
+
   /* Shadows */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);

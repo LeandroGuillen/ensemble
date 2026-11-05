@@ -5,7 +5,8 @@
   gap: var(--spacing-lg);
 }
 
-// Selected character highlighting
+// Selected character highlighting (arrow-key cursor). Accent colour; keyboard
+// focus uses the separate --focus-ring-color so the two never look alike.
 .character-item.selected {
   outline: 2px solid var(--color-accent-primary);
   outline-offset: 2px;
@@ -30,14 +31,16 @@
     }
   }
 
-  // Keyboard users see the card actions as soon as focus enters the card.
-  &:focus-within .character-actions {
-    opacity: 1;
-  }
+  // Keyboard users see the card actions the moment focus enters the card
+  // (no fade, so the focused button is never half-transparent), and the card
+  // edge picks up the focus colour so the owning card is obvious.
+  &:focus-within {
+    border-color: var(--focus-ring-color);
 
-  &:focus-visible {
-    outline: 2px solid var(--color-accent-primary);
-    outline-offset: 2px;
+    .character-actions {
+      opacity: 1;
+      transition: none;
+    }
   }
 
   &.selected {
@@ -50,7 +53,9 @@
 .character-thumbnail {
   position: relative;
   width: 100%;
-  aspect-ratio: 4 / 3;
+  // 3:2 keeps head-and-shoulders portraits recognisable while leaving room
+  // for name, category, tags and summary in the same card.
+  aspect-ratio: 3 / 2;
   background: linear-gradient(135deg, var(--color-bg-tertiary), var(--color-bg-elevated));
   overflow: hidden;
 
@@ -178,9 +183,19 @@
 
   .icon-btn {
     pointer-events: auto; // Buttons remain clickable when visible
-    background-color: rgba(10, 14, 26, 0.8);
+    min-width: 32px;
+    min-height: 32px;
+    background-color: color-mix(in srgb, var(--color-bg-primary) 85%, transparent);
+    color: var(--color-text-primary);
     backdrop-filter: blur(4px);
     border: 1px solid var(--color-border);
+
+    // Over a portrait the ring needs a dark halo to stay visible.
+    &:focus-visible {
+      outline: 2px solid var(--focus-ring-color);
+      outline-offset: 2px;
+      box-shadow: 0 0 0 5px color-mix(in srgb, var(--color-bg-primary) 80%, transparent);
+    }
 
     &:hover {
       background-color: var(--color-bg-tertiary);
@@ -191,6 +206,18 @@
       background-color: rgba(239, 68, 68, 0.2);
       border-color: var(--color-error);
     }
+  }
+}
+
+// Short windows (e.g. 800×600): flatter portraits and a two-line summary so a
+// whole row of cards, text included, fits in the visible list.
+@media (max-height: 760px) {
+  .character-thumbnail {
+    aspect-ratio: 2 / 1;
+  }
+
+  .character-description {
+    -webkit-line-clamp: 2;
   }
 }
 

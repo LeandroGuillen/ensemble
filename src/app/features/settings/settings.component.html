@@ -60,6 +60,29 @@
         <p class="settings-search-empty">No settings match “{{ searchQuery }}”</p>
       }
 
+      <!-- Narrow windows: one compact picker instead of a sideways-scrolling list. -->
+      <div class="settings-section-picker">
+        <label for="settings-section-select">Section</label>
+        <select
+          id="settings-section-select"
+          class="settings-section-select"
+          [ngModel]="activeSection"
+          (ngModelChange)="selectSection($event)"
+        >
+          @for (entry of navEntries; track entry.id) {
+            @if (entry.kind === 'group') {
+              <optgroup [label]="entry.label">
+                @for (child of entry.children; track child.id) {
+                  <option [ngValue]="child.id">{{ child.label }}</option>
+                }
+              </optgroup>
+            } @else {
+              <option [ngValue]="entry.id">{{ entry.label }}</option>
+            }
+          }
+        </select>
+      </div>
+
       <ul class="settings-nav-list">
         @for (entry of filteredNavEntries; track entry.id) {
           @if (entry.kind === 'group') {
@@ -81,6 +104,7 @@
                         type="button"
                         class="settings-nav-item settings-nav-child"
                         [class.active]="activeSection === child.id"
+                        [attr.aria-current]="activeSection === child.id ? 'page' : null"
                         (click)="selectSection(child.id)"
                       >
                         <span class="settings-nav-label">{{ child.label }}</span>
@@ -96,6 +120,7 @@
                 type="button"
                 class="settings-nav-item"
                 [class.active]="activeSection === entry.id"
+                [attr.aria-current]="activeSection === entry.id ? 'page' : null"
                 (click)="selectSection(entry.id)"
               >
                 <span class="settings-nav-label">{{ entry.label }}</span>

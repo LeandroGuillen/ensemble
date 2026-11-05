@@ -364,3 +364,73 @@
     }
   }
 }
+
+// Folded secondary filters (Cast, House, Pictures): the summary shows the
+// current value so a folded section still says what it is doing.
+details.filter-disclosure {
+  display: block;
+
+  > :not(summary) {
+    margin-top: var(--spacing-sm);
+  }
+}
+
+.filter-disclosure-summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  margin: 0 -6px;
+  padding: 2px 6px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &:hover {
+    background: var(--color-bg-tertiary);
+  }
+
+  .filter-label {
+    flex: 1;
+  }
+}
+
+.filter-disclosure-chevron {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+  transition: transform var(--transition-fast);
+
+  details[open] > summary & {
+    transform: rotate(90deg);
+  }
+}
+
+.filter-current {
+  max-width: 55%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+
+  &.is-set {
+    color: var(--color-text-primary);
+    font-weight: 600;
+  }
+}
+
+.character-filter .filter-body details.filter-disclosure {
+  display: block;
+}
+
+// Folded sections stack as a compact list rather than full-height blocks.
+.sidebar-mode .filter-body details.filter-disclosure + details.filter-disclosure {
+  margin-top: calc(var(--spacing-xs) - var(--spacing-lg));
+}

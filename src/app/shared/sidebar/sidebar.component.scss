@@ -3,6 +3,34 @@ $sidebar-width-collapsed: 60px;
 $transition-duration: 250ms;
 $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
 
+:host {
+  display: flex;
+  flex-shrink: 0;
+}
+
+// Narrow window, labels requested: the sidebar floats over the page while
+// this spacer keeps the icon rail's width so the content does not jump.
+.sidebar-rail-spacer {
+  width: $sidebar-width-collapsed;
+  flex-shrink: 0;
+}
+
+.sidebar-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 1090;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.sidebar.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 1100;
+  box-shadow: var(--shadow-xl);
+}
+
 .sidebar {
   width: $sidebar-width-expanded;
   height: 100vh;
@@ -387,10 +415,12 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
 
   // Current page: tinted surface, accent ring and accent icon. The solid
   // accent fill stays reserved for each page's primary action.
+  // A left accent bar (not a ring) marks the place, so it never resembles
+  // the keyboard focus outline.
   &.active {
     background: var(--selected-bg);
     color: var(--selected-fg);
-    box-shadow: inset 0 0 0 1px var(--selected-ring);
+    box-shadow: inset 3px 0 0 var(--color-accent-primary);
 
     .nav-icon {
       opacity: 1;
@@ -399,6 +429,17 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
 
     .nav-label {
       font-weight: 600;
+    }
+  }
+
+  // Inside a collection's page (a character, a House, a book…): same marker,
+  // lighter tint, so "you are within Characters" reads differently from
+  // "you are on the Characters list".
+  &.active.active-parent {
+    background: color-mix(in srgb, var(--color-accent-primary) 9%, transparent);
+
+    .nav-label {
+      font-weight: 500;
     }
   }
 
@@ -498,7 +539,7 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
     &.update-busy { cursor: progress; }
 
     &:focus-visible {
-      outline: 2px solid var(--color-accent-primary);
+      outline: 2px solid var(--focus-ring-color);
       outline-offset: 2px;
     }
 

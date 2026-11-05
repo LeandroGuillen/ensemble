@@ -1035,6 +1035,29 @@ export class CharacterDetailComponent
     this.navigateBack();
   }
 
+  /** User choice for the "File & collection" disclosure (null = automatic). */
+  private advancedOpenChoice: boolean | null = null;
+
+  /**
+   * Folded by default. Opens on its own for drafts (promotion lives there) and
+   * whenever a collection change is pending, so a pending move is never hidden.
+   */
+  get advancedOpen(): boolean {
+    if (this.collectionChangeHint) return true;
+    return this.advancedOpenChoice ?? this.isDraftMode;
+  }
+
+  onAdvancedToggle(event: Event): void {
+    const open = (event.target as HTMLDetailsElement | null)?.open ?? false;
+    if (open !== this.advancedOpen) this.advancedOpenChoice = open;
+  }
+
+  /** Singular collection name for the disclosure summary. */
+  get collectionLabelSingular(): string {
+    const option = this.collectionOptions.find(o => o.id === this.collection);
+    return option?.name ?? '';
+  }
+
   /** Name of the list this record belongs to, shown in the header back link. */
   get collectionLabel(): string {
     return this.isDraftMode ? 'Drawer' : this.isLoreMode ? 'Lore' : 'Characters';

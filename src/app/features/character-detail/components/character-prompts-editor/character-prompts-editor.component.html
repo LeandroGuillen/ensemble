@@ -1,10 +1,15 @@
-<section class="panel prompts-panel">
-  <header class="panel-header">
-    <h3 class="panel-title">Prompts</h3>
-    <span class="panel-subtitle">
-      Image-generation prompts — the starred one is the default and is written first in the file
+<!-- Image prompts are secondary to the description: folded by default, with the
+     count in the summary so the section still says what it holds. -->
+<details class="panel prompts-panel" [open]="promptsOpen" (toggle)="onPanelToggle($event)">
+  <summary class="panel-header prompts-summary">
+    <svg class="prompts-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span class="prompts-summary-text">
+      <h3 class="panel-title">Prompts <span class="prompts-count">{{ prompts.length }}</span></h3>
+      <span class="panel-subtitle">
+        Image-generation prompts — the starred one is the default and is written first in the file
+      </span>
     </span>
-  </header>
+  </summary>
   <div class="prompts-body">
     <div class="prompts-list-col">
       <ul class="prompts-list">
@@ -21,7 +26,12 @@
               [title]="$index === 0 ? 'Default prompt' : 'Set as default'"
               (click)="setPromptAsDefault($index); $event.stopPropagation()"
             ><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#star" /></svg></button>
-            <span class="prompts-list-name">{{ getPromptLabel(prompt, $index) }}</span>
+            <button
+              type="button"
+              class="prompts-list-name"
+              [attr.aria-pressed]="selectedPromptIndex === $index"
+              (click)="selectPrompt($index); $event.stopPropagation()"
+            >{{ getPromptLabel(prompt, $index) }}</button>
           </li>
         } @empty {
           <li class="prompts-list-empty">No prompts yet</li>
@@ -99,4 +109,4 @@
       }
     </div>
   </div>
-</section>
+</details>

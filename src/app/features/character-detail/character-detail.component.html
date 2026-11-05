@@ -4,20 +4,6 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
       <span>{{ collectionLabel }}</span>
     </button>
-    <div pageHeaderSuffix class="header-meta">
-      @if (isEditing && character) {
-        <button
-          type="button"
-          class="file-path-chip"
-          (click)="openCharacterFolder()"
-          title="Open folder in file explorer"
-        >
-          <svg class="ui-icon file-path-chip-icon" aria-hidden="true"><use href="assets/ui-icons.svg#folder" /></svg>
-          <span class="file-path-chip-text">{{ currentProject?.metadata?.settings?.charactersFolder || 'characters' }}/{{ character.relativePath }}</span>
-        </button>
-      }
-    </div>
-
     @if (characterForm.dirty || hasAnyBookPageDirty()) {
       <span class="dirty-pill" title="You have unsaved changes">● Unsaved</span>
     }
@@ -345,28 +331,6 @@
               </div>
 
               <div class="infobox-fields">
-                <div class="hero-field form-group-collection">
-                  <label class="form-label" id="collection-label">Collection</label>
-                  <div class="collection-toggle" role="radiogroup" aria-labelledby="collection-label">
-                    @for (option of collectionOptions; track option.id) {
-                      <button
-                        type="button"
-                        class="collection-option"
-                        role="radio"
-                        [class.active]="collection === option.id"
-                        [class.is-saved]="isEditing && savedCollection === option.id && collection !== option.id"
-                        [attr.aria-checked]="collection === option.id"
-                        [disabled]="isSaving || savingBookPageId"
-                        [title]="option.tooltip"
-                        (click)="setCollection(option.id)"
-                      >{{ option.name }}</button>
-                    }
-                  </div>
-                  @if (collectionChangeHint) {
-                    <span class="hero-field-hint collection-hint">{{ collectionChangeHint }}</span>
-                  }
-                </div>
-
                 @if (categories.length > 0) {
                   <div class="hero-field form-group-category" [class.field-highlight]="characterForm.get('category')?.invalid && characterForm.get('category')?.touched">
                     <label class="form-label">Category{{ collection === 'characters' ? ' *' : '' }}</label>
@@ -406,14 +370,63 @@
                 }
               </div>
 
-              @if (isEditing) {
-                <div class="infobox-danger">
-                  @if (character?.created || character?.modified) {
+              <!-- Where the record lives: less frequent than category/tags, so it is
+                   folded under one summary (open for drafts, where promotion is the point). -->
+              <details class="infobox-advanced" [open]="advancedOpen" (toggle)="onAdvancedToggle($event)">
+                <summary class="infobox-advanced-summary">
+                  <svg class="infobox-advanced-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span class="infobox-advanced-title">File &amp; collection</span>
+                  <span class="infobox-advanced-current">{{ collectionLabelSingular }}</span>
+                </summary>
+                <div class="infobox-advanced-body">
+                  <div class="hero-field form-group-collection">
+                    <label class="form-label" id="collection-label">Collection</label>
+                    <div class="collection-toggle" role="radiogroup" aria-labelledby="collection-label">
+                      @for (option of collectionOptions; track option.id) {
+                        <button
+                          type="button"
+                          class="collection-option"
+                          role="radio"
+                          [class.active]="collection === option.id"
+                          [class.is-saved]="isEditing && savedCollection === option.id && collection !== option.id"
+                          [attr.aria-checked]="collection === option.id"
+                          [disabled]="isSaving || savingBookPageId"
+                          [title]="option.tooltip"
+                          (click)="setCollection(option.id)"
+                        >{{ option.name }}</button>
+                      }
+                    </div>
+                    @if (collectionChangeHint) {
+                      <span class="hero-field-hint collection-hint">{{ collectionChangeHint }}</span>
+                    }
+                  </div>
+
+                  @if (isEditing && character) {
+                    <div class="hero-field">
+                      <span class="form-label" id="file-path-label">File</span>
+                      <button
+                        type="button"
+                        class="file-path-chip"
+                        (click)="openCharacterFolder()"
+                        title="Open folder in file explorer"
+                        aria-describedby="file-path-label"
+                      >
+                        <svg class="ui-icon file-path-chip-icon" aria-hidden="true"><use href="assets/ui-icons.svg#folder" /></svg>
+                        <span class="file-path-chip-text">{{ currentProject?.metadata?.settings?.charactersFolder || 'characters' }}/{{ character.relativePath }}</span>
+                      </button>
+                    </div>
+                  }
+                  @if (isEditing && (character?.created || character?.modified)) {
                     <p class="infobox-dates">
                       @if (character?.created) { <span>Created {{ character!.created | date: 'mediumDate' }}</span> }
                       @if (character?.modified) { <span>Last saved {{ character!.modified | date: 'mediumDate' }}</span> }
                     </p>
                   }
+                </div>
+              </details>
+
+              @if (isEditing) {
+                <div class="infobox-danger">
                   <button
                     type="button"
                     class="danger-link"

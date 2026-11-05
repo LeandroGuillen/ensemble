@@ -1221,3 +1221,28 @@
   display: block;
   margin-top: var(--spacing-sm);
 }
+
+// Wide Settings panel: label (and its help) on the left, field on the right,
+// so forms use the width instead of a narrow column beside empty space.
+@container settings-panel (min-width: 720px) {
+  .metadata-panel .settings-fields {
+    max-width: 54rem;
+  }
+
+  .metadata-panel .settings-fields .form-group:has(> label:first-child:not(.checkbox-label)) {
+    display: grid;
+    grid-template-columns: minmax(10rem, 15rem) minmax(0, 36rem);
+    column-gap: var(--spacing-xl);
+    align-items: start;
+
+    > label:first-child {
+      grid-column: 1;
+      grid-row: 1 / span 4;
+      padding-top: 0.55rem;
+    }
+
+    > :not(label:first-child) {
+      grid-column: 2;
+    }
+  }
+}

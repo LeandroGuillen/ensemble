@@ -1,3 +1,5 @@
+import { ModalService } from '../../core/services/modal.service';
+import { isInteractiveKeyboardTarget } from '../../core/utils/list-keyboard.utils';
 import {
   AfterViewInit,
   Component,
@@ -30,7 +32,6 @@ import { Character } from '../../core/interfaces/character.interface';
 import { WikiTextPipe } from '../../shared/pipes/excerpt.pipe';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { EmojiPickerComponent } from '../../shared/emoji-picker/emoji-picker.component';
-import { ConfirmButtonDirective } from '../../shared/confirm-button/confirm-button.directive';
 import { PlotBoardReorderService } from './plot-board-reorder.service';
 import { PlotBoardSidebarComponent } from './components/plot-board-sidebar/plot-board-sidebar.component';
 import { ThreadToolbarComponent } from './components/thread-toolbar/thread-toolbar.component';
@@ -45,7 +46,6 @@ export type ZoomLevel = 1 | 2 | 3;
     FormsModule,
     PageHeaderComponent,
     EmojiPickerComponent,
-    ConfirmButtonDirective,
     PlotBoardSidebarComponent,
     ThreadToolbarComponent,
     CellEditorPopoverComponent,
@@ -72,6 +72,7 @@ export type ZoomLevel = 1 | 2 | 3;
 })
 export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   private readonly destroyRef = inject(DestroyRef);
+  private readonly modal = inject(ModalService);
   private saveRequest$ = new Subject<void>();
   private suspendAutoSave = false;
 
@@ -194,6 +195,63 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
       this.showThreadColorPicker = null;
     }
     this.threadToolbar.onNameRowEnter(threadId, anchor);
+  }
+
+  /** Focus left the thread header (and did not move into its toolbar). */
+  onThreadNameRowFocusOut(threadId: string, event: FocusEvent): void {
+    const next = event.relatedTarget as HTMLElement | null;
+    if (next?.closest(`.thread-hover-toolbar[data-thread-id="${CSS.escape(threadId)}"]`)) return;
+    if (next && (event.currentTarget as HTMLElement | null)?.contains(next)) return;
+    this.onThreadNameRowLeave(threadId);
+  }
+
+  /** Keyboard route into the hover toolbar (Up arrow on a thread name). */
+  focusThreadToolbar(threadId: string, event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    const first = document.querySelector<HTMLElement>(
+      `.thread-hover-toolbar[data-thread-id="${CSS.escape(threadId)}"] button`
+    );
+    first?.focus();
+  }
+
+  /** Escape inside an icon picker closes it and puts focus back on its button. */
+  closeIconPicker(event: Event, button: HTMLElement): void {
+    if (this.showThreadIconPicker === null && this.showRowIconPicker === null) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.showThreadIconPicker = null;
+    this.showRowIconPicker = null;
+    button.focus();
+  }
+
+  /** Explicit dialog, as for every other delete in the app. */
+  async askDeleteThread(threadId: string): Promise<void> {
+    const thread = this.board.threads.find(t => t.id === threadId);
+    if (!thread) return;
+    const ok = await this.modal.confirm(
+      `Delete the thread "${thread.name}" and its events from this board?`,
+      'Delete thread',
+      { confirmText: 'Delete', danger: true }
+    );
+    if (ok) this.confirmDeleteThread(threadId);
+    // The hover toolbar hid while the dialog was open: give focus a visible home.
+    setTimeout(() => {
+      const names = Array.from(document.querySelectorAll<HTMLElement>('.thread-name[data-thread-id]'));
+      const target = names.find(n => n.dataset['threadId'] === threadId) ?? names[0];
+      target?.focus();
+    }, 0);
+  }
+
+  async askDeleteRow(rowIndex: number): Promise<void> {
+    const row = this.board.rows[rowIndex];
+    if (!row) return;
+    const ok = await this.modal.confirm(
+      `Delete the row "${row.name}" and its events from this board?`,
+      'Delete row',
+      { confirmText: 'Delete', danger: true }
+    );
+    if (ok) this.confirmDeleteRow(rowIndex);
   }
 
   onThreadNameRowLeave(threadId: string): void {
@@ -799,6 +857,8 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
     if (!this.hasOpenFile || this.plotBoardModalsOpen() || this.isLoading) {
       return;
     }
+    // A shared dialog (e.g. delete confirmation) owns the keyboard while open.
+    if (document.querySelector('.modal-overlay')) return;
 
     const target = event.target as HTMLElement | null;
     const inTextField =
@@ -836,6 +896,9 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
     if (target?.closest('.plot-board-sidebar')) return;
     if (target?.closest('app-page-header')) return;
     if (inTextField) return;
+    // Enter on a focused control (icon picker, thread/row name, remove button…)
+    // belongs to that control: never swallow its native activation.
+    if (event.key === 'Enter' && isInteractiveKeyboardTarget(target)) return;
 
     const key = event.key;
     if (

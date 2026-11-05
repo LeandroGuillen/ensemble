@@ -144,10 +144,11 @@
   position: relative;
   display: grid;
   grid-template-columns: 240px minmax(0, 1fr);
-  grid-template-rows: auto 1fr auto auto;
+  grid-template-rows: auto 1fr auto auto auto;
   grid-template-areas:
     'thumb  head'
     'thumb  fields'
+    'thumb  advanced'
     'thumb  danger'
     'body   body';
   column-gap: var(--spacing-xl);
@@ -187,6 +188,7 @@
       'thumb'
       'head'
       'fields'
+      'advanced'
       'danger'
       'body';
   }
@@ -953,7 +955,7 @@
 
     &::-webkit-details-marker { display: none; }
     &:hover { color: var(--color-text-primary); }
-    &:focus-visible { outline: 2px solid var(--color-accent-primary); outline-offset: 2px; }
+    &:focus-visible { outline: 2px solid var(--focus-ring-color); outline-offset: 2px; }
   }
 
   .description-help-text {
@@ -1354,5 +1356,81 @@
   &:hover,
   &:focus-visible {
     text-decoration: underline;
+  }
+}
+
+// "File & collection": folded metadata under the routine fields.
+.infobox-advanced {
+  grid-area: advanced;
+  min-width: 0;
+  margin-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border-subtle);
+  padding-top: var(--spacing-sm);
+}
+
+.infobox-advanced-summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 2px 4px;
+  margin: 0 -4px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  list-style: none;
+  color: var(--color-text-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &:hover {
+    background: var(--color-bg-tertiary);
+  }
+}
+
+.infobox-advanced-chevron {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+  transition: transform var(--transition-fast);
+
+  .infobox-advanced[open] > .infobox-advanced-summary & {
+    transform: rotate(90deg);
+  }
+}
+
+.infobox-advanced-title {
+  flex: 1;
+}
+
+.infobox-advanced-current {
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.infobox-advanced-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  padding-top: var(--spacing-sm);
+
+  .file-path-chip {
+    max-width: 100%;
+    height: auto;
+    min-height: 32px;
+    border-radius: var(--radius-md);
+    color: var(--color-text-secondary);
+    text-align: left;
+  }
+
+  .file-path-chip-text {
+    max-width: none;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 }
