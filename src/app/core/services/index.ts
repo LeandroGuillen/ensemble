@@ -4,6 +4,7 @@ export { LocationService } from "./location.service";
 export { LocationCommandService } from "./location-command.service";
 export { CastService } from "./cast.service";
 export { ProjectService } from "./project.service";
+export { ProjectIconService } from "./project-icon.service";
 export { PinboardService } from "./pinboard.service";
 export { PinboardStoreService } from "./pinboard-store.service";
 export { RecentProjectsService } from "./recent-projects.service";

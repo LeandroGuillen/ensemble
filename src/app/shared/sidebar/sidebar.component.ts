@@ -2,7 +2,7 @@ import { Component, DestroyRef, ElementRef, HostListener, OnInit, ViewChild, inj
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, NavigationEnd } from '@angular/router';
 
-import { ProjectService } from '../../core/services';
+import { ProjectIconService, ProjectService } from '../../core/services';
 import { ElectronService } from '../../core/services/electron.service';
 import { UpdateService, UpdateStatus } from '../../core/services/update.service';
 import { NotificationService } from '../../core/services/notification.service';
@@ -37,7 +37,10 @@ interface NavSection {
 })
 export class SidebarComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
+  private readonly projectIconService = inject(ProjectIconService);
   currentProjectName = '';
+  /** Custom project icon (data URL); null shows the Ensemble logo. */
+  projectIconUrl: string | null = null;
   currentRoute = '';
   private routeBeforeSettings = '/characters';
   /** Window width from which the labelled sidebar is shown by default. */
@@ -113,6 +116,10 @@ export class SidebarComponent implements OnInit {
     this.updateService.updateStatus$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(status => { this.updateStatus = status; });
+
+    this.projectIconService.iconUrl$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(url => this.projectIconUrl = url);
 
     this.projectService.currentProject$.subscribe((project: any) => {
       const folderName = typeof project?.path === 'string'

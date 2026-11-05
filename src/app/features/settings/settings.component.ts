@@ -69,7 +69,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
       kind: 'leaf',
       id: 'general',
       label: 'General',
-      description: 'Folders, paths, and updates',
+      description: 'Project name and icon, folders, and updates',
     },
     {
       kind: 'leaf',
@@ -256,7 +256,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     return {
       id: DEFAULT_SETTINGS_SECTION,
       label: 'General',
-      description: 'Folders, paths, and updates',
+      description: 'Project name and icon, folders, and updates',
     };
   }
 
@@ -375,6 +375,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     return {
       defaultCategory: settings?.defaultCategory || '',
       defaultCategoryName: defaultCategory?.name || '',
+      projectName: project?.metadata.projectName || '',
       zoomPercent: `${this.zoomService.getZoomPercent()}%`,
       charactersFolder: settings?.charactersFolder || 'characters',
       locationsFolder: settings?.locationsFolder || 'locations',

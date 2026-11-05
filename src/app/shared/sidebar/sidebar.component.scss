@@ -112,40 +112,57 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
     width: 28px;
     height: 28px;
     transition: all var(--transition-base);
+
+    // Custom project icons are arbitrary images: crop to a rounded square.
+    &.custom {
+      object-fit: cover;
+      border-radius: var(--radius-md);
+    }
   }
 
   .brand-copy {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 2px;
     min-width: 0;
   }
 
-  .brand-project {
-    max-width: 120px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    color: var(--color-text-secondary);
-    font-size: 0.75rem;
-    font-weight: 500;
-    line-height: 1.1;
-  }
-
+  // App name sits above as a small eyebrow; the project name is the headline.
   .brand-text {
     line-height: 1;
-    font-size: 1.125rem;
+    font-size: 0.6875rem;
     font-weight: 600;
-    color: var(--color-text-primary);
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
     white-space: nowrap;
     opacity: 1;
     transition: opacity $transition-duration $transition-timing;
-    letter-spacing: -0.01em;
+
+    // No project open: the app name is the headline.
+    &.solo {
+      font-size: 1.125rem;
+      color: var(--color-text-primary);
+      text-transform: none;
+      letter-spacing: -0.01em;
+    }
 
     .collapsed & {
       opacity: 0;
       width: 0;
     }
+  }
+
+  .brand-project {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--color-text-primary);
+    font-size: 1.125rem;
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
   }
 }
 

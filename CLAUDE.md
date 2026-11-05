@@ -28,6 +28,7 @@ Located in `src/app/core/services/`:
 
 - **ElectronService**: IPC bridge to Electron main process for all file system operations (including directory operations)
 - **ProjectService**: Manages work folder selection and `ensemble.json` (categories, tags, settings, `lastSession`, pinboards)
+- **ProjectIconService**: Sidebar project icon (`ensemble.json` → `projectIcon`, a project-relative image path). Images picked from outside the project are copied to `<imagesFolder>/project-icon.<ext>`
 - **CharacterService**: CRUD operations for convention-based character folders under `characters/`
 - **LocationService**: CRUD operations for location files (`_*.md`), recursive scan under `locations/`, flat-file format
 - **CastService**: CRUD operations for cast folders under the casts folder

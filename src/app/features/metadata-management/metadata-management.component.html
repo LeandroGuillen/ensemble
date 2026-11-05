@@ -834,6 +834,47 @@
 
       @if (activeSection === 'general') {
             <section class="section settings-fields">
+                <div class="form-group" [settingsSearchable]="['Project Name', 'project', 'rename', projectNameControl.value]">
+                  <label for="projectName">Project Name</label>
+                  <input
+                    type="text"
+                    id="projectName"
+                    [formControl]="projectNameControl"
+                    class="form-control"
+                    [class.error]="projectNameControl.invalid"
+                    />
+                  @if (projectNameControl.hasError('required')) {
+                    <div class="field-error">Project name is required.</div>
+                  }
+                  <small class="form-help">Shown in the sidebar and the project list. The folder on disk is not renamed.</small>
+                </div>
+                <div class="form-group" [settingsSearchable]="['Project Icon', 'project', 'logo', 'image', 'sidebar']">
+                  <label>Project Icon</label>
+                  <div class="project-icon-row">
+                    <img
+                      class="project-icon-preview"
+                      [class.custom]="!!projectIconUrl"
+                      [src]="projectIconUrl || 'assets/icon.svg'"
+                      alt=""
+                      width="48"
+                      height="48"
+                      />
+                    <div class="project-icon-actions">
+                      <button type="button" class="btn btn-secondary" (click)="chooseProjectIcon()" [disabled]="changingProjectIcon">
+                        {{ projectIconPath ? 'Change icon…' : 'Choose icon…' }}
+                      </button>
+                      @if (projectIconPath) {
+                        <button type="button" class="btn btn-secondary" (click)="resetProjectIcon()">Use Ensemble logo</button>
+                      }
+                    </div>
+                  </div>
+                  <small class="form-help">
+                    @if (projectIconPath) {
+                      Using <code>{{ projectIconPath }}</code>.
+                    }
+                    Shown in the sidebar. Images from outside the project are copied into the images folder.
+                  </small>
+                </div>
                 <form [formGroup]="settingsForm">
                 <div class="form-group" [settingsSearchable]="['Characters Folder', 'path', settings?.charactersFolder || 'characters']">
                   <label for="charactersFolder">Characters Folder</label>

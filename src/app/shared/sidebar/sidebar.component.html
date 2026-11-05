@@ -19,15 +19,16 @@
       [attr.aria-label]="currentProjectName ? 'Switch project. Current project: ' + currentProjectName : 'Open a project'"
       >
       <img
-        src="assets/icon.svg"
+        [src]="projectIconUrl || 'assets/icon.svg'"
         alt=""
         class="brand-icon"
+        [class.custom]="!!projectIconUrl"
         width="32"
         height="32"
         />
       @if (!isCollapsed) {
         <span class="brand-copy">
-          <span class="brand-text">Ensemble</span>
+          <span class="brand-text" [class.solo]="!currentProjectName">Ensemble</span>
           @if (currentProjectName) {
             <span class="brand-project">{{ currentProjectName }}</span>
           }

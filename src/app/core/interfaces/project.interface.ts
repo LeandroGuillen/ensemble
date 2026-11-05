@@ -32,6 +32,8 @@ export interface CharacterStyle {
 
 export interface ProjectMetadata {
   projectName: string;
+  /** Project-relative image shown in the sidebar instead of the Ensemble logo. */
+  projectIcon?: string;
   version: string;
   categories: Category[];
   tags: Tag[];

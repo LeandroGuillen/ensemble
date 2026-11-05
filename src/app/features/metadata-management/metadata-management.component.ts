@@ -3,11 +3,12 @@ import { Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges, DestroyR
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { debounceTime } from 'rxjs';
 import { MetadataService } from '../../core/services/metadata.service';
 import { LoggingService } from '../../core/services/logging.service';
 import { ProjectService } from '../../core/services/project.service';
+import { ProjectIconService } from '../../core/services/project-icon.service';
 import { CharacterService } from '../../core/services/character.service';
 import { CastService } from '../../core/services/cast.service';
 import { LocationService } from '../../core/services/location.service';
@@ -62,6 +63,16 @@ interface PendingDelete {
 export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy {
   private readonly toasts = inject(NotificationService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly projectIconService = inject(ProjectIconService);
+
+  /** Project identity (General → Project): name and sidebar icon. */
+  readonly projectNameControl = new FormControl('', {
+    nonNullable: true,
+    validators: [Validators.required, Validators.maxLength(200)],
+  });
+  projectIconUrl: string | null = null;
+  projectIconPath: string | null = null;
+  changingProjectIcon = false;
 
   /** Which settings panel section to render (driven by parent Settings page). */
   @Input() activeSection: SettingsSectionId = 'general';
@@ -233,6 +244,61 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
       .subscribe(() => {
         void this.saveSettings();
       });
+
+    this.projectService.currentProject$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(project => {
+        const name = project?.metadata?.projectName ?? '';
+        if (name !== this.projectNameControl.value.trim()) {
+          this.projectNameControl.setValue(name, { emitEvent: false });
+        }
+        this.projectIconPath = this.projectIconService.getIconPath();
+      });
+    this.projectNameControl.valueChanges
+      .pipe(debounceTime(600), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => void this.saveProjectName());
+    this.projectIconService.iconUrl$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(url => this.projectIconUrl = url);
+  }
+
+  private async saveProjectName(): Promise<void> {
+    const name = this.projectNameControl.value.trim();
+    const current = this.projectService.getCurrentProject();
+    if (!current || !name || this.projectNameControl.invalid || name === current.metadata.projectName) {
+      return;
+    }
+    try {
+      await this.projectService.updateMetadata({ projectName: name });
+    } catch (error) {
+      this.logger.error('Failed to rename project:', error);
+    }
+  }
+
+  async chooseProjectIcon(): Promise<void> {
+    if (this.changingProjectIcon) {
+      return;
+    }
+    const imagePath = await this.electronService.selectImage();
+    if (!imagePath) {
+      return;
+    }
+    this.changingProjectIcon = true;
+    try {
+      await this.projectIconService.setIcon(imagePath);
+    } catch (error) {
+      this.logger.error('Failed to set project icon:', error);
+    } finally {
+      this.changingProjectIcon = false;
+    }
+  }
+
+  async resetProjectIcon(): Promise<void> {
+    try {
+      await this.projectIconService.clearIcon();
+    } catch (error) {
+      this.logger.error('Failed to reset project icon:', error);
+    }
   }
 
   private async loadCurrentVersion(): Promise<void> {

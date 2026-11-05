@@ -32,6 +32,19 @@ export const SETTINGS_FIELD_INDEX: SettingsFieldIndex[] = [
     valueKeys: ['zoomPercent'],
   },
   {
+    id: 'project-name',
+    section: 'general',
+    label: 'Project Name',
+    keywords: ['project name', 'rename', 'title'],
+    valueKeys: ['projectName'],
+  },
+  {
+    id: 'project-icon',
+    section: 'general',
+    label: 'Project Icon',
+    keywords: ['project icon', 'logo', 'image', 'sidebar'],
+  },
+  {
     id: 'updates',
     section: 'general',
     label: 'Application Updates',
