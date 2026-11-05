@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { NgZone } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { NavigationEnd, Router } from '@angular/router';
@@ -162,7 +162,7 @@ describe('AppComponent prepare-to-leave zone', () => {
     expect(runSpy).toHaveBeenCalled();
   });
 
-  it('updates dialog state via NgZone.run when choose() is invoked outside the zone', async () => {
+  it('updates dialog state via NgZone.run when choose() is invoked outside the zone', fakeAsync(() => {
     const runSpy = spyOn(ngZone, 'run').and.callThrough();
 
     ngZone.runOutsideAngular(() => {
@@ -177,6 +177,8 @@ describe('AppComponent prepare-to-leave zone', () => {
       );
     });
 
+    tick();
+
     expect(runSpy).toHaveBeenCalled();
     expect(component.confirmationVisible).toBeTrue();
     expect(component.currentConfirmation?.title).toBe('Plan changed on disk');
@@ -185,6 +187,6 @@ describe('AppComponent prepare-to-leave zone', () => {
 
     // Dismiss so the pending choose() promise settles.
     component.onConfirmationCancel();
-    await new Promise((r) => setTimeout(r, 20));
-  });
+    tick();
+  }));
 });

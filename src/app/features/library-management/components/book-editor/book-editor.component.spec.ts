@@ -2,8 +2,11 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BookEditorComponent } from './book-editor.component';
 import { CharacterPickerService } from '../../../../core/services/character-picker.service';
 import { CharacterService } from '../../../../core/services/character.service';
-import { ModalService } from '../../../../core/services/modal.service';
 import { ProjectService } from '../../../../core/services/project.service';
+import { BookEditActionsService } from '../../../../core/services/book-edit-actions.service';
+import { MetadataService } from '../../../../core/services/metadata.service';
+import { ModalService } from '../../../../core/services/modal.service';
+import { Book } from '../../../../core/interfaces/project.interface';
 
 describe('Book editor layout', () => {
   let fixture: ComponentFixture<BookEditorComponent>;
@@ -15,7 +18,6 @@ describe('Book editor layout', () => {
         { provide: CharacterPickerService, useValue: { pick: async () => null } },
         { provide: CharacterService, useValue: { getCharacterById: () => undefined } },
         { provide: ProjectService, useValue: { getCurrentProject: () => null, getDefaultCharacterStyle: () => '' } },
-        { provide: ModalService, useValue: { confirm: async () => false } },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(BookEditorComponent);
@@ -63,5 +65,67 @@ describe('Book editor layout', () => {
     const save = spyOn(fixture.componentInstance.save, 'emit');
     fixture.nativeElement.querySelector('.page-header .btn-primary').click();
     expect(save).toHaveBeenCalledWith(jasmine.objectContaining({ name: 'Test book' }));
+  });
+});
+
+describe('Book editor delete book', () => {
+  const book: Book = { id: 'lc2', code: 'lc2', name: 'Tidebreak', color: '#3498db' };
+
+  let fixture: ComponentFixture<BookEditorComponent>;
+  let editor: BookEditorComponent;
+  let bookEditActions: jasmine.SpyObj<BookEditActionsService>;
+  let modal: jasmine.SpyObj<ModalService>;
+
+  beforeEach(async () => {
+    bookEditActions = jasmine.createSpyObj('BookEditActionsService', ['confirmAndDelete']);
+    modal = jasmine.createSpyObj('ModalService', ['confirm']);
+
+    await TestBed.configureTestingModule({
+      imports: [BookEditorComponent],
+      providers: [
+        { provide: CharacterPickerService, useValue: { pick: async () => null } },
+        { provide: CharacterService, useValue: { getCharacterById: () => undefined } },
+        { provide: ProjectService, useValue: { getCurrentProject: () => null, getDefaultCharacterStyle: () => '' } },
+        { provide: BookEditActionsService, useValue: bookEditActions },
+        { provide: ModalService, useValue: modal },
+        { provide: MetadataService, useValue: {} },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(BookEditorComponent);
+    editor = fixture.componentInstance;
+    fixture.componentRef.setInput('isVisible', true);
+    fixture.componentRef.setInput('book', book);
+    fixture.detectChanges();
+  });
+
+  it('emits delete without its own confirm (parent runs confirmAndDelete once)', () => {
+    const del = spyOn(editor.delete, 'emit');
+    editor.onDelete();
+    expect(modal.confirm).not.toHaveBeenCalled();
+    expect(del).toHaveBeenCalledWith(book);
+  });
+
+  it('mirrors the book page handler: one confirmAndDelete and saving clears', async () => {
+    bookEditActions.confirmAndDelete.and.returnValue(Promise.resolve(true));
+
+    let savingBook = false;
+    const onBookDelete = async (b: Book) => {
+      try {
+        savingBook = true;
+        if (!(await bookEditActions.confirmAndDelete(b))) {
+          return;
+        }
+      } finally {
+        savingBook = false;
+      }
+    };
+
+    editor.onDelete();
+    await onBookDelete(book);
+
+    expect(modal.confirm).not.toHaveBeenCalled();
+    expect(bookEditActions.confirmAndDelete).toHaveBeenCalledTimes(1);
+    expect(savingBook).toBeFalse();
   });
 });

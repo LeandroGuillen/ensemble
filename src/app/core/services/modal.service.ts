@@ -27,6 +27,8 @@ export interface ConfirmationRequest {
 export class ModalService {
   private confirmationSubject = new Subject<ConfirmationRequest>();
   public confirmation$: Observable<ConfirmationRequest> = this.confirmationSubject.asObservable();
+  /** Ensures a second confirm waits until the first dialog fully settles. */
+  private confirmSerial: Promise<void> = Promise.resolve();
 
   /**
    * Shows a confirmation dialog
@@ -79,17 +81,28 @@ export class ModalService {
   }
 
   private open(request: Omit<ConfirmationRequest, 'id' | 'resolve'>): Promise<ChoiceResult> {
-    return new Promise<ChoiceResult>((resolve) => {
-      this.confirmationSubject.next({
-        id: `confirmation-${Date.now()}-${Math.random()}`,
-        ...request,
-        resolve: (value) => {
-          if (value === true) resolve('primary');
-          else if (value === 'secondary') resolve('secondary');
-          else resolve('cancel');
-        },
+    const show = (): Promise<ChoiceResult> =>
+      new Promise<ChoiceResult>((resolve) => {
+        this.confirmationSubject.next({
+          id: `confirmation-${Date.now()}-${Math.random()}`,
+          ...request,
+          resolve: (value) => {
+            // Defer until after ConfirmationDialogComponent.close() on the same click.
+            queueMicrotask(() => {
+              if (value === true) resolve('primary');
+              else if (value === 'secondary') resolve('secondary');
+              else resolve('cancel');
+            });
+          },
+        });
       });
-    });
+
+    const chained = this.confirmSerial.then(show);
+    this.confirmSerial = chained.then(
+      () => undefined,
+      () => undefined
+    );
+    return chained;
   }
 
   /**

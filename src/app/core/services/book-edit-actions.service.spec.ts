@@ -89,3 +89,39 @@ describe('BookEditActionsService book code change', () => {
     ]);
   });
 });
+
+describe('BookEditActionsService confirmAndDelete', () => {
+  let service: BookEditActionsService;
+  let metadata: jasmine.SpyObj<MetadataService>;
+  let modal: jasmine.SpyObj<ModalService>;
+  const book: Book = { id: 'lc2', code: 'lc2', name: 'Tidebreak', color: '#111' };
+
+  beforeEach(() => {
+    metadata = jasmine.createSpyObj('MetadataService', ['removeBook']);
+    metadata.removeBook.and.returnValue(Promise.resolve());
+    modal = jasmine.createSpyObj('ModalService', ['confirm']);
+
+    TestBed.configureTestingModule({
+      providers: [
+        BookEditActionsService,
+        { provide: MetadataService, useValue: metadata },
+        { provide: ModalService, useValue: modal },
+        { provide: CharacterService, useValue: {} },
+      ],
+    });
+    service = TestBed.inject(BookEditActionsService);
+  });
+
+  it('returns false and removes nothing when the user cancels', async () => {
+    modal.confirm.and.returnValue(Promise.resolve(false));
+    expect(await service.confirmAndDelete(book)).toBeFalse();
+    expect(metadata.removeBook).not.toHaveBeenCalled();
+  });
+
+  it('removes the book after confirmation', async () => {
+    modal.confirm.and.returnValue(Promise.resolve(true));
+    expect(await service.confirmAndDelete(book)).toBeTrue();
+    expect(metadata.removeBook).toHaveBeenCalledWith('lc2');
+    expect(modal.confirm).toHaveBeenCalledTimes(1);
+  });
+});

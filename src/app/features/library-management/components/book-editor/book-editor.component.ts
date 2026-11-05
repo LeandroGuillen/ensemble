@@ -5,9 +5,7 @@ import { Book, Saga, Series } from '../../../../core/interfaces/project.interfac
 import { Character } from '../../../../core/interfaces/character.interface';
 import { CharacterPickerService } from '../../../../core/services/character-picker.service';
 import { CharacterService } from '../../../../core/services/character.service';
-import { ModalService } from '../../../../core/services/modal.service';
 import { ProjectService } from '../../../../core/services/project.service';
-import { getBookDisplayName } from '../../../../core/utils/book-display.utils';
 import { BookFormData } from '../../../../core/services/book-edit-actions.service';
 import { ElectronService } from '../../../../core/services/electron.service';
 import { projectRelativePath } from '../../../../core/utils/path.utils';
@@ -81,7 +79,6 @@ export class BookEditorComponent implements OnInit, OnChanges {
     private characterPicker: CharacterPickerService,
     private characterService: CharacterService,
     private projectService: ProjectService,
-    private modalService: ModalService,
     private electronService: ElectronService
   ) {
     this.bookForm = this.fb.group({
@@ -306,17 +303,9 @@ export class BookEditorComponent implements OnInit, OnChanges {
     this.mouseDownOnOverlay = false;
   }
 
-  async onDelete(): Promise<void> {
+  onDelete(): void {
     if (!this.book) return;
-    if (
-      await this.modalService.confirm(
-        `Are you sure you want to delete "${getBookDisplayName(this.book)}"?`,
-        'Delete Book',
-        { confirmText: 'Delete', danger: true }
-      )
-    ) {
-      this.delete.emit(this.book);
-    }
+    this.delete.emit(this.book);
   }
 
   selectColor(color: string): void {
