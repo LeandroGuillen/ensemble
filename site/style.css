@@ -394,6 +394,44 @@ main:focus {
   }
 }
 
+/* Demo screenshot slots. Empty labelled boxes until the real shots
+   exist (character sheet, pinboard or cast, book plan); no fake UI. */
+.demo-shots__note {
+  color: var(--muted);
+}
+
+.demo-shots__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.demo-shot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  aspect-ratio: 16 / 10;
+  padding: 1rem;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--muted);
+  text-align: center;
+}
+
+.demo-shot strong {
+  font-family: var(--font-display);
+  color: var(--text);
+}
+
+.demo-shot span {
+  font-size: 0.9rem;
+}
+
 /* Privacy */
 .check-list {
   margin: 0;
