@@ -161,6 +161,23 @@ export function parsePromptBody(body: string): PromptSection[] {
   return sections;
 }
 
+/**
+ * Body of a file whose frontmatter `parseMarkdown()` already accepted, without
+ * the whitespace trim `parseMarkdown()` applies. Trimming would strip the
+ * indent of the first notes line, so `  ## Golden hour` would come back as a
+ * `##` variant (and `    ```prompt` as a prompt block).
+ */
+function untrimmedBody(raw: string): string {
+  const text = raw.replace(/\r\n?/g, '\n');
+  const start = text.trimStart();
+  if (!start.startsWith('---')) return text;
+  const lines = start.split('\n');
+  for (let i = 1; i < lines.length; i++) {
+    if (lines[i].trim() === '---') return lines.slice(i + 1).join('\n');
+  }
+  return '';
+}
+
 /** Parses a whole prompt file, frontmatter included. Throws on malformed frontmatter. */
 export function parsePromptFile(raw: string): PromptFileData {
   const parsed = parseMarkdown<Record<string, unknown>>(raw);
@@ -185,7 +202,7 @@ export function parsePromptFile(raw: string): PromptFileData {
     created: timestamp(frontmatter['created']),
     modified: timestamp(frontmatter['modified']),
     extra,
-    sections: parsePromptBody(parsed.data.content || ''),
+    sections: parsePromptBody(untrimmedBody(raw)),
   };
 }
 

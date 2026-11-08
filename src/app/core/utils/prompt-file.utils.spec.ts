@@ -91,6 +91,42 @@ describe('prompt-file.utils', () => {
     expect(parsePromptFile(raw)).toEqual(data);
   });
 
+  it('round-trips main notes that start with an indented ## line (space or tab)', () => {
+    for (const notes of [
+      ' ## Golden hour\nWarm rim light from the lantern.',
+      '\t## Golden hour\nWarm rim light.',
+      '   ##Golden hour',
+      '    ```prompt\n    indented code\n    ```',
+      '  plain indented first line',
+    ]) {
+      const data = fileWith([section('', notes, 'main prompt'), section('Keeper portrait', 'Variant notes.', 'keeper')]);
+      const again = parsePromptFile(serializePromptFile(data));
+      expect(again.sections.map((s) => s.name)).withContext(notes).toEqual(['', 'Keeper portrait']);
+      expect(again.sections[0].notes).withContext(notes).toBe(notes);
+      expect(again.sections[0].prompt).withContext(notes).toBe('main prompt');
+      expect(again).withContext(notes).toEqual(data);
+    }
+  });
+
+  it('reproduces the review probe: indented ## notes in the sample keep notes and prompt in the main section', () => {
+    const data = parsePromptFile(sample);
+    data.sections[0].notes = '  ## Golden hour\nBase look for Dessir.';
+    const again = parsePromptFile(serializePromptFile(data));
+    expect(again.sections.length).toBe(2);
+    expect(again.sections[0].notes).toBe('  ## Golden hour\nBase look for Dessir.');
+    expect(again.sections[0].prompt).toBe(data.sections[0].prompt);
+    expect(again).toEqual(data);
+  });
+
+  it('still reads a hand-written variant right after the frontmatter (with or without CRLF)', () => {
+    for (const eol of ['\n', '\r\n']) {
+      const raw = ['---', 'tags: [pony]', '---', '', '', '## First', '```prompt', 'a', '```', ''].join(eol);
+      const sections = parsePromptFile(raw).sections;
+      expect(sections.map((s) => s.name)).toEqual(['', 'First']);
+      expect(sections[1].prompt).toBe('a');
+    }
+  });
+
   it('round-trips variant names that start or end with #', () => {
     const names = ['Keeper portrait C#', 'C##', '#1 pick', '# tagged #', '#', '##', 'a #'];
     const data = fileWith([section('', 'Main notes.'), ...names.map((name) => section(name, '', 'x'))]);

@@ -128,5 +128,7 @@ child
   (`\## Golden hour`) and read back without it, so it stays in the notes. A variant
   name ending in `#` is saved with a closing ` #` (`## Keeper portrait C# #`), because
   trailing `#`s on a heading line are otherwise dropped from the name.
+- A variant heading starts at the beginning of the line. An indented `##` line
+  (space or tab) is notes, also when it is the first line of the file body.
 - Unknown frontmatter keys are preserved.
 
