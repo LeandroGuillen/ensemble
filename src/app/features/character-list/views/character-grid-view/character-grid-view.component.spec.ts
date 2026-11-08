@@ -1,6 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { CharacterGridViewComponent } from './character-grid-view.component';
 import { MetadataHelperService } from '../../../../core/services/metadata-helper.service';
+import { WikiLinkTargetsService } from '../../../../core/services/wiki-link-targets.service';
+import { buildWikiLinkTargets } from '../../../../core/utils/wiki-links.utils';
+import { of } from 'rxjs';
 
 describe('CharacterGridViewComponent card actions', () => {
   const setup = async () => {
@@ -62,5 +65,25 @@ describe('CharacterGridViewComponent card actions', () => {
     (root.querySelector('.delete-btn') as HTMLButtonElement).click();
     expect(deleted).toEqual(['mara']);
     expect(opened).toEqual(['mara']);
+  });
+
+  it('card description shows a [[C#]] link as the C# record it opens', async () => {
+    TestBed.configureTestingModule({
+      providers: [{
+        provide: WikiLinkTargetsService,
+        useValue: {
+          recordName$: () => of(buildWikiLinkTargets([{
+            folder: 'characters', route: 'character', singular: 'Character',
+            targets: [{ id: 'c', name: 'C#', relativePath: 'c/c.md' }, { id: 'u', name: 'Unit#7', relativePath: 'u/u.md' }],
+          }]).recordName),
+        },
+      }],
+    });
+    const { fixture, root } = await setup();
+    fixture.componentRef.setInput('characters', [
+      { id: 'mara', name: 'Mara Vell', tags: [], category: 'main', content: 'Writes [[C#]] for [[Unit#7]].' },
+    ]);
+    fixture.detectChanges();
+    expect(root.querySelector('.character-description')?.textContent?.trim()).toBe('Writes C# for Unit#7.');
   });
 });

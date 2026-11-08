@@ -105,38 +105,60 @@ export interface ResolvedWikiLink {
   title: string;
 }
 
+/** Collections a project-folder prefix (e.g. `locations/...`) points at; empty when there is none. */
+function explicitCollectionsFor(record: string, collections: WikiLinkCollection[]): WikiLinkCollection[] {
+  const normalized = normalizePath(record);
+  const matching = collections.filter(collection =>
+    normalized.startsWith(normalizePath(collection.folder).replace(/\/$/, '') + '/')
+  );
+  // The longest matching folder wins; collections sharing it (characters and drafts) are all tried.
+  const longest = Math.max(...matching.map(collection => normalizePath(collection.folder).replace(/\/$/, '').length));
+  return matching.filter(collection => normalizePath(collection.folder).replace(/\/$/, '').length === longest);
+}
+
+interface WikiLinkReading {
+  reading: { record: string; fragment?: string };
+  explicitCollections: WikiLinkCollection[];
+  matches: { entry: WikiLinkTarget; collection: WikiLinkCollection }[];
+}
+
+/**
+ * The longest reading of the target that matches a record. A record whose full name contains
+ * `#` wins over reading the `#` as a heading. Without any match, the shortest reading (the text
+ * before the first `#`) is returned with no matches.
+ */
+function readWikiLinkTarget(target: string, collections: WikiLinkCollection[]): WikiLinkReading {
+  const readings = recordReadings(target);
+  const reading = readings[readings.length - 1];
+  for (const candidate of readings) {
+    const explicit = explicitCollectionsFor(candidate.record, collections);
+    const candidates = explicit.length ? explicit : collections;
+    const found = preferPrimary(candidates.flatMap(collection =>
+      matchingRecords(candidate.record, collection.targets, collection.folder).map(entry => ({ entry, collection }))
+    ));
+    if (found.length) return { reading: candidate, explicitCollections: explicit, matches: found };
+  }
+  return { reading, explicitCollections: explicitCollectionsFor(reading.record, collections), matches: [] };
+}
+
+/**
+ * The record part of a wiki link target as the resolver reads it (`Unit#7` when a record has
+ * that name, `Mara` for `Mara#Backstory`), or `undefined` when no record matches any reading.
+ */
+/** Record part of a wiki link target as the link resolver reads it; `undefined` when nothing matches. */
+export type WikiLinkRecordName = (target: string) => string | undefined;
+
+export function wikiLinkRecordName(target: string, collections: WikiLinkCollection[]): string | undefined {
+  const { reading, matches } = readWikiLinkTarget(target, collections);
+  return matches.length ? reading.record : undefined;
+}
+
 /**
  * Resolve a wikilink target against collections (the first is the default destination).
  * A project folder prefix (e.g. `locations/...`) is authoritative, including for missing targets.
  */
 export function resolveWikiLinkTarget(target: string, collections: WikiLinkCollection[]): ResolvedWikiLink {
-  const explicitFor = (record: string) => {
-    const normalized = normalizePath(record);
-    const matching = collections.filter(collection =>
-      normalized.startsWith(normalizePath(collection.folder).replace(/\/$/, '') + '/')
-    );
-    // The longest matching folder wins; collections sharing it (characters and drafts) are all tried.
-    const longest = Math.max(...matching.map(collection => normalizePath(collection.folder).replace(/\/$/, '').length));
-    return matching.filter(collection => normalizePath(collection.folder).replace(/\/$/, '').length === longest);
-  };
-  // A record whose full name contains `#` wins over reading the `#` as a heading.
-  const readings = recordReadings(target);
-  let reading = readings[readings.length - 1];
-  let explicitCollections = explicitFor(reading.record);
-  let matches: { entry: WikiLinkTarget; collection: WikiLinkCollection }[] = [];
-  for (const candidate of readings) {
-    const explicit = explicitFor(candidate.record);
-    const candidates = explicit.length ? explicit : collections;
-    const found = preferPrimary(candidates.flatMap(collection =>
-      matchingRecords(candidate.record, collection.targets, collection.folder).map(entry => ({ entry, collection }))
-    ));
-    if (found.length) {
-      reading = candidate;
-      explicitCollections = explicit;
-      matches = found;
-      break;
-    }
-  }
+  const { reading, explicitCollections, matches } = readWikiLinkTarget(target, collections);
   const record = reading.record;
   const resolved = matches.length === 1 ? matches[0] : undefined;
   const destination = resolved?.collection
@@ -174,6 +196,8 @@ export interface WikiLinkSuggestion {
 
 export interface WikiLinkTargets {
   resolve: (target: string) => ResolvedWikiLink;
+  /** Record part of a target as `resolve` reads it; `undefined` when nothing matches. */
+  recordName: WikiLinkRecordName;
   suggestions: WikiLinkSuggestion[];
 }
 
@@ -210,7 +234,11 @@ export function buildWikiLinkTargets(collections: WikiLinkCollection[]): WikiLin
       }
     }
   }
-  return { resolve: (target) => resolveWikiLinkTarget(target, collections), suggestions };
+  return {
+    resolve: (target) => resolveWikiLinkTarget(target, collections),
+    recordName: (target) => wikiLinkRecordName(target, collections),
+    suggestions,
+  };
 }
 
 function escapeAttribute(value: string): string {

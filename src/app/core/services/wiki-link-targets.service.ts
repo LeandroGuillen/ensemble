@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, combineLatest, map, tap } from 'rxjs';
-import { WikiLinkCollection, WikiLinkTargets, buildWikiLinkTargets } from '../utils/wiki-links.utils';
+import { Observable, combineLatest, map, shareReplay, tap } from 'rxjs';
+import { WikiLinkCollection, WikiLinkRecordName, WikiLinkTargets, buildWikiLinkTargets } from '../utils/wiki-links.utils';
 import { CharacterService } from './character.service';
 import { HouseService } from './house.service';
 import { LocationService } from './location.service';
@@ -17,6 +17,18 @@ export class WikiLinkTargetsService {
   private readonly houses = inject(HouseService);
   private readonly projects = inject(ProjectService);
   private readonly logger = inject(LoggingService);
+  private recordNames$?: Observable<WikiLinkRecordName>;
+
+  /**
+   * How the resolver reads each link target's record name (`[[C#]]` -> `C#` when such a record
+   * exists), shared by every list preview so cards show the name the link opens.
+   */
+  recordName$(): Observable<WikiLinkRecordName> {
+    return this.recordNames$ ??= this.targets$('character').pipe(
+      map((targets) => targets.recordName),
+      shareReplay({ bufferSize: 1, refCount: true })
+    );
+  }
 
   /**
    * Resolver and `[[` suggestions, refreshed whenever any target list changes.

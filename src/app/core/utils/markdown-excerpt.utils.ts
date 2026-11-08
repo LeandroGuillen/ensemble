@@ -1,3 +1,5 @@
+import type { WikiLinkRecordName } from './wiki-links.utils';
+
 /**
  * `[[Target|Label]]` with any run of backslashes right before it. Not after
  * `!` (embeds) or inside a backslash run (the whole run is captured).
@@ -5,16 +7,23 @@
 const WIKI_LINK = /(?<![!\\])(\\*)\[\[([^\[\]\n|]+)(?:\|([^\[\]\n]*))?\]\]/g;
 
 /**
- * Display text of a wiki link. A `#` directly after a character starts a
- * heading or block fragment (`[[Mara#Backstory]]` -> `Mara`); a `#` after a
- * space is part of the name (`[[Unit #7]]` -> `Unit #7`). An odd number of
- * backslashes escapes the link, which is then left as written.
+ * Display text of a wiki link. Without project records, a `#` directly after a character starts
+ * a heading or block fragment (`[[Mara#Backstory]]` -> `Mara`), a `#` after a space is part of
+ * the name (`[[Unit #7]]` -> `Unit #7`), and so is a trailing `#` (`[[C#]]` -> `C#`). When
+ * `recordName` reads more of the target as a record's name (a `C#` or `Unit#7` record), that
+ * name is shown, matching where the link opens. An odd number of backslashes escapes the link,
+ * which is then left as written.
  */
-function wikiLinkReplacement(match: string, slashes: string, target: string, label?: string): string {
-  if (slashes.length % 2 === 1) return match;
-  const fragment = target.search(/(?<=\S)#/);
-  const name = (fragment === -1 ? target : target.slice(0, fragment)).trim();
-  return slashes + ((label && label.trim()) || name || target.trim());
+function wikiLinkReplacer(recordName?: WikiLinkRecordName) {
+  return (match: string, slashes: string, target: string, label?: string): string => {
+    if (slashes.length % 2 === 1) return match;
+    if (label && label.trim()) return slashes + label.trim();
+    const fragment = target.search(/(?<=\S)#(?=[^#]*\S)/);
+    let name = (fragment === -1 ? target : target.slice(0, fragment)).trim();
+    const record = recordName?.(target)?.trim();
+    if (record && record.length > name.length) name = record;
+    return slashes + (name || target.trim());
+  };
 }
 
 /**
@@ -25,7 +34,11 @@ function wikiLinkReplacement(match: string, slashes: string, target: string, lab
  * and embeds are dropped, and whitespace is collapsed to single spaces. The
  * result is cut on a word boundary and ends with an ellipsis when shortened.
  */
-export function markdownExcerpt(content: string | null | undefined, maxLength = 160): string {
+export function markdownExcerpt(
+  content: string | null | undefined,
+  maxLength = 160,
+  recordName?: WikiLinkRecordName
+): string {
   if (!content) return '';
   let text = content
     // Fenced code blocks and HTML comments carry no preview value.
@@ -35,7 +48,7 @@ export function markdownExcerpt(content: string | null | undefined, maxLength = 
     .replace(/!\[\[[^\]\n]*\]\]/g, ' ')
     .replace(/!\[[^\]\n]*\]\([^)\n]*\)/g, ' ')
     // Wiki links: [[Target|Label]] -> Label, [[Target#Heading]] -> Target, \[[Literal]] kept
-    .replace(WIKI_LINK, wikiLinkReplacement)
+    .replace(WIKI_LINK, wikiLinkReplacer(recordName))
     // Markdown links: [text](url) -> text
     .replace(/\[([^\]\n]+)\]\([^)\n]*\)/g, '$1')
     // Inline code
@@ -67,7 +80,7 @@ export function markdownExcerpt(content: string | null | undefined, maxLength = 
  * rest of the text (including line breaks) untouched. For short cells such as
  * plot-board beats, where the raw link syntax would otherwise leak into view.
  */
-export function wikiLinksAsText(text: string | null | undefined): string {
+export function wikiLinksAsText(text: string | null | undefined, recordName?: WikiLinkRecordName): string {
   if (!text) return '';
-  return text.replace(WIKI_LINK, wikiLinkReplacement);
+  return text.replace(WIKI_LINK, wikiLinkReplacer(recordName));
 }

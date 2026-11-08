@@ -40,7 +40,7 @@ Located in `src/app/core/services/`:
 - **BookEditActionsService**: Create/update/delete books from the Edit Book modal; shared by the Books page (`/library`) and the book page
 - **MetadataService**: Validates characters against project metadata (categories/tags)
 - **FileWatcherService**: Monitors work folder for external file changes (using chokidar)
-- **WikiLinkTargetsService**: `[[wikilink]]` resolver and completion entries (characters, locations, Houses) for the Markdown description editors
+- **WikiLinkTargetsService**: `[[wikilink]]` resolver and completion entries (characters, locations, Houses) for the Markdown description editors; `recordName$()` feeds the `excerpt` / `wikiText` preview pipes so `[[C#]]` shows the `C#` record it opens
 - **SkinService**: Applies the UI skin (`settings.skin`, per project) by setting `html[data-skin]`. Skins change shape/type/motion independently of the color theme; registry in `src/app/core/skins/`, styles in `src/styles/skins/_<id>.scss` scoped to `html[data-skin='<id>']`
 - **PendingEditsService**: Debounced autosaves that must survive leaving. Pages `register()` a flusher while open and `track()` the save they start on destroy; `AppComponent` (quit/reload/close) and `ProjectService` (project switch) call `flushAll()` first. Used by Settings (Project Name and the settings form)
 - **UndoDeleteService**: 15 s Undo toast after staging a delete; restores files via `restoreFromTrash` and reapplies snapshots. Subscribes once to sticky `trash-commit-failed` errors.

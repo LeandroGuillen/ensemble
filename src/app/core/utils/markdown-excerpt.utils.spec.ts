@@ -1,4 +1,39 @@
 import { markdownExcerpt, wikiLinksAsText } from './markdown-excerpt.utils';
+import { WikiLinkCollection, buildWikiLinkTargets } from './wiki-links.utils';
+
+/** Record names as the resolver reads them, for a project with C#, Unit#7 and Mara records. */
+const collections: WikiLinkCollection[] = [{
+  folder: 'characters', route: 'character', singular: 'Character',
+  targets: [
+    { id: 'c', name: 'C#', relativePath: 'c/c.md' },
+    { id: 'u', name: 'Unit#7', relativePath: 'unit-7/unit-7.md' },
+    { id: 'm', name: 'Mara', relativePath: 'mara/mara.md' },
+  ],
+}];
+const recordName = buildWikiLinkTargets(collections).recordName;
+
+describe('wiki link previews of names with # after a non-space', () => {
+  it('show the record name the resolver opens (reviewer probe: [[C#]], [[Unit#7]])', () => {
+    expect(markdownExcerpt('Uses [[C#]] with [[Unit#7]] daily', 160, recordName)).toBe('Uses C# with Unit#7 daily');
+    expect(wikiLinksAsText('[[C#]] / [[Unit#7]]', recordName)).toBe('C# / Unit#7');
+    expect(buildWikiLinkTargets(collections).resolve('Unit#7').id).toBe('u');
+  });
+
+  it('keep heading fragments of those records and of plain names', () => {
+    expect(markdownExcerpt('[[Unit#7#Origins]] and [[Mara#Backstory]]', 160, recordName)).toBe('Unit#7 and Mara');
+    expect(wikiLinksAsText('[[C##Intro]] [[Mara#^b1]]', recordName)).toBe('C# Mara');
+  });
+
+  it('keep a trailing # even without records', () => {
+    expect(markdownExcerpt('Uses [[C#]] daily')).toBe('Uses C# daily');
+    expect(wikiLinksAsText('[[C#]]')).toBe('C#');
+  });
+
+  it('read [[Unit#7]] as a heading of Unit when no Unit#7 record exists', () => {
+    expect(wikiLinksAsText('[[Unit#7]]')).toBe('Unit');
+    expect(wikiLinksAsText('[[Unit #7]] [[Unit#7]]', () => undefined)).toBe('Unit #7 Unit');
+  });
+});
 
 describe('markdownExcerpt', () => {
   it('shows wiki links as their label or target', () => {
