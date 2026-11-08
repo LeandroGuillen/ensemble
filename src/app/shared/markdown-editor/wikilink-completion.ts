@@ -18,9 +18,11 @@ export function wikiLinkCompletion(suggestions: () => WikiLinkSuggestion[]) {
       boost: suggestion.boost,
       apply: (view: EditorView, _completion: Completion, from: number, to: number) => {
         const end = view.state.sliceDoc(to, to + 2) === ']]' ? to + 2 : to;
+        // Display text can't contain brackets: they would end the link early.
+        const display = suggestion.label.replace(/[\[\]]/g, '');
         const insert = suggestion.target === suggestion.label
           ? `${suggestion.target}]]`
-          : `${suggestion.target}|${suggestion.label}]]`;
+          : `${suggestion.target}|${display}]]`;
         view.dispatch({ changes: { from, to: end, insert }, selection: { anchor: from + insert.length }, userEvent: 'input.complete' });
       },
     }));

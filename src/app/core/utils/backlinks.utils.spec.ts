@@ -186,3 +186,43 @@ describe('heading backlinks', () => {
     expect(excludedCountFor(index, 'Mara Vell')).toBe(0);
   });
 });
+
+describe('names containing #', () => {
+  const unit7 = { id: 'unit-7', name: 'Unit #7', relativePath: 'unit-7/unit-7.md' };
+  const unit = { id: 'unit', name: 'Unit', relativePath: 'unit/unit.md' };
+  const withCharacters = (characters: any[]) => collectionsFrom({ characters, locations: [], houses: [] });
+
+  it('attributes [[Unit #7]] to Unit #7 when it is the only record', () => {
+    const index = buildBacklinkIndex([doc({ content: 'She repaired [[Unit #7]] herself.' })], withCharacters([unit7]));
+    expect(index.byTargetId['unit-7']?.map((b) => b.snippet)).toEqual(['She repaired [Unit #7] herself.']);
+    expect(index.excluded).toEqual([]);
+  });
+
+  it('attributes [[Unit #7]] to Unit #7, not to a record named Unit', () => {
+    const index = buildBacklinkIndex([doc({ content: 'She repaired [[Unit #7]] herself.' })], withCharacters([unit, unit7]));
+    expect(index.byTargetId['unit-7']?.length).toBe(1);
+    expect(index.byTargetId['unit']).toBeUndefined();
+  });
+
+  it('still attributes a real heading link [[Unit#Origins]] to Unit', () => {
+    const index = buildBacklinkIndex([doc({ content: 'See [[Unit#Origins]].' })], withCharacters([unit, unit7]));
+    expect(index.byTargetId['unit']?.length).toBe(1);
+    expect(index.byTargetId['unit-7']).toBeUndefined();
+  });
+
+  it('counts an unresolved [[Unit #7]] for Unit #7, not for Unit', () => {
+    const twoUnit7 = withCharacters([unit, unit7, { ...unit7, id: 'unit-7b', relativePath: 'unit-7b/unit-7b.md' }]);
+    const index = buildBacklinkIndex([doc({ content: '[[Unit #7]] [[Unit #7#Origins]]' })], twoUnit7);
+    expect(index.excluded.map((link) => link.state)).toEqual(['ambiguous', 'ambiguous']);
+    expect(excludedCountFor(index, 'Unit #7')).toBe(2);
+    expect(excludedCountFor(index, 'Unit')).toBe(0);
+    expect(index.byTargetId).toEqual({});
+  });
+
+  it('counts an unresolved [[Unit#Origins]] for Unit', () => {
+    const twoUnits = withCharacters([unit, { ...unit, id: 'unit-b', relativePath: 'unit-b/unit-b.md' }, unit7]);
+    const index = buildBacklinkIndex([doc({ content: '[[Unit#Origins]]' })], twoUnits);
+    expect(excludedCountFor(index, 'Unit')).toBe(1);
+    expect(excludedCountFor(index, 'Unit #7')).toBe(0);
+  });
+});

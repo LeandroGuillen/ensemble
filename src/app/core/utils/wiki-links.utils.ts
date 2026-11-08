@@ -25,18 +25,28 @@ function normalizePath(value: string): string {
   return value.trim().replace(/\\/g, '/').replace(/^\.\//, '').replace(/\.md$/i, '').toLowerCase();
 }
 
-/** Record portion of a target; a heading or block fragment is only a navigation hint. */
-export function wikiLinkRecordTarget(target: string): string {
-  return target.split('#', 1)[0].trim();
+/** Characters that can't be written in a link target, so names with them are linked by path. */
+const LINK_BREAKING_CHARS = /[#|\[\]]/;
+
+/**
+ * Ways to read a target as record + optional fragment, longest record first: the whole target
+ * (a name such as "Unit #7"), then the text before each `#` from last to first.
+ */
+function recordReadings(target: string): { record: string; fragment?: string }[] {
+  const readings: { record: string; fragment?: string }[] = [{ record: target.trim() }];
+  for (let i = target.lastIndexOf('#'); i >= 0; i = i ? target.lastIndexOf('#', i - 1) : -1) {
+    readings.push({ record: target.slice(0, i).trim(), fragment: target.slice(i + 1) });
+  }
+  return readings;
 }
 
 /** Resolve only unique matches. Explicit file paths take precedence over display names. */
-function matchingTargets<T extends WikiLinkTarget>(
-  target: string,
+function matchingRecords<T extends WikiLinkTarget>(
+  record: string,
   targets: T[],
   folderName: string
 ): T[] {
-  const normalized = normalizePath(wikiLinkRecordTarget(target));
+  const normalized = normalizePath(record);
   if (!normalized) return [];
   const folder = normalizePath(folderName).replace(/\/$/, '');
   const pathMatches = targets.filter(entry => {
@@ -52,6 +62,15 @@ function matchingTargets<T extends WikiLinkTarget>(
   return matches;
 }
 
+/** Matches for the longest reading of the target that matches anything. */
+function matchingTargets<T extends WikiLinkTarget>(target: string, targets: T[], folderName: string): T[] {
+  for (const { record } of recordReadings(target)) {
+    const matches = matchingRecords(record, targets, folderName);
+    if (matches.length) return matches;
+  }
+  return [];
+}
+
 export function resolveWikiLink<T extends WikiLinkTarget>(target: string, targets: T[], folder: string): T | undefined {
   const matches = matchingTargets(target, targets, folder);
   return matches.length === 1 ? matches[0] : undefined;
@@ -64,6 +83,11 @@ export interface ResolvedWikiLink {
   id?: string;
   /** Optional heading or block scroll hint, without the leading #. */
   fragment?: string;
+  /**
+   * The record part the link was read as: the whole target when a record has that full name
+   * (e.g. "Unit #7"), otherwise the text before a heading `#`.
+   */
+  record: string;
   /** Hash route (e.g. `#/character/<id>`); absent when ambiguous. */
   href?: string;
   route: string;
@@ -75,18 +99,35 @@ export interface ResolvedWikiLink {
  * A project folder prefix (e.g. `locations/...`) is authoritative, including for missing targets.
  */
 export function resolveWikiLinkTarget(target: string, collections: WikiLinkCollection[]): ResolvedWikiLink {
-  const normalized = normalizePath(wikiLinkRecordTarget(target));
-  const explicitCollections = collections.filter(collection =>
-    normalized.startsWith(normalizePath(collection.folder).replace(/\/$/, '') + '/')
-  ).sort((a, b) => b.folder.length - a.folder.length);
-  const candidates = explicitCollections.length ? [explicitCollections[0]] : collections;
-  const matches = candidates.flatMap(collection =>
-    matchingTargets(target, collection.targets, collection.folder).map(entry => ({ entry, collection }))
-  );
+  const explicitFor = (record: string) => {
+    const normalized = normalizePath(record);
+    return collections.filter(collection =>
+      normalized.startsWith(normalizePath(collection.folder).replace(/\/$/, '') + '/')
+    ).sort((a, b) => b.folder.length - a.folder.length);
+  };
+  // A record whose full name contains `#` wins over reading the `#` as a heading.
+  const readings = recordReadings(target);
+  let reading = readings[readings.length - 1];
+  let explicitCollections = explicitFor(reading.record);
+  let matches: { entry: WikiLinkTarget; collection: WikiLinkCollection }[] = [];
+  for (const candidate of readings) {
+    const explicit = explicitFor(candidate.record);
+    const candidates = explicit.length ? [explicit[0]] : collections;
+    const found = candidates.flatMap(collection =>
+      matchingRecords(candidate.record, collection.targets, collection.folder).map(entry => ({ entry, collection }))
+    );
+    if (found.length) {
+      reading = candidate;
+      explicitCollections = explicit;
+      matches = found;
+      break;
+    }
+  }
+  const record = reading.record;
   const resolved = matches.length === 1 ? matches[0] : undefined;
   const destination = resolved?.collection || explicitCollections[0] || collections[0];
   if (resolved) {
-    return { state: 'resolved', ...(target.includes('#') ? { fragment: target.slice(target.indexOf('#') + 1) } : {}), id: resolved.entry.id, href: `#/${destination.route}/${encodeURIComponent(resolved.entry.id)}`, route: destination.route, title: target };
+    return { state: 'resolved', ...(reading.fragment !== undefined ? { fragment: reading.fragment } : {}), id: resolved.entry.id, href: `#/${destination.route}/${encodeURIComponent(resolved.entry.id)}`, route: destination.route, title: target, record };
   }
   if (!matches.length && !target.includes('#')) {
     const creationName = explicitCollections.length
@@ -96,9 +137,10 @@ export function resolveWikiLinkTarget(target: string, collections: WikiLinkColle
       href: `#/${destination.route}?name=${encodeURIComponent(creationName)}&fromLink=1`,
       route: destination.route,
       title: `Open New ${destination.singular} with name: ${target}`,
+      record,
     };
   }
-  return { state: 'ambiguous', route: destination.route, title: `${destination.singular} not found or ambiguous: ${target}` };
+  return { state: 'ambiguous', route: destination.route, title: `${destination.singular} not found or ambiguous: ${target}`, record };
 }
 
 export interface WikiLinkSuggestion {
@@ -123,7 +165,8 @@ export interface WikiLinkTargets {
  * are created). Targets with `aliases` also suggest each alias as `[[Name|Alias]]`.
  */
 export function buildWikiLinkTargets(collections: WikiLinkCollection[]): WikiLinkTargets {
-  // Names shared by several targets would be ambiguous; link those by path instead.
+  // Names shared by several targets would be ambiguous, and names with `#`, `|`, `[` or `]` can't
+  // be written as a target (`#` reads as a heading); link those by path instead.
   const nameCounts = new Map<string, number>();
   for (const collection of collections) {
     for (const entry of collection.targets) {
@@ -136,7 +179,7 @@ export function buildWikiLinkTargets(collections: WikiLinkCollection[]): WikiLin
     for (const entry of collection.targets) {
       const name = entry.name.trim();
       if (!name) continue;
-      const target = nameCounts.get(name.toLowerCase())! > 1
+      const target = nameCounts.get(name.toLowerCase())! > 1 || LINK_BREAKING_CHARS.test(name)
         ? `${collection.folder.replace(/\/$/, '')}/${entry.relativePath.replace(/\.md$/i, '')}`
         : name;
       suggestions.push({ label: name, target, detail: collection.singular, type: collection.route });

@@ -3,7 +3,6 @@ import {
   WikiLinkTarget,
   extractWikiLinks,
   resolveWikiLinkTarget,
-  wikiLinkRecordTarget,
 } from './wiki-links.utils';
 
 /** Where a backlink came from. Lore and drafts are character records with a flag. */
@@ -41,6 +40,8 @@ export interface ExcludedLink {
   sourcePart?: string;
   /** The raw link target text (inside `[[...]]`). */
   target: string;
+  /** The record part the target was read as (see `ResolvedWikiLink.record`). */
+  record: string;
   state: 'missing' | 'ambiguous';
 }
 
@@ -116,6 +117,7 @@ export function buildBacklinkIndex(
           sourceName: doc.sourceName,
           sourcePart: doc.sourcePart,
           target: span.target,
+          record: resolved.record,
           state: resolved.state,
         });
       }
@@ -124,9 +126,12 @@ export function buildBacklinkIndex(
   return { byTargetId, excluded };
 }
 
-/** Whether a link target text refers to a record by its name or one of its aliases. */
-export function targetRefersToName(target: string, name: string, aliases: string[] = []): boolean {
-  const normalized = normalizeName(wikiLinkRecordTarget(target));
+/**
+ * Whether a link's record part (the target without any heading, see `ResolvedWikiLink.record`)
+ * refers to a record by its name or one of its aliases.
+ */
+export function targetRefersToName(record: string, name: string, aliases: string[] = []): boolean {
+  const normalized = normalizeName(record);
   if (!normalized) return false;
   if (normalizeName(name) === normalized) return true;
   return aliases.some((alias) => normalizeName(alias) === normalized);
@@ -137,7 +142,7 @@ export function targetRefersToName(target: string, name: string, aliases: string
  * but could not be attributed to a single record.
  */
 export function excludedCountFor(index: BacklinkIndex, name: string, aliases: string[] = []): number {
-  return index.excluded.filter((link) => targetRefersToName(link.target, name, aliases)).length;
+  return index.excluded.filter((link) => targetRefersToName(link.record, name, aliases)).length;
 }
 
 /** Group a record's backlinks by source type, in display order, dropping empty groups. */

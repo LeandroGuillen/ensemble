@@ -1,4 +1,4 @@
-import { buildWikiLinkTargets, renderWikiLinkMarkdown, resolveWikiLink, WikiLinkCollection } from './wiki-links.utils';
+import { buildWikiLinkTargets, extractWikiLinks, renderWikiLinkMarkdown, resolveWikiLink, WikiLinkCollection } from './wiki-links.utils';
 
 describe('buildWikiLinkTargets', () => {
   const characters = (targets: any[]): WikiLinkCollection =>
@@ -60,5 +60,67 @@ describe('heading wiki-links', () => {
     expect(renderWikiLinkMarkdown('[[Mara Vell|keeper]]', targets, options).html)
       .toBe('<p><a href="#/character/mara" title="Mara Vell">keeper</a></p>');
     expect(renderWikiLinkMarkdown('[[Ghost]]', targets, options).missingLinks).toEqual(['Ghost']);
+  });
+});
+
+describe('names containing #', () => {
+  const characters = (targets: any[]): WikiLinkCollection =>
+    ({ targets, folder: 'characters', route: 'character', singular: 'Character' });
+  const unit7 = { id: 'unit-7', name: 'Unit #7', relativePath: 'unit-7/unit-7.md' };
+  const unit = { id: 'unit', name: 'Unit', relativePath: 'unit/unit.md' };
+
+  it('suggests a path target for names with #, |, [ or ], shown with the name', () => {
+    const { suggestions, resolve } = buildWikiLinkTargets([characters([
+      unit7, unit,
+      { id: 'pipe', name: 'A|B', relativePath: 'a-b/a-b.md' },
+      { id: 'bracket', name: 'Subject [12]', relativePath: 'subject-12/subject-12.md' },
+    ])]);
+    expect(suggestions.map((s) => [s.label, s.target])).toEqual([
+      ['Unit #7', 'characters/unit-7/unit-7'],
+      ['Unit', 'Unit'],
+      ['A|B', 'characters/a-b/a-b'],
+      ['Subject [12]', 'characters/subject-12/subject-12'],
+    ]);
+    // The inserted `[[target|name]]` (brackets dropped from the display text) links to the picked record.
+    for (const suggestion of suggestions) {
+      const inserted = `[[${suggestion.target}|${suggestion.label.replace(/[\[\]]/g, '')}]]`;
+      const [span] = extractWikiLinks(inserted);
+      expect(span.end).toBe(inserted.length);
+      expect(resolve(span.target).state).withContext(inserted).toBe('resolved');
+    }
+    expect(suggestions.map((s) => resolve(s.target).id)).toEqual(['unit-7', 'unit', 'pipe', 'bracket']);
+    expect(resolve('characters/unit-7/unit-7')).toEqual(jasmine.objectContaining({ state: 'resolved', id: 'unit-7' }));
+  });
+
+  it('resolves a hand-written [[Unit #7]] alone', () => {
+    const targets = [unit7];
+    const { resolve } = buildWikiLinkTargets([characters(targets)]);
+    expect(resolve('Unit #7')).toEqual(jasmine.objectContaining({ state: 'resolved', id: 'unit-7', href: '#/character/unit-7' }));
+    expect(resolve('Unit #7').fragment).toBeUndefined();
+    expect(resolveWikiLink('Unit #7', targets, 'characters')).toEqual(unit7);
+    expect(renderWikiLinkMarkdown('[[Unit #7]]', targets, characters([])).html)
+      .toBe('<p><a href="#/character/unit-7" title="Unit #7">Unit #7</a></p>');
+  });
+
+  it('resolves [[Unit #7]] to Unit #7, never to a record named like its prefix', () => {
+    const targets = [unit, unit7];
+    const { resolve } = buildWikiLinkTargets([characters(targets)]);
+    expect(resolve('Unit #7')).toEqual(jasmine.objectContaining({ state: 'resolved', id: 'unit-7' }));
+    expect(resolveWikiLink('unit #7', targets, 'characters')).toEqual(unit7);
+    // A heading inside Unit #7, and a real heading link to Unit.
+    expect(resolve('Unit #7#Origins')).toEqual(jasmine.objectContaining({ state: 'resolved', id: 'unit-7', fragment: 'Origins' }));
+    expect(resolve('Unit#Origins')).toEqual(jasmine.objectContaining({ state: 'resolved', id: 'unit', fragment: 'Origins' }));
+    expect(resolveWikiLink('Unit#Origins', targets, 'characters')).toEqual(unit);
+  });
+
+  it('prefers Unit #7 in another collection over a character named Unit', () => {
+    const { resolve } = buildWikiLinkTargets([characters([unit]),
+      { targets: [{ ...unit7, id: 'loc-7', relativePath: '_unit-7.md' }], folder: 'locations', route: 'location', singular: 'Location' }]);
+    expect(resolve('Unit #7')).toEqual(jasmine.objectContaining({ state: 'resolved', id: 'loc-7', href: '#/location/loc-7' }));
+  });
+
+  it('reads [[Unit #7]] as a heading link to Unit when no Unit #7 exists', () => {
+    const { resolve } = buildWikiLinkTargets([characters([unit])]);
+    expect(resolve('Unit #7')).toEqual(jasmine.objectContaining({ state: 'resolved', id: 'unit', fragment: '7' }));
   });
 });
