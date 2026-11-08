@@ -109,6 +109,30 @@ describe('BacklinkService', () => {
     expect(fromDraft.href).toBe('#/character-draft/d-heir');
   });
 
+  it('marks a draft\'s book page as a draft source, and leaves a character\'s book page unmarked', async () => {
+    const heir = {
+      id: 'd-heir', name: 'Secret Heir', draft: true,
+      content: '', books: ['lc1'], relativePath: '@drafts/secret-heir/secret-heir.md',
+    };
+    service = makeService({
+      characters: {
+        getReferenceCharactersSnapshot: () => [{ ...mara, content: '' }],
+        getDraftsSnapshot: () => [heir],
+        getBookPageContent: async () => 'A page mentioning [[Port Saltmere]].',
+      },
+    });
+    await service.rebuild();
+
+    const pages = service.backlinksFor('l-port').filter((b) => b.sourceType === 'book');
+    // Read the flag through a plain record so the spec compiles before the field existed.
+    const draftPage: Record<string, unknown> = { ...pages.find((b) => b.sourceId === 'd-heir')! };
+    const maraPage: Record<string, unknown> = { ...pages.find((b) => b.sourceId === 'c-mara')! };
+    expect(draftPage['sourceDraft']).toBe(true);
+    expect(draftPage['href']).toBe('#/character-draft/d-heir');
+    expect(maraPage['sourceDraft']).toBeFalsy();
+    expect(maraPage['href']).toBe('#/character/c-mara');
+  });
+
   it('attributes mentions like the editors when a draft shares a character name', async () => {
     const maraDraft = {
       id: 'd-mara', name: 'Mara Vell', draft: true,

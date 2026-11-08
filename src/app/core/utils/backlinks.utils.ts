@@ -16,6 +16,8 @@ export interface BacklinkSourceDoc {
   sourceName: string;
   /** Which part of the source (e.g. `Book page: lc1`); omitted for a record's description. */
   sourcePart?: string;
+  /** The source belongs to a character draft (e.g. a draft's book page), which routes to `/character-draft`. */
+  sourceDraft?: boolean;
   /** Hash route to navigate to the source. */
   href: string;
   /** The document text to scan. */
@@ -28,6 +30,8 @@ export interface Backlink {
   sourceId: string;
   sourceName: string;
   sourcePart?: string;
+  /** The source belongs to a character draft (see `BacklinkSourceDoc.sourceDraft`). */
+  sourceDraft?: boolean;
   href: string;
   /** Short context around the link. */
   snippet: string;
@@ -107,6 +111,7 @@ export function buildBacklinkIndex(
           sourceId: doc.sourceId,
           sourceName: doc.sourceName,
           sourcePart: doc.sourcePart,
+          ...(doc.sourceDraft ? { sourceDraft: true } : {}),
           href: doc.href,
           snippet: snippetFor(doc.content, span),
         };

@@ -196,6 +196,7 @@ export class BacklinkService {
               sourceId: character.id,
               sourceName: character.name,
               sourcePart: `Book page: ${bookLabel}`,
+              ...(character.draft ? { sourceDraft: true } : {}),
               href: `#/${character.draft ? 'character-draft' : 'character'}/${encodeURIComponent(character.id)}`,
               content,
             });

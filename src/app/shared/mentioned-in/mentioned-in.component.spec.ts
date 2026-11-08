@@ -80,6 +80,14 @@ describe('MentionedInComponent', () => {
     expect(page).toEqual(['/character', 'c-mara']);
   });
 
+  it('routes a draft book page to the draft page, not the character page', () => {
+    const source = {
+      sourceType: 'book' as const, sourceId: 'd-heir', sourceName: 'Secret Heir', sourcePart: 'Book page: lc1',
+      sourceDraft: true, href: '#/character-draft/d-heir', snippet: '',
+    };
+    expect(fixture.componentInstance.routerLinkFor(source)).toEqual(['/character-draft', 'd-heir']);
+  });
+
   it('routes a draft source to the draft page', () => {
     const draft = fixture.componentInstance.routerLinkFor({
       sourceType: 'draft', sourceId: 'd-heir', sourceName: 'Secret Heir', href: '#/character-draft/d-heir', snippet: '',

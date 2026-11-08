@@ -47,8 +47,9 @@ export class MentionedInComponent implements OnInit {
       case 'house':
         return ['/house', item.sourceId];
       case 'book':
-        // A book plan belongs to the book; a book page belongs to its character.
-        return item.sourcePart === 'Book plan' ? ['/book', item.sourceId] : ['/character', item.sourceId];
+        // A book plan belongs to the book; a book page belongs to its character or draft.
+        if (item.sourcePart === 'Book plan') return ['/book', item.sourceId];
+        return [item.sourceDraft ? '/character-draft' : '/character', item.sourceId];
       default:
         return ['/character', item.sourceId];
     }
