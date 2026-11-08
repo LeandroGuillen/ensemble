@@ -90,9 +90,25 @@ export interface HouseSeatRemoval {
   seatId: string;
 }
 
+/** A character or location id removed from a prompt file's `characters:` / `locations:` list. */
+export interface PromptLinkRemoval {
+  /** Path relative to the prompts folder. */
+  relativePath: string;
+  promptName: string;
+  index: number;
+}
+
+export interface PromptLinkSnapshot {
+  field: 'characters' | 'locations';
+  targetId: string;
+  removals: PromptLinkRemoval[];
+}
+
 export interface LocationReferenceSnapshot {
   locationId: string;
   seats: HouseSeatRemoval[];
+  /** Prompt files that linked the location (`locations:`). */
+  prompts?: PromptLinkSnapshot;
 }
 
 /** Combined character reference cleanup snapshot. */
@@ -103,6 +119,8 @@ export interface CharacterReferenceSnapshot {
   houses: HouseCharacterSnapshot;
   pinboards: PinboardCharacterSnapshot;
   plotThreads: PlotThreadCharacterSnapshot;
+  /** Prompt files that linked the character (`characters:`). */
+  prompts?: PromptLinkSnapshot;
 }
 
 /**

@@ -46,6 +46,7 @@ import { MentionedInComponent } from '../../shared/mentioned-in/mentioned-in.com
 import { getBookDisplayName } from '../../core/utils/book-display.utils';
 import { LocationTypeSelectComponent } from '../../shared/location-type-select/location-type-select.component';
 import { isTrashStagingError } from '../../core/trash/trash-record-id';
+import { buildDeleteReferencesMessage } from '../../shared/utils/reference-message.utils';
 
 @Component({
   selector: 'app-location-detail',
@@ -393,9 +394,18 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
     if (!this.location) {
       return;
     }
+    let references = '';
+    try {
+      references = buildDeleteReferencesMessage(
+        await this.locationService.countLocationReferences(this.location.id),
+        'location'
+      );
+    } catch (error) {
+      this.logger.error('Failed to count location references', error);
+    }
     if (
       !(await this.modalService.confirm(
-        `Are you sure you want to delete the location "${this.location.name}"?\n\nIt will be moved to the system Trash. You can undo for 15 seconds.`,
+        `Are you sure you want to delete the location "${this.location.name}"?${references}\n\nIt will be moved to the system Trash. You can undo for 15 seconds. After that, restore it from the system Trash (links in Houses and prompts come back only with Undo).`,
         'Delete location',
         { confirmText: 'Delete location', danger: true }
       ))

@@ -40,6 +40,14 @@ describe('Reference Message Utils', () => {
   });
 
   describe('buildDeleteReferencesMessage', () => {
+    it('lists prompts and names the deleted kind', () => {
+      const message = buildDeleteReferencesMessage(
+        { prompts: [{ id: 'places/Grey Harbor.md', name: 'Grey Harbor' }] },
+        'location'
+      );
+      expect(message).toBe('\n\nThis location will be removed from:\n• 1 prompt: Grey Harbor');
+    });
+
     it('should build complete confirmation message with all reference types', () => {
       const refs = {
         houses: [{ id: 'h1', name: 'House Stark' }],

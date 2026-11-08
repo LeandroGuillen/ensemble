@@ -3,6 +3,7 @@ import {
   CharacterReferenceSnapshot,
   HouseCharacterSnapshot,
   LocationReferenceSnapshot,
+  PromptLinkSnapshot,
   ReferenceRestoreResult,
   ReferenceRestoreSkip,
 } from '../interfaces/reference-snapshot.interface';
@@ -18,8 +19,9 @@ import { NotificationService } from './notification.service';
  * Centralized service for cleaning up cross-references when entities are deleted.
  * This avoids circular dependencies between services.
  *
- * NOTE: PinboardService is resolved lazily via Injector to break the circular
- * dependency (PinboardService -> CharacterService -> ReferenceCleanupService).
+ * NOTE: PinboardService and PromptService are resolved lazily via Injector to
+ * break circular dependencies (both depend on CharacterService, which depends
+ * on ReferenceCleanupService).
  */
 @Injectable({
   providedIn: 'root'
@@ -60,6 +62,38 @@ export class ReferenceCleanupService {
     return null;
   }
 
+  private async promptService() {
+    const { PromptService } = await import('./prompt.service');
+    return this.injector.get(PromptService);
+  }
+
+  /** Prompt files linking a character or location; [] (logged) when they cannot be read. */
+  private async countPromptLinks(
+    field: 'characters' | 'locations',
+    targetId: string
+  ): Promise<{ id: string; name: string }[]> {
+    try {
+      return await (await this.promptService()).countLinks(field, targetId);
+    } catch (error) {
+      this.logger.error('Failed to count prompt links', error);
+      return [];
+    }
+  }
+
+  private async removePromptLinks(
+    field: 'characters' | 'locations',
+    targetId: string
+  ): Promise<PromptLinkSnapshot> {
+    return (await this.promptService()).removeLinks(field, targetId);
+  }
+
+  private async restorePromptLinks(snapshot: PromptLinkSnapshot | undefined): Promise<ReferenceRestoreResult> {
+    if (!snapshot || snapshot.removals.length === 0) {
+      return { restored: 0, skipped: [] };
+    }
+    return (await this.promptService()).restoreLinks(snapshot);
+  }
+
   private toastFailedHouseLinks(error: unknown): void {
     const names = (error as { failedHouseNames?: unknown })?.failedHouseNames;
     if (!Array.isArray(names) || names.length === 0) {
@@ -81,7 +115,9 @@ export class ReferenceCleanupService {
     casts: { id: string; name: string }[];
     pinboards: { id: string; name: string }[];
     plotBoards: { id: string; name: string }[];
+    prompts: { id: string; name: string }[];
   }> {
+    const prompts = await this.countPromptLinks('characters', characterId);
     try {
       // Lazy-load PinboardService to break circular dependency
       const PinboardService = (await import('./pinboard.service')).PinboardService;
@@ -99,10 +135,11 @@ export class ReferenceCleanupService {
         casts,
         pinboards,
         plotBoards,
+        prompts,
       };
     } catch (error) {
       this.logger.error('Failed to count character references', error);
-      return { houses: [], casts: [], pinboards: [], plotBoards: [] };
+      return { houses: [], casts: [], pinboards: [], plotBoards: [], prompts };
     }
   }
 
@@ -114,7 +151,27 @@ export class ReferenceCleanupService {
       houses: { characterId, removals: [] },
       pinboards: { characterId, removals: [] },
       plotThreads: { characterId, removals: [] },
+      prompts: { field: 'characters', targetId: characterId, removals: [] },
     };
+  }
+
+  /** Prompt files linking a draft (drafts have no other references). */
+  async countDraftReferences(characterId: string): Promise<{ prompts: { id: string; name: string }[] }> {
+    return { prompts: await this.countPromptLinks('characters', characterId) };
+  }
+
+  /**
+   * Remove a deleted draft's id from prompt files. Drafts are kept out of
+   * casts, Houses, pinboards and plot boards, but prompts can link them.
+   */
+  async removeDraftReferences(characterId: string): Promise<CharacterReferenceSnapshot> {
+    const snapshot = this.emptyCharacterSnapshot(characterId);
+    try {
+      snapshot.prompts = await this.removePromptLinks('characters', characterId);
+    } catch (cleanupError) {
+      this.logger.error('Failed to remove draft from prompts', cleanupError);
+    }
+    return snapshot;
   }
 
   /**
@@ -169,6 +226,14 @@ export class ReferenceCleanupService {
       snapshot.plotThreads = await this.plotBoardService.removeCharacterFromThreads(characterId);
     } catch (cleanupError) {
       const msg = 'Failed to remove character from plot threads';
+      this.logger.error(msg, cleanupError);
+      cleanupErrors.push(msg);
+    }
+
+    try {
+      snapshot.prompts = await this.removePromptLinks('characters', characterId);
+    } catch (cleanupError) {
+      const msg = 'Failed to remove character from prompts';
       this.logger.error(msg, cleanupError);
       cleanupErrors.push(msg);
     }
@@ -233,35 +298,72 @@ export class ReferenceCleanupService {
       this.logger.error('Failed to restore character plot threads', error);
     }
 
+    try {
+      const promptResult = await this.restorePromptLinks(snapshot.prompts);
+      restored += promptResult.restored;
+      skipped.push(...promptResult.skipped);
+    } catch (error) {
+      this.logger.error('Failed to restore character prompt links', error);
+    }
+
     return { restored, skipped };
   }
 
+  /** Prompt files that link a location (`locations:`), for the delete dialog. */
+  async countLocationReferences(locationId: string): Promise<{ prompts: { id: string; name: string }[] }> {
+    return { prompts: await this.countPromptLinks('locations', locationId) };
+  }
+
   /**
-   * Clear house references to a deleted location. Returns seatId snapshot for Undo.
+   * Clear House seats and prompt links pointing at a deleted location.
+   * Returns a snapshot for Undo.
    */
   async clearLocationReferences(locationId: string): Promise<LocationReferenceSnapshot> {
+    let snapshot: LocationReferenceSnapshot;
     try {
-      return await this.houseService.clearLocationReferences(locationId);
+      snapshot = await this.houseService.clearLocationReferences(locationId);
     } catch (cleanupError) {
       const partial = this.takePartialLocationSnapshot(cleanupError);
       if (partial) {
         this.toastFailedHouseLinks(cleanupError);
-        return partial;
+        snapshot = partial;
+      } else {
+        this.logger.error('Failed to clear location references from houses', cleanupError);
+        snapshot = { locationId, seats: [] };
       }
-      this.logger.error('Failed to clear location references from houses', cleanupError);
-      return { locationId, seats: [] };
     }
+
+    try {
+      snapshot = { ...snapshot, prompts: await this.removePromptLinks('locations', locationId) };
+    } catch (cleanupError) {
+      this.logger.error('Failed to clear location links from prompts', cleanupError);
+    }
+    return snapshot;
   }
 
   /**
-   * Restore House seatId values from a location-delete snapshot.
+   * Restore House seatId values and prompt links from a location-delete snapshot.
    */
   async restoreLocationReferences(snapshot: LocationReferenceSnapshot): Promise<ReferenceRestoreResult> {
+    const skipped: ReferenceRestoreSkip[] = [];
+    let restored = 0;
+
     try {
-      return await this.houseService.restoreLocationReferences(snapshot);
+      const houseResult = await this.houseService.restoreLocationReferences(snapshot);
+      restored += houseResult.restored;
+      skipped.push(...houseResult.skipped);
     } catch (error) {
       this.logger.error('Failed to restore location references to houses', error);
-      return { restored: 0, skipped: [] };
     }
+
+    try {
+      const promptResult = await this.restorePromptLinks(snapshot.prompts);
+      restored += promptResult.restored;
+      skipped.push(...promptResult.skipped);
+    } catch (error) {
+      this.logger.error('Failed to restore location links in prompts', error);
+    }
+
+    return { restored, skipped };
   }
 }

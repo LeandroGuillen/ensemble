@@ -4,6 +4,11 @@ import { BehaviorSubject, combineLatest, Observable } from 'rxjs';
 import { Character } from '../interfaces/character.interface';
 import { PromptFile, PromptFileData } from '../interfaces/prompt.interface';
 import {
+  PromptLinkSnapshot,
+  ReferenceRestoreResult,
+  ReferenceRestoreSkip,
+} from '../interfaces/reference-snapshot.interface';
+import {
   emptyPromptFileData,
   parsePromptFile,
   sectionsFromCharacterPrompts,
@@ -31,6 +36,9 @@ export const PROMPT_IMAGES_FOLDER = '_images';
 
 /** Folder new character prompts go to, relative to the prompts folder. */
 export const CHARACTER_PROMPTS_FOLDER = 'characters';
+
+/** Frontmatter list of a prompt file that links to characters or locations. */
+export type PromptLinkField = 'characters' | 'locations';
 
 const ILLEGAL_SEGMENT_CHARS = /[<>:"|?*\\\u0000-\u001f]/g;
 
@@ -321,6 +329,71 @@ export class PromptService {
       ? [...existing.characters, characterId]
       : existing.characters.filter((id) => id !== characterId);
     await this.savePrompt(relativePath, { ...existing, characters });
+  }
+
+  /** Prompt files whose `characters:` / `locations:` list holds `targetId` (for delete dialogs). */
+  async countLinks(field: PromptLinkField, targetId: string): Promise<{ id: string; name: string }[]> {
+    await this.ensureLoaded();
+    return this.promptsSubject.value
+      .filter((file) => file[field].includes(targetId))
+      .map((file) => ({ id: file.relativePath, name: file.name }));
+  }
+
+  /**
+   * Removes a deleted character's or location's id from every prompt file that
+   * links it, so no prompt is left pointing at nothing. Returns where each id
+   * sat, for Undo. A file that cannot be written keeps its link and is reported.
+   */
+  async removeLinks(field: PromptLinkField, targetId: string): Promise<PromptLinkSnapshot> {
+    await this.ensureLoaded();
+    const snapshot: PromptLinkSnapshot = { field, targetId, removals: [] };
+    const failed: string[] = [];
+    for (const file of this.promptsSubject.value.filter((f) => f[field].includes(targetId))) {
+      const index = file[field].indexOf(targetId);
+      try {
+        await this.savePrompt(file.relativePath, {
+          ...file,
+          [field]: file[field].filter((id) => id !== targetId),
+        });
+        snapshot.removals.push({ relativePath: file.relativePath, promptName: file.name, index });
+      } catch (error) {
+        this.logger.error(`Could not unlink ${targetId} from prompt ${file.relativePath}`, error);
+        failed.push(file.name);
+      }
+    }
+    if (failed.length > 0) {
+      this.notificationService.showWarning(
+        `Could not update ${failed.length === 1 ? 'prompt' : 'prompts'}: ${failed.join(', ')}. The link stays there.`
+      );
+    }
+    return snapshot;
+  }
+
+  /** Puts links removed by `removeLinks()` back at their old positions. */
+  async restoreLinks(snapshot: PromptLinkSnapshot | null | undefined): Promise<ReferenceRestoreResult> {
+    const skipped: ReferenceRestoreSkip[] = [];
+    let restored = 0;
+    if (!snapshot || snapshot.removals.length === 0) return { restored, skipped };
+    await this.ensureLoaded();
+    const { field, targetId } = snapshot;
+    for (const removal of snapshot.removals) {
+      const file = this.getPrompt(removal.relativePath);
+      if (!file) {
+        skipped.push({ kind: 'prompt', id: removal.relativePath, label: removal.promptName });
+        continue;
+      }
+      if (file[field].includes(targetId)) continue;
+      const ids = [...file[field]];
+      ids.splice(Math.min(Math.max(removal.index, 0), ids.length), 0, targetId);
+      try {
+        await this.savePrompt(file.relativePath, { ...file, [field]: ids });
+        restored += 1;
+      } catch (error) {
+        this.logger.error(`Could not relink ${targetId} in prompt ${file.relativePath}`, error);
+        skipped.push({ kind: 'prompt', id: removal.relativePath, label: removal.promptName });
+      }
+    }
+    return { restored, skipped };
   }
 
   /** New prompt for a character under `characters/`, linked to it. */

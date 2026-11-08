@@ -338,6 +338,11 @@ export class LocationService {
     }
   }
 
+  /** Prompt files that link a location, for the delete dialog. */
+  async countLocationReferences(id: string): Promise<{ prompts: { id: string; name: string }[] }> {
+    return this.referenceCleanup.countLocationReferences(id);
+  }
+
   async deleteLocation(id: string): Promise<boolean> {
     try {
       const locations = this.locationsSubject.value;

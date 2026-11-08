@@ -96,7 +96,7 @@ describe('PromptService', () => {
         { provide: CharacterService, useValue: characterService },
         { provide: FileWatcherService, useValue: { fileChanges$: new Subject() } },
         { provide: LoggingService, useValue: jasmine.createSpyObj('LoggingService', ['log', 'warn', 'error']) },
-        { provide: NotificationService, useValue: jasmine.createSpyObj('NotificationService', ['showSuccess', 'showError']) },
+        { provide: NotificationService, useValue: jasmine.createSpyObj('NotificationService', ['showSuccess', 'showError', 'showWarning']) },
         { provide: UndoDeleteService, useValue: jasmine.createSpyObj('UndoDeleteService', ['register']) },
       ],
     });
@@ -171,5 +171,86 @@ describe('PromptService', () => {
 
     expect([...files.keys()].filter((p) => p.includes('Dessir'))).toEqual([`${promptsRoot}/characters/Dessir.md`]);
     expect(characterService.clearLegacyPrompts).toHaveBeenCalledWith('c1');
+  });
+
+  describe('prompt links of deleted characters and locations', () => {
+    const maraPath = `${promptsRoot}/characters/Mara Vell.md`;
+    const harborPath = `${promptsRoot}/places/Grey Harbor.md`;
+
+    beforeEach(() => {
+      files.set(maraPath, '---\ncharacters:\n  - other\n  - mara-vell\n  - third\n---\n```prompt\nmara\n```\n');
+      files.set(harborPath, '---\ncharacters:\n  - mara-vell\nlocations:\n  - harbor\n  - lighthouse\n---\nnotes\n');
+      files.set(`${promptsRoot}/unrelated.md`, '---\ncharacters:\n  - other\n---\nx\n');
+    });
+
+    it('counts the prompt files that link an id', async () => {
+      expect(await service.countLinks('characters', 'mara-vell')).toEqual([
+        { id: 'characters/Mara Vell.md', name: 'Mara Vell' },
+        { id: 'places/Grey Harbor.md', name: 'Grey Harbor' },
+      ]);
+      expect(await service.countLinks('locations', 'harbor')).toEqual([
+        { id: 'places/Grey Harbor.md', name: 'Grey Harbor' },
+      ]);
+    });
+
+    it('unlinks a character from every prompt file and Undo puts it back in place', async () => {
+      const unrelatedBefore = files.get(`${promptsRoot}/unrelated.md`);
+      const snapshot = await service.removeLinks('characters', 'mara-vell');
+
+      expect(snapshot.removals).toEqual([
+        { relativePath: 'characters/Mara Vell.md', promptName: 'Mara Vell', index: 1 },
+        { relativePath: 'places/Grey Harbor.md', promptName: 'Grey Harbor', index: 0 },
+      ]);
+      expect(parsePromptFile(files.get(maraPath)!).characters).toEqual(['other', 'third']);
+      expect(parsePromptFile(files.get(harborPath)!).characters).toEqual([]);
+      expect(parsePromptFile(files.get(harborPath)!).locations).toEqual(['harbor', 'lighthouse']);
+      expect(service.promptsForCharacter('mara-vell')).toEqual([]);
+      expect(files.get(`${promptsRoot}/unrelated.md`)).toBe(unrelatedBefore);
+
+      const result = await service.restoreLinks(snapshot);
+
+      expect(result).toEqual({ restored: 2, skipped: [] });
+      expect(parsePromptFile(files.get(maraPath)!).characters).toEqual(['other', 'mara-vell', 'third']);
+      expect(parsePromptFile(files.get(harborPath)!).characters).toEqual(['mara-vell']);
+      expect(service.promptsForCharacter('mara-vell').map((f) => f.relativePath)).toEqual([
+        'characters/Mara Vell.md',
+        'places/Grey Harbor.md',
+      ]);
+    });
+
+    it('unlinks a location and restores it at its old position', async () => {
+      const snapshot = await service.removeLinks('locations', 'harbor');
+      expect(parsePromptFile(files.get(harborPath)!).locations).toEqual(['lighthouse']);
+      expect(parsePromptFile(files.get(harborPath)!).characters).toEqual(['mara-vell']);
+
+      await service.restoreLinks(snapshot);
+      expect(parsePromptFile(files.get(harborPath)!).locations).toEqual(['harbor', 'lighthouse']);
+    });
+
+    it('reports a prompt deleted before Undo as skipped', async () => {
+      const snapshot = await service.removeLinks('characters', 'mara-vell');
+      files.delete(harborPath);
+      await service.forceReload();
+
+      const result = await service.restoreLinks(snapshot);
+
+      expect(result.restored).toBe(1);
+      expect(result.skipped).toEqual([{ kind: 'prompt', id: 'places/Grey Harbor.md', label: 'Grey Harbor' }]);
+      expect(parsePromptFile(files.get(maraPath)!).characters).toEqual(['other', 'mara-vell', 'third']);
+    });
+
+    it('keeps the link and warns when a prompt file cannot be written', async () => {
+      electron.writeFileAtomic.and.callFake(async (p: string, content: string) => {
+        if (p === maraPath) return { success: false, error: 'read-only' };
+        files.set(p, content);
+        return { success: true };
+      });
+
+      const snapshot = await service.removeLinks('characters', 'mara-vell');
+
+      expect(snapshot.removals.map((r) => r.relativePath)).toEqual(['places/Grey Harbor.md']);
+      expect(parsePromptFile(files.get(maraPath)!).characters).toContain('mara-vell');
+      expect(TestBed.inject(NotificationService).showWarning).toHaveBeenCalled();
+    });
   });
 });

@@ -122,8 +122,12 @@ describe('CharacterService', () => {
       'removeCharacterReferences',
       'clearLocationReferences',
       'restoreCharacterReferences',
+      'countDraftReferences',
+      'removeDraftReferences',
     ]);
-    referenceCleanupSpy.countCharacterReferences.and.returnValue(Promise.resolve({ houses: [], casts: [], pinboards: [], plotBoards: [] }));
+    referenceCleanupSpy.countCharacterReferences.and.returnValue(Promise.resolve({ houses: [], casts: [], pinboards: [], plotBoards: [], prompts: [] }));
+    referenceCleanupSpy.countDraftReferences.and.returnValue(Promise.resolve({ prompts: [] }));
+    referenceCleanupSpy.removeDraftReferences.and.callFake(async (id: string) => emptyCharacterSnapshot(id));
     referenceCleanupSpy.removeCharacterReferences.and.callFake(async (id: string) => emptyCharacterSnapshot(id));
     referenceCleanupSpy.clearLocationReferences.and.returnValue(Promise.resolve({ locationId: '', seats: [] }));
     referenceCleanupSpy.restoreCharacterReferences.and.returnValue(Promise.resolve({ restored: 0, skipped: [] }));
@@ -956,7 +960,8 @@ describe('CharacterService', () => {
         houses: [{ id: 'h1', name: 'House Stark' }, { id: 'h2', name: 'House Tully' }],
         casts: [{ id: 'c1', name: 'Cast 1' }],
         pinboards: [{ id: 'pb1', name: 'Pinboard 1' }, { id: 'pb2', name: 'Pinboard 2' }, { id: 'pb3', name: 'Pinboard 3' }],
-        plotBoards: [{ id: 'plot.plotboard.md', name: 'plot' }]
+        plotBoards: [{ id: 'plot.plotboard.md', name: 'plot' }],
+        prompts: [],
       }));
 
       const counts = await service.countCharacterReferences('char-1');
@@ -968,7 +973,7 @@ describe('CharacterService', () => {
       expect(referenceCleanupService.countCharacterReferences).toHaveBeenCalledWith('char-1');
     });
 
-    it('should return zero counts for drafts', async () => {
+    it('counts only prompt links for drafts', async () => {
       const draft: Character = {
         id: 'draft-1',
         name: 'Draft Character',
@@ -985,9 +990,14 @@ describe('CharacterService', () => {
       };
 
       (service as any).draftsSubject.next([draft]);
+      referenceCleanupService.countDraftReferences.and.returnValue(
+        Promise.resolve({ prompts: [{ id: 'characters/Draft.md', name: 'Draft' }] })
+      );
 
       const counts = await service.countCharacterReferences('draft-1');
 
+      expect(counts.prompts).toEqual([{ id: 'characters/Draft.md', name: 'Draft' }]);
+      expect(referenceCleanupService.countDraftReferences).toHaveBeenCalledWith('draft-1');
       expect(counts.houses.length).toBe(0);
       expect(counts.casts.length).toBe(0);
       expect(counts.pinboards.length).toBe(0);
@@ -1067,7 +1077,7 @@ describe('CharacterService', () => {
       expect(electronService.deleteDirectoryRecursive).not.toHaveBeenCalled();
     });
 
-    it('should not invoke reference cleanup for draft characters', async () => {
+    it('removes only prompt links for draft characters and restores them on Undo', async () => {
       const project = createValidProject();
       projectService.getCurrentProject.and.returnValue(project);
       (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
@@ -1089,13 +1099,28 @@ describe('CharacterService', () => {
 
       (service as any).draftsSubject.next([draft]);
 
+      const draftSnapshot = {
+        ...emptyCharacterSnapshot('draft-id-1'),
+        prompts: {
+          field: 'characters' as const,
+          targetId: 'draft-id-1',
+          removals: [{ relativePath: 'characters/Draft.md', promptName: 'Draft', index: 0 }],
+        },
+      };
+      referenceCleanupService.removeDraftReferences.and.resolveTo(draftSnapshot);
+
       await service.deleteCharacter('draft-id-1');
 
       expect(referenceCleanupService.removeCharacterReferences).not.toHaveBeenCalled();
+      expect(referenceCleanupService.removeDraftReferences).toHaveBeenCalledWith('draft-id-1');
       expect(undoDeleteService.register).toHaveBeenCalledWith(
         'tok-char',
-        jasmine.objectContaining({ kind: 'draft' })
+        jasmine.objectContaining({ kind: 'draft', referenceSnapshot: draftSnapshot })
       );
+
+      const entry = undoDeleteService.register.calls.mostRecent().args[1];
+      await entry.restoreReferences(entry.referenceSnapshot);
+      expect(referenceCleanupService.restoreCharacterReferences).toHaveBeenCalledWith(draftSnapshot);
     });
 
     it('should return false when character does not exist', async () => {

@@ -7,6 +7,7 @@ import { CastService } from './cast.service';
 import { MetadataService } from './metadata.service';
 import { LoggingService } from './logging.service';
 import { NotificationService } from './notification.service';
+import { PromptService } from './prompt.service';
 
 describe('ReferenceCleanupService', () => {
   let service: ReferenceCleanupService;
@@ -17,6 +18,7 @@ describe('ReferenceCleanupService', () => {
   let metadataService: jasmine.SpyObj<MetadataService>;
   let loggingService: jasmine.SpyObj<LoggingService>;
   let notificationService: jasmine.SpyObj<NotificationService>;
+  let promptService: jasmine.SpyObj<PromptService>;
 
   beforeEach(() => {
     const houseSpy = jasmine.createSpyObj('HouseService', [
@@ -51,8 +53,18 @@ describe('ReferenceCleanupService', () => {
       'showWarning',
     ]);
 
+    const promptSpy = jasmine.createSpyObj('PromptService', ['countLinks', 'removeLinks', 'restoreLinks']);
+    promptSpy.countLinks.and.resolveTo([]);
+    promptSpy.removeLinks.and.callFake(async (field: 'characters' | 'locations', targetId: string) => ({
+      field,
+      targetId,
+      removals: [],
+    }));
+    promptSpy.restoreLinks.and.resolveTo({ restored: 0, skipped: [] });
+
     TestBed.configureTestingModule({
       providers: [
+        { provide: PromptService, useValue: promptSpy },
         ReferenceCleanupService,
         { provide: HouseService, useValue: houseSpy },
         { provide: PinboardService, useValue: pinboardSpy },
@@ -74,6 +86,98 @@ describe('ReferenceCleanupService', () => {
     notificationService = TestBed.inject(
       NotificationService
     ) as jasmine.SpyObj<NotificationService>;
+    promptService = TestBed.inject(PromptService) as jasmine.SpyObj<PromptService>;
+  });
+
+  describe('prompt links', () => {
+    const promptSnapshot = (field: 'characters' | 'locations', targetId: string) => ({
+      field,
+      targetId,
+      removals: [{ relativePath: 'a/Mara.md', promptName: 'Mara', index: 0 }],
+    });
+
+    beforeEach(() => {
+      houseService.countCharacterReferences.and.returnValue([]);
+      castService.countCharacterInCasts.and.returnValue([]);
+      pinboardService.countCharacterReferences.and.returnValue([]);
+      plotBoardService.countCharacterReferences.and.returnValue(Promise.resolve([]));
+      houseService.clearLocationReferences.and.resolveTo({ locationId: 'loc-1', seats: [] });
+      houseService.restoreLocationReferences.and.resolveTo({ restored: 0, skipped: [] });
+    });
+
+    it('counts prompts linking a character, draft or location', async () => {
+      promptService.countLinks.and.resolveTo([{ id: 'a/Mara.md', name: 'Mara' }]);
+
+      expect((await service.countCharacterReferences('char-1')).prompts).toEqual([{ id: 'a/Mara.md', name: 'Mara' }]);
+      expect(await service.countDraftReferences('draft-1')).toEqual({ prompts: [{ id: 'a/Mara.md', name: 'Mara' }] });
+      expect(await service.countLocationReferences('loc-1')).toEqual({ prompts: [{ id: 'a/Mara.md', name: 'Mara' }] });
+      expect(promptService.countLinks.calls.allArgs()).toEqual([
+        ['characters', 'char-1'],
+        ['characters', 'draft-1'],
+        ['locations', 'loc-1'],
+      ]);
+    });
+
+    it('still counts the other references when prompts cannot be read', async () => {
+      promptService.countLinks.and.rejectWith(new Error('no prompts folder'));
+      houseService.countCharacterReferences.and.returnValue([{ id: 'h1', name: 'House' }]);
+
+      const refs = await service.countCharacterReferences('char-1');
+
+      expect(refs.houses).toEqual([{ id: 'h1', name: 'House' }]);
+      expect(refs.prompts).toEqual([]);
+    });
+
+    it('character cleanup snapshots prompt links and restore hands them back', async () => {
+      metadataService.removeCharacterFromBookPovs.and.resolveTo({ characterId: 'char-1', removals: [] });
+      castService.removeCharacterFromCasts.and.resolveTo({ characterId: 'char-1', removals: [] });
+      houseService.removeCharacterFromHouses.and.resolveTo({ characterId: 'char-1', removals: [] });
+      pinboardService.removeCharacterConnections.and.resolveTo({ characterId: 'char-1', removals: [] });
+      plotBoardService.removeCharacterFromThreads.and.resolveTo({ characterId: 'char-1', removals: [] });
+      metadataService.restoreCharacterToBookPovs.and.resolveTo({ restored: 0, skipped: [] });
+      castService.restoreCharacterToCasts.and.resolveTo({ restored: 0, skipped: [] });
+      houseService.restoreCharacterToHouses.and.resolveTo({ restored: 0, skipped: [] });
+      pinboardService.restoreCharacterConnections.and.resolveTo({ restored: 0, skipped: [] });
+      plotBoardService.restoreCharacterToThreads.and.resolveTo({ restored: 0, skipped: [] });
+      const prompts = promptSnapshot('characters', 'char-1');
+      promptService.removeLinks.and.resolveTo(prompts);
+      promptService.restoreLinks.and.resolveTo({ restored: 1, skipped: [] });
+
+      const snapshot = await service.removeCharacterReferences('char-1');
+      expect(promptService.removeLinks).toHaveBeenCalledWith('characters', 'char-1');
+      expect(snapshot.prompts).toEqual(prompts);
+
+      const result = await service.restoreCharacterReferences(snapshot);
+      expect(promptService.restoreLinks).toHaveBeenCalledWith(prompts);
+      expect(result.restored).toBe(1);
+    });
+
+    it('draft cleanup only touches prompts', async () => {
+      const prompts = promptSnapshot('characters', 'draft-1');
+      promptService.removeLinks.and.resolveTo(prompts);
+
+      const snapshot = await service.removeDraftReferences('draft-1');
+
+      expect(snapshot.prompts).toEqual(prompts);
+      expect(houseService.removeCharacterFromHouses).not.toHaveBeenCalled();
+      expect(castService.removeCharacterFromCasts).not.toHaveBeenCalled();
+    });
+
+    it('location cleanup adds prompt links to the seat snapshot and restores both', async () => {
+      const prompts = promptSnapshot('locations', 'loc-1');
+      promptService.removeLinks.and.resolveTo(prompts);
+      promptService.restoreLinks.and.resolveTo({
+        restored: 0,
+        skipped: [{ kind: 'prompt', id: 'a/Mara.md', label: 'Mara' }],
+      });
+
+      const snapshot = await service.clearLocationReferences('loc-1');
+      expect(snapshot).toEqual({ locationId: 'loc-1', seats: [], prompts });
+
+      const result = await service.restoreLocationReferences(snapshot);
+      expect(houseService.restoreLocationReferences).toHaveBeenCalledWith(snapshot);
+      expect(result.skipped).toEqual([{ kind: 'prompt', id: 'a/Mara.md', label: 'Mara' }]);
+    });
   });
 
   describe('countCharacterReferences', () => {
@@ -270,7 +374,7 @@ describe('ReferenceCleanupService', () => {
 
       const result = await service.clearLocationReferences('loc-1');
 
-      expect(result).toEqual(partial);
+      expect(result).toEqual({ ...partial, prompts: { field: 'locations', targetId: 'loc-1', removals: [] } });
       expect(notificationService.showWarning).toHaveBeenCalledWith(
         `Couldn't update the House "House Fail", so this link was left in place.`
       );

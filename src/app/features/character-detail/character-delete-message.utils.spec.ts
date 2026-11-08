@@ -63,7 +63,15 @@ describe('Character Delete Message Utils', () => {
       );
     });
 
-    it('should skip reference counting for drafts', async () => {
+    it('lists the prompts that link a draft', async () => {
+      mockCharacterService.countCharacterReferences.and.returnValue(Promise.resolve({
+        houses: [],
+        casts: [],
+        pinboards: [],
+        plotBoards: [],
+        prompts: [{ id: 'characters/Draft Character.md', name: 'Draft Character' }],
+      }));
+
       const message = await buildCharacterDeleteMessage(
         'Draft Character',
         'draft-1',
@@ -72,10 +80,28 @@ describe('Character Delete Message Utils', () => {
       );
 
       expect(message).toContain('Are you sure you want to delete "Draft Character"?');
+      expect(message).toContain('This draft will be removed from:\n• 1 prompt: Draft Character');
       expect(message).toContain('It will be moved to the system Trash. You can undo for 15 seconds.');
-      
-      // Should not have called countCharacterReferences
-      expect(mockCharacterService.countCharacterReferences).not.toHaveBeenCalled();
+      expect(mockCharacterService.countCharacterReferences).toHaveBeenCalledWith('draft-1');
+    });
+
+    it('lists linked prompts and says prompt links come back only with Undo', async () => {
+      mockCharacterService.countCharacterReferences.and.returnValue(Promise.resolve({
+        houses: [{ id: 'h1', name: 'House Vell' }],
+        casts: [],
+        pinboards: [],
+        plotBoards: [],
+        prompts: [
+          { id: 'characters/Mara Vell.md', name: 'Mara Vell' },
+          { id: 'portraits/Mara young.md', name: 'Mara young' },
+        ],
+      }));
+
+      const message = await buildCharacterDeleteMessage('Mara Vell', 'mara-vell', false, deps);
+
+      expect(message).toContain('This character will be removed from:');
+      expect(message).toContain('• 2 prompts: Mara Vell, Mara young');
+      expect(message).toContain('plot threads and prompts come back only with Undo');
     });
 
     it('should handle unnamed characters', async () => {

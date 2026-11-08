@@ -30,6 +30,7 @@ import {
 } from '../../core/utils/list-keyboard.utils';
 import { resolveThumbnailForBookStyle } from '../../core/utils/thumbnail.utils';
 import { isTrashStagingError } from '../../core/trash/trash-record-id';
+import { buildCharacterDeleteMessage } from '../character-detail/character-delete-message.utils';
 import { CharacterFilterComponent } from '../../shared/character-filter/character-filter.component';
 import { ModalFrameComponent } from '../../shared/modal-frame/modal-frame.component';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
@@ -688,9 +689,13 @@ export class CharacterListComponent implements OnInit {
     event.stopPropagation();
 
     const displayName = this.getCharacterDisplayName(character);
+    const confirmMessage = await buildCharacterDeleteMessage(displayName, character.id, !!character.draft, {
+      characterService: this.characterService,
+      logger: this.logger,
+    });
     if (
       await this.modalService.confirm(
-        `Are you sure you want to delete "${displayName}"?\n\nIt will be moved to the system Trash. You can undo for 15 seconds. After that, restore it from the system Trash (links in Houses, pinboards and plot threads come back only with Undo).`,
+        confirmMessage,
         character.draft ? 'Delete draft' : 'Delete character',
         { confirmText: 'Delete', danger: true }
       )

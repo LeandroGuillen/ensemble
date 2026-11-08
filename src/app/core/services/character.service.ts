@@ -1249,15 +1249,18 @@ export class CharacterService {
     casts: { id: string; name: string }[];
     pinboards: { id: string; name: string }[];
     plotBoards: { id: string; name: string }[];
+    prompts: { id: string; name: string }[];
   }> {
     const character = this.findRecord(id);
     if (!character) {
-      return { houses: [], casts: [], pinboards: [], plotBoards: [] };
+      return { houses: [], casts: [], pinboards: [], plotBoards: [], prompts: [] };
     }
 
     const isDraft = !!this.getDraftById(id);
     if (isDraft) {
-      return { houses: [], casts: [], pinboards: [], plotBoards: [] };
+      // Drafts are only ever linked from prompt files.
+      const { prompts } = await this.referenceCleanup.countDraftReferences(id);
+      return { houses: [], casts: [], pinboards: [], plotBoards: [], prompts };
     }
 
     return this.referenceCleanup.countCharacterReferences(id);
@@ -1325,7 +1328,7 @@ export class CharacterService {
           await this.forceReloadCharacters();
         },
         restoreReferences: async (snapshot) => {
-          if (!snapshot || isDraft) {
+          if (!snapshot) {
             return { restored: 0, skipped: [] };
           }
           return this.referenceCleanup.restoreCharacterReferences(
@@ -1338,12 +1341,10 @@ export class CharacterService {
         this.removeCachedThumbnailsForCharacter(character.id);
         sourceSubject.next(characters.filter((char) => char.id !== character.id));
 
-        if (!isDraft) {
-          referenceSnapshot = await this.referenceCleanup.removeCharacterReferences(
-            character.id
-          );
-          cleanedRefs = true;
-        }
+        referenceSnapshot = isDraft
+          ? await this.referenceCleanup.removeDraftReferences(character.id)
+          : await this.referenceCleanup.removeCharacterReferences(character.id);
+        cleanedRefs = true;
 
         this.undoDelete.register(token, buildUndoEntry());
       } catch (postError) {

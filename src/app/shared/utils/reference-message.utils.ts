@@ -20,26 +20,37 @@ export function formatReferenceList(
   return `${count} ${label}: ${names}${more}`;
 }
 
+type ReferenceList = { id: string; name: string }[];
+
 /**
  * Build the full delete confirmation message listing all referenced resources.
- * @param refs Object containing arrays of referenced houses, casts, pinboards, and plotBoards
+ * @param refs Arrays of referenced houses, casts, pinboards, plot boards and prompts (all optional)
+ * @param subject What is being deleted, for the heading (default: 'character')
  * @returns Message fragment (e.g. '\n\nThis character will be removed from:\n• ...')
  *          or empty string if no references exist
  */
-export function buildDeleteReferencesMessage(refs: {
-  houses: { id: string; name: string }[];
-  casts: { id: string; name: string }[];
-  pinboards: { id: string; name: string }[];
-  plotBoards: { id: string; name: string }[];
-}): string {
+export function buildDeleteReferencesMessage(
+  refs: {
+    houses?: ReferenceList;
+    casts?: ReferenceList;
+    pinboards?: ReferenceList;
+    plotBoards?: ReferenceList;
+    prompts?: ReferenceList;
+  },
+  subject: string = 'character'
+): string {
   const refParts: string[] = [];
-  
-  if (refs.houses.length > 0) refParts.push(formatReferenceList(refs.houses, 'house', 'houses'));
-  if (refs.casts.length > 0) refParts.push(formatReferenceList(refs.casts, 'cast', 'casts'));
-  if (refs.pinboards.length > 0) refParts.push(formatReferenceList(refs.pinboards, 'pinboard', 'pinboards'));
-  if (refs.plotBoards.length > 0) refParts.push(formatReferenceList(refs.plotBoards, 'plot board', 'plot boards'));
-  
+  const add = (items: ReferenceList | undefined, singular: string, plural: string) => {
+    if (items && items.length > 0) refParts.push(formatReferenceList(items, singular, plural));
+  };
+
+  add(refs.houses, 'house', 'houses');
+  add(refs.casts, 'cast', 'casts');
+  add(refs.pinboards, 'pinboard', 'pinboards');
+  add(refs.plotBoards, 'plot board', 'plot boards');
+  add(refs.prompts, 'prompt', 'prompts');
+
   if (refParts.length === 0) return '';
-  
-  return `\n\nThis character will be removed from:\n• ${refParts.join('\n• ')}`;
+
+  return `\n\nThis ${subject} will be removed from:\n• ${refParts.join('\n• ')}`;
 }
