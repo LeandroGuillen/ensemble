@@ -7,3 +7,7 @@ release
 
 # Electron builder cache
 .cache/electron-builder
+# Per-project backup state, identity and default snapshots the app writes into
+# any project it opens (e.g. examples/demo-project), plus the old snapshot folder
+.ensemble-backup/
+ensemble-backups/
