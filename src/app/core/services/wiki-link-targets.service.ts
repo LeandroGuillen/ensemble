@@ -1,7 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, combineLatest, map, tap } from 'rxjs';
 import { WikiLinkCollection, WikiLinkTargets, buildWikiLinkTargets } from '../utils/wiki-links.utils';
-import { CHARACTER_DRAFTS_FOLDER } from '../utils/character-path.utils';
 import { CharacterService } from './character.service';
 import { HouseService } from './house.service';
 import { LocationService } from './location.service';
@@ -47,7 +46,9 @@ export class WikiLinkTargetsService {
           { targets: houses, folder: 'houses', route: 'house', singular: 'House' },
           // Every existing note is a valid link target (Obsidian-style), so drafts
           // link like any other note; they stay out of all other character consumers.
-          { targets: drafts, folder: CHARACTER_DRAFTS_FOLDER, route: 'character-draft', singular: 'Draft' },
+          // Their paths are relative to the characters folder (`characters/@drafts/x/x`), and a
+          // published character with the same name wins the bare name (`secondary`).
+          { targets: drafts, folder: settings?.charactersFolder || 'characters', route: 'character-draft', singular: 'Draft', secondary: true },
         ];
         const primaryIndex = collections.findIndex((collection) => collection.route === primary);
         collections.unshift(...collections.splice(primaryIndex, 1));

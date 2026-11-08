@@ -110,6 +110,10 @@ and `Ctrl`/`Cmd` + click to open the target. A link to a name that doesn't exist
 yet offers to create the record. The **Mentioned in** panel on each record lists
 every place that links to it.
 
+If a draft has the same name as a published character, `[[Name]]` links to the
+published character. Link the draft by its path instead, e.g.
+`[[characters/@drafts/mara-vell/mara-vell]]` (the `[[` suggestion does this for you).
+
 ## External editing
 
 Because everything is plain files, you can edit in Obsidian or any editor.

@@ -28,6 +28,23 @@ describe('buildWikiLinkTargets', () => {
     ]);
   });
 
+  it('lets a primary record win a shared name over a secondary collection, which keeps its path', () => {
+    const drafts = (targets: any[]): WikiLinkCollection =>
+      ({ targets, folder: 'characters', route: 'character-draft', singular: 'Draft', secondary: true });
+    const { resolve, suggestions } = buildWikiLinkTargets([
+      characters([{ id: 'ash', name: 'Ash', relativePath: 'ash/ash.md' }]),
+      drafts([{ id: 'ash-draft', name: 'Ash', relativePath: '@drafts/ash/ash.md' }]),
+    ]);
+    expect(resolve('Ash')).toEqual(jasmine.objectContaining({ state: 'resolved', href: '#/character/ash' }));
+    expect(resolve('characters/@drafts/ash/ash')).toEqual(jasmine.objectContaining({ state: 'resolved', href: '#/character-draft/ash-draft' }));
+    expect(resolve('@drafts/ash/ash')).toEqual(jasmine.objectContaining({ state: 'resolved', href: '#/character-draft/ash-draft' }));
+    expect(suggestions.map((s) => s.target)).toEqual(['Ash', 'characters/@drafts/ash/ash']);
+    // Missing links, even under the shared folder, are never created as drafts.
+    expect(resolve('characters/@drafts/new/new').href).toBe('#/character?name=new&fromLink=1');
+    const draftFirst = buildWikiLinkTargets([drafts([]), characters([])]);
+    expect(draftFirst.resolve('Missing').href).toBe('#/character?name=Missing&fromLink=1');
+  });
+
   it('links duplicate names by path', () => {
     const { suggestions } = buildWikiLinkTargets([characters([
       { id: 'a', name: 'Ash', relativePath: 'ash/ash.md' },

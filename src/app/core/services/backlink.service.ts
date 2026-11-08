@@ -17,7 +17,6 @@ import { FileWatcherService } from './file-watcher.service';
 import { ElectronService } from './electron.service';
 import { LoggingService } from './logging.service';
 import { pathJoin } from '../utils/path.utils';
-import { CHARACTER_DRAFTS_FOLDER } from '../utils/character-path.utils';
 import { Character } from '../interfaces/character.interface';
 
 const EMPTY_INDEX: BacklinkIndex = { byTargetId: {}, excluded: [] };
@@ -134,8 +133,9 @@ export class BacklinkService {
         { targets: reference, folder: settings?.charactersFolder || 'characters', route: 'character', singular: 'Character' },
         { targets: locations, folder: settings?.locationsFolder || 'locations', route: 'location', singular: 'Location' },
         { targets: houses, folder: 'houses', route: 'house', singular: 'House' },
-        // Drafts are link targets too, so "Mentioned in" agrees with the editors.
-        { targets: drafts, folder: CHARACTER_DRAFTS_FOLDER, route: 'character-draft', singular: 'Draft' },
+        // Drafts are link targets too, set up exactly as in WikiLinkTargetsService so
+        // "Mentioned in" agrees with the editors.
+        { targets: drafts, folder: settings?.charactersFolder || 'characters', route: 'character-draft', singular: 'Draft', secondary: true },
       ];
 
       const docs = await this.collectSources(project?.path || null, project?.metadata.books || [], reference, drafts, locations, houses);

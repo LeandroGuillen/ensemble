@@ -108,4 +108,28 @@ describe('BacklinkService', () => {
     expect(fromDraft.sourceType).toBe('draft');
     expect(fromDraft.href).toBe('#/character-draft/d-heir');
   });
+
+  it('attributes mentions like the editors when a draft shares a character name', async () => {
+    const maraDraft = {
+      id: 'd-mara', name: 'Mara Vell', draft: true,
+      content: '', books: [], relativePath: '@drafts/mara-vell/mara-vell.md',
+    };
+    const ben = {
+      id: 'c-ben', name: 'Ben', lore: false, draft: false, books: [], relativePath: 'ben/ben.md',
+      content: 'Sails with [[Mara Vell]]. The rewrite: [[characters/@drafts/mara-vell/mara-vell]], old link [[@drafts/mara-vell/mara-vell|Mara]].',
+    };
+    service = makeService({
+      characters: {
+        getReferenceCharactersSnapshot: () => [{ ...mara, content: '' }, ben],
+        getDraftsSnapshot: () => [maraDraft],
+        getBookPageContent: async () => null,
+      },
+    });
+    await service.rebuild();
+
+    expect(service.backlinksFor('c-mara').map((b) => b.snippet)).toEqual([jasmine.stringContaining('[Mara Vell]')]);
+    expect(service.backlinksFor('d-mara').length).toBe(2);
+    expect(service.index.excluded).toEqual([]);
+    expect(service.excludedCountFor('Mara Vell')).toBe(0);
+  });
 });

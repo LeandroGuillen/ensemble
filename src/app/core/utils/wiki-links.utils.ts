@@ -17,6 +17,17 @@ export interface WikiLinkOptions {
 
 export interface WikiLinkCollection extends WikiLinkOptions {
   targets: WikiLinkTarget[];
+  /**
+   * Matches here count only when no other collection matches (drafts yield to published
+   * records with the same name, so existing links stay stable). Never a creation destination.
+   */
+  secondary?: boolean;
+}
+
+/** Drop secondary-collection matches when a primary collection matches too. */
+function preferPrimary<M extends { collection: WikiLinkCollection }>(matches: M[]): M[] {
+  const primary = matches.filter(match => !match.collection.secondary);
+  return primary.length ? primary : matches;
 }
 
 const parser = unified().use(remarkParse);
@@ -101,9 +112,12 @@ export interface ResolvedWikiLink {
 export function resolveWikiLinkTarget(target: string, collections: WikiLinkCollection[]): ResolvedWikiLink {
   const explicitFor = (record: string) => {
     const normalized = normalizePath(record);
-    return collections.filter(collection =>
+    const matching = collections.filter(collection =>
       normalized.startsWith(normalizePath(collection.folder).replace(/\/$/, '') + '/')
-    ).sort((a, b) => b.folder.length - a.folder.length);
+    );
+    // The longest matching folder wins; collections sharing it (characters and drafts) are all tried.
+    const longest = Math.max(...matching.map(collection => normalizePath(collection.folder).replace(/\/$/, '').length));
+    return matching.filter(collection => normalizePath(collection.folder).replace(/\/$/, '').length === longest);
   };
   // A record whose full name contains `#` wins over reading the `#` as a heading.
   const readings = recordReadings(target);
@@ -112,10 +126,10 @@ export function resolveWikiLinkTarget(target: string, collections: WikiLinkColle
   let matches: { entry: WikiLinkTarget; collection: WikiLinkCollection }[] = [];
   for (const candidate of readings) {
     const explicit = explicitFor(candidate.record);
-    const candidates = explicit.length ? [explicit[0]] : collections;
-    const found = candidates.flatMap(collection =>
+    const candidates = explicit.length ? explicit : collections;
+    const found = preferPrimary(candidates.flatMap(collection =>
       matchingRecords(candidate.record, collection.targets, collection.folder).map(entry => ({ entry, collection }))
-    );
+    ));
     if (found.length) {
       reading = candidate;
       explicitCollections = explicit;
@@ -125,7 +139,10 @@ export function resolveWikiLinkTarget(target: string, collections: WikiLinkColle
   }
   const record = reading.record;
   const resolved = matches.length === 1 ? matches[0] : undefined;
-  const destination = resolved?.collection || explicitCollections[0] || collections[0];
+  const destination = resolved?.collection
+    || explicitCollections.find(collection => !collection.secondary)
+    || collections.find(collection => !collection.secondary)
+    || collections[0];
   if (resolved) {
     return { state: 'resolved', ...(reading.fragment !== undefined ? { fragment: reading.fragment } : {}), id: resolved.entry.id, href: `#/${destination.route}/${encodeURIComponent(resolved.entry.id)}`, route: destination.route, title: target, record };
   }
@@ -167,11 +184,15 @@ export interface WikiLinkTargets {
 export function buildWikiLinkTargets(collections: WikiLinkCollection[]): WikiLinkTargets {
   // Names shared by several targets would be ambiguous, and names with `#`, `|`, `[` or `]` can't
   // be written as a target (`#` reads as a heading); link those by path instead.
+  // A secondary (draft) name that also belongs to a primary record resolves to that record, so
+  // only the secondary entry needs its path; primary entries count only primary names.
+  const primaryCounts = new Map<string, number>();
   const nameCounts = new Map<string, number>();
   for (const collection of collections) {
     for (const entry of collection.targets) {
       const key = entry.name.trim().toLowerCase();
       nameCounts.set(key, (nameCounts.get(key) || 0) + 1);
+      if (!collection.secondary) primaryCounts.set(key, (primaryCounts.get(key) || 0) + 1);
     }
   }
   const suggestions: WikiLinkSuggestion[] = [];
@@ -179,7 +200,8 @@ export function buildWikiLinkTargets(collections: WikiLinkCollection[]): WikiLin
     for (const entry of collection.targets) {
       const name = entry.name.trim();
       if (!name) continue;
-      const target = nameCounts.get(name.toLowerCase())! > 1 || LINK_BREAKING_CHARS.test(name)
+      const counts = collection.secondary ? nameCounts : primaryCounts;
+      const target = counts.get(name.toLowerCase())! > 1 || LINK_BREAKING_CHARS.test(name)
         ? `${collection.folder.replace(/\/$/, '')}/${entry.relativePath.replace(/\.md$/i, '')}`
         : name;
       suggestions.push({ label: name, target, detail: collection.singular, type: collection.route });
