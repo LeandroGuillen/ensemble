@@ -29,6 +29,7 @@ import {
   DEFAULT_CASTS_FOLDER,
   DEFAULT_NAMES_FILE,
   DEFAULT_CATEGORIES,
+  DEMO_MARKER_FILE,
   DEFAULT_TAGS,
   DEFAULT_CHARACTER_STYLES,
   DEFAULT_CHARACTER_STYLE_ID,
@@ -40,6 +41,7 @@ import { requireProject } from '../utils/project.utils';
 import { PinboardStoreService } from './pinboard-store.service';
 import { RecentProjectsService } from './recent-projects.service';
 import { PendingEditsService } from './pending-edits.service';
+import { NotificationService } from './notification.service';
 
 @Injectable({
   providedIn: 'root',
@@ -181,11 +183,18 @@ export class ProjectService {
   /**
    * Loads an existing project from the file system
    */
-  async loadProject(projectPath: string): Promise<Project | null> {
+  async loadProject(requestedPath: string): Promise<Project | null> {
     try {
       if (!(await this.persistBookPlanBeforeSwitch())) {
         return this.currentProjectSubject.value;
       }
+      // The committed demo in a git checkout opens as a writable copy, so nothing the app
+      // writes on open or while navigating changes the checkout.
+      const resolved = await this.electronService.resolveProjectFolder(requestedPath);
+      if (!resolved.success || !resolved.path) {
+        throw new Error(resolved.error || `Cannot open project folder: ${requestedPath}`);
+      }
+      const projectPath = resolved.path;
       await this.electronService.setWorkFolder(projectPath);
 
       // Check if directory exists
@@ -274,6 +283,12 @@ export class ProjectService {
 
       this.currentProjectSubject.next(project);
       this.recentProjects.add(projectPath);
+      if (resolved.demoCopy) {
+        this.injector.get(NotificationService).showInfo(
+          `Opened your copy of the demo project (${projectPath}); the original folder stays unchanged.`,
+          6000
+        );
+      }
 
       // setWorkFolder already committed the previous project's pending trash entries.
       // Drop renderer Undo toasts so they cannot restore against the wrong project.
@@ -399,6 +414,13 @@ export class ProjectService {
         // Pass through the short IPC error (no "Failed to copy project:" prefix)
         // so the outer catch yields e.g. "Failed to duplicate project: Destination is not empty: ..."
         throw new Error(copyResult.error || 'Copy failed');
+      }
+
+      // A duplicate of the committed demo is the user's own project: drop the demo marker
+      // so it opens in place even inside a git repository.
+      const demoMarkerPath = pathJoin(destProjectPath, DEMO_MARKER_FILE);
+      if (await this.electronService.fileExists(demoMarkerPath)) {
+        await this.electronService.deleteFile(demoMarkerPath);
       }
 
       // Load the duplicated project's ensemble.json (or metadata.json for legacy)

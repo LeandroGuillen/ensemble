@@ -32,6 +32,7 @@ export interface IpcChannels {
   readonly getRecentProjects: string;
   readonly saveRecentProjects: string;
   readonly setWorkFolder: string;
+  readonly resolveProjectFolder: string;
 
   readonly createDirectory: string;
   readonly fileExists: string;

@@ -12,6 +12,8 @@ import { DEFAULT_BASE_COLORS } from '../utils/color-palette.utils';
 // ---- Filenames -------------------------------------------------------------
 export const ENSEMBLE_JSON_FILE = 'ensemble.json';
 export const LEGACY_METADATA_JSON_FILE = 'metadata.json';
+/** Marks the committed demo project (lib/demo-project.js uses the same name). */
+export const DEMO_MARKER_FILE = '.ensemble-demo';
 
 // ---- Default relative folders / files --------------------------------------
 export const DEFAULT_CHARACTERS_FOLDER = 'characters';

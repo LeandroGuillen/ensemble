@@ -27,7 +27,7 @@ Ensemble is an Electron + Angular 21 desktop application for character managemen
 Located in `src/app/core/services/`:
 
 - **ElectronService**: IPC bridge to Electron main process for all file system operations (including directory operations)
-- **ProjectService**: Manages work folder selection and `ensemble.json` (categories, tags, settings, `lastSession`, pinboards)
+- **ProjectService**: Manages work folder selection and `ensemble.json` (categories, tags, settings, `lastSession`, pinboards). `loadProject()` first asks the main process for the folder to open (`resolveProjectFolder`, `lib/demo-project.js`): the committed demo (`.ensemble-demo` marker) inside a git checkout opens as a writable copy under `<userData>/demo-projects/`
 - **ProjectIconService**: Sidebar project icon (`ensemble.json` → `projectIcon`, a project-relative image path). Images picked from outside the project are copied to `<imagesFolder>/project-icon.<ext>`
 - **CharacterService**: CRUD operations for convention-based character folders under `characters/`
 - **LocationService**: CRUD operations for location files (`_*.md`), recursive scan under `locations/`, flat-file format

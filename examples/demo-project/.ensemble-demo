@@ -1,0 +1,6 @@
+This folder is the demo project committed to the Ensemble repository.
+
+When you open it from a git checkout, Ensemble opens a writable copy in its
+user data folder (demo-projects/demo-project) instead, so the checkout stays
+unchanged. The copy does not include this file. Copies you make yourself
+outside a git checkout open in place.

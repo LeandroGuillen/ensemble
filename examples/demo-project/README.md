@@ -2,13 +2,12 @@
 
 An original maritime fantasy demo for Ensemble. Along a coast of memory-powered lighthouses, a keeper and a harbor commander must decide which promises to keep when the drowned begin coming home.
 
-## Copy first, then open
+## Open it
 
-1. Copy this entire `examples/demo-project` folder to a location you can write to. You can also download the repository ZIP, extract it, and copy this folder from it.
-2. In Ensemble, open the copied folder as a project (select the folder containing `ensemble.json`).
-3. Explore Characters, Lore, Drawer, Houses, Locations, Library, Casts, the relationship pinboards, the plot board and Backstage. Select **Tidebreak** in Library to open its chapter plan. Select a book on Mara, Ilse or Saffi’s page to read the per-book notes.
+1. In Ensemble, open this `examples/demo-project` folder as a project (select the folder containing `ensemble.json`).
+2. Explore Characters, Lore, Drawer, Houses, Locations, Library, Casts, the relationship pinboards, the plot board and Backstage. Select **Tidebreak** in Library to open its chapter plan. Select a book on Mara, Ilse or Saffi’s page to read the per-book notes.
 
-Ensemble writes project metadata immediately on opening and remembers navigation as you work. Opening a read-only folder fails; opening the repository’s original folder can leave local changes. Always work in your writable copy. Deletes use an Undo window and then the OS trash; exclude `.ensemble-trash/` from any backup, snapshot or export.
+Ensemble writes project metadata immediately on opening and remembers navigation as you work. So that a git checkout stays unchanged, opening this folder from a checkout opens a writable copy in Ensemble’s user data folder (`demo-projects/demo-project`) instead. A notice shows the copy’s path, and the copy is reopened, with your changes, next time. The `.ensemble-demo` file marks this folder as the demo; the copy does not include it. A copy you make yourself outside a git checkout (for example from the repository ZIP) opens in place. Deletes use an Undo window and then the OS trash; exclude `.ensemble-trash/` from any backup, snapshot or export.
 
 The project starts with the dark Blue Gold theme and Classic skin. There are two casts, each with its own relationship graph: Coast relationships (eight people, with labeled directional connections) and The Lighthouse Crew (four people).
 

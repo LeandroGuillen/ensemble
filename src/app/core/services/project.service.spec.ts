@@ -38,6 +38,7 @@ describe('ProjectService', () => {
       'writeFileAtomic',
       'createDirectory',
       'setWorkFolder',
+      'resolveProjectFolder',
       'getRecentProjects',
       'saveRecentProjects',
       'deleteFile',
@@ -64,6 +65,7 @@ describe('ProjectService', () => {
 
     electronService.isElectron.and.returnValue(true);
     electronService.setWorkFolder.and.returnValue(Promise.resolve({ success: true }));
+    electronService.resolveProjectFolder.and.callFake(async (folderPath: string) => ({ success: true, path: folderPath, demoCopy: false }));
     electronService.getRecentProjects.and.returnValue(Promise.resolve([]));
     electronService.saveRecentProjects.and.returnValue(Promise.resolve({ success: true }));
     electronService.deleteFile.and.returnValue(Promise.resolve({ success: true }));
@@ -122,6 +124,42 @@ describe('ProjectService', () => {
       await expectAsync(service.loadProject('/other/project')).toBeRejected();
 
       expect(calls).toEqual(['flush', 'setWorkFolder']);
+    });
+
+    it('opens the writable copy the main process resolves for the committed demo, never the checkout folder', async () => {
+      const checkoutDemo = '/repo/examples/demo-project';
+      const copy = '/user-data/demo-projects/demo-project';
+      electronService.resolveProjectFolder.and.resolveTo({ success: true, path: copy, demoCopy: true });
+      electronService.isDirectory.and.resolveTo(true);
+      electronService.fileExists.and.callFake(async (p: string) => p === `${copy}/ensemble.json`);
+      electronService.readFile.and.resolveTo({ success: true, content: JSON.stringify(createValidMetadata()) });
+      electronService.createDirectory.and.resolveTo({ success: true });
+      electronService.writeFileAtomic.and.resolveTo({ success: true });
+      electronService.readDirectoryFiles.and.resolveTo({ success: true, files: [], directories: [] });
+      const notifications = TestBed.inject(NotificationService) as jasmine.SpyObj<NotificationService>;
+      notifications.showInfo = jasmine.createSpy('showInfo');
+
+      const project = await service.loadProject(checkoutDemo);
+
+      expect(electronService.resolveProjectFolder).toHaveBeenCalledWith(checkoutDemo);
+      expect(project?.path).toBe(copy);
+      expect(electronService.setWorkFolder).toHaveBeenCalledWith(copy);
+      expect(electronService.setWorkFolder).not.toHaveBeenCalledWith(checkoutDemo);
+      const touched = [
+        ...electronService.writeFileAtomic.calls.allArgs().map(a => a[0] as string),
+        ...electronService.createDirectory.calls.allArgs().map(a => a[0] as string),
+        ...electronService.readFile.calls.allArgs().map(a => a[0] as string),
+      ];
+      expect(touched.length).toBeGreaterThan(0);
+      expect(touched.filter(p => p.startsWith(checkoutDemo))).toEqual([]);
+      expect(notifications.showInfo).toHaveBeenCalledWith(jasmine.stringContaining(copy), jasmine.any(Number));
+    });
+
+    it('does not open anything when the project folder cannot be resolved', async () => {
+      electronService.resolveProjectFolder.and.resolveTo({ success: false, error: 'EACCES: copy failed' });
+
+      await expectAsync(service.loadProject('/repo/examples/demo-project')).toBeRejectedWithError(/EACCES: copy failed/);
+      expect(electronService.setWorkFolder).not.toHaveBeenCalled();
     });
 
     it('should load project from ensemble.json', async () => {
@@ -550,6 +588,32 @@ describe('ProjectService', () => {
 
       expect(electronService.copyDirectoryRecursive).toHaveBeenCalledWith(sourcePath, destPath);
       expect(project).toBeTruthy();
+      expect(project?.path).toBe(destPath);
+    });
+
+    it('drops the demo marker from a duplicate of the demo so it opens in place', async () => {
+      const sourcePath = '/repo/examples/demo-project';
+      const destPath = '/vault/lantern';
+      let copied = false;
+      electronService.copyDirectoryRecursive.and.callFake(async () => {
+        copied = true;
+        return { success: true };
+      });
+      electronService.fileExists.and.callFake(async (p: string) => {
+        if (p === sourcePath || p === `${sourcePath}/ensemble.json`) return true;
+        if (p === destPath || p === `${destPath}/ensemble.json` || p === `${destPath}/.ensemble-demo`) return copied;
+        return false;
+      });
+      electronService.isDirectory.and.callFake(async (p: string) => p === sourcePath || (copied && p === destPath));
+      electronService.readFile.and.resolveTo({ success: true, content: JSON.stringify(createValidMetadata()) });
+      electronService.writeFileAtomic.and.resolveTo({ success: true });
+      electronService.createDirectory.and.resolveTo({ success: true });
+      electronService.readDirectoryFiles.and.resolveTo({ success: true, files: [], directories: [] });
+
+      const project = await service.duplicateProject(sourcePath, '/vault', 'lantern');
+
+      expect(electronService.deleteFile).toHaveBeenCalledWith(`${destPath}/.ensemble-demo`);
+      expect(electronService.deleteFile).not.toHaveBeenCalledWith(`${sourcePath}/.ensemble-demo`);
       expect(project?.path).toBe(destPath);
     });
 

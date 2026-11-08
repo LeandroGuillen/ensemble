@@ -94,6 +94,17 @@ export class ElectronService {
     return await this.ipcRenderer.invoke(IpcChannels.setWorkFolder, folderPath);
   }
 
+  /**
+   * The folder to open for `folderPath`. The committed demo project inside a git checkout
+   * resolves to its writable copy under the app's user data folder; anything else to itself.
+   */
+  async resolveProjectFolder(folderPath: string): Promise<{ success: boolean; path?: string; demoCopy?: boolean; error?: string }> {
+    if (!this.isElectron()) {
+      return { success: true, path: folderPath, demoCopy: false };
+    }
+    return await this.ipcRenderer.invoke(IpcChannels.resolveProjectFolder, folderPath);
+  }
+
   // Dialog operations
   async selectFolder(): Promise<string | null> {
     if (!this.isElectron()) {

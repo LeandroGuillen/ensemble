@@ -16,8 +16,9 @@ tags, books, settings and pinboards. You can keep several projects and switch
 between them.
 
 To explore before writing anything, open the bundled
-[demo project](../examples/demo-project/) (The Lantern Coast) — copy it somewhere
-writable first, because Ensemble writes to a project as soon as it opens it.
+[demo project](../examples/demo-project/) (The Lantern Coast). Opened from a git
+checkout, it opens as a writable copy in Ensemble's user data folder, so the
+checkout stays unchanged.
 
 ## People: Characters, Lore and drafts
 

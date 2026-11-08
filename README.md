@@ -97,7 +97,7 @@ sudo dnf install ./ensemble-*.x86_64.rpm
 
 ## First project
 
-To look around before you write anything, [open the demo project](examples/demo-project/), an invented world called The Lantern Coast. Copy the `examples/demo-project` folder somewhere you can write to first, then open the copy; Ensemble writes to a project as soon as it opens it.
+To look around before you write anything, [open the demo project](examples/demo-project/), an invented world called The Lantern Coast. Opened from a git checkout, Ensemble works on a copy in its user data folder, so the checkout stays unchanged.
 
 Create a folder on your disk and open it in Ensemble as a project. Ensemble adds the folders it needs and writes a small `ensemble.json` with your categories, tags, books and settings.
 
