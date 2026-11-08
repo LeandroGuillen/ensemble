@@ -1396,11 +1396,15 @@ getFilterSummary(): string {
     characters: Character[];
   }> {
     const grouped = new Map<string, Character[]>();
+    const knownCategoryIds = new Set(this.categories.map((category) => category.id));
 
-    // Group characters by effective category (book override when book filter set)
+    // Group characters by effective category (book override when book filter set).
+    // A category id missing from metadata (e.g. deleted in Settings) goes to
+    // Uncategorized, so stale metadata never hides a character from the list.
     for (const character of this.filteredCharacters) {
+      const effective = resolveEffectiveCategory(character, this.selectedBook);
       const categoryId =
-        resolveEffectiveCategory(character, this.selectedBook) || 'uncategorized';
+        effective && knownCategoryIds.has(effective) ? effective : 'uncategorized';
       if (!grouped.has(categoryId)) {
         grouped.set(categoryId, []);
       }
@@ -1515,7 +1519,9 @@ getFilterSummary(): string {
       return;
     }
 
-    if (draggedCharacter.category === targetCategoryId) {
+    // Dropped back into its own group: nothing to change. Also keeps a stale
+    // category id (shown under Uncategorized) from being rewritten on disk.
+    if (draggedCharacter.category === targetCategoryId || event.previousContainer === event.container) {
       return;
     }
 
@@ -1555,11 +1561,15 @@ getFilterSummary(): string {
 
   private computeGroupedByTag(): Array<{ tagId: string; characters: Character[] }> {
     const grouped = new Map<string, Character[]>();
+    const knownTagIds = new Set(this.tags.map((tag) => tag.id));
 
-    // Group characters by tag (characters can appear in multiple groups)
+    // Group characters by tag (characters can appear in multiple groups).
+    // Tag ids missing from metadata (e.g. deleted in Settings) are ignored; a
+    // character left with no known tag goes to Untagged instead of vanishing.
     for (const character of this.filteredCharacters) {
-      if (character.tags && character.tags.length > 0) {
-        for (const tagId of character.tags) {
+      const knownTags = (character.tags ?? []).filter((tagId) => knownTagIds.has(tagId));
+      if (knownTags.length > 0) {
+        for (const tagId of knownTags) {
           if (!grouped.has(tagId)) {
             grouped.set(tagId, []);
           }
