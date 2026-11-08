@@ -166,21 +166,25 @@ export class ReferenceCleanupService {
    */
   async removeDraftReferences(characterId: string): Promise<CharacterReferenceSnapshot> {
     const snapshot = this.emptyCharacterSnapshot(characterId);
-    try {
-      snapshot.prompts = await this.removePromptLinks('characters', characterId);
-    } catch (cleanupError) {
-      this.logger.error('Failed to remove draft from prompts', cleanupError);
-    }
+    // Throws (nothing changed) when a linked prompt file cannot be updated.
+    snapshot.prompts = await this.removePromptLinks('characters', characterId);
     return snapshot;
   }
 
   /**
    * Remove all references to a character across the project.
    * Returns a combined typed snapshot for Undo restore.
+   * Throws (nothing changed) when a linked prompt file cannot be updated.
    */
   async removeCharacterReferences(characterId: string): Promise<CharacterReferenceSnapshot> {
     const snapshot = this.emptyCharacterSnapshot(characterId);
     const cleanupErrors: string[] = [];
+
+    // Prompts go first and are not best-effort: a prompt file that cannot be
+    // unlinked throws (with its own links put back) before anything else is
+    // touched, so the caller cancels the delete instead of leaving a prompt
+    // with an anonymous "Missing character" link.
+    snapshot.prompts = await this.removePromptLinks('characters', characterId);
 
     try {
       snapshot.bookPovs = await this.metadataService.removeCharacterFromBookPovs(characterId);
@@ -226,14 +230,6 @@ export class ReferenceCleanupService {
       snapshot.plotThreads = await this.plotBoardService.removeCharacterFromThreads(characterId);
     } catch (cleanupError) {
       const msg = 'Failed to remove character from plot threads';
-      this.logger.error(msg, cleanupError);
-      cleanupErrors.push(msg);
-    }
-
-    try {
-      snapshot.prompts = await this.removePromptLinks('characters', characterId);
-    } catch (cleanupError) {
-      const msg = 'Failed to remove character from prompts';
       this.logger.error(msg, cleanupError);
       cleanupErrors.push(msg);
     }
@@ -316,9 +312,13 @@ export class ReferenceCleanupService {
 
   /**
    * Clear House seats and prompt links pointing at a deleted location.
-   * Returns a snapshot for Undo.
+   * Returns a snapshot for Undo. Throws (nothing changed) when a linked prompt
+   * file cannot be updated.
    */
   async clearLocationReferences(locationId: string): Promise<LocationReferenceSnapshot> {
+    // Prompts first and not best-effort (see removeCharacterReferences): throws
+    // before any House is touched when a linked prompt file cannot be updated.
+    const prompts = await this.removePromptLinks('locations', locationId);
     let snapshot: LocationReferenceSnapshot;
     try {
       snapshot = await this.houseService.clearLocationReferences(locationId);
@@ -333,12 +333,7 @@ export class ReferenceCleanupService {
       }
     }
 
-    try {
-      snapshot = { ...snapshot, prompts: await this.removePromptLinks('locations', locationId) };
-    } catch (cleanupError) {
-      this.logger.error('Failed to clear location links from prompts', cleanupError);
-    }
-    return snapshot;
+    return { ...snapshot, prompts };
   }
 
   /**

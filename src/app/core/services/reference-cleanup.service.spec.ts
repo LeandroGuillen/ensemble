@@ -163,6 +163,28 @@ describe('ReferenceCleanupService', () => {
       expect(castService.removeCharacterFromCasts).not.toHaveBeenCalled();
     });
 
+    it('a prompt unlink failure aborts character cleanup before any other reference is touched', async () => {
+      const failure = new Error('could not update prompt "Mara"');
+      promptService.removeLinks.and.rejectWith(failure);
+
+      await expectAsync(service.removeCharacterReferences('char-1')).toBeRejectedWith(failure);
+
+      expect(metadataService.removeCharacterFromBookPovs).not.toHaveBeenCalled();
+      expect(castService.removeCharacterFromCasts).not.toHaveBeenCalled();
+      expect(houseService.removeCharacterFromHouses).not.toHaveBeenCalled();
+      expect(pinboardService.removeCharacterConnections).not.toHaveBeenCalled();
+      expect(plotBoardService.removeCharacterFromThreads).not.toHaveBeenCalled();
+    });
+
+    it('a prompt unlink failure aborts draft and location cleanup', async () => {
+      const failure = new Error('could not update prompt "Mara"');
+      promptService.removeLinks.and.rejectWith(failure);
+
+      await expectAsync(service.removeDraftReferences('draft-1')).toBeRejectedWith(failure);
+      await expectAsync(service.clearLocationReferences('loc-1')).toBeRejectedWith(failure);
+      expect(houseService.clearLocationReferences).not.toHaveBeenCalled();
+    });
+
     it('location cleanup adds prompt links to the seat snapshot and restores both', async () => {
       const prompts = promptSnapshot('locations', 'loc-1');
       promptService.removeLinks.and.resolveTo(prompts);

@@ -37,6 +37,14 @@ export const PROMPT_IMAGES_FOLDER = '_images';
 /** Folder new character prompts go to, relative to the prompts folder. */
 export const CHARACTER_PROMPTS_FOLDER = 'characters';
 
+/** A prompt file linking a deleted character/location could not be updated; the delete is cancelled. */
+export class PromptUnlinkError extends Error {
+  constructor(readonly promptName: string, override readonly cause?: unknown) {
+    super(`could not update prompt "${promptName}"`);
+    this.name = 'PromptUnlinkError';
+  }
+}
+
 /** Frontmatter list of a prompt file that links to characters or locations. */
 export type PromptLinkField = 'characters' | 'locations';
 
@@ -342,12 +350,15 @@ export class PromptService {
   /**
    * Removes a deleted character's or location's id from every prompt file that
    * links it, so no prompt is left pointing at nothing. Returns where each id
-   * sat, for Undo. A file that cannot be written keeps its link and is reported.
+   * sat, for Undo.
+   *
+   * All or nothing: if a file cannot be written, the links already removed are
+   * put back and a `PromptUnlinkError` is thrown so the caller cancels the
+   * delete (a committed delete must never leave an anonymous dangling id).
    */
   async removeLinks(field: PromptLinkField, targetId: string): Promise<PromptLinkSnapshot> {
     await this.ensureLoaded();
     const snapshot: PromptLinkSnapshot = { field, targetId, removals: [] };
-    const failed: string[] = [];
     for (const file of this.promptsSubject.value.filter((f) => f[field].includes(targetId))) {
       const index = file[field].indexOf(targetId);
       try {
@@ -355,16 +366,19 @@ export class PromptService {
           ...file,
           [field]: file[field].filter((id) => id !== targetId),
         });
-        snapshot.removals.push({ relativePath: file.relativePath, promptName: file.name, index });
       } catch (error) {
         this.logger.error(`Could not unlink ${targetId} from prompt ${file.relativePath}`, error);
-        failed.push(file.name);
+        try {
+          const { skipped } = await this.restoreLinks(snapshot);
+          if (skipped.length > 0) {
+            this.logger.error(`Could not relink ${targetId} in: ${skipped.map((s) => s.id).join(', ')}`);
+          }
+        } catch (restoreError) {
+          this.logger.error(`Could not relink ${targetId} after a failed unlink`, restoreError);
+        }
+        throw new PromptUnlinkError(file.name, error);
       }
-    }
-    if (failed.length > 0) {
-      this.notificationService.showWarning(
-        `Could not update ${failed.length === 1 ? 'prompt' : 'prompts'}: ${failed.join(', ')}. The link stays there.`
-      );
+      snapshot.removals.push({ relativePath: file.relativePath, promptName: file.name, index });
     }
     return snapshot;
   }

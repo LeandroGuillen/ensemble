@@ -239,18 +239,27 @@ describe('PromptService', () => {
       expect(parsePromptFile(files.get(maraPath)!).characters).toEqual(['other', 'mara-vell', 'third']);
     });
 
-    it('keeps the link and warns when a prompt file cannot be written', async () => {
+    it('throws and puts back links already removed when a prompt file cannot be written', async () => {
+      const before = { mara: files.get(maraPath), harbor: parsePromptFile(files.get(harborPath)!).characters };
+      // Mara Vell.md is unlinked first; Grey Harbor.md then fails to write.
       electron.writeFileAtomic.and.callFake(async (p: string, content: string) => {
-        if (p === maraPath) return { success: false, error: 'read-only' };
+        if (p === harborPath) return { success: false, error: 'read-only' };
         files.set(p, content);
         return { success: true };
       });
 
-      const snapshot = await service.removeLinks('characters', 'mara-vell');
+      await expectAsync(service.removeLinks('characters', 'mara-vell')).toBeRejectedWith(
+        jasmine.objectContaining({ name: 'PromptUnlinkError', promptName: 'Grey Harbor' })
+      );
 
-      expect(snapshot.removals.map((r) => r.relativePath)).toEqual(['places/Grey Harbor.md']);
-      expect(parsePromptFile(files.get(maraPath)!).characters).toContain('mara-vell');
-      expect(TestBed.inject(NotificationService).showWarning).toHaveBeenCalled();
+      expect(parsePromptFile(files.get(maraPath)!).characters).toEqual(
+        parsePromptFile(before.mara!).characters
+      );
+      expect(parsePromptFile(files.get(harborPath)!).characters).toEqual(before.harbor);
+      expect(service.promptsForCharacter('mara-vell').map((f) => f.relativePath)).toEqual([
+        'characters/Mara Vell.md',
+        'places/Grey Harbor.md',
+      ]);
     });
   });
 });

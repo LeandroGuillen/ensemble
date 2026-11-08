@@ -156,6 +156,8 @@ describe('Character reference restore integration (Real DI)', () => {
       getPinboards: () => project$.value?.metadata.pinboards || [],
       getCastsFolderPath: () => `${PROJECT_PATH}/casts`,
       getCharactersFolderPath: () => `${PROJECT_PATH}/characters`,
+      // No prompts folder on disk: prompt cleanup is a no-op.
+      getPromptsFolderPath: () => `${PROJECT_PATH}/prompts`,
       getDefaultCharacterStyle: () => 'default',
       getCharacterStyles: () => [{ id: 'default', name: 'Default' }],
       remapCharacterIds: jasmine.createSpy('remapCharacterIds').and.returnValue(Promise.resolve(false)),

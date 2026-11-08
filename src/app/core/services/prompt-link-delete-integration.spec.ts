@@ -37,6 +37,8 @@ describe('Prompt links on character / location delete (real DI)', () => {
   let locationService: LocationService;
   let promptService: PromptService;
   let undoDelete: jasmine.SpyObj<UndoDeleteService>;
+  let electron: jasmine.SpyObj<ElectronService>;
+  let notifications: jasmine.SpyObj<NotificationService>;
 
   const record = (over: Partial<Character>): Character => ({
     id: 'mara-vell',
@@ -70,7 +72,7 @@ describe('Prompt links on character / location delete (real DI)', () => {
       [DRAFT_PROMPT, '---\ncharacters:\n  - sketch\n---\nrough idea\n'],
     ]);
 
-    const electron = jasmine.createSpyObj<ElectronService>('ElectronService', [
+    electron = jasmine.createSpyObj<ElectronService>('ElectronService', [
       'isElectron', 'fileExists', 'createDirectory', 'readDirectoryRecursive', 'readFile',
       'writeFileAtomic', 'stageForTrash', 'restoreFromTrash', 'getImageAsDataUrl',
     ]);
@@ -92,6 +94,7 @@ describe('Prompt links on character / location delete (real DI)', () => {
     });
     electron.stageForTrash.and.resolveTo({ success: true, token: 'tok', expiresAt: Date.now() + 15000 });
     electron.getImageAsDataUrl.and.resolveTo(null);
+    electron.restoreFromTrash.and.resolveTo({ success: true } as any);
 
     const project = { path: PROJECT, metadata: { settings: {}, books: [], categories: [], tags: [] } } as any;
     const projectService = jasmine.createSpyObj<ProjectService>(
@@ -139,6 +142,9 @@ describe('Prompt links on character / location delete (real DI)', () => {
     pinboard.removeCharacterConnections.and.callFake(async (characterId: string) => ({ characterId, removals: [] }));
     pinboard.restoreCharacterConnections.and.resolveTo({ restored: 0, skipped: [] });
 
+    notifications = jasmine.createSpyObj<NotificationService>('NotificationService', [
+      'showSuccess', 'showError', 'showWarning',
+    ]);
     undoDelete = jasmine.createSpyObj<UndoDeleteService>('UndoDeleteService', ['register', 'dismissAll']);
 
     TestBed.configureTestingModule({
@@ -156,10 +162,7 @@ describe('Prompt links on character / location delete (real DI)', () => {
         { provide: ProjectService, useValue: projectService },
         { provide: FileWatcherService, useValue: { fileChanges$: new Subject() } },
         { provide: LoggingService, useValue: jasmine.createSpyObj('LoggingService', ['log', 'warn', 'error']) },
-        {
-          provide: NotificationService,
-          useValue: jasmine.createSpyObj('NotificationService', ['showSuccess', 'showError', 'showWarning']),
-        },
+        { provide: NotificationService, useValue: notifications },
         { provide: UndoDeleteService, useValue: undoDelete },
       ],
     });
@@ -255,5 +258,67 @@ describe('Prompt links on character / location delete (real DI)', () => {
 
     expect(result.skipped).toEqual([]);
     expect(links(HARBOR_PROMPT)).toEqual(before);
+  });
+
+  /**
+   * Reviewer probe: a prompt file that cannot be written during the delete.
+   * The delete must not be committed with the id left in that file (the
+   * Prompts page would show an anonymous "Missing character" chip): it is
+   * cancelled, the staged files are restored and every prompt link is as before.
+   */
+  describe('when a linked prompt file cannot be written', () => {
+    const failWritesTo = (path: string) =>
+      electron.writeFileAtomic.and.callFake(async (p: string, content: string) => {
+        if (p === path) return { success: false, error: 'EACCES: permission denied' };
+        disk.set(p, content);
+        return { success: true };
+      });
+
+    it('cancels the character delete and leaves every prompt link as before', async () => {
+      const before = { mara: links(MARA_PROMPT), harbor: links(HARBOR_PROMPT) };
+      // Mara Vell.md is unlinked first, then Grey Harbor.md fails.
+      failWritesTo(HARBOR_PROMPT);
+
+      await expectAsync(characterService.deleteCharacter('mara-vell')).toBeRejected();
+
+      expect(electron.restoreFromTrash).toHaveBeenCalledWith('tok');
+      expect(undoDelete.register).not.toHaveBeenCalled();
+      expect(characterService.getCharacterById('mara-vell')?.name).toBe('Mara Vell');
+      expect(links(MARA_PROMPT)).toEqual(before.mara);
+      expect(links(HARBOR_PROMPT)).toEqual(before.harbor);
+      expect(promptService.promptsForCharacter('mara-vell').map((f) => f.relativePath)).toEqual([
+        'characters/Mara Vell.md',
+        'places/Grey Harbor.md',
+      ]);
+      expect(notifications.showError).toHaveBeenCalledWith(
+        jasmine.stringMatching(/Couldn't delete "Mara Vell".*prompt "Grey Harbor".*Nothing was changed/)
+      );
+    });
+
+    it('cancels the draft delete and keeps the prompt link', async () => {
+      failWritesTo(DRAFT_PROMPT);
+
+      await expectAsync(characterService.deleteCharacter('sketch')).toBeRejected();
+
+      expect(electron.restoreFromTrash).toHaveBeenCalledWith('tok');
+      expect(undoDelete.register).not.toHaveBeenCalled();
+      expect(characterService.getDraftById('sketch')).toBeTruthy();
+      expect(links(DRAFT_PROMPT).characters).toEqual(['sketch']);
+    });
+
+    it('cancels the location delete and keeps the prompt link', async () => {
+      const before = links(HARBOR_PROMPT);
+      failWritesTo(HARBOR_PROMPT);
+
+      await expectAsync(locationService.deleteLocation('grey-harbor')).toBeRejected();
+
+      expect(electron.restoreFromTrash).toHaveBeenCalledWith('tok');
+      expect(undoDelete.register).not.toHaveBeenCalled();
+      expect(locationService.getLocationById('grey-harbor')?.name).toBe('Grey Harbor');
+      expect(links(HARBOR_PROMPT)).toEqual(before);
+      expect(notifications.showError).toHaveBeenCalledWith(
+        jasmine.stringMatching(/Couldn't delete "Grey Harbor".*Nothing was changed/)
+      );
+    });
   });
 });

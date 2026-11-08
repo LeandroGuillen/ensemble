@@ -122,6 +122,8 @@ describe('Character Cleanup Integration (Real DI)', () => {
             getCurrentProject: () => project$.value,
             getCurrentPinboard: () => project$.value?.metadata?.pinboards?.[0] || null,
             getCharactersFolderPath: () => '/test/project/characters',
+            // No prompts folder on disk (fileExists is false): prompt cleanup is a no-op.
+            getPromptsFolderPath: () => '/test/project/prompts',
             getDefaultCharacterStyle: () => 'default',
             getCharacterStyles: () => [{ id: 'default', name: 'Default' }],
             getPinboards: () => project$.value?.metadata?.pinboards || [],

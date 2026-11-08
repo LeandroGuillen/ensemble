@@ -403,16 +403,9 @@ export class LocationService {
         this.thumbnailDataUrls.delete(location.id);
         this.locationsSubject.next(locations.filter((loc) => loc.id !== location.id));
 
-        try {
-          referenceSnapshot = await this.referenceCleanup.clearLocationReferences(
-            location.id
-          );
-        } catch (cleanupError) {
-          this.logger.warn(
-            'Failed to cleanup location references in houses, continuing',
-            cleanupError
-          );
-        }
+        // House failures are handled inside; a prompt file that cannot be
+        // unlinked throws here and cancels the delete (see the catch below).
+        referenceSnapshot = await this.referenceCleanup.clearLocationReferences(location.id);
 
         this.undoDelete.register(token, buildUndoEntry());
       } catch (postError) {

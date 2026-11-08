@@ -449,20 +449,21 @@ A foggy port.`,
       expect(referenceCleanup.clearLocationReferences).toHaveBeenCalledWith(created.id);
     });
 
-    it('still succeeds when house cleanup throws an error', async () => {
+    it('cancels the delete when reference cleanup throws (a linked prompt file could not be updated)', async () => {
+      // House failures are absorbed inside clearLocationReferences; it only
+      // rejects when a prompt file still linking the location cannot be written.
       const project = createValidProject();
       projectService.getCurrentProject.and.returnValue(project);
 
       const created = await service.createLocation(createFormData());
       referenceCleanup.clearLocationReferences.and.returnValue(
-        Promise.reject(new Error('Cleanup failed'))
+        Promise.reject(new Error('could not update prompt "Harbor"'))
       );
 
-      const deleted = await service.deleteLocation(created.id);
+      await expectAsync(service.deleteLocation(created.id)).toBeRejected();
 
-      expect(deleted).toBeTrue();
-      expect(service.getLocationsSnapshot()).toEqual([]);
-      expect(electronService.stageForTrash).toHaveBeenCalled();
+      expect(service.getLocationById(created.id)).toBeTruthy();
+      expect(electronService.restoreFromTrash).toHaveBeenCalled();
       expect(electronService.deleteFile).not.toHaveBeenCalled();
     });
 
