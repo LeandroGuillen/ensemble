@@ -47,6 +47,14 @@ export class ElectronService {
     return await this.ipcRenderer.invoke(IpcChannels.fileExists, filePath);
   }
 
+  /** True when the file (or a new file at that path) can be written. */
+  async isWritable(targetPath: string): Promise<boolean> {
+    if (!this.isElectron()) {
+      return false;
+    }
+    return await this.ipcRenderer.invoke(IpcChannels.isWritable, targetPath);
+  }
+
   async isDirectory(dirPath: string): Promise<boolean> {
     if (!this.isElectron()) {
       return false;

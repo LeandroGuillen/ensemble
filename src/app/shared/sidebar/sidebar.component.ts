@@ -85,6 +85,7 @@ export class SidebarComponent implements OnInit {
         { icon: 'book', label: 'Books', route: '/library', title: 'Books' },
         { icon: 'shield', label: 'Houses', route: '/houses', title: 'Houses' },
         { icon: 'map-pin', label: 'Locations', route: '/locations', title: 'Locations' },
+        { icon: 'map', label: 'World map', route: '/world-map', title: 'World map' },
         { icon: 'plot-board', label: 'Plot Board', route: '/plot-board', title: 'Plot Board' }
       ]
     }

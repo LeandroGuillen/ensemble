@@ -200,6 +200,14 @@ export const routes: Routes = [
     canDeactivate: [locationEditorGuard],
   },
   {
+    path: "world-map",
+    loadComponent: () =>
+      import("./features/world-map/world-map.component").then(
+        (m) => m.WorldMapComponent
+      ),
+    canActivate: [projectGuard],
+  },
+  {
     path: "houses",
     loadComponent: () => import("./features/house-list/house-list.component").then(m => m.HouseListComponent),
     canActivate: [projectGuard],

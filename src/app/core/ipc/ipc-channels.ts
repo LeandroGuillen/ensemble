@@ -36,6 +36,7 @@ export interface IpcChannels {
   readonly createDirectory: string;
   readonly fileExists: string;
   readonly isDirectory: string;
+  readonly isWritable: string;
   readonly readFile: string;
   readonly writeFile: string;
   readonly writeFileAtomic: string;

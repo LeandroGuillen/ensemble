@@ -34,6 +34,7 @@ Located in `src/app/core/services/`:
 - **CastService**: CRUD operations for cast folders under the casts folder
 - **PinboardService**: Manages pinboard data (nodes/edges) across multiple pinboards stored in `ensemble.json`
 - **PromptService**: Prompt repository: every `*.md` under the prompts folder (`settings.promptsFolder`, default `prompts`). Files are addressed by path relative to that folder; links to characters/locations live in the prompt file (`promptsForCharacter()` derives the reverse). Format parsed/serialized by `prompt-file.utils.ts`. Also moves legacy character-frontmatter `prompts:` into `prompts/characters/<name>.md` on load
+- **WorldMapService**: World map (`world-map.md` at the project root): location pins (x/y, by location id) and roads. Writes every edit straight away, keeps a session undo/redo stack, reloads on external edits, and opens read-only when the project or file is not writable (`isWritable` IPC) or the file cannot be parsed. Format in `world-map.utils.ts` and `docs/data-format.md`
 - **PlotBoardService**: Discovers and manages plot-board Markdown files anywhere under the project (`*.pinboard.md`, plus legacy `*.plotboard.md`)
 - **BookPlanService**: Loads, autosaves (1s idle) and watches a book's plan file (`Book.plan.path`); external edits reload when there are no unsaved changes, otherwise they surface as a conflict
 - **BookEditActionsService**: Create/update/delete books from the Edit Book modal; shared by the Books page (`/library`) and the book page
@@ -135,6 +136,7 @@ project-folder/
 ├── ensemble.json           # Project metadata: categories, tags, settings, lastSession, pinboards
 ├── .ensemble-trash/        # Staged deletes before OS trash (exclude from backups/exports)
 ├── comfyui-workflows/      # ComfyUI API-format workflow JSON (optional; image generation)
+├── world-map.md            # World map: location pins and roads (created on first pin)
 ├── locations/              # Location files (recursively scanned)
 │   └── _<slug>.md          # Location file (e.g., "_grey-harbor.md")
 ├── prompts/                # Prompt files in any subfolders (configurable; see docs/data-format.md)
@@ -284,6 +286,7 @@ All routes defined in `src/app/app.routes.ts`:
 - `/locations` - Location list with search/filter
 - `/location/:id` - Edit existing location
 - `/location` - Create new location
+- `/world-map` - World map (location pins and roads on a canvas)
 - `/houses` - House list
 - `/house/:id` - Edit existing House
 - `/house` - Create new House

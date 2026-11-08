@@ -18,6 +18,7 @@ import { KeyboardShortcutsDialogComponent } from "./shared/keyboard-shortcuts-di
 import { KeyboardShortcutsService } from "./shared/keyboard-shortcuts-dialog/keyboard-shortcuts.service";
 import { ModalService, ConfirmationRequest } from "./core/services/modal.service";
 import { Book } from "./core/interfaces/project.interface";
+import { WORLD_MAP_FILE } from "./core/constants/project.constants";
 
 @Component({
     selector: "app-root",
@@ -136,6 +137,8 @@ export class AppComponent implements OnInit {
           project.metadata.settings?.locationsFolder?.trim() || 'locations',
           project.metadata.settings?.promptsFolder?.trim() || 'prompts',
           'houses',
+          // The world map is one file at the project root.
+          WORLD_MAP_FILE,
           // Book plan files can live anywhere in the project; watch each file directly.
           ...(project.metadata.books || [])
             .map((book: Book) => book.plan?.path?.trim())

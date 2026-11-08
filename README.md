@@ -36,6 +36,7 @@ Ensemble keeps your cast, your world and your plot in one folder of Markdown fil
 ### World
 
 - **Locations**: record places with one of nine types, such as Country, Settlement, Building or Natural Feature.
+- **World map**: pin your locations on a canvas and join them with labelled roads.
 - **Location filters**: filter by type, book and picture, and clear the filters in one click.
 - **Location icons**: give every type its own icon.
 - **Houses**: record crests, mottos, colors, seats, members and an ordered list of reigns with joint heads.
@@ -120,6 +121,7 @@ project-folder/
 │   ├── concepts.md                # Concepts
 │   └── names.md                   # Name lists
 ├── locations/             # Locations, one file each
+├── world-map.md           # World map pins and roads
 │   └── _port-saltmere.md
 ├── houses/                 # Family and dynasty records
 │   └── house-vell/

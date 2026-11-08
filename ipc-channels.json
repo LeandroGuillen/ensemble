@@ -22,6 +22,7 @@
   "createDirectory": "create-directory",
   "fileExists": "file-exists",
   "isDirectory": "is-directory",
+  "isWritable": "is-writable",
   "readFile": "read-file",
   "writeFile": "write-file",
   "writeFileAtomic": "write-file-atomic",

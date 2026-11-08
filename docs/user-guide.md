@@ -60,6 +60,19 @@ a character **per book**:
 location), an ordered list of reigns with joint heads, and a Markdown history.
 Characters belong to one or more Houses across your world's history.
 
+## World map
+
+The **World map** (sidebar, under Locations) answers "what is near what?". Drag
+places from the *Not on the map* list onto the canvas, or use **Pin all
+unplaced** for a rough layout to rearrange. Drag pins to move them, drag the
+background to pan, and scroll to zoom. Clicking a pin opens the location.
+**Draw roads** connects pins: click one, then another; clicking a connected
+pair again removes the road. Click a road to give it a label such as "Coast
+road, 3 days". Every change is saved to `world-map.md` right away, and Ctrl+Z
+and Ctrl+Shift+Z undo and redo. Focused pins move with the arrow keys (Shift for
+bigger steps); Delete takes them off the map. In a read-only project you can look
+around and open places, but not change the map.
+
 ## Casts and pinboards
 
 A **cast** groups characters together — for example "The Lighthouse Crew" — with

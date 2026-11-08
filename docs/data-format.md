@@ -57,6 +57,35 @@ names, descriptions, book names, and type labels. Type, book, and picture filter
 can be combined; their selections are remembered, and Clear Filters resets them.
 The toolbar wraps below the page title as space becomes limited.
 
+## World map
+
+The World map page places locations as pins on a blank canvas. It is stored in
+`world-map.md` at the project root, created the first time you pin something:
+
+```markdown
+---
+pins:
+  - location: m0k3r5abc123   # location id
+    name: Grey Harbor        # for reading only; rewritten on save
+    x: 120
+    'y': -40
+roads:
+  - from: m0k3r5abc123
+    to: m0k3r5def456
+    label: Coast road        # optional
+---
+
+(optional notes, kept as they are)
+```
+
+Coordinates are canvas units with no projection. Pins point at locations by
+their stable `id`, so renaming or moving a location file keeps its pin. A pin
+whose location no longer exists stays in the file but is not drawn, so a deleted
+location that is restored with Undo returns to the same spot. Roads join two
+pins; one pair has at most one road, in either direction. The `'y'` quotes come
+from the YAML writer; `y:` without quotes reads the same. If the file cannot be
+parsed, the map opens read-only and leaves the file untouched.
+
 ## Prompts
 
 Prompt files are any `*.md` under the prompts folder (`settings.promptsFolder`,

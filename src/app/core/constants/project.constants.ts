@@ -26,6 +26,8 @@ export const DEFAULT_CHARACTER_STYLES: ReadonlyArray<{ id: string; name: string 
 ];
 export const DEFAULT_CASTS_FOLDER = 'characters/casts';
 export const DEFAULT_NAMES_FILE = 'characters/names.md';
+/** World map pins and roads (project root). */
+export const WORLD_MAP_FILE = 'world-map.md';
 
 // ---- Pinboard connection colors --------------------------------------------
 /** Fallback color used when a `PinboardConnection` has no explicit color. */

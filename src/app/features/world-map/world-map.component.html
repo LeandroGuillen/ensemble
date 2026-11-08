@@ -1,0 +1,234 @@
+<div class="world-map">
+  <app-page-header [title]="'World map'">
+    <button class="icon-btn" (click)="loadAll(true)" title="Reload map and locations" aria-label="Reload map and locations">
+      <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#refresh" /></svg>
+    </button>
+    @if (hasLocations && !readOnly) {
+      <button
+        class="btn btn-secondary"
+        [class.road-toggle-on]="roadMode"
+        [attr.aria-pressed]="roadMode"
+        (click)="toggleRoadMode()"
+        title="Click two pins to connect them; click a connected pair again to remove the road (Esc to stop)"
+      >
+        {{ roadMode ? 'Done drawing roads' : 'Draw roads' }}
+      </button>
+    }
+    @if (unplaced.length > 0 && !readOnly) {
+      <button class="btn btn-primary" (click)="pinAllUnplaced()" data-testid="pin-all">
+        <svg class="ui-icon plus-glyph" aria-hidden="true"><use href="assets/ui-icons.svg#pin" /></svg>
+        Pin all unplaced ({{ unplaced.length }})
+      </button>
+    }
+  </app-page-header>
+
+  @if (state?.error) {
+    <div class="map-banner map-banner-error" role="alert">
+      <strong>world-map.md could not be read.</strong>
+      {{ state?.error }}. The map is read-only until the file is fixed, so nothing is overwritten.
+      <button class="btn btn-sm btn-secondary" (click)="loadAll(true)">Reload</button>
+    </div>
+  } @else if (state?.readOnly) {
+    <div class="map-banner" role="status" data-testid="read-only-banner">
+      <strong>Read-only project.</strong> You can look around and open locations, but pins and roads can't be changed.
+    </div>
+  }
+
+  <div class="map-body">
+    <section class="map-stage" aria-label="World map canvas">
+      <svg
+        #canvas
+        class="map-canvas"
+        [class.panning]="!!dragPosition"
+        [class.road-mode]="roadMode"
+        [class.drop-active]="dropActive"
+        role="application"
+        aria-roledescription="map"
+        aria-label="World map. Drag pins to move them, drag the background to pan, scroll to zoom."
+        (pointerdown)="onCanvasPointerDown($event)"
+        (pointermove)="onCanvasPointerMove($event)"
+        (pointerup)="onCanvasPointerUp($event)"
+        (pointercancel)="onCanvasPointerCancel($event)"
+        (wheel)="onWheel($event)"
+        (dragover)="onCanvasDragOver($event)"
+        (dragleave)="onCanvasDragLeave()"
+        (drop)="onCanvasDrop($event)"
+      >
+        <defs>
+          <pattern
+            id="world-map-grid"
+            width="80"
+            height="80"
+            patternUnits="userSpaceOnUse"
+            [attr.patternTransform]="transform"
+          >
+            <path d="M 80 0 L 0 0 0 80" class="grid-line" />
+          </pattern>
+        </defs>
+        <rect class="grid" width="100%" height="100%" fill="url(#world-map-grid)" />
+
+        <g [attr.transform]="transform">
+          @for (road of roads; track road.key) {
+            <g
+              class="road"
+              [class.selected]="road.key === selectedRoadKey"
+              (pointerdown)="$event.stopPropagation()"
+              (click)="selectRoad(road, $event)"
+            >
+              <line class="road-hit" [attr.x1]="road.from.x" [attr.y1]="road.from.y" [attr.x2]="road.to.x" [attr.y2]="road.to.y" />
+              <line class="road-line" [attr.x1]="road.from.x" [attr.y1]="road.from.y" [attr.x2]="road.to.x" [attr.y2]="road.to.y" />
+              @if (road.label) {
+                <text
+                  class="road-label"
+                  [attr.x]="(road.from.x + road.to.x) / 2"
+                  [attr.y]="(road.from.y + road.to.y) / 2 - 6"
+                  text-anchor="middle"
+                >{{ road.label }}</text>
+              }
+            </g>
+          }
+
+          @for (pin of placed; track pin.location.id) {
+            <g
+              class="pin"
+              [class.dragging]="dragPosition?.id === pin.location.id"
+              [class.road-from]="roadFrom === pin.location.id"
+              [attr.transform]="'translate(' + pin.x + ' ' + pin.y + ')'"
+              tabindex="0"
+              role="button"
+              [attr.aria-label]="pin.location.name + ', ' + pin.typeLabel + (roadMode ? '. Press Enter to connect' : '. Press Enter to open')"
+              [attr.data-location-id]="pin.location.id"
+              (pointerdown)="onPinPointerDown(pin, $event)"
+              (keydown)="onPinKeydown(pin, $event)"
+            >
+              <title>{{ pin.location.name }} ({{ pin.typeLabel }})</title>
+              <circle class="pin-disc" r="18" />
+              <use class="pin-icon" [attr.href]="pin.icon" x="-10" y="-10" width="20" height="20" />
+              <text class="pin-label" y="34" text-anchor="middle">{{ pin.location.name }}</text>
+            </g>
+          }
+        </g>
+      </svg>
+
+      <div class="map-controls" role="toolbar" aria-label="Map view">
+        <button class="icon-btn" (click)="zoomBy(1.25)" title="Zoom in" aria-label="Zoom in">
+          <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
+        </button>
+        <button class="icon-btn" (click)="zoomBy(0.8)" title="Zoom out" aria-label="Zoom out">
+          <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#minus" /></svg>
+        </button>
+        <button class="btn btn-sm btn-secondary" (click)="fitToView()" title="Fit all pins in view">Fit</button>
+        @if (!readOnly) {
+          <button class="btn btn-sm btn-secondary" (click)="undo()" [disabled]="!state?.canUndo" title="Undo (Ctrl+Z)">Undo</button>
+          <button class="btn btn-sm btn-secondary" (click)="redo()" [disabled]="!state?.canRedo" title="Redo (Ctrl+Shift+Z)">Redo</button>
+        }
+      </div>
+
+      @if (roadMode) {
+        <div class="map-hint" role="status">
+          {{ roadFrom ? 'Now click the pin to connect to.' : 'Click a pin to start a road.' }}
+          Clicking a connected pair again removes the road.
+        </div>
+      }
+
+      @if (!isLoading && state) {
+        @if (!hasLocations) {
+          <div class="map-empty" data-testid="empty-no-locations">
+            <svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="assets/ui-icons.svg#map" /></svg>
+            <h3>No locations yet</h3>
+            <p>Create a few places first, then pin them here to see what is near what.</p>
+            <button class="btn btn-primary" (click)="createLocation()">Create a location</button>
+          </div>
+        } @else if (placed.length === 0) {
+          <div class="map-empty" data-testid="empty-no-pins">
+            <svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="assets/ui-icons.svg#map-pin" /></svg>
+            <h3>Drop locations onto the map</h3>
+            @if (readOnly) {
+              <p>Nothing has been placed on this map yet.</p>
+            } @else {
+              <p>Drag a place from the list, or let Ensemble lay them all out roughly so you can move them where they belong.</p>
+              <button class="btn btn-primary" (click)="pinAllUnplaced()">Pin all unplaced locations</button>
+            }
+          </div>
+        }
+      }
+    </section>
+
+    @if (hasLocations) {
+      <aside class="map-panel" aria-label="Map details">
+        @if (selectedRoad; as road) {
+          <section class="panel-section" data-testid="road-panel">
+            <h2 class="panel-title">Road</h2>
+            <p class="road-ends">{{ road.from.location.name }} ↔ {{ road.to.location.name }}</p>
+            <label class="field">
+              <span>Label</span>
+              <input
+                type="text"
+                [(ngModel)]="roadLabelDraft"
+                (blur)="saveRoadLabel()"
+                (keydown.enter)="saveRoadLabel()"
+                [disabled]="readOnly"
+                placeholder="e.g. Coast road, 3 days"
+              />
+            </label>
+            @if (!readOnly) {
+              <button class="btn btn-sm btn-danger" (click)="deleteSelectedRoad()">Remove road</button>
+            }
+          </section>
+        }
+
+        <section class="panel-section">
+          <h2 class="panel-title">Not on the map <span class="count">{{ unplaced.length }}</span></h2>
+          @if (unplaced.length === 0) {
+            <p class="panel-empty">Every location is on the map.</p>
+          } @else {
+            @if (unplaced.length > 8) {
+              <input
+                type="text"
+                class="panel-filter"
+                [(ngModel)]="unplacedFilter"
+                placeholder="Filter…"
+                aria-label="Filter unplaced locations"
+              />
+            }
+            <ul class="place-list" data-testid="unplaced-list">
+              @for (location of filteredUnplaced; track location.id) {
+                <li
+                  class="place"
+                  [attr.draggable]="!readOnly"
+                  (dragstart)="onListDragStart(location, $event)"
+                  [title]="readOnly ? location.name : 'Drag onto the map, or use Pin'"
+                >
+                  <svg class="ui-icon place-icon" aria-hidden="true"><use [attr.href]="getIcon(location)" /></svg>
+                  <button class="place-name link-btn" (click)="openLocation(location)">{{ location.name }}</button>
+                  @if (!readOnly) {
+                    <button class="btn btn-sm btn-secondary" (click)="pinAtCenter(location)" [attr.aria-label]="'Pin ' + location.name + ' at the centre of the map'">Pin</button>
+                  }
+                </li>
+              }
+            </ul>
+          }
+        </section>
+
+        @if (placed.length > 0) {
+          <section class="panel-section">
+            <h2 class="panel-title">On the map <span class="count">{{ placed.length }}</span></h2>
+            <ul class="place-list">
+              @for (pin of placed; track pin.location.id) {
+                <li class="place">
+                  <svg class="ui-icon place-icon" aria-hidden="true"><use [attr.href]="pin.icon" /></svg>
+                  <button class="place-name link-btn" (click)="openLocation(pin.location)">{{ pin.location.name }}</button>
+                  @if (!readOnly) {
+                    <button class="icon-btn" (click)="unpin(pin.location.id)" [attr.aria-label]="'Remove ' + pin.location.name + ' from the map'" title="Remove from map">
+                      <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg>
+                    </button>
+                  }
+                </li>
+              }
+            </ul>
+          </section>
+        }
+      </aside>
+    }
+  </div>
+</div>

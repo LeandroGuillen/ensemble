@@ -95,6 +95,14 @@ export const SHORTCUT_REGISTRY: readonly Shortcut[] = [
   { keys: ['↑', '↓', '←', '→'], description: 'Move cell focus', category: 'Plot Board' },
   { keys: ['Enter'], description: 'Edit focused cell', category: 'Plot Board' },
 
+  // World map
+  { keys: ['Ctrl', 'Z'], description: 'Undo map change', category: 'World map' },
+  { keys: ['Ctrl', 'Shift', 'Z'], description: 'Redo map change', category: 'World map' },
+  { keys: ['↑', '↓', '←', '→'], description: 'Move focused pin (Shift: bigger steps)', category: 'World map' },
+  { keys: ['Enter'], description: 'Open focused pin (connect it while drawing roads)', category: 'World map' },
+  { keys: ['Del'], description: 'Remove focused pin, or the selected road', category: 'World map' },
+  { keys: ['Esc'], description: 'Stop drawing roads / clear road selection', category: 'World map' },
+
   // Command Palette
   { keys: ['↑', '↓'], description: 'Navigate commands', category: 'Command Palette' },
   { keys: ['PgUp/PgDn'], description: 'Jump selection by page', category: 'Command Palette' },
