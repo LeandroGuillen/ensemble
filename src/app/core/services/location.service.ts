@@ -10,6 +10,7 @@ import { parseThumbnailReference, resolveThumbnailPath } from '../utils/thumbnai
 import { assertIpcSuccess } from '../utils/ipc.utils';
 import { requireProject } from '../utils/project.utils';
 import { LocationReferenceSnapshot } from '../interfaces/reference-snapshot.interface';
+import { Project } from '../interfaces/project.interface';
 import {
   isTrashStagingError,
   sanitizeTrashRecordId,
@@ -42,6 +43,9 @@ export class LocationService {
   private currentProjectPath: string | null = null;
 
   private thumbnailDataUrls: Map<string, string> = new Map();
+  /** Book ids of the last seen project metadata, to notice book deletes. */
+  private knownBookIds: Set<string> | null = null;
+  private knownBooksProjectPath: string | null = null;
 
   constructor(
     private electronService: ElectronService,
@@ -55,6 +59,41 @@ export class LocationService {
     this.fileWatcherService.fileChanges$.pipe(takeUntilDestroyed()).subscribe((event) => {
       this.handleFileChange(event);
     });
+    this.projectService.currentProject$?.pipe(takeUntilDestroyed()).subscribe((project) => {
+      this.dropRemovedBooks(project);
+    });
+  }
+
+  /**
+   * When a book disappears from the project's metadata (book delete), drop it
+   * from the in-memory locations so a later save does not write it back.
+   * MetadataService.removeBook rewrites the location files themselves.
+   */
+  private dropRemovedBooks(project: Project | null): void {
+    const previousIds = this.knownBookIds;
+    const previousPath = this.knownBooksProjectPath;
+    this.knownBookIds = new Set((project?.metadata.books || []).map((book) => book.id));
+    this.knownBooksProjectPath = project?.path ?? null;
+    if (!project || !previousIds || previousPath !== project.path) {
+      return;
+    }
+
+    const removed = [...previousIds].filter((id) => !this.knownBookIds!.has(id));
+    if (removed.length === 0) {
+      return;
+    }
+
+    let changed = false;
+    const locations = this.locationsSubject.value.map((location) => {
+      if (!location.books?.some((id) => removed.includes(id))) {
+        return location;
+      }
+      changed = true;
+      return { ...location, books: location.books.filter((id) => !removed.includes(id)) };
+    });
+    if (changed) {
+      this.locationsSubject.next(locations);
+    }
   }
 
   getLocations(): Observable<Location[]> {

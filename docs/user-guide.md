@@ -129,3 +129,7 @@ overwriting.
   House or cast stages it and offers **Undo** for 15 seconds, then moves it to
   your system Trash. Anything in `.ensemble-trash/` is staged for deletion, so
   exclude that folder from your own backups or exports.
+- **Deleting a book** removes it from every character (including its per-book
+  category, tags and pictures), location and House reign, and moves the
+  characters' notes for that book (`<slug>.<code>.md`) to your system Trash,
+  so a new book with the same code starts with no notes.

@@ -39,12 +39,12 @@ describe('MetadataService', () => {
   });
 
   beforeEach(() => {
-    const electronSpy = jasmine.createSpyObj('ElectronService', ['isElectron', 'readDirectoryRecursive', 'readFile', 'writeFile']);
-    const projectSpy = jasmine.createSpyObj('ProjectService', ['getCurrentProject', 'updateMetadata', 'getCharactersFolderPath'], {
+    const electronSpy = jasmine.createSpyObj('ElectronService', ['isElectron', 'readDirectoryRecursive', 'readFile', 'writeFile', 'writeFileAtomic', 'stageForTrash']);
+    const projectSpy = jasmine.createSpyObj('ProjectService', ['getCurrentProject', 'updateMetadata', 'getCharactersFolderPath', 'getLocationsFolderPath'], {
       currentProject$: new BehaviorSubject<Project | null>(null)
     });
     const castSpy = jasmine.createSpyObj('CastService', ['createCast', 'updateCast', 'deleteCast']);
-    const loggingSpy = jasmine.createSpyObj('LoggingService', ['log', 'error']);
+    const loggingSpy = jasmine.createSpyObj('LoggingService', ['log', 'error', 'warn']);
     const notificationSpy = jasmine.createSpyObj('NotificationService', ['showError']);
 
     TestBed.configureTestingModule({
@@ -68,6 +68,7 @@ describe('MetadataService', () => {
     projectService.getCurrentProject.and.returnValue(createValidProject());
     projectService.updateMetadata.and.returnValue(Promise.resolve());
     projectService.getCharactersFolderPath.and.returnValue('/test/project/characters');
+    projectService.getLocationsFolderPath.and.returnValue('/test/project/locations');
     electronService.readDirectoryRecursive.and.returnValue(Promise.resolve({ success: true, files: [] }));
   });
 
@@ -412,6 +413,187 @@ describe('MetadataService', () => {
       await service.removeBook('book-1');
 
       expect(projectService.updateMetadata).toHaveBeenCalled();
+    });
+
+    describe('removeBook cleanup', () => {
+      /** Simulated project files: absolute path → content. */
+      let files: Map<string, string>;
+      let staged: string[];
+
+      const C = '/test/project/characters';
+      const L = '/test/project/locations';
+      const H = '/test/project/houses';
+
+      const listUnder = (dir: string, pattern: string) =>
+        [...files.keys()]
+          .filter((path) => path.startsWith(`${dir}/`))
+          .filter((path) => {
+            const name = path.slice(path.lastIndexOf('/') + 1);
+            return pattern === '_*.md' ? name.startsWith('_') && name.endsWith('.md') : name.endsWith('.md');
+          })
+          .map((path) => ({ relativePath: path.slice(dir.length + 1), absolutePath: path }));
+
+      beforeEach(() => {
+        staged = [];
+        files = new Map([
+          [
+            `${C}/mara-vell/mara-vell.md`,
+            [
+              '---',
+              'id: mara',
+              'name: Mara Vell',
+              'category: main-character',
+              'books:',
+              '  - lc1',
+              '  - lc2',
+              'bookCategories:',
+              '  lc2: main-character',
+              'bookTags:',
+              '  lc1:',
+              '    - magic-user',
+              '  lc2:',
+              '    - magic-user',
+              'thumbnails:',
+              '  default: "[[img/mara.jpg]]"',
+              'bookThumbnails:',
+              '  lc1:',
+              '    default: "[[img/mara-lc1.jpg]]"',
+              '  lc2:',
+              '    default: "[[img/mara-lc2.jpg]]"',
+              '---',
+              '',
+              'Mara body.',
+            ].join('\n'),
+          ],
+          [`${C}/mara-vell/mara-vell.lc1.md`, 'Notes for book one.'],
+          [`${C}/mara-vell/mara-vell.lc2.md`, 'Notes for book two.'],
+          [
+            `${C}/@drafts/saffi-reed/saffi-reed.md`,
+            ['---', 'id: saffi', 'name: Saffi Reed', 'books:', '  - lc2', '---', '', 'Draft.'].join('\n'),
+          ],
+          [`${C}/@drafts/saffi-reed/saffi-reed.lc2.md`, 'Draft notes for book two.'],
+          [`${C}/_legacy-olm.md`, ['---', 'name: Olm', 'books:', '  - lc2', '---', '', 'Legacy.'].join('\n')],
+          [`${C}/_legacy-olm-lc2.md`, 'Legacy notes for book two.'],
+          [
+            `${L}/coast/_vellhaven-lighthouse.md`,
+            ['---', 'id: lighthouse', 'name: Vellhaven Lighthouse', 'books:', '  - lc1', '  - lc2', '---', '', 'Light.'].join('\n'),
+          ],
+          [
+            `${L}/_grey-harbor.md`,
+            ['---', 'id: harbor', 'name: Grey Harbor', 'books:', '  - lc1', '---', '', 'Harbor.'].join('\n'),
+          ],
+          [
+            `${H}/vell/vell.md`,
+            [
+              '---',
+              'type: house',
+              'id: house-vell',
+              'name: House Vell',
+              'characterIds:',
+              '  - mara',
+              'leadership:',
+              '  - id: reign-1',
+              '    characterIds:',
+              '      - mara',
+              '    period: ""',
+              '    books:',
+              '      - lc1',
+              '      - lc2',
+              '    notes: ""',
+              '---',
+              '',
+              'History.',
+            ].join('\n'),
+          ],
+        ]);
+
+        electronService.readDirectoryRecursive.and.callFake(async (dir: string, pattern: string) => ({
+          success: true,
+          files: listUnder(dir, pattern),
+        }));
+        electronService.readFile.and.callFake(async (path: string) =>
+          files.has(path) ? { success: true, content: files.get(path)! } : { success: false, error: 'ENOENT' }
+        );
+        electronService.writeFileAtomic.and.callFake(async (path: string, content: string) => {
+          files.set(path, content);
+          return { success: true };
+        });
+        electronService.stageForTrash.and.callFake(async (_project: string, path: string) => {
+          staged.push(path);
+          files.delete(path);
+          return { success: true, token: `t${staged.length}` };
+        });
+
+        const project = createValidProject();
+        project.metadata.books = [
+          { id: 'b1', name: 'Book One', code: 'lc1', color: '#FF0000' },
+          { id: 'lc2', name: 'Book Two', code: 'LC2', color: '#00FF00' },
+        ];
+        projectService.getCurrentProject.and.returnValue(project);
+        (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
+      });
+
+      it('moves the deleted book\'s character notes to the trash and keeps the others', async () => {
+        await service.removeBook('lc2');
+
+        expect(staged.sort()).toEqual([
+          `${C}/@drafts/saffi-reed/saffi-reed.lc2.md`,
+          `${C}/_legacy-olm-lc2.md`,
+          `${C}/mara-vell/mara-vell.lc2.md`,
+        ]);
+        expect(electronService.stageForTrash).toHaveBeenCalledWith(
+          '/test/project',
+          `${C}/mara-vell/mara-vell.lc2.md`,
+          jasmine.objectContaining({ kind: 'book-page', recordId: 'lc2' })
+        );
+        expect(files.get(`${C}/mara-vell/mara-vell.lc1.md`)).toBe('Notes for book one.');
+        expect(service.getBooks().map((book) => book.id)).toEqual(['b1']);
+      });
+
+      it('strips the book from character books, bookThumbnails and other per-book overrides', async () => {
+        await service.removeBook('lc2');
+
+        const mara = files.get(`${C}/mara-vell/mara-vell.md`)!;
+        expect(mara).not.toContain('lc2');
+        expect(mara).not.toContain('mara-lc2.jpg');
+        expect(mara).not.toContain('bookCategories');
+        expect(mara).toContain('mara-lc1.jpg');
+        expect(mara).toMatch(/books:\s*\n\s*- lc1/);
+        expect(mara).toMatch(/bookTags:\s*\n\s*lc1:/);
+        expect(mara).toContain('Mara body.');
+
+        expect(files.get(`${C}/@drafts/saffi-reed/saffi-reed.md`)).not.toContain('lc2');
+        expect(files.get(`${C}/_legacy-olm.md`)).not.toContain('lc2');
+      });
+
+      it('removes the book from location files', async () => {
+        await service.removeBook('lc2');
+
+        const lighthouse = files.get(`${L}/coast/_vellhaven-lighthouse.md`)!;
+        expect(lighthouse).not.toContain('lc2');
+        expect(lighthouse).toMatch(/books:\s*\n\s*- lc1/);
+        expect(lighthouse).toContain('Light.');
+        expect(electronService.writeFileAtomic).not.toHaveBeenCalledWith(`${L}/_grey-harbor.md`, jasmine.anything());
+      });
+
+      it('removes the book from House leadership book lists', async () => {
+        await service.removeBook('lc2');
+
+        const house = files.get(`${H}/vell/vell.md`)!;
+        expect(house).not.toContain('lc2');
+        expect(house).toContain('lc1');
+        expect(house).toContain('reign-1');
+        expect(house).toContain('History.');
+      });
+
+      it('touches no file when saving the metadata fails', async () => {
+        projectService.updateMetadata.and.returnValue(Promise.reject(new Error('disk full')));
+
+        await expectAsync(service.removeBook('lc2')).toBeRejected();
+
+        expect(electronService.writeFileAtomic).not.toHaveBeenCalled();
+        expect(electronService.stageForTrash).not.toHaveBeenCalled();
+      });
     });
   });
 

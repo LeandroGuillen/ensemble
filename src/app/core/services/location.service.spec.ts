@@ -233,6 +233,49 @@ A foggy port.`,
     expect(electronService.writeFileAtomic.calls.mostRecent().args[1]).not.toContain('type:');
   });
 
+  describe('book delete', () => {
+    it('drops a deleted book from in-memory locations so a later save does not write it back', async () => {
+      const project = createValidProject();
+      project.metadata.books = [
+        { id: 'lc1', name: 'Book 1', code: 'lc1', color: '#00FF00' },
+        { id: 'lc2', name: 'Book 2', code: 'lc2', color: '#0000FF' },
+      ];
+      projectService.getCurrentProject.and.returnValue(project);
+      const project$ = projectService.currentProject$ as BehaviorSubject<Project | null>;
+      project$.next(project);
+
+      const created = await service.createLocation({ ...createFormData(), books: ['lc1', 'lc2'] });
+
+      // MetadataService.removeBook saves metadata without the book.
+      const afterDelete: Project = {
+        ...project,
+        metadata: { ...project.metadata, books: [project.metadata.books![0]] },
+      };
+      projectService.getCurrentProject.and.returnValue(afterDelete);
+      project$.next(afterDelete);
+
+      expect(service.getLocationById(created.id)?.books).toEqual(['lc1']);
+
+      const updated = await service.updateLocation(created.id, { content: 'Edited later' });
+      expect(updated?.books).toEqual(['lc1']);
+      const markdown = electronService.writeFileAtomic.calls.mostRecent().args[1] as string;
+      expect(markdown).toContain('lc1');
+      expect(markdown).not.toContain('lc2');
+    });
+
+    it('keeps locations of another project untouched when switching projects', async () => {
+      const project = createValidProject();
+      projectService.getCurrentProject.and.returnValue(project);
+      const project$ = projectService.currentProject$ as BehaviorSubject<Project | null>;
+      project$.next(project);
+      const created = await service.createLocation({ ...createFormData(), books: ['n23'] });
+
+      project$.next({ path: '/other/project', metadata: { ...project.metadata, books: [] } });
+
+      expect(service.getLocationById(created.id)?.books).toEqual(['n23']);
+    });
+  });
+
   describe('createLocation', () => {
     it('creates a location file and updates the list', async () => {
       const project = createValidProject();

@@ -11,7 +11,7 @@ import {
 import { ValidationResult } from '../interfaces/validation.interface';
 import { CharacterValidator } from '../validators/character.validator';
 import { ProjectValidator } from '../validators/project.validator';
-import { pathJoin } from '../utils/path.utils';
+import { pathBasename, pathJoin } from '../utils/path.utils';
 import { slugify } from '../utils/slug.utils';
 import { parseMarkdown, generateMarkdown } from '../utils/markdown.utils';
 import {
@@ -26,6 +26,7 @@ import { ProjectService } from './project.service';
 import { CastService } from './cast.service';
 import { LoggingService } from './logging.service';
 import { requireProject } from '../utils/project.utils';
+import { sanitizeTrashRecordId } from '../trash/trash-record-id';
 import {
   isLegacyCharacterMainFile,
   parseCharacterMainFileLocation,
@@ -715,7 +716,11 @@ export class MetadataService {
   }
 
   /**
-   * Removes a book and cleans up character references
+   * Removes a book, then cleans up what referenced it on disk: character,
+   * location and House leadership `books:` entries, per-book character overrides (`bookCategories`,
+   * `bookTags`, `bookThumbnails`), and per-book character notes
+   * (`<slug>.<bookPageSuffix>.md`), which are staged for the OS trash so a new
+   * book with the same code does not pick them up.
    */
   async removeBook(id: string): Promise<void> {
     const metadata = this.metadataSubject.value;
@@ -726,21 +731,21 @@ export class MetadataService {
     // Initialize books array if it doesn't exist (for backward compatibility)
     const books = metadata.books || [];
 
-    const bookExists = books.some((book) => book.id === id);
-    if (!bookExists) {
+    const book = books.find((candidate) => candidate.id === id);
+    if (!book) {
       throw new Error(`Book with ID '${id}' not found`);
     }
 
-    // Clean up character references to this book
-    await this.cleanupBookReferencesFromCharacters(id);
-
-    // Remove book and save
+    // Remove the book first, so a failed save leaves every file untouched.
     const updatedMetadata = {
       ...metadata,
-      books: books.filter((book) => book.id !== id),
+      books: books.filter((candidate) => candidate.id !== id),
     };
 
     await this.saveMetadata(updatedMetadata);
+
+    await this.cleanupBookReferencesFromCharacters(book);
+    await this.cleanupBookReferencesFromLocationsAndHouses(id);
   }
 
   /**
@@ -1393,62 +1398,160 @@ export class MetadataService {
   // Utility Methods
 
   /**
-   * Cleans up references to a book from all character files
+   * Strips a deleted book from every character, Lore figure and draft main file
+   * (`books`, `bookCategories`, `bookTags`, `bookThumbnails`) and stages its
+   * per-book notes pages for the OS trash.
    */
-  private async cleanupBookReferencesFromCharacters(bookId: string): Promise<void> {
+  private async cleanupBookReferencesFromCharacters(book: Book): Promise<void> {
     if (!this.currentProjectPath) {
       return;
     }
+    const projectPath = this.currentProjectPath;
 
     try {
       const charactersPath = this.projectService.getCharactersFolderPath();
       const scanResult = await this.electronService.readDirectoryRecursive(charactersPath, '*.md');
-      
+
       if (!scanResult.success || !scanResult.files) {
         this.logger.warn('Failed to list character files:', scanResult.error);
         return;
       }
-      
-      for (const { relativePath, absolutePath: filePath } of scanResult.files) {
-        if (
-          !parseCharacterMainFileLocation(relativePath) &&
-          !isLegacyCharacterMainFile(relativePath)
-        ) {
+
+      const suffix = bookPageSuffix(book);
+      const scanned = new Map(
+        scanResult.files.map((file) => [file.relativePath.replace(/\\/g, '/'), file.absolutePath])
+      );
+      const mainFiles: string[] = [];
+      const notePaths: string[] = [];
+
+      for (const { relativePath, absolutePath } of scanResult.files) {
+        const normalizedPath = relativePath.replace(/\\/g, '/');
+        const folderBased = !!parseCharacterMainFileLocation(normalizedPath);
+        if (!folderBased && !isLegacyCharacterMainFile(normalizedPath)) {
           continue;
         }
-        const readResult = await this.electronService.readFile(filePath);
-        
-        if (!readResult.success || !readResult.content) {
-          this.logger.warn(`Failed to read character file ${filePath}:`, readResult.error);
-          continue;
+        mainFiles.push(absolutePath);
+
+        // Folder-based pages are `<slug>.<suffix>.md`; legacy flat pages `<base>-<bookId>.md`.
+        const base = normalizedPath.slice(0, -'.md'.length);
+        const notePath = scanned.get(folderBased ? `${base}.${suffix}.md` : `${base}-${book.id}.md`);
+        if (notePath) {
+          notePaths.push(notePath);
         }
-        
-        // Parse frontmatter to check if this character references the book
-        const parsed = parseMarkdown(readResult.content);
-        if (!parsed.success || !parsed.data) {
-          this.logger.warn(`Failed to parse character file ${filePath}:`, parsed.error);
-          continue;
-        }
-        const frontmatter = parsed.data.frontmatter as Record<string, any>;
-        
-        const books = frontmatter['books'];
-        if (books && Array.isArray(books) && books.includes(bookId)) {
-          // Remove the book reference
-          const updatedBooks = books.filter((id: string) => id !== bookId);
-          const updatedFrontmatter = { ...frontmatter, books: updatedBooks };
-          
-          // Update the file
-          const updatedContent = generateMarkdown(updatedFrontmatter, parsed.data.content);
-          const writeResult = await this.electronService.writeFileAtomic(filePath, updatedContent);
-          
-          if (!writeResult.success) {
-            this.logger.warn(`Failed to update character file ${filePath}:`, writeResult.error);
-          }
+      }
+
+      await this.rewriteFrontmatter(
+        mainFiles.filter((path) => !notePaths.includes(path)),
+        'character',
+        (frontmatter) => stripBookFromCharacterFrontmatter(frontmatter, book.id)
+      );
+
+      for (const notePath of notePaths) {
+        const staged = await this.electronService.stageForTrash(projectPath, notePath, {
+          kind: 'book-page',
+          recordId: sanitizeTrashRecordId(book.id),
+          name: pathBasename(notePath),
+        });
+        if (!staged.success) {
+          this.logger.warn(`Failed to move book notes ${notePath} to the trash:`, staged.error);
         }
       }
     } catch (error) {
       this.logger.error('Failed to cleanup book references from characters', error);
-      // Don't throw here as we still want to remove the book from metadata
+      // Don't throw: the book is already gone from metadata
+    }
+  }
+
+  /** Removes a deleted book from location `books:` and House leadership `books:` lists. */
+  private async cleanupBookReferencesFromLocationsAndHouses(bookId: string): Promise<void> {
+    if (!this.currentProjectPath) {
+      return;
+    }
+    const withoutBook = (value: unknown) =>
+      Array.isArray(value) && value.includes(bookId) ? value.filter((id) => id !== bookId) : null;
+
+    const folders = [
+      {
+        path: this.projectService.getLocationsFolderPath(),
+        pattern: '_*.md',
+        label: 'location',
+        transform: (frontmatter: Record<string, unknown>) => {
+          const books = withoutBook(frontmatter['books']);
+          return books ? { ...frontmatter, books } : null;
+        },
+      },
+      {
+        path: pathJoin(this.currentProjectPath, 'houses'),
+        pattern: '*.md',
+        label: 'House',
+        transform: (frontmatter: Record<string, unknown>) => {
+          const leadership = frontmatter['leadership'];
+          if (frontmatter['type'] !== 'house' || !Array.isArray(leadership)) {
+            return null;
+          }
+          let changed = false;
+          const updated = leadership.map((entry) => {
+            const books = entry && typeof entry === 'object' ? withoutBook(entry['books']) : null;
+            if (!books) {
+              return entry;
+            }
+            changed = true;
+            return { ...entry, books };
+          });
+          return changed ? { ...frontmatter, leadership: updated } : null;
+        },
+      },
+    ];
+
+    for (const folder of folders) {
+      try {
+        const scanResult = await this.electronService.readDirectoryRecursive(folder.path, folder.pattern);
+        if (!scanResult.success || !scanResult.files) {
+          this.logger.warn(`Failed to list ${folder.label} files:`, scanResult.error);
+          continue;
+        }
+        await this.rewriteFrontmatter(
+          scanResult.files.map((file) => file.absolutePath),
+          folder.label,
+          folder.transform
+        );
+      } catch (error) {
+        this.logger.error(`Failed to cleanup book references from ${folder.label} files`, error);
+      }
+    }
+  }
+
+  /**
+   * Rewrites the frontmatter of each file with `transform`; a null result leaves
+   * the file untouched. Failures are logged per file and never thrown.
+   */
+  private async rewriteFrontmatter(
+    filePaths: string[],
+    label: string,
+    transform: (frontmatter: Record<string, unknown>) => Record<string, unknown> | null
+  ): Promise<void> {
+    for (const filePath of filePaths) {
+      const readResult = await this.electronService.readFile(filePath);
+      if (!readResult.success || !readResult.content) {
+        this.logger.warn(`Failed to read ${label} file ${filePath}:`, readResult.error);
+        continue;
+      }
+      const parsed = parseMarkdown(readResult.content);
+      if (!parsed.success || !parsed.data) {
+        this.logger.warn(`Failed to parse ${label} file ${filePath}:`, parsed.error);
+        continue;
+      }
+      const updated = transform(parsed.data.frontmatter as Record<string, unknown>);
+      if (!updated) {
+        continue;
+      }
+      const writeResult = await this.electronService.writeFileAtomic(
+        filePath,
+        generateMarkdown(updated, parsed.data.content)
+      );
+      if (!writeResult.success) {
+        this.logger.warn(`Failed to update ${label} file ${filePath}:`, writeResult.error);
+      }
     }
   }
 
@@ -1545,4 +1648,41 @@ export class MetadataService {
     this.metadataSubject.next(null);
     this.currentProjectPath = null;
   }
+}
+
+/** Character frontmatter maps keyed by book id (per-book overrides). */
+const PER_BOOK_CHARACTER_FIELDS = ['bookCategories', 'bookTags', 'bookThumbnails'] as const;
+
+/**
+ * Removes `bookId` from a character's `books` list and per-book overrides.
+ * Empty override maps are dropped. Returns null when nothing referenced the book.
+ */
+export function stripBookFromCharacterFrontmatter(
+  frontmatter: Record<string, unknown>,
+  bookId: string
+): Record<string, unknown> | null {
+  const updated: Record<string, unknown> = { ...frontmatter };
+  let changed = false;
+
+  const books = frontmatter['books'];
+  if (Array.isArray(books) && books.includes(bookId)) {
+    updated['books'] = books.filter((id) => id !== bookId);
+    changed = true;
+  }
+
+  for (const field of PER_BOOK_CHARACTER_FIELDS) {
+    const map = frontmatter[field];
+    if (!map || typeof map !== 'object' || Array.isArray(map) || !Object.hasOwn(map, bookId)) {
+      continue;
+    }
+    const { [bookId]: _removed, ...rest } = map as Record<string, unknown>;
+    if (Object.keys(rest).length > 0) {
+      updated[field] = rest;
+    } else {
+      delete updated[field];
+    }
+    changed = true;
+  }
+
+  return changed ? updated : null;
 }
