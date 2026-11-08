@@ -1,4 +1,23 @@
 /**
+ * `[[Target|Label]]` with any run of backslashes right before it. Not after
+ * `!` (embeds) or inside a backslash run (the whole run is captured).
+ */
+const WIKI_LINK = /(?<![!\\])(\\*)\[\[([^\[\]\n|]+)(?:\|([^\[\]\n]*))?\]\]/g;
+
+/**
+ * Display text of a wiki link. A `#` directly after a character starts a
+ * heading or block fragment (`[[Mara#Backstory]]` -> `Mara`); a `#` after a
+ * space is part of the name (`[[Unit #7]]` -> `Unit #7`). An odd number of
+ * backslashes escapes the link, which is then left as written.
+ */
+function wikiLinkReplacement(match: string, slashes: string, target: string, label?: string): string {
+  if (slashes.length % 2 === 1) return match;
+  const fragment = target.search(/(?<=\S)#/);
+  const name = (fragment === -1 ? target : target.slice(0, fragment)).trim();
+  return slashes + ((label && label.trim()) || name || target.trim());
+}
+
+/**
  * Plain-text previews of Markdown bodies for list cards and rows.
  *
  * Cards should read like prose, not like source: `[[Target|Label]]` becomes
@@ -15,11 +34,8 @@ export function markdownExcerpt(content: string | null | undefined, maxLength = 
     // Embeds: ![[image.png]] and ![alt](src)
     .replace(/!\[\[[^\]\n]*\]\]/g, ' ')
     .replace(/!\[[^\]\n]*\]\([^)\n]*\)/g, ' ')
-    // Wiki links: [[Target|Label]] -> Label, [[Target#Heading]] -> Target
-    .replace(/\\?\[\[([^\[\]\n|]+)(?:\|([^\[\]\n]*))?\]\]/g, (_m, target: string, label?: string) => {
-      const shown = (label && label.trim()) || target.split('#')[0].trim() || target.trim();
-      return shown;
-    })
+    // Wiki links: [[Target|Label]] -> Label, [[Target#Heading]] -> Target, \[[Literal]] kept
+    .replace(WIKI_LINK, wikiLinkReplacement)
     // Markdown links: [text](url) -> text
     .replace(/\[([^\]\n]+)\]\([^)\n]*\)/g, '$1')
     // Inline code
@@ -53,7 +69,5 @@ export function markdownExcerpt(content: string | null | undefined, maxLength = 
  */
 export function wikiLinksAsText(text: string | null | undefined): string {
   if (!text) return '';
-  return text.replace(/(?<!!)\\?\[\[([^\[\]\n|]+)(?:\|([^\[\]\n]*))?\]\]/g, (_m, target: string, label?: string) =>
-    (label && label.trim()) || target.split('#')[0].trim() || target.trim()
-  );
+  return text.replace(WIKI_LINK, wikiLinkReplacement);
 }
