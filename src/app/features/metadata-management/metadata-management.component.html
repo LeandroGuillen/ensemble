@@ -190,10 +190,10 @@
                           [class.confirming]="isDeletePending('category', category.id)"
                           (click)="deleteCategory(category); $event.stopPropagation()"
                           [disabled]="!canDeleteCategory(category) || saving"
-                          [attr.aria-label]="isDeletePending('category', category.id) ? 'Confirm deleting ' + category.name : 'Delete ' + category.name"
+                          [attr.aria-label]="isDeletePending('category', category.id) ? 'Confirm deleting ' + category.name + '. ' + deleteConfirmLabel('category', category.id) : 'Delete ' + category.name"
                           [title]="!canDeleteCategory(category) ? 'Cannot delete default category' : (isDeletePending('category', category.id) ? 'Confirm deletion' : 'Delete category')"
                           >
-                          {{ isDeletePending('category', category.id) ? 'Are you sure?' : 'Delete' }}
+                          {{ isDeletePending('category', category.id) ? deleteConfirmLabel('category', category.id) : 'Delete' }}
                         </button>
                       </div>
                     }
@@ -448,10 +448,10 @@
                           [class.confirming]="isDeletePending('tag', tag.id)"
                           (click)="deleteTag(tag); $event.stopPropagation()"
                           [disabled]="saving"
-                          [attr.aria-label]="isDeletePending('tag', tag.id) ? 'Confirm deleting ' + tag.name : 'Delete ' + tag.name"
+                          [attr.aria-label]="isDeletePending('tag', tag.id) ? 'Confirm deleting ' + tag.name + '. ' + deleteConfirmLabel('tag', tag.id) : 'Delete ' + tag.name"
                           [title]="isDeletePending('tag', tag.id) ? 'Confirm deletion' : 'Delete tag'"
                           >
-                          {{ isDeletePending('tag', tag.id) ? 'Are you sure?' : 'Delete' }}
+                          {{ isDeletePending('tag', tag.id) ? deleteConfirmLabel('tag', tag.id) : 'Delete' }}
                         </button>
                       </div>
                     }

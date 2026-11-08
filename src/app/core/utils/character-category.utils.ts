@@ -101,3 +101,26 @@ export function normalizeBookTags(
 
   return Object.keys(result).length > 0 ? result : undefined;
 }
+
+type CategoryTagRefs = {
+  category: string;
+  tags?: string[];
+  bookCategories?: Record<string, string>;
+  bookTags?: Record<string, string[]>;
+};
+
+/** Whether a character uses `categoryId` as its category or in a per-book override. */
+export function characterUsesCategory(character: CategoryTagRefs, categoryId: string): boolean {
+  return (
+    character.category === categoryId ||
+    Object.values(character.bookCategories ?? {}).includes(categoryId)
+  );
+}
+
+/** Whether a character has `tagId` as a tag or in a per-book override. */
+export function characterUsesTag(character: CategoryTagRefs, tagId: string): boolean {
+  return (
+    !!character.tags?.includes(tagId) ||
+    Object.values(character.bookTags ?? {}).some((tags) => tags.includes(tagId))
+  );
+}

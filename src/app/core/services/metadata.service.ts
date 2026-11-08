@@ -235,6 +235,11 @@ export class MetadataService {
     };
 
     await this.saveMetadata(updatedMetadata);
+
+    // A per-book override naming a deleted category would block saving the character.
+    await this.rewriteCharacterMainFiles('category', (frontmatter) =>
+      stripCategoryFromCharacterFrontmatter(frontmatter, id)
+    );
   }
 
   // Tag Management
@@ -348,6 +353,11 @@ export class MetadataService {
     };
 
     await this.saveMetadata(updatedMetadata);
+
+    // A per-book override naming a deleted tag would block saving the character.
+    await this.rewriteCharacterMainFiles('tag', (frontmatter) =>
+      stripTagFromCharacterFrontmatter(frontmatter, id)
+    );
   }
 
   // Cast Management
@@ -1462,6 +1472,36 @@ export class MetadataService {
     }
   }
 
+  /**
+   * Rewrites every character, Lore figure and draft main file with `transform`
+   * after a category or tag was deleted. Never throws: the metadata is already saved.
+   */
+  private async rewriteCharacterMainFiles(
+    deletedKind: string,
+    transform: (frontmatter: Record<string, unknown>) => Record<string, unknown> | null
+  ): Promise<void> {
+    if (!this.currentProjectPath) {
+      return;
+    }
+    try {
+      const charactersPath = this.projectService.getCharactersFolderPath();
+      const scanResult = await this.electronService.readDirectoryRecursive(charactersPath, '*.md');
+      if (!scanResult.success || !scanResult.files) {
+        this.logger.warn('Failed to list character files:', scanResult.error);
+        return;
+      }
+      const mainFiles = scanResult.files
+        .filter(({ relativePath }) => {
+          const normalizedPath = relativePath.replace(/\\/g, '/');
+          return !!parseCharacterMainFileLocation(normalizedPath) || isLegacyCharacterMainFile(normalizedPath);
+        })
+        .map((file) => file.absolutePath);
+      await this.rewriteFrontmatter(mainFiles, 'character', transform);
+    } catch (error) {
+      this.logger.error(`Failed to cleanup deleted ${deletedKind} from characters`, error);
+    }
+  }
+
   /** Removes a deleted book from location `books:` and House leadership `books:` lists. */
   private async cleanupBookReferencesFromLocationsAndHouses(bookId: string): Promise<void> {
     if (!this.currentProjectPath) {
@@ -1681,6 +1721,95 @@ export function stripBookFromCharacterFrontmatter(
     } else {
       delete updated[field];
     }
+    changed = true;
+  }
+
+  return changed ? updated : null;
+}
+
+/**
+ * Maps each entry of a per-book override map; entries mapped to undefined are
+ * dropped. Returns null when nothing changed and undefined when the map ends up empty.
+ */
+function filterPerBookMap(
+  map: unknown,
+  mapEntry: (value: unknown) => unknown | undefined
+): Record<string, unknown> | undefined | null {
+  if (!map || typeof map !== 'object' || Array.isArray(map)) {
+    return null;
+  }
+  let changed = false;
+  const result: Record<string, unknown> = {};
+  for (const [bookId, value] of Object.entries(map as Record<string, unknown>)) {
+    const next = mapEntry(value);
+    if (next !== value) {
+      changed = true;
+    }
+    if (next !== undefined) {
+      result[bookId] = next;
+    }
+  }
+  if (!changed) {
+    return null;
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
+}
+
+/** Sets or deletes `field` on `frontmatter` (undefined deletes it). */
+function setOrDelete(frontmatter: Record<string, unknown>, field: string, value: unknown): void {
+  if (value === undefined) {
+    delete frontmatter[field];
+  } else {
+    frontmatter[field] = value;
+  }
+}
+
+/**
+ * Removes a deleted category from a character's per-book `bookCategories` overrides
+ * (the book falls back to the main category). The main `category` is left as is.
+ * Returns null when no override used the category.
+ */
+export function stripCategoryFromCharacterFrontmatter(
+  frontmatter: Record<string, unknown>,
+  categoryId: string
+): Record<string, unknown> | null {
+  const bookCategories = filterPerBookMap(frontmatter['bookCategories'], (value) =>
+    value === categoryId ? undefined : value
+  );
+  if (bookCategories === null) {
+    return null;
+  }
+  const updated = { ...frontmatter };
+  setOrDelete(updated, 'bookCategories', bookCategories);
+  return updated;
+}
+
+/**
+ * Removes a deleted tag from a character's `tags` and per-book `bookTags` overrides.
+ * A book override left without tags is dropped. Returns null when nothing used the tag.
+ */
+export function stripTagFromCharacterFrontmatter(
+  frontmatter: Record<string, unknown>,
+  tagId: string
+): Record<string, unknown> | null {
+  const updated = { ...frontmatter };
+  let changed = false;
+
+  const tags = frontmatter['tags'];
+  if (Array.isArray(tags) && tags.includes(tagId)) {
+    updated['tags'] = tags.filter((id) => id !== tagId);
+    changed = true;
+  }
+
+  const bookTags = filterPerBookMap(frontmatter['bookTags'], (value) => {
+    if (!Array.isArray(value) || !value.includes(tagId)) {
+      return value;
+    }
+    const remaining = value.filter((id) => id !== tagId);
+    return remaining.length > 0 ? remaining : undefined;
+  });
+  if (bookTags !== null) {
+    setOrDelete(updated, 'bookTags', bookTags);
     changed = true;
   }
 

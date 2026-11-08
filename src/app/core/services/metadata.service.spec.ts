@@ -597,6 +597,111 @@ describe('MetadataService', () => {
     });
   });
 
+  describe('deleting a category or tag cleans character files', () => {
+    let files: Map<string, string>;
+    const C = '/test/project/characters';
+
+    const ilse = [
+      '---',
+      'id: ilse',
+      'name: Ilse Dunmore',
+      'category: main-character',
+      'tags:',
+      '  - magic-user',
+      '  - tide-touched',
+      'books:',
+      '  - lc1',
+      '  - lc2',
+      'bookCategories:',
+      '  lc1: antagonist',
+      '  lc2: main-character',
+      'bookTags:',
+      '  lc1:',
+      '    - magic-user',
+      '    - tide-touched',
+      '  lc2:',
+      '    - tide-touched',
+      '---',
+      '',
+      'Ilse body.',
+    ].join('\n');
+
+    beforeEach(() => {
+      files = new Map([
+        [`${C}/ilse-dunmore/ilse-dunmore.md`, ilse],
+        [`${C}/ilse-dunmore/ilse-dunmore.lc1.md`, 'Notes tide-touched antagonist.'],
+        [
+          `${C}/@drafts/wren/wren.md`,
+          ['---', 'id: wren', 'name: Wren', 'books:', '  - lc2', 'bookCategories:', '  lc2: antagonist', '---', '', 'Draft.'].join('\n'),
+        ],
+        [`${C}/plain/plain.md`, ['---', 'id: plain', 'name: Plain', 'category: main-character', '---', '', 'Plain.'].join('\n')],
+      ]);
+      electronService.readDirectoryRecursive.and.callFake(async (dir: string) => ({
+        success: true,
+        files: [...files.keys()]
+          .filter((path) => path.startsWith(`${dir}/`))
+          .map((path) => ({ relativePath: path.slice(dir.length + 1), absolutePath: path })),
+      }));
+      electronService.readFile.and.callFake(async (path: string) =>
+        files.has(path) ? { success: true, content: files.get(path)! } : { success: false, error: 'ENOENT' }
+      );
+      electronService.writeFileAtomic.and.callFake(async (path: string, content: string) => {
+        files.set(path, content);
+        return { success: true };
+      });
+
+      const project = createValidProject();
+      project.metadata.categories.push({ id: 'antagonist', name: 'Antagonist', color: '#000000' });
+      project.metadata.tags.push({ id: 'tide-touched', name: 'Tide Touched', color: '#00FFFF' });
+      project.metadata.books = [
+        { id: 'lc1', name: 'Book One', color: '#FF0000' },
+        { id: 'lc2', name: 'Book Two', color: '#00FF00' },
+      ];
+      projectService.getCurrentProject.and.returnValue(project);
+      (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
+    });
+
+    it('removeTag strips the tag from main tags and per-book bookTags', async () => {
+      await service.removeTag('tide-touched');
+
+      const saved = files.get(`${C}/ilse-dunmore/ilse-dunmore.md`)!;
+      expect(saved).not.toContain('tide-touched');
+      expect(saved).toMatch(/tags:\s*\n\s*- magic-user/);
+      expect(saved).toMatch(/bookTags:\s*\n\s*lc1:\s*\n\s*- magic-user/);
+      expect(saved).not.toMatch(/lc2:\s*\n\s*-/); // the emptied lc2 override is gone
+      expect(saved).toContain('lc1: antagonist');
+      expect(saved).toContain('Ilse body.');
+      // Book notes pages and files that never used the tag are not touched.
+      expect(files.get(`${C}/ilse-dunmore/ilse-dunmore.lc1.md`)).toBe('Notes tide-touched antagonist.');
+      expect(electronService.writeFileAtomic).not.toHaveBeenCalledWith(`${C}/plain/plain.md`, jasmine.anything());
+      expect(service.getTags().map((tag) => tag.id)).toEqual(['magic-user']);
+    });
+
+    it('removeCategory strips the category from bookCategories, in drafts too, keeping other overrides', async () => {
+      await service.removeCategory('antagonist');
+
+      const saved = files.get(`${C}/ilse-dunmore/ilse-dunmore.md`)!;
+      expect(saved).not.toContain('antagonist');
+      expect(saved).toMatch(/bookCategories:\s*\n\s*lc2: main-character/);
+      expect(saved).toContain('category: main-character');
+      expect(saved).toContain('tide-touched');
+
+      const draft = files.get(`${C}/@drafts/wren/wren.md`)!;
+      expect(draft).not.toContain('antagonist');
+      expect(draft).not.toContain('bookCategories');
+      expect(electronService.writeFileAtomic).not.toHaveBeenCalledWith(`${C}/plain/plain.md`, jasmine.anything());
+    });
+
+    it('touches no character file when saving the metadata fails', async () => {
+      projectService.updateMetadata.and.returnValue(Promise.reject(new Error('disk full')));
+
+      await expectAsync(service.removeTag('tide-touched')).toBeRejected();
+      await expectAsync(service.removeCategory('antagonist')).toBeRejected();
+
+      expect(electronService.writeFileAtomic).not.toHaveBeenCalled();
+    });
+  });
+
   describe('Settings Management', () => {
     beforeEach(() => {
       const project = createValidProject();

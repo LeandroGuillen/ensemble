@@ -1149,15 +1149,20 @@ export class CharacterService {
       }
 
       const nextBooks = data.books ?? existingCharacter.books;
-      const nextBookCategories = normalizeBookCategories(
-        'bookCategories' in data ? data.bookCategories : existingCharacter.bookCategories,
-        nextBooks
-      );
+      // Overrides naming a category or tag deleted in Settings are dropped, not
+      // rejected, so a stale id can never make the character unsaveable.
+      const { bookCategories: nextBookCategories, bookTags: nextBookTags } =
+        this.dropDeletedOverrideIds(
+          normalizeBookCategories(
+            'bookCategories' in data ? data.bookCategories : existingCharacter.bookCategories,
+            nextBooks
+          ),
+          normalizeBookTags(
+            'bookTags' in data ? data.bookTags : existingCharacter.bookTags,
+            nextBooks
+          )
+        );
       await this.validateBookCategoryReferences(nextBookCategories);
-      const nextBookTags = normalizeBookTags(
-        'bookTags' in data ? data.bookTags : existingCharacter.bookTags,
-        nextBooks
-      );
       await this.validateBookTagReferences(nextBookTags);
       const nextBookThumbnails = normalizeBookThumbnailsMap(
         'bookThumbnails' in data ? data.bookThumbnails : relocatedCharacter.bookThumbnails,
@@ -1509,6 +1514,29 @@ export class CharacterService {
         throw new Error(`Referenced book '${bookId}' does not exist in project metadata`);
       }
     }
+  }
+
+  /**
+   * Removes per-book category/tag override ids that are no longer in project
+   * metadata (deleted in Settings). Empty overrides are dropped, as on load.
+   */
+  private dropDeletedOverrideIds(
+    bookCategories: Record<string, string> | undefined,
+    bookTags: Record<string, string[]> | undefined
+  ): { bookCategories?: Record<string, string>; bookTags?: Record<string, string[]> } {
+    const metadata = requireProject(this.projectService.getCurrentProject()).metadata;
+    const categoryIds = new Set((metadata.categories || []).map((category) => category.id));
+    const tagIds = new Set((metadata.tags || []).map((tag) => tag.id));
+
+    const keptCategories = Object.entries(bookCategories ?? {}).filter(([, id]) => categoryIds.has(id));
+    const keptTags = Object.entries(bookTags ?? {})
+      .map(([bookId, tags]) => [bookId, tags.filter((id) => tagIds.has(id))] as const)
+      .filter(([, tags]) => tags.length > 0);
+
+    return {
+      bookCategories: keptCategories.length > 0 ? Object.fromEntries(keptCategories) : undefined,
+      bookTags: keptTags.length > 0 ? Object.fromEntries(keptTags) : undefined,
+    };
   }
 
   /**

@@ -1,4 +1,6 @@
 import {
+  characterUsesCategory,
+  characterUsesTag,
   isEffectiveCategoryEnabled,
   normalizeBookCategories,
   normalizeBookTags,
@@ -162,6 +164,25 @@ describe('character-category.utils', () => {
 
     it('keeps unknown categories visible', () => {
       expect(isEffectiveCategoryEnabled({ category: 'legacy' }, '', categories, [])).toBeTrue();
+    });
+  });
+
+  describe('characterUsesCategory / characterUsesTag', () => {
+    const character = {
+      category: 'main-character',
+      tags: ['magic-user'],
+      bookCategories: { lc1: 'antagonist' },
+      bookTags: { lc2: ['tide-touched'] },
+    };
+
+    it('counts the main value and per-book overrides', () => {
+      expect(characterUsesCategory(character, 'main-character')).toBeTrue();
+      expect(characterUsesCategory(character, 'antagonist')).toBeTrue();
+      expect(characterUsesCategory(character, 'mentor')).toBeFalse();
+      expect(characterUsesTag(character, 'magic-user')).toBeTrue();
+      expect(characterUsesTag(character, 'tide-touched')).toBeTrue();
+      expect(characterUsesTag(character, 'cursed')).toBeFalse();
+      expect(characterUsesTag({ category: '' }, 'cursed')).toBeFalse();
     });
   });
 });

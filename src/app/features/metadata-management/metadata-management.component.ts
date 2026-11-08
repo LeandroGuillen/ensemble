@@ -24,12 +24,14 @@ import { PreferencesService } from '../../core/services/preferences.service';
 import { ModalService } from '../../core/services/modal.service';
 import { Category, Tag, ProjectSettings, CategoryFolderMode, CharacterStyle } from '../../core/interfaces/project.interface';
 import { Theme } from '../../core/interfaces/theme.interface';
+import { Character } from '../../core/interfaces/character.interface';
 import { Skin } from '../../core/interfaces/skin.interface';
 import { DEFAULT_SKIN_ID } from '../../core/skins';
 import { ColorPaletteConfig } from '../../core/interfaces/color-palette.interface';
 import { BASE_COLOR_NAMES } from '../../core/interfaces/color-palette.interface';
 import { DEFAULT_BASE_COLORS } from '../../core/utils/color-palette.utils';
 import { slugify } from '../../core/utils/slug.utils';
+import { characterUsesCategory, characterUsesTag } from '../../core/utils/character-category.utils';
 import { requireProject } from '../../core/utils/project.utils';
 import { DEFAULT_CHARACTER_STYLE_ID } from '../../core/constants/project.constants';
 import type { SettingsSectionId } from '../settings/settings-section';
@@ -53,6 +55,8 @@ type DeleteTargetKind = 'category' | 'tag' | 'character-style';
 interface PendingDelete {
   kind: DeleteTargetKind;
   id: string;
+  /** Characters (including Lore and drafts) using the category or tag. */
+  usedBy?: number;
 }
 
 @Component({
@@ -422,7 +426,12 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
   }
 
   async deleteCategory(category: Category): Promise<void> {
-    if (!this.canDeleteCategory(category) || !this.beginDeleteConfirmation('category', category.id)) {
+    if (
+      !this.canDeleteCategory(category) ||
+      !this.beginDeleteConfirmation('category', category.id, () =>
+        this.countCharactersUsing((character) => characterUsesCategory(character, category.id))
+      )
+    ) {
       return;
     }
 
@@ -493,7 +502,11 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
   }
 
   async deleteTag(tag: Tag): Promise<void> {
-    if (!this.beginDeleteConfirmation('tag', tag.id)) {
+    if (
+      !this.beginDeleteConfirmation('tag', tag.id, () =>
+        this.countCharactersUsing((character) => characterUsesTag(character, tag.id))
+      )
+    ) {
       return;
     }
 
@@ -680,10 +693,29 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
     return this.pendingDelete?.kind === kind && this.pendingDelete.id === id;
   }
 
-  private beginDeleteConfirmation(kind: DeleteTargetKind, id: string): boolean {
+  /** Label of a delete button waiting for confirmation; says how many characters use the item. */
+  deleteConfirmLabel(kind: DeleteTargetKind, id: string): string {
+    const usedBy = this.isDeletePending(kind, id) ? this.pendingDelete?.usedBy : undefined;
+    if (usedBy === undefined) {
+      return 'Are you sure?';
+    }
+    if (usedBy === 0) {
+      return 'No characters use it. Delete?';
+    }
+    return `Used by ${usedBy} character${usedBy === 1 ? '' : 's'}. Delete?`;
+  }
+
+  private countCharactersUsing(uses: (character: Character) => boolean): number {
+    return [
+      ...this.characterService.getReferenceCharactersSnapshot(),
+      ...this.characterService.getDraftsSnapshot(),
+    ].filter(uses).length;
+  }
+
+  private beginDeleteConfirmation(kind: DeleteTargetKind, id: string, countUsage?: () => number): boolean {
     if (!this.isDeletePending(kind, id)) {
       this.clearPendingDelete();
-      this.pendingDelete = { kind, id };
+      this.pendingDelete = { kind, id, usedBy: countUsage?.() };
       this.pendingDeleteTimeout = setTimeout(() => {
         this.clearPendingDelete();
       }, 3000);

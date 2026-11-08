@@ -809,6 +809,65 @@ describe('CharacterService', () => {
       expect(savedContent).not.toContain('bookTags:');
     });
 
+    describe('after a category or tag used in a per-book override was deleted', () => {
+      // Project metadata no longer has 'antagonist' or 'tide-touched' (deleted in Settings).
+      const setUp = () => {
+        const project = createValidProject();
+        project.metadata.books = [
+          { id: 'lc1', name: 'Book One', color: '#111' },
+          { id: 'lc2', name: 'Book Two', color: '#222' },
+        ];
+        projectService.getCurrentProject.and.returnValue(project);
+        (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
+
+        const ilse: Character = {
+          id: 'ilse',
+          name: 'Ilse Dunmore',
+          category: 'main-character',
+          tags: [],
+          books: ['lc1', 'lc2'],
+          bookCategories: { lc1: 'antagonist', lc2: 'main-character' },
+          bookTags: { lc1: ['magic-user', 'tide-touched'], lc2: ['tide-touched'] },
+          prompts: [],
+          content: 'Old notes',
+          created: new Date(),
+          modified: new Date(),
+          relativePath: 'ilse-dunmore/ilse-dunmore.md',
+          filePath: '/test/project/characters/ilse-dunmore/ilse-dunmore.md',
+        };
+        (service as any).charactersSubject.next([ilse]);
+        electronService.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));
+        return ilse;
+      };
+
+      it('saves an edit and drops the stale override ids', async () => {
+        setUp();
+
+        const updated = await service.updateCharacter('ilse', { content: 'Old notes, edited' });
+
+        expect(updated?.content).toBe('Old notes, edited');
+        expect(updated?.bookCategories).toEqual({ lc2: 'main-character' });
+        expect(updated?.bookTags).toEqual({ lc1: ['magic-user'] });
+        const savedContent = electronService.writeFileAtomic.calls.mostRecent().args[1] as string;
+        expect(savedContent).not.toContain('antagonist');
+        expect(savedContent).not.toContain('tide-touched');
+        expect(savedContent).toContain('Old notes, edited');
+      });
+
+      it('saves when the form sends the stale overrides back unchanged', async () => {
+        const ilse = setUp();
+
+        const updated = await service.updateCharacter('ilse', {
+          content: 'Edited',
+          bookCategories: { ...ilse.bookCategories },
+          bookTags: { ...ilse.bookTags },
+        });
+
+        expect(updated?.bookCategories).toEqual({ lc2: 'main-character' });
+        expect(updated?.bookTags).toEqual({ lc1: ['magic-user'] });
+      });
+    });
+
     it('should keep a stable id when the character is renamed', async () => {
       const project = createValidProject();
       projectService.getCurrentProject.and.returnValue(project);

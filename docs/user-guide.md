@@ -135,3 +135,8 @@ overwriting.
   category, tags and pictures), location and House reign, and moves the
   characters' notes for that book (`<slug>.<code>.md`) to your system Trash,
   so a new book with the same code starts with no notes.
+- **Deleting a tag or category** (Settings) first tells you how many characters
+  use it. A deleted tag is removed from every character's tags and per-book
+  tags; a deleted category is removed from per-book categories (that book then
+  uses the character's main category). A character still naming a deleted tag
+  or category in a per-book override has it dropped the next time it is saved.
