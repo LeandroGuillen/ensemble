@@ -4,7 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
-import { debounceTime } from 'rxjs';
+import { debounceTime, tap } from 'rxjs';
 import { MetadataService } from '../../core/services/metadata.service';
 import { LoggingService } from '../../core/services/logging.service';
 import { ProjectService } from '../../core/services/project.service';
@@ -22,6 +22,7 @@ import { ElectronService } from '../../core/services/electron.service';
 import { ZoomService } from '../../core/services/zoom.service';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { ModalService } from '../../core/services/modal.service';
+import { PendingEditsService } from '../../core/services/pending-edits.service';
 import { Category, Tag, ProjectSettings, CategoryFolderMode, CharacterStyle } from '../../core/interfaces/project.interface';
 import { Theme } from '../../core/interfaces/theme.interface';
 import { Character } from '../../core/interfaces/character.interface';
@@ -69,6 +70,12 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
   private readonly toasts = inject(NotificationService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly projectIconService = inject(ProjectIconService);
+  private readonly pendingEdits = inject(PendingEditsService);
+  /** Edited but not yet saved (the 600 ms autosave debounce is still running). */
+  private settingsEditPending = false;
+  private projectNameEditPending = false;
+  private projectNameSave: Promise<void> = Promise.resolve();
+  private unregisterPendingEdits: (() => void) | null = null;
 
   /** Project identity (General → Project): name and sidebar icon. */
   readonly projectNameControl = new FormControl('', {
@@ -247,9 +254,13 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
       });
 
     this.settingsForm.valueChanges
-      .pipe(debounceTime(600), takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        tap(() => (this.settingsEditPending = true)),
+        debounceTime(600),
+        takeUntilDestroyed(this.destroyRef)
+      )
       .subscribe(() => {
-        void this.saveSettings();
+        void this.savePendingSettings();
       });
 
     this.projectService.currentProject$
@@ -262,11 +273,50 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
         this.projectIconPath = this.projectIconService.getIconPath();
       });
     this.projectNameControl.valueChanges
-      .pipe(debounceTime(600), takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => void this.saveProjectName());
+      .pipe(
+        tap(() => (this.projectNameEditPending = true)),
+        debounceTime(600),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => void this.savePendingProjectName());
+    // Quit / reload / project switch save edits still inside the debounce window.
+    this.unregisterPendingEdits = this.pendingEdits.register(() => this.flushPendingEdits(true));
     this.projectIconService.iconUrl$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(url => this.projectIconUrl = url);
+  }
+
+  /**
+   * Save edits whose autosave debounce has not fired yet (leaving Settings,
+   * quit, reload, project switch). With `leaving`, an edit that cannot be
+   * saved because its field is invalid says so, since its error is no longer
+   * on screen.
+   */
+  async flushPendingEdits(leaving = false): Promise<void> {
+    if (leaving && this.projectNameEditPending && this.projectNameControl.invalid) {
+      this.toasts.showError('Project name not saved: it is empty or too long.');
+    }
+    if (leaving && this.settingsEditPending && this.settingsForm.invalid) {
+      this.toasts.showError('Settings not saved: a field has an invalid value.');
+    }
+    await Promise.all([this.savePendingProjectName(), this.savePendingSettings()]);
+  }
+
+  private savePendingProjectName(): Promise<void> {
+    if (!this.projectNameEditPending) {
+      return this.projectNameSave;
+    }
+    this.projectNameEditPending = false;
+    this.projectNameSave = this.saveProjectName();
+    return this.projectNameSave;
+  }
+
+  private savePendingSettings(): Promise<void> {
+    if (!this.settingsEditPending) {
+      return this.settingsSaveChain;
+    }
+    this.settingsEditPending = false;
+    return this.saveSettings();
   }
 
   private async saveProjectName(): Promise<void> {
@@ -324,6 +374,10 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
 
   ngOnDestroy(): void {
     this.clearPendingDelete();
+    this.unregisterPendingEdits?.();
+    this.unregisterPendingEdits = null;
+    // The debounced autosave dies with the component: save what it would have.
+    this.pendingEdits.track(this.flushPendingEdits(true));
   }
 
   private async loadData(): Promise<void> {

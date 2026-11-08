@@ -19,6 +19,7 @@ import { KeyboardShortcutsService } from "./shared/keyboard-shortcuts-dialog/key
 import { ModalService, ConfirmationRequest } from "./core/services/modal.service";
 import { Book } from "./core/interfaces/project.interface";
 import { WORLD_MAP_FILE } from "./core/constants/project.constants";
+import { PendingEditsService } from "./core/services/pending-edits.service";
 
 @Component({
     selector: "app-root",
@@ -320,6 +321,8 @@ export class AppComponent implements OnInit {
   private async handlePrepareToLeaveRequest(): Promise<void> {
     this.electronService.replyPrepareToLeaveAck();
     try {
+      // Debounced autosaves (Settings) first, so quit/reload does not drop them.
+      await this.injector.get(PendingEditsService).flushAll();
       const { BookPlanService } = await import('./core/services/book-plan.service');
       const bookPlan = this.injector.get(BookPlanService);
       const allowed = await Promise.resolve(bookPlan.prepareToLeave());

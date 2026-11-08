@@ -3,6 +3,7 @@ import { ProjectService } from './project.service';
 import { ElectronService } from './electron.service';
 import { LoggingService } from './logging.service';
 import { NotificationService } from './notification.service';
+import { PendingEditsService } from './pending-edits.service';
 import { Project, ProjectMetadata } from '../interfaces/project.interface';
 
 describe('ProjectService', () => {
@@ -106,6 +107,23 @@ describe('ProjectService', () => {
   });
 
   describe('loadProject', () => {
+    it('saves pending debounced edits (Settings) before switching the work folder', async () => {
+      const calls: string[] = [];
+      TestBed.inject(PendingEditsService).register(async () => {
+        await Promise.resolve();
+        calls.push('flush');
+      });
+      electronService.setWorkFolder.and.callFake(async () => {
+        calls.push('setWorkFolder');
+        return { success: true };
+      });
+      electronService.isDirectory.and.returnValue(Promise.resolve(false));
+
+      await expectAsync(service.loadProject('/other/project')).toBeRejected();
+
+      expect(calls).toEqual(['flush', 'setWorkFolder']);
+    });
+
     it('should load project from ensemble.json', async () => {
       const projectPath = '/test/project';
       const metadata = createValidMetadata();

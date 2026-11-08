@@ -39,6 +39,7 @@ import { LoggingService } from './logging.service';
 import { requireProject } from '../utils/project.utils';
 import { PinboardStoreService } from './pinboard-store.service';
 import { RecentProjectsService } from './recent-projects.service';
+import { PendingEditsService } from './pending-edits.service';
 
 @Injectable({
   providedIn: 'root',
@@ -55,11 +56,14 @@ export class ProjectService {
   ) {}
 
   /**
-   * Persist or resolve a pending book plan before switching projects.
+   * Save pending debounced edits (Settings) and persist or resolve a pending
+   * book plan before switching projects.
    * Lazy-resolves BookPlanService to avoid a circular DI with ProjectService.
    * Returns false if the user cancelled an unresolved conflict.
    */
   private async persistBookPlanBeforeSwitch(): Promise<boolean> {
+    // Debounced autosaves (Settings) belong to the project being left.
+    await this.injector.get(PendingEditsService).flushAll();
     const { BookPlanService } = await import('./book-plan.service');
     const bookPlan = this.injector.get(BookPlanService);
     return bookPlan.prepareToLeave();

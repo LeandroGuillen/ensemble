@@ -1,5 +1,26 @@
+import { ComponentFixture, TestBed, fakeAsync, flushMicrotasks, tick } from '@angular/core/testing';
+import { BehaviorSubject, of } from 'rxjs';
 import { MetadataManagementComponent } from './metadata-management.component';
 import { Character } from '../../core/interfaces/character.interface';
+import { MetadataService } from '../../core/services/metadata.service';
+import { ProjectService } from '../../core/services/project.service';
+import { ProjectIconService } from '../../core/services/project-icon.service';
+import { CharacterService } from '../../core/services/character.service';
+import { CastService } from '../../core/services/cast.service';
+import { LocationService } from '../../core/services/location.service';
+import { PromptService } from '../../core/services/prompt.service';
+import { BackstageService } from '../../core/services/backstage.service';
+import { ThemeService } from '../../core/services/theme.service';
+import { SkinService } from '../../core/services/skin.service';
+import { ColorPaletteService } from '../../core/services/color-palette.service';
+import { UpdateService } from '../../core/services/update.service';
+import { ElectronService } from '../../core/services/electron.service';
+import { ZoomService } from '../../core/services/zoom.service';
+import { PreferencesService } from '../../core/services/preferences.service';
+import { ModalService } from '../../core/services/modal.service';
+import { LoggingService } from '../../core/services/logging.service';
+import { NotificationService } from '../../core/services/notification.service';
+import { PendingEditsService } from '../../core/services/pending-edits.service';
 
 /** Delete confirmation for categories and tags: says how many characters use them. */
 describe('MetadataManagementComponent delete confirmation', () => {
@@ -61,4 +82,176 @@ describe('MetadataManagementComponent delete confirmation', () => {
     expect(component.deleteConfirmLabel('category', mentor.id)).toBe('No characters use it. Delete?');
     expect(metadataService.removeCategory).not.toHaveBeenCalled();
   });
+});
+
+/**
+ * Settings autosaves 600 ms after the last keystroke. Leaving Settings (destroy),
+ * quitting / reloading or switching project inside that window must still save.
+ */
+describe('MetadataManagementComponent pending autosave on leave', () => {
+  let fixture: ComponentFixture<MetadataManagementComponent>;
+  let component: MetadataManagementComponent;
+  let project: BehaviorSubject<any>;
+  let metadataService: { metadata$: BehaviorSubject<any>; loadMetadata: jasmine.Spy; updateSettings: jasmine.Spy };
+  let projectService: { currentProject$: BehaviorSubject<any>; getCurrentProject: jasmine.Spy; getCharacterStyles: jasmine.Spy; updateMetadata: jasmine.Spy };
+  let promptService: { forceReload: jasmine.Spy };
+  let logger: { error: jasmine.Spy; warn: jasmine.Spy };
+  let toasts: { showError: jasmine.Spy };
+
+  const settings = {
+    defaultCategory: 'main-character',
+    charactersFolder: 'characters',
+    locationsFolder: 'locations',
+    promptsFolder: 'prompts',
+    castsFolder: 'characters/casts',
+    namesFile: 'characters/names.md',
+    imagesFolder: 'img',
+    defaultCharacterStyle: 'default',
+    theme: 'blue-gold',
+    skin: 'classic',
+  };
+
+  beforeEach(async () => {
+    project = new BehaviorSubject<any>({ path: '/tmp/p', metadata: { projectName: 'The Lantern Coast', settings } });
+    metadataService = {
+      metadata$: new BehaviorSubject<any>({ categories: [], tags: [], settings }),
+      loadMetadata: jasmine.createSpy('loadMetadata').and.resolveTo(),
+      updateSettings: jasmine.createSpy('updateSettings').and.resolveTo(),
+    };
+    projectService = {
+      currentProject$: project,
+      getCurrentProject: jasmine.createSpy('getCurrentProject').and.callFake(() => project.value),
+      getCharacterStyles: jasmine.createSpy('getCharacterStyles').and.returnValue([{ id: 'default', name: 'Default' }]),
+      updateMetadata: jasmine.createSpy('updateMetadata').and.callFake(async (updates: any) => {
+        project.next({ ...project.value, metadata: { ...project.value.metadata, ...updates } });
+      }),
+    };
+    promptService = { forceReload: jasmine.createSpy('forceReload').and.resolveTo() };
+    logger = { error: jasmine.createSpy('error'), warn: jasmine.createSpy('warn') };
+    toasts = { showError: jasmine.createSpy('showError') };
+
+    await TestBed.configureTestingModule({
+      imports: [MetadataManagementComponent],
+      providers: [
+        { provide: MetadataService, useValue: metadataService },
+        { provide: ProjectService, useValue: projectService },
+        { provide: ProjectIconService, useValue: { getIconPath: () => null, iconUrl$: of(null) } },
+        { provide: CharacterService, useValue: { forceReloadCharacters: jasmine.createSpy().and.resolveTo() } },
+        { provide: CastService, useValue: { forceReloadCasts: jasmine.createSpy().and.resolveTo() } },
+        { provide: LocationService, useValue: { forceReloadLocations: jasmine.createSpy().and.resolveTo() } },
+        { provide: PromptService, useValue: promptService },
+        { provide: BackstageService, useValue: { loadBackstageData: jasmine.createSpy().and.resolveTo() } },
+        { provide: ThemeService, useValue: { getAvailableThemes: () => [], currentTheme$: of(null), setTheme: jasmine.createSpy().and.resolveTo() } },
+        { provide: SkinService, useValue: { getAvailableSkins: () => [], setSkin: jasmine.createSpy().and.resolveTo() } },
+        { provide: ColorPaletteService, useValue: { palette$: of(null), getAllColors: () => [] } },
+        { provide: UpdateService, useValue: { updateStatus$: of({ status: 'idle' }) } },
+        { provide: ElectronService, useValue: { getVersion: () => Promise.resolve('0.0.0') } },
+        { provide: ZoomService, useValue: { zoomLevel$: of(1), getZoomPercent: () => 100 } },
+        { provide: PreferencesService, useValue: { getPlanOutlineSide: () => 'left', setPlanOutlineSide: () => undefined } },
+        { provide: ModalService, useValue: {} },
+        { provide: LoggingService, useValue: logger },
+        { provide: NotificationService, useValue: toasts },
+      ],
+    })
+      .overrideComponent(MetadataManagementComponent, { set: { template: '', imports: [] } })
+      .compileComponents();
+
+    fixture = TestBed.createComponent(MetadataManagementComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('saves a Project Name typed less than 600 ms before leaving Settings', fakeAsync(() => {
+    component.projectNameControl.setValue('Renamed A (quick leave)');
+    tick(200);
+    fixture.destroy();
+    flushMicrotasks();
+
+    expect(projectService.updateMetadata).toHaveBeenCalledOnceWith({ projectName: 'Renamed A (quick leave)' });
+    tick(1000);
+    expect(projectService.updateMetadata).toHaveBeenCalledTimes(1);
+  }));
+
+  it('saves a Prompts Folder typed less than 600 ms before leaving Settings', fakeAsync(() => {
+    component.settingsForm.patchValue({ promptsFolder: 'prompt-library' });
+    tick(200);
+    fixture.destroy();
+    flushMicrotasks();
+
+    expect(metadataService.updateSettings).toHaveBeenCalledTimes(1);
+    expect(metadataService.updateSettings.calls.mostRecent().args[0].promptsFolder).toBe('prompt-library');
+    expect(promptService.forceReload).toHaveBeenCalled();
+    tick(1000);
+    expect(metadataService.updateSettings).toHaveBeenCalledTimes(1);
+  }));
+
+  it('quit / reload / project switch (flushAll) saves edits still waiting on the debounce, once', fakeAsync(() => {
+    const pendingEdits = TestBed.inject(PendingEditsService);
+    component.projectNameControl.setValue('Renamed C (quit)');
+    component.settingsForm.patchValue({ promptsFolder: 'prompt-library' });
+    tick(200);
+
+    let flushed = false;
+    void pendingEdits.flushAll().then(() => (flushed = true));
+    flushMicrotasks();
+
+    expect(flushed).toBeTrue();
+    expect(projectService.updateMetadata).toHaveBeenCalledOnceWith({ projectName: 'Renamed C (quit)' });
+    expect(metadataService.updateSettings).toHaveBeenCalledTimes(1);
+    tick(1000);
+    expect(projectService.updateMetadata).toHaveBeenCalledTimes(1);
+    expect(metadataService.updateSettings).toHaveBeenCalledTimes(1);
+  }));
+
+  it('flushAll waits for a save started when Settings was destroyed', fakeAsync(() => {
+    const pendingEdits = TestBed.inject(PendingEditsService);
+    let finishWrite!: () => void;
+    projectService.updateMetadata.and.returnValue(new Promise<void>((resolve) => (finishWrite = resolve)));
+    component.projectNameControl.setValue('Renamed (switch)');
+    tick(200);
+    fixture.destroy();
+
+    let flushed = false;
+    void pendingEdits.flushAll().then(() => (flushed = true));
+    flushMicrotasks();
+    expect(flushed).toBeFalse();
+
+    finishWrite();
+    flushMicrotasks();
+    expect(flushed).toBeTrue();
+  }));
+
+  it('does not save an invalid value on leave and says so', fakeAsync(() => {
+    component.projectNameControl.setValue('');
+    component.settingsForm.patchValue({ promptsFolder: 'x'.repeat(201) });
+    tick(200);
+    fixture.destroy();
+    flushMicrotasks();
+
+    expect(projectService.updateMetadata).not.toHaveBeenCalled();
+    expect(metadataService.updateSettings).not.toHaveBeenCalled();
+    expect(toasts.showError).toHaveBeenCalledWith('Project name not saved: it is empty or too long.');
+    expect(toasts.showError).toHaveBeenCalledWith('Settings not saved: a field has an invalid value.');
+  }));
+
+  it('reports a rejected folder (`..`) on leave instead of dropping it silently', fakeAsync(() => {
+    metadataService.updateSettings.and.rejectWith(new Error('Invalid settings: promptsFolder: Prompts folder cannot contain parent path (..)'));
+    component.settingsForm.patchValue({ promptsFolder: '../outside' });
+    tick(200);
+    fixture.destroy();
+    flushMicrotasks();
+
+    expect(metadataService.updateSettings).toHaveBeenCalledTimes(1);
+    expect(logger.error).toHaveBeenCalledWith('Failed to save settings:', jasmine.any(Error));
+  }));
+
+  it('leaving without edits writes nothing', fakeAsync(() => {
+    tick(1000);
+    fixture.destroy();
+    flushMicrotasks();
+
+    expect(projectService.updateMetadata).not.toHaveBeenCalled();
+    expect(metadataService.updateSettings).not.toHaveBeenCalled();
+    expect(toasts.showError).not.toHaveBeenCalled();
+  }));
 });
