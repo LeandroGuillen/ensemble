@@ -130,7 +130,7 @@ overwriting.
   text files (Markdown, JSON) an update can rewrite, not images, and are kept
   to a limit you set. Linked folders (such as a shared character folder) are
   followed, except a link to a folder that contains the project and snapshot
-  zips reached through a link; these are listed as skipped.
+  zips reached through a link (even renamed ones); these are listed as skipped.
 - **Undoable deletes**: deleting a character, draft, Lore figure, location,
   House or cast stages it and offers **Undo** for 15 seconds, then moves it to
   your system Trash. Anything in `.ensemble-trash/` is staged for deletion, so
