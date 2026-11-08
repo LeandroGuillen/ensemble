@@ -22,6 +22,7 @@ import { contrastTextColor } from '../../core/utils/color-contrast.utils';
 import { aliasesMatchSearch } from '../../core/utils/character-alias.utils';
 import { getCharacterDisplayName } from '../../core/utils/character-display.utils';
 import {
+  isBlockingDialogOpen,
   isEditableKeyboardTarget,
   moveListSelection,
   plainLetterKey,
@@ -477,8 +478,11 @@ export class CharacterListComponent implements OnInit {
 
   @HostListener('document:keydown', ['$event'])
   handleKeyboardEvent(event: KeyboardEvent): void {
-    if (event.key === 'Escape' && this.filtersOverlayOpen && !event.defaultPrevented &&
-        !document.querySelector('.modal-overlay, .command-palette-backdrop, .shortcuts-backdrop')) {
+    // A dialog over the list owns the keyboard until it closes.
+    if (isBlockingDialogOpen()) {
+      return;
+    }
+    if (event.key === 'Escape' && this.filtersOverlayOpen && !event.defaultPrevented) {
       event.preventDefault();
       this.closeFiltersOverlay();
       return;

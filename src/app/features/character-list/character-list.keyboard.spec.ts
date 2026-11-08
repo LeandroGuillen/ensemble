@@ -91,4 +91,60 @@ describe('CharacterListComponent keyboard', () => {
     expect(createNewCharacter).toHaveBeenCalled();
     expect(toggleViewMode).toHaveBeenCalled();
   });
+
+  describe('while a dialog is open', () => {
+    let overlay: HTMLElement | null = null;
+
+    function openDialog(className: string, attrs: Record<string, string> = {}): void {
+      overlay = document.createElement('div');
+      overlay.className = className;
+      for (const [name, value] of Object.entries(attrs)) {
+        overlay.setAttribute(name, value);
+      }
+      document.body.appendChild(overlay);
+    }
+
+    afterEach(() => {
+      overlay?.remove();
+      overlay = null;
+    });
+
+    for (const [label, cls, attrs] of [
+      ['confirmation (modal frame)', 'modal-overlay', {}],
+      ['command palette', 'command-palette-backdrop', {}],
+      ['shortcuts dialog', 'shortcuts-backdrop', {}],
+      ['aria-modal dialog', 'image-picker-dialog', { role: 'dialog', 'aria-modal': 'true' }],
+    ] as const) {
+      it(`ignores N, L, arrows and Enter while a ${label} is open`, () => {
+        openDialog(cls, attrs as Record<string, string>);
+        const cancel = document.createElement('button');
+        overlay!.appendChild(cancel);
+        component.selectedCharacterIndex = 0;
+
+        const n = key('n', { target: cancel });
+        component.handleKeyboardEvent(n);
+        component.handleKeyboardEvent(key('l', { target: cancel }));
+        component.handleKeyboardEvent(key('ArrowDown', { target: cancel }));
+        component.handleKeyboardEvent(key('ArrowUp', { target: cancel }));
+        component.handleKeyboardEvent(key('Enter', { target: document.body }));
+
+        expect(createNewCharacter).not.toHaveBeenCalled();
+        expect(toggleViewMode).not.toHaveBeenCalled();
+        expect(editCharacter).not.toHaveBeenCalled();
+        expect(scrollToSelectedCharacter).not.toHaveBeenCalled();
+        expect(component.selectedCharacterIndex).toBe(0);
+        expect(n.preventDefault).not.toHaveBeenCalled();
+      });
+    }
+
+    it('handles shortcuts again once the dialog closes', () => {
+      openDialog('modal-overlay');
+      component.handleKeyboardEvent(key('n'));
+      expect(createNewCharacter).not.toHaveBeenCalled();
+
+      overlay!.remove();
+      component.handleKeyboardEvent(key('n'));
+      expect(createNewCharacter).toHaveBeenCalledTimes(1);
+    });
+  });
 });

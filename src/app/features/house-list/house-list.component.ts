@@ -6,6 +6,7 @@ import { Router, RouterLink } from '@angular/router';
 import { House } from '../../core/interfaces/house.interface';
 import { HouseService } from '../../core/services/house.service';
 import {
+  isBlockingDialogOpen,
   isEditableKeyboardTarget,
   moveListSelection,
   plainLetterKey,
@@ -81,7 +82,8 @@ export class HouseListComponent implements OnInit {
 
   @HostListener('document:keydown', ['$event'])
   handleKeyboardEvent(event: KeyboardEvent): void {
-    if (isEditableKeyboardTarget(event.target)) {
+    // A dialog over the list owns the keyboard until it closes.
+    if (isBlockingDialogOpen() || isEditableKeyboardTarget(event.target)) {
       return;
     }
 

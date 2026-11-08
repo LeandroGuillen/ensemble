@@ -64,3 +64,20 @@ export function plainLetterKey(event: KeyboardEvent): string | null {
   }
   return event.key.toLowerCase();
 }
+
+/**
+ * Selector for app overlays that own the keyboard while open: modal frames
+ * (including confirmation dialogs), the command palette, the shortcuts dialog
+ * and any other `aria-modal` dialog.
+ */
+export const BLOCKING_DIALOG_SELECTOR =
+  '.modal-overlay, .command-palette-backdrop, .shortcuts-backdrop, [role="dialog"][aria-modal="true"]';
+
+/**
+ * True while a modal, confirmation, command palette or shortcuts dialog is open.
+ * Page-level document shortcuts (letters, arrows, Enter) must do nothing then,
+ * so a stray key cannot act on the page behind a live dialog.
+ */
+export function isBlockingDialogOpen(root: ParentNode = document): boolean {
+  return !!root.querySelector(BLOCKING_DIALOG_SELECTOR);
+}

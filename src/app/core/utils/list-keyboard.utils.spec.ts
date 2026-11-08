@@ -1,5 +1,6 @@
 import {
   hasShortcutModifier,
+  isBlockingDialogOpen,
   isEditableKeyboardTarget,
   moveListSelection,
   plainLetterKey,
@@ -56,6 +57,39 @@ describe('list-keyboard.utils', () => {
       expect(moveListSelection(0, 'up', 3)).toBe(2);
       expect(moveListSelection(1, 'down', 3)).toBe(2);
       expect(moveListSelection(0, 'down', 0)).toBe(-1);
+    });
+  });
+
+  describe('isBlockingDialogOpen', () => {
+    it('detects modal frames, the command palette, the shortcuts dialog and aria-modal dialogs', () => {
+      const root = document.createElement('div');
+      expect(isBlockingDialogOpen(root)).toBeFalse();
+
+      for (const make of [
+        () => Object.assign(document.createElement('div'), { className: 'modal-overlay' }),
+        () => Object.assign(document.createElement('div'), { className: 'command-palette-backdrop' }),
+        () => Object.assign(document.createElement('div'), { className: 'shortcuts-backdrop' }),
+        () => {
+          const el = document.createElement('div');
+          el.setAttribute('role', 'dialog');
+          el.setAttribute('aria-modal', 'true');
+          return el;
+        },
+      ]) {
+        const el = make();
+        root.appendChild(el);
+        expect(isBlockingDialogOpen(root)).toBeTrue();
+        el.remove();
+        expect(isBlockingDialogOpen(root)).toBeFalse();
+      }
+    });
+
+    it('ignores non-modal popovers', () => {
+      const root = document.createElement('div');
+      const popover = document.createElement('div');
+      popover.setAttribute('role', 'dialog');
+      root.appendChild(popover);
+      expect(isBlockingDialogOpen(root)).toBeFalse();
     });
   });
 });

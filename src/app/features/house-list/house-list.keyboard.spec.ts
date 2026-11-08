@@ -58,4 +58,49 @@ describe('HouseListComponent keyboard', () => {
     component.handleKeyboardEvent(key('n'));
     expect(createNewHouse).toHaveBeenCalled();
   });
+
+  describe('while a dialog is open', () => {
+    let overlay: HTMLElement | null = null;
+
+    function openDialog(className: string, attrs: Record<string, string> = {}): void {
+      overlay = document.createElement('div');
+      overlay.className = className;
+      for (const [name, value] of Object.entries(attrs)) {
+        overlay.setAttribute(name, value);
+      }
+      document.body.appendChild(overlay);
+    }
+
+    afterEach(() => {
+      overlay?.remove();
+      overlay = null;
+    });
+
+    it('ignores N, arrows and Enter while a confirmation is open', () => {
+      openDialog('modal-overlay');
+      const cancel = document.createElement('button');
+      overlay!.appendChild(cancel);
+      component.selectedHouseIndex = 0;
+
+      component.handleKeyboardEvent(key('n', { target: cancel }));
+      component.handleKeyboardEvent(key('ArrowDown', { target: cancel }));
+      component.handleKeyboardEvent(key('ArrowUp', { target: cancel }));
+      component.handleKeyboardEvent(key('Enter', { target: document.body }));
+
+      expect(createNewHouse).not.toHaveBeenCalled();
+      expect(openHouse).not.toHaveBeenCalled();
+      expect(scrollToSelectedHouse).not.toHaveBeenCalled();
+      expect(component.selectedHouseIndex).toBe(0);
+    });
+
+    it('ignores N while the shortcuts dialog is open, then handles it after close', () => {
+      openDialog('shortcuts-backdrop');
+      component.handleKeyboardEvent(key('n'));
+      expect(createNewHouse).not.toHaveBeenCalled();
+
+      overlay!.remove();
+      component.handleKeyboardEvent(key('n'));
+      expect(createNewHouse).toHaveBeenCalledTimes(1);
+    });
+  });
 });

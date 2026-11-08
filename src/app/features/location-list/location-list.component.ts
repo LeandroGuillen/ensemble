@@ -16,6 +16,7 @@ import { PageHeaderComponent } from '../../shared/page-header/page-header.compon
 import { contrastTextColor } from '../../core/utils/color-contrast.utils';
 import { getBookDisplayName } from '../../core/utils/book-display.utils';
 import {
+  isBlockingDialogOpen,
   isEditableKeyboardTarget,
   moveListSelection,
   plainLetterKey,
@@ -119,7 +120,8 @@ export class LocationListComponent implements OnInit {
 
   @HostListener('document:keydown', ['$event'])
   handleKeyboardEvent(event: KeyboardEvent): void {
-    if (isEditableKeyboardTarget(event.target)) {
+    // A dialog over the list owns the keyboard until it closes.
+    if (isBlockingDialogOpen() || isEditableKeyboardTarget(event.target)) {
       return;
     }
 
