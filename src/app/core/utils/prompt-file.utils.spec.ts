@@ -62,6 +62,65 @@ describe('prompt-file.utils', () => {
     expect(again).toEqual(data);
   });
 
+  const section = (name: string, notes: string, prompt: string | null = null) => ({
+    name,
+    notes,
+    prompt,
+    negative: null,
+    images: [] as string[],
+  });
+  const fileWith = (sections: ReturnType<typeof section>[]) => ({
+    characters: [],
+    locations: [],
+    tags: [],
+    created: '2026-11-08T10:00:00Z',
+    modified: '2026-11-08T10:00:00Z',
+    extra: {},
+    sections,
+  });
+
+  it('round-trips notes that contain ## heading lines without creating variants', () => {
+    const data = fileWith([
+      section('', 'Lighting notes for the keeper.\n\n## Golden hour\nWarm rim light from the lantern.'),
+      section('Keeper portrait', '##\n## Closed ##\n\\## already escaped\n\\\\## twice', 'keeper, lantern'),
+      section('Other', '```text\n## inside a fence\n```\n### deeper\n ## indented'),
+    ]);
+    const raw = serializePromptFile(data);
+    expect(raw).toContain('\\## Golden hour');
+    expect(raw).toContain('\n## inside a fence\n');
+    expect(parsePromptFile(raw)).toEqual(data);
+  });
+
+  it('round-trips variant names that start or end with #', () => {
+    const names = ['Keeper portrait C#', 'C##', '#1 pick', '# tagged #', '#', '##', 'a #'];
+    const data = fileWith([section('', 'Main notes.'), ...names.map((name) => section(name, '', 'x'))]);
+    const raw = serializePromptFile(data);
+    expect(raw).toContain('## Keeper portrait C# #');
+    const again = parsePromptFile(raw);
+    expect(again.sections.map((s) => s.name)).toEqual(['', ...names]);
+    expect(again).toEqual(data);
+  });
+
+  it('reproduces the card: Golden hour notes and a "C#" variant survive a save and reload', () => {
+    const data = parsePromptFile(sample);
+    data.sections[0].notes = 'Lighting notes for the keeper.\n\n## Golden hour\nWarm rim light from the lantern.';
+    data.sections[1].name = 'Keeper portrait C#';
+    const again = parsePromptFile(serializePromptFile(data));
+    expect(again.sections.map((s) => s.name)).toEqual(['', 'Keeper portrait C#']);
+    expect(again.sections[0].notes).toBe(data.sections[0].notes);
+    expect(again).toEqual(data);
+  });
+
+  it('still reads hand-written ## variants and closing sequences the same way', () => {
+    const body = ['Intro', '', '## First', '```prompt', 'a', '```', '##Second ##', '## Third #  ', '##', ''].join(
+      '\n'
+    );
+    const sections = parsePromptBody(body);
+    expect(sections.map((s) => s.name)).toEqual(['', 'First', 'Second', 'Third', '']);
+    expect(sections[0].notes).toBe('Intro');
+    expect(sections[1].prompt).toBe('a');
+  });
+
   it('keeps other code blocks and deeper headings as notes', () => {
     const body = ['### Settings', '```json', '{"steps": 30}', '```', '## v2', '```prompt', 'x', '```'].join('\n');
     const sections = parsePromptBody(body);

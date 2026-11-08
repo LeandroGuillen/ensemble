@@ -124,5 +124,9 @@ child
   section. Images picked from outside the project are copied to `prompts/_images/`.
 - Anything else (other code blocks, `###` headings, prose) is kept as the section's notes.
   When Ensemble saves a section it writes notes first, then the blocks, then the images.
+- A notes line that would start a variant (`## …`) is saved with a leading backslash
+  (`\## Golden hour`) and read back without it, so it stays in the notes. A variant
+  name ending in `#` is saved with a closing ` #` (`## Keeper portrait C# #`), because
+  trailing `#`s on a heading line are otherwise dropped from the name.
 - Unknown frontmatter keys are preserved.
 

@@ -13,6 +13,14 @@ const MANAGED_KEYS = new Set(['characters', 'locations', 'tags', 'created', 'mod
 
 const FENCE_OPEN = /^\s{0,3}(`{3,}|~{3,})\s*([^\s`]*)/;
 const SECTION_HEADING = /^##(?!#)\s*(.*?)\s*#*\s*$/;
+/**
+ * A notes line that would read as a `##` heading is written with a leading
+ * backslash (`\## Golden hour`). Lines that already start with backslashes
+ * before `##` get one more, so reading strips exactly one and stays lossless.
+ */
+const ESCAPED_NOTES_HEADING = /^\\+##(?!#)/;
+const NOTES_HEADING_TO_ESCAPE = /^\\*##(?!#)/;
+const FENCE_CLOSE = /^\s{0,3}(`{3,}|~{3,})\s*$/;
 const IMAGE_EMBED = /!\[\[([^\]]+)\]\]/g;
 const IMAGE_LINE = /^\s*(?:!\[\[[^\]]+\]\]\s*)+$/;
 
@@ -84,6 +92,11 @@ function embedPath(target: string): string {
   return target.split('|')[0].trim();
 }
 
+function closesFence(line: string, marker: string): boolean {
+  const close = line.match(FENCE_CLOSE);
+  return !!close && close[1][0] === marker[0] && close[1].length >= marker.length;
+}
+
 /** Parses a prompt file's Markdown body (no frontmatter) into sections. */
 export function parsePromptBody(body: string): PromptSection[] {
   const lines = body.replace(/\r\n?/g, '\n').split('\n');
@@ -100,8 +113,7 @@ export function parsePromptBody(body: string): PromptSection[] {
 
   for (const line of lines) {
     if (fence) {
-      const close = line.match(/^\s{0,3}(`{3,}|~{3,})\s*$/);
-      if (close && close[1][0] === fence.marker[0] && close[1].length >= fence.marker.length) {
+      if (closesFence(line, fence.marker)) {
         const content = fence.content.join('\n');
         if (fence.info === PROMPT_BLOCK && current.prompt === null) {
           current.prompt = content;
@@ -140,7 +152,7 @@ export function parsePromptBody(body: string): PromptSection[] {
       continue;
     }
 
-    notes.push(line);
+    notes.push(ESCAPED_NOTES_HEADING.test(line) ? line.slice(1) : line);
   }
 
   // An unterminated fence is kept as plain text rather than dropped.
@@ -191,9 +203,41 @@ function serializeBlock(info: string, content: string): string {
   return `${fence}${info}\n${content}\n${fence}`;
 }
 
+/**
+ * Escapes notes lines that the parser would read as a `##` variant heading.
+ * Lines inside fenced blocks in the notes are left alone, as the parser does.
+ */
+function escapeNotes(notes: string): string {
+  let marker: string | null = null;
+  return notes
+    .split('\n')
+    .map((line) => {
+      if (marker) {
+        if (closesFence(line, marker)) marker = null;
+        return line;
+      }
+      const open = line.match(FENCE_OPEN);
+      if (open) {
+        marker = open[1];
+        return line;
+      }
+      return NOTES_HEADING_TO_ESCAPE.test(line) ? `\\${line}` : line;
+    })
+    .join('\n');
+}
+
+/**
+ * Heading line for a variant. A name ending in `#` gets a closing ` #`, so the
+ * parser strips that instead of the name's own `#` (`## Keeper portrait C# #`).
+ */
+function sectionHeading(name: string): string {
+  const text = name.trim() || UNTITLED_SECTION;
+  return text.endsWith('#') ? `## ${text} #` : `## ${text}`;
+}
+
 function serializeSection(section: PromptSection): string {
   const parts: string[] = [];
-  const notes = section.notes.trim() ? trimBlankLines(section.notes.split('\n')) : '';
+  const notes = section.notes.trim() ? escapeNotes(trimBlankLines(section.notes.split('\n'))) : '';
   if (notes) parts.push(notes);
   const blocks: string[] = [];
   if (section.prompt !== null) blocks.push(serializeBlock(PROMPT_BLOCK, section.prompt));
@@ -211,7 +255,7 @@ export function serializePromptBody(sections: PromptSection[]): string {
   const mainText = serializeSection(main);
   if (mainText) chunks.push(mainText);
   for (const section of named) {
-    const heading = `## ${section.name.trim() || UNTITLED_SECTION}`;
+    const heading = sectionHeading(section.name);
     const body = serializeSection(section);
     chunks.push(body ? `${heading}\n\n${body}` : heading);
   }
