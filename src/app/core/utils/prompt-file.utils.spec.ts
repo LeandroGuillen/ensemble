@@ -66,7 +66,7 @@ describe('prompt-file.utils', () => {
     name,
     notes,
     prompt,
-    negative: null,
+    negative: null as string | null,
     images: [] as string[],
   });
   const fileWith = (sections: ReturnType<typeof section>[]) => ({
@@ -124,6 +124,65 @@ describe('prompt-file.utils', () => {
       const sections = parsePromptFile(raw).sections;
       expect(sections.map((s) => s.name)).toEqual(['', 'First']);
       expect(sections[1].prompt).toBe('a');
+    }
+  });
+
+  it('reproduces the review probe: notes with an unclosed fence and a ## line keep the main prompt', () => {
+    for (const notes of [
+      '```\n## Golden hour',
+      'Lighting notes.\n```\n## Golden hour\nWarm rim light.',
+      '~~~text\n## Golden hour',
+      '```prompt\nnot the prompt\n```',
+      '```negative\nnot the negative\n```',
+      '````\n```\n## Golden hour',
+    ]) {
+      const data = fileWith([section('', notes, 'main prompt'), section('Keeper portrait', 'Variant notes.', 'keeper')]);
+      const again = parsePromptFile(serializePromptFile(data));
+      expect(again.sections.map((s) => s.name)).withContext(notes).toEqual(['', 'Keeper portrait']);
+      expect(again.sections[0].prompt).withContext(notes).toBe('main prompt');
+      expect(again.sections[0].notes).withContext(notes).toBe(notes);
+      expect(again).withContext(notes).toEqual(data);
+    }
+  });
+
+  it('round-trips leading and trailing blank lines in notes', () => {
+    for (const notes of ['\nLighting notes.', 'Lighting notes.\n', '\n\nA\n\nB\n\n', '  \nA\n\t', '\n', '   ', '\\\nA\n\\']) {
+      const data = fileWith([section('', notes, 'main prompt'), section('Keeper portrait', notes)]);
+      const again = parsePromptFile(serializePromptFile(data));
+      expect(again.sections.map((s) => s.notes)).withContext(JSON.stringify(notes)).toEqual([notes, notes]);
+      expect(again).withContext(JSON.stringify(notes)).toEqual(data);
+    }
+  });
+
+  it('round-trips every combination of tricky notes lines', () => {
+    const tricky = [
+      '',
+      '  ',
+      '## Golden hour',
+      '\\## escaped',
+      '\\',
+      '```',
+      '```prompt',
+      '~~~negative',
+      '```text',
+      '![[img/a.png]]',
+      '\\![[img/b.png]]',
+      ' ## indented',
+      'plain text',
+    ];
+    for (const a of tricky) {
+      for (const b of tricky) {
+        for (const c of tricky) {
+          const notes = [a, b, c].join('\n');
+          const data = fileWith([
+            section('', notes, 'main prompt'),
+            { ...section('Keeper portrait C#', notes, 'keeper'), negative: 'bad', images: ['img/k.png'] },
+            section('Notes only', notes),
+          ]);
+          const again = parsePromptFile(serializePromptFile(data));
+          expect(again).withContext(JSON.stringify(notes)).toEqual(data);
+        }
+      }
     }
   });
 

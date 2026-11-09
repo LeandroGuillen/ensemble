@@ -13,16 +13,25 @@ const MANAGED_KEYS = new Set(['characters', 'locations', 'tags', 'created', 'mod
 
 const FENCE_OPEN = /^\s{0,3}(`{3,}|~{3,})\s*([^\s`]*)/;
 const SECTION_HEADING = /^##(?!#)\s*(.*?)\s*#*\s*$/;
-/**
- * A notes line that would read as a `##` heading is written with a leading
- * backslash (`\## Golden hour`). Lines that already start with backslashes
- * before `##` get one more, so reading strips exactly one and stays lossless.
- */
-const ESCAPED_NOTES_HEADING = /^\\+##(?!#)/;
-const NOTES_HEADING_TO_ESCAPE = /^\\*##(?!#)/;
 const FENCE_CLOSE = /^\s{0,3}(`{3,}|~{3,})\s*$/;
 const IMAGE_EMBED = /!\[\[([^\]]+)\]\]/g;
 const IMAGE_LINE = /^\s*(?:!\[\[[^\]]+\]\]\s*)+$/;
+
+/**
+ * Notes escaping. A notes line the parser would read as something else (a
+ * `##` variant, an image line, a fence that would take the prompt or never
+ * close) or a blank line at the start or end of the notes (which reading
+ * trims) is written with one leading backslash: `\## Golden hour`, `\```prompt`,
+ * `\`. A line that already starts with backslashes before such a construct
+ * gets one more. Reading strips exactly one, so notes round-trip losslessly.
+ */
+function isEscapable(text: string): boolean {
+  return !text.trim() || SECTION_HEADING.test(text) || FENCE_OPEN.test(text) || IMAGE_LINE.test(text);
+}
+
+function isEscapedNotesLine(line: string): boolean {
+  return line.startsWith('\\') && isEscapable(line.replace(/^\\+/, ''));
+}
 
 export function emptyPromptSection(name = ''): PromptSection {
   return { name, notes: '', prompt: null, negative: null, images: [] };
@@ -79,14 +88,6 @@ function toStringList(raw: unknown): string[] {
   return result;
 }
 
-function trimBlankLines(lines: string[]): string {
-  let start = 0;
-  let end = lines.length;
-  while (start < end && !lines[start].trim()) start++;
-  while (end > start && !lines[end - 1].trim()) end--;
-  return lines.slice(start, end).join('\n');
-}
-
 /** Extracts the path from an embed target such as `img/a.png|300`. */
 function embedPath(target: string): string {
   return target.split('|')[0].trim();
@@ -102,10 +103,19 @@ export function parsePromptBody(body: string): PromptSection[] {
   const lines = body.replace(/\r\n?/g, '\n').split('\n');
   const sections: PromptSection[] = [];
   let current = emptyPromptSection();
+  // Raw notes lines; escaped lines are unescaped after the blank-line trim,
+  // so an escaped blank line at either end survives it.
   let notes: string[] = [];
+  let escaped = new Set<number>();
 
   const finishSection = () => {
-    current.notes = trimBlankLines(notes);
+    let start = 0;
+    let end = notes.length;
+    while (start < end && !notes[start].trim()) start++;
+    while (end > start && !notes[end - 1].trim()) end--;
+    const kept: string[] = [];
+    for (let i = start; i < end; i++) kept.push(escaped.has(i) ? notes[i].slice(1) : notes[i]);
+    current.notes = kept.join('\n');
     sections.push(current);
   };
 
@@ -141,6 +151,7 @@ export function parsePromptBody(body: string): PromptSection[] {
       finishSection();
       current = emptyPromptSection(heading[1]);
       notes = [];
+      escaped = new Set<number>();
       continue;
     }
 
@@ -152,7 +163,8 @@ export function parsePromptBody(body: string): PromptSection[] {
       continue;
     }
 
-    notes.push(ESCAPED_NOTES_HEADING.test(line) ? line.slice(1) : line);
+    if (isEscapedNotesLine(line)) escaped.add(notes.length);
+    notes.push(line);
   }
 
   // An unterminated fence is kept as plain text rather than dropped.
@@ -221,26 +233,40 @@ function serializeBlock(info: string, content: string): string {
 }
 
 /**
- * Escapes notes lines that the parser would read as a `##` variant heading.
- * Lines inside fenced blocks in the notes are left alone, as the parser does.
+ * Escapes the notes lines the parser would not give back as written (see
+ * `isEscapable()`). A fenced block in the notes is written as is only when the
+ * parser keeps it as notes: it closes within the notes and is not a
+ * `prompt` / `negative` block. Otherwise its opening line is escaped and the
+ * lines after it are handled one by one.
  */
 function escapeNotes(notes: string): string {
-  let marker: string | null = null;
-  return notes
-    .split('\n')
-    .map((line) => {
-      if (marker) {
-        if (closesFence(line, marker)) marker = null;
-        return line;
+  const lines = notes.split('\n');
+  let first = 0;
+  let last = lines.length - 1;
+  while (first <= last && !lines[first].trim()) first++;
+  while (last >= first && !lines[last].trim()) last--;
+
+  const out: string[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const open = line.match(FENCE_OPEN);
+    if (open) {
+      const info = open[2].toLowerCase();
+      const close =
+        info === PROMPT_BLOCK || info === NEGATIVE_BLOCK
+          ? -1
+          : lines.findIndex((candidate, j) => j > i && closesFence(candidate, open[1]));
+      if (close !== -1) {
+        out.push(...lines.slice(i, close + 1));
+        i = close;
+        continue;
       }
-      const open = line.match(FENCE_OPEN);
-      if (open) {
-        marker = open[1];
-        return line;
-      }
-      return NOTES_HEADING_TO_ESCAPE.test(line) ? `\\${line}` : line;
-    })
-    .join('\n');
+    }
+    const boundaryBlank = !line.trim() && (i < first || i > last);
+    const special = !!open || SECTION_HEADING.test(line) || IMAGE_LINE.test(line);
+    out.push(boundaryBlank || special || isEscapedNotesLine(line) ? `\\${line}` : line);
+  }
+  return out.join('\n');
 }
 
 /**
@@ -254,7 +280,7 @@ function sectionHeading(name: string): string {
 
 function serializeSection(section: PromptSection): string {
   const parts: string[] = [];
-  const notes = section.notes.trim() ? escapeNotes(trimBlankLines(section.notes.split('\n'))) : '';
+  const notes = section.notes ? escapeNotes(section.notes) : '';
   if (notes) parts.push(notes);
   const blocks: string[] = [];
   if (section.prompt !== null) blocks.push(serializeBlock(PROMPT_BLOCK, section.prompt));

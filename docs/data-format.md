@@ -124,8 +124,13 @@ child
   section. Images picked from outside the project are copied to `prompts/_images/`.
 - Anything else (other code blocks, `###` headings, prose) is kept as the section's notes.
   When Ensemble saves a section it writes notes first, then the blocks, then the images.
-- A notes line that would start a variant (`## …`) is saved with a leading backslash
-  (`\## Golden hour`) and read back without it, so it stays in the notes. A variant
+- Notes are saved exactly as typed, except for lines that would read back differently.
+  Those get one leading backslash, removed again when the file is read: a line that
+  would start a variant (`\## Golden hour`), an image-only line (`\![[img/a.png]]`),
+  a fence opening line whose block would not stay in the notes (a ` ```prompt ` or
+  ` ```negative ` block, or a fence that is not closed within the notes: `` \``` ``), and
+  a blank line at the start or end of the notes (written as a lone `\`). A line that
+  already starts with backslashes before one of these gets one more. A variant
   name ending in `#` is saved with a closing ` #` (`## Keeper portrait C# #`), because
   trailing `#`s on a heading line are otherwise dropped from the name.
 - A variant heading starts at the beginning of the line. An indented `##` line
