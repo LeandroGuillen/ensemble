@@ -149,7 +149,7 @@ export function parsePromptBody(body: string): PromptSection[] {
     const heading = line.match(SECTION_HEADING);
     if (heading) {
       finishSection();
-      current = emptyPromptSection(heading[1]);
+      current = emptyPromptSection(decodeSectionName(heading[1]));
       notes = [];
       escaped = new Set<number>();
       continue;
@@ -270,11 +270,69 @@ function escapeNotes(notes: string): string {
 }
 
 /**
- * Heading line for a variant. A name ending in `#` gets a closing ` #`, so the
- * parser strips that instead of the name's own `#` (`## Keeper portrait C# #`).
+ * Variant name escaping. A heading drops whitespace around the name, so
+ * leading and trailing whitespace is written as numeric character references
+ * (`## &#32;Keeper portrait C#&#32;`). A name whose own text starts or ends
+ * with something that looks like one (`&#32;`, `&amp;#32;`…) gets one more
+ * `amp;` there, and reading removes exactly one.
+ */
+const NAME_ESCAPE_START = /^&((?:amp;)*#\d+;)/;
+const NAME_ESCAPE_END = /&((?:amp;)*#\d+;)$/;
+const NAME_ESCAPED_START = /^&amp;((?:amp;)*#\d+;)/;
+const NAME_ESCAPED_END = /&amp;((?:amp;)*#\d+;)$/;
+
+function whitespaceRefs(text: string): string {
+  return Array.from(text, (char) => `&#${char.codePointAt(0)};`).join('');
+}
+
+function encodeSectionName(name: string): string {
+  const core = name.trim();
+  if (!core) return whitespaceRefs(name);
+  const lead = name.slice(0, name.length - name.trimStart().length);
+  const trail = name.slice(name.trimEnd().length);
+  let text = core.replace(NAME_ESCAPE_START, '&amp;$1');
+  const end = text.match(NAME_ESCAPE_END);
+  if (end && end.index! > 0) text = `${text.slice(0, end.index)}&amp;${end[1]}`;
+  return whitespaceRefs(lead) + text + whitespaceRefs(trail);
+}
+
+/** Character for `&#<code>;` when it is whitespace, else null. */
+function whitespaceRef(code: string): string | null {
+  const value = Number(code);
+  if (!Number.isInteger(value) || value > 0x10ffff) return null;
+  const char = String.fromCodePoint(value);
+  return /^\s$/.test(char) ? char : null;
+}
+
+function decodeSectionName(raw: string): string {
+  let text = raw;
+  let lead = '';
+  let trail = '';
+  for (let m = text.match(/^&#(\d+);/); m; m = text.match(/^&#(\d+);/)) {
+    const char = whitespaceRef(m[1]);
+    if (char === null) break;
+    lead += char;
+    text = text.slice(m[0].length);
+  }
+  for (let m = text.match(/&#(\d+);$/); m; m = text.match(/&#(\d+);$/)) {
+    const char = whitespaceRef(m[1]);
+    if (char === null) break;
+    trail = char + trail;
+    text = text.slice(0, m.index);
+  }
+  text = text.replace(NAME_ESCAPED_START, '&$1');
+  const end = text.match(NAME_ESCAPED_END);
+  if (end && end.index! > 0) text = `${text.slice(0, end.index)}&${end[1]}`;
+  return lead + text + trail;
+}
+
+/**
+ * Heading line for a variant (name escaped as above). A name ending in `#`
+ * gets a closing ` #`, so the parser strips that instead of the name's own `#`
+ * (`## Keeper portrait C# #`).
  */
 function sectionHeading(name: string): string {
-  const text = name.trim() || UNTITLED_SECTION;
+  const text = name ? encodeSectionName(name) : UNTITLED_SECTION;
   return text.endsWith('#') ? `## ${text} #` : `## ${text}`;
 }
 

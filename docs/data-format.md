@@ -132,7 +132,11 @@ child
   a blank line at the start or end of the notes (written as a lone `\`). A line that
   already starts with backslashes before one of these gets one more. A variant
   name ending in `#` is saved with a closing ` #` (`## Keeper portrait C# #`), because
-  trailing `#`s on a heading line are otherwise dropped from the name.
+  trailing `#`s on a heading line are otherwise dropped from the name. Spaces or
+  tabs at the start or end of a variant name are saved as character references
+  (`## &#32;Keeper portrait C#&#32;`), because a heading drops them. A name whose
+  own text starts or ends with something like `&#32;` gets one extra `amp;` there
+  (`&amp;#32;`), which reading removes again.
 - A variant heading starts at the beginning of the line. An indented `##` line
   (space or tab) is notes, also when it is the first line of the file body.
 - Unknown frontmatter keys are preserved.

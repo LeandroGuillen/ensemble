@@ -196,6 +196,59 @@ describe('prompt-file.utils', () => {
     expect(again).toEqual(data);
   });
 
+  it('reproduces the review probe: a variant name with leading and trailing spaces reopens as typed', () => {
+    const data = parsePromptFile(sample);
+    data.sections[1].name = ' Keeper portrait C# ';
+    const raw = serializePromptFile(data);
+    const again = parsePromptFile(raw);
+    expect(again.sections.map((s) => s.name)).toEqual(['', ' Keeper portrait C# ']);
+    expect(again).toEqual(data);
+    // A second save writes the same file.
+    expect(serializePromptFile(again)).toBe(raw);
+  });
+
+  it('round-trips variant names with surrounding whitespace or character-reference look-alikes', () => {
+    const names = [
+      '  two spaces  ',
+      '\tTabbed\t',
+      ' ',
+      '   ',
+      '\u00a0nbsp\u3000',
+      ' C## ',
+      ' ## ',
+      'x ',
+      ' x',
+      '&#32;literal&#32;',
+      '&amp;#32;x&amp;amp;#9;',
+      ' &#32; ',
+      '&#32;',
+      '&#65;B&#66;',
+      'Fish &amp; chips',
+      'Tom & Jerry',
+      '&',
+      '&#;',
+    ];
+    const data = fileWith([section('', 'Main notes.'), ...names.map((name) => section(name, '', 'x'))]);
+    const again = parsePromptFile(serializePromptFile(data));
+    expect(again.sections.map((s) => s.name)).toEqual(['', ...names]);
+    expect(again).toEqual(data);
+  });
+
+  it('round-trips every short name built from tricky pieces', () => {
+    const pieces = ['', ' ', '\t', '#', '&#32;', '&amp;', 'a', ';'];
+    const names: string[] = [];
+    for (const a of pieces) for (const b of pieces) for (const c of pieces) names.push(a + b + c);
+    const unique = [...new Set(names)].filter((name) => name !== '');
+    const data = fileWith([section('', ''), ...unique.map((name) => section(name, '', 'x'))]);
+    const again = parsePromptFile(serializePromptFile(data));
+    expect(again.sections.map((s) => s.name)).toEqual(['', ...unique]);
+  });
+
+  it('still reads hand-written variant names with & as written', () => {
+    const body = ['## Fish &amp; chips', '## Tom & Jerry', '## &#65;bc', ''].join('\n');
+    expect(parsePromptBody(body).map((s) => s.name)).toEqual(['', 'Fish &amp; chips', 'Tom & Jerry', '&#65;bc']);
+  });
+
   it('reproduces the card: Golden hour notes and a "C#" variant survive a save and reload', () => {
     const data = parsePromptFile(sample);
     data.sections[0].notes = 'Lighting notes for the keeper.\n\n## Golden hour\nWarm rim light from the lantern.';
