@@ -210,7 +210,10 @@ export class PromptEditorComponent implements OnChanges, OnDestroy {
   // ---- Links and tags -----------------------------------------------------
 
   characterName(id: string): string {
-    return this.characters.find((c) => c.id === id)?.name || 'Missing character';
+    const live = this.characters.find((c) => c.id === id);
+    if (live) return live.name || 'Untitled';
+    const deleted = this.promptService.deletedName('characters', id);
+    return deleted ? `${deleted} (deleted)` : 'Missing character';
   }
 
   isMissingCharacter(id: string): boolean {
@@ -218,7 +221,10 @@ export class PromptEditorComponent implements OnChanges, OnDestroy {
   }
 
   locationName(id: string): string {
-    return this.locations.find((l) => l.id === id)?.name || 'Missing location';
+    const live = this.locations.find((l) => l.id === id);
+    if (live) return live.name || 'Untitled';
+    const deleted = this.promptService.deletedName('locations', id);
+    return deleted ? `${deleted} (deleted)` : 'Missing location';
   }
 
   /** Searchable character picker (command palette with portraits). */

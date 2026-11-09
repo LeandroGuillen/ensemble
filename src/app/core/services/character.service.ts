@@ -1268,7 +1268,7 @@ export class CharacterService {
 
   /**
    * Stage a character / draft / Lore figure for OS trash + Undo.
-   * Order: stageForTrash → memory/thumbnail → reference cleanup → UndoDeleteService.
+   * Order: remember name for prompt links → stageForTrash → memory/thumbnail → reference cleanup → UndoDeleteService.
    * Post-stage failures restore the staged path and roll back in-memory/refs.
    */
   async deleteCharacter(id: string): Promise<boolean> {
@@ -1288,6 +1288,16 @@ export class CharacterService {
       const targetPath = isFolderBasedCharacterPath(character.relativePath)
         ? pathDirname(character.filePath)
         : character.filePath;
+
+      // Before anything moves: a prompt link left behind (unreadable prompt
+      // file, failed rollback) must show this name, not "Missing character".
+      try {
+        await this.referenceCleanup.rememberPromptLinkName('characters', character.id, name);
+      } catch (nameError) {
+        const err = `could not save its name for prompt links (${errorMessage(nameError)})`;
+        this.notificationService.showError(trashStagingFailureMessage(name, err));
+        throw new TrashStagingError(err);
+      }
 
       const stageResult = await this.electronService.stageForTrash(
         project.path,

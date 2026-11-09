@@ -240,11 +240,16 @@ export class PromptsComponent implements OnInit {
   }
 
   linkNames(file: PromptFile): string[] {
+    // A deleted record a link still points at shows its stored name.
+    const deleted = (field: 'characters' | 'locations', id: string) => {
+      const name = this.promptService.deletedName(field, id);
+      return name ? `${name} (deleted)` : undefined;
+    };
     const names = file.characters
-      .map((id) => this.linkTargets.find((c) => c.id === id)?.name)
+      .map((id) => this.linkTargets.find((c) => c.id === id)?.name ?? deleted('characters', id))
       .filter((name): name is string => !!name);
     for (const id of file.locations) {
-      const name = this.locations.find((l) => l.id === id)?.name;
+      const name = this.locations.find((l) => l.id === id)?.name ?? deleted('locations', id);
       if (name) names.push(name);
     }
     return names;

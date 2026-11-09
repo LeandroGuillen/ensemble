@@ -87,6 +87,20 @@ export class ReferenceCleanupService {
     return (await this.promptService()).removeLinks(field, targetId);
   }
 
+  /**
+   * Stores the name of a character or location about to be deleted, so a
+   * prompt link that cannot be cleaned up still shows it. Not best-effort:
+   * throws when it cannot be saved, and callers run it before staging so the
+   * delete is cancelled with nothing changed.
+   */
+  async rememberPromptLinkName(
+    field: 'characters' | 'locations',
+    targetId: string,
+    name: string
+  ): Promise<void> {
+    await (await this.promptService()).rememberDeletedName(field, targetId, name);
+  }
+
   private async restorePromptLinks(snapshot: PromptLinkSnapshot | undefined): Promise<ReferenceRestoreResult> {
     if (!snapshot || snapshot.removals.length === 0) {
       return { restored: 0, skipped: [] };

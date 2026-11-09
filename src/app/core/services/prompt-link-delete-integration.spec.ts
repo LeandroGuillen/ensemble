@@ -39,6 +39,9 @@ describe('Prompt links on character / location delete (real DI)', () => {
   let undoDelete: jasmine.SpyObj<UndoDeleteService>;
   let electron: jasmine.SpyObj<ElectronService>;
   let notifications: jasmine.SpyObj<NotificationService>;
+  let projectService: jasmine.SpyObj<ProjectService>;
+  /** ensemble.json as last written (via ProjectService.updateMetadata). */
+  let metadataOnDisk: any;
 
   const record = (over: Partial<Character>): Character => ({
     id: 'mara-vell',
@@ -97,12 +100,20 @@ describe('Prompt links on character / location delete (real DI)', () => {
     electron.restoreFromTrash.and.resolveTo({ success: true } as any);
 
     const project = { path: PROJECT, metadata: { settings: {}, books: [], categories: [], tags: [] } } as any;
-    const projectService = jasmine.createSpyObj<ProjectService>(
+    metadataOnDisk = structuredClone(project.metadata);
+    projectService = jasmine.createSpyObj<ProjectService>(
       'ProjectService',
-      ['getCurrentProject', 'getPromptsFolderPath', 'getCharactersFolderPath', 'getLocationsFolderPath', 'getDefaultCharacterStyle'],
+      [
+        'getCurrentProject', 'getPromptsFolderPath', 'getCharactersFolderPath', 'getLocationsFolderPath',
+        'getDefaultCharacterStyle', 'updateMetadata',
+      ],
       { currentProject$: new BehaviorSubject(project) }
     );
     projectService.getCurrentProject.and.returnValue(project);
+    projectService.updateMetadata.and.callFake(async (updates) => {
+      project.metadata = { ...project.metadata, ...updates };
+      metadataOnDisk = structuredClone(project.metadata);
+    });
     projectService.getPromptsFolderPath.and.returnValue(PROMPTS);
     projectService.getCharactersFolderPath.and.returnValue(`${PROJECT}/characters`);
     projectService.getLocationsFolderPath.and.returnValue(`${PROJECT}/locations`);
@@ -319,6 +330,125 @@ describe('Prompt links on character / location delete (real DI)', () => {
       expect(notifications.showError).toHaveBeenCalledWith(
         jasmine.stringMatching(/Couldn't delete "Grey Harbor".*Nothing was changed/)
       );
+    });
+  });
+
+  /**
+   * Reviewer probes (round 2): links the delete cannot clean up. A committed
+   * delete must leave no anonymous "Missing character": a link that still
+   * points at the deleted id shows the name it had.
+   */
+  describe('links the delete cannot clean up', () => {
+    const SECRET_PROMPT = `${PROMPTS}/characters/Secret.md`;
+
+    it('a prompt file that cannot be read during the delete keeps its link, labelled with the old name', async () => {
+      disk.set(SECRET_PROMPT, '---\ncharacters:\n  - mara-vell\n---\nhidden\n');
+      electron.readFile.and.callFake(async (p: string) =>
+        p === SECRET_PROMPT
+          ? { success: false, error: 'EACCES: permission denied' }
+          : disk.has(p) ? { success: true, content: disk.get(p)! } : { success: false, error: 'missing' }
+      );
+
+      await characterService.deleteCharacter('mara-vell');
+      expect(undoDelete.register).toHaveBeenCalled(); // the delete goes through (Undo window)
+      expect(links(SECRET_PROMPT).characters).toEqual(['mara-vell']); // untouched: unreadable
+
+      // Undo window passes; later the file is readable again and still links her.
+      electron.readFile.and.callFake(async (p: string) =>
+        disk.has(p) ? { success: true, content: disk.get(p)! } : { success: false, error: 'missing' }
+      );
+      await promptService.forceReload();
+      expect(promptService.getPrompt('characters/Secret.md')?.characters).toEqual(['mara-vell']);
+      expect(characterService.getCharacterById('mara-vell')).toBeUndefined();
+      expect(promptService.deletedName('characters', 'mara-vell')).toBe('Mara Vell');
+      expect(metadataOnDisk.deletedRecordNames).toEqual({ characters: { 'mara-vell': 'Mara Vell' } });
+    });
+
+    it('a failed unlink whose rollback and staged-file restore also fail leaves a labelled link', async () => {
+      // Mara Vell.md is unlinked, Grey Harbor.md fails, relinking Mara Vell.md fails too.
+      let marasWrites = 0;
+      electron.writeFileAtomic.and.callFake(async (p: string, content: string) => {
+        if (p === HARBOR_PROMPT || (p === MARA_PROMPT && ++marasWrites > 1)) {
+          return { success: false, error: 'EACCES: permission denied' };
+        }
+        disk.set(p, content);
+        return { success: true };
+      });
+      electron.restoreFromTrash.and.resolveTo({ success: false, error: 'EBUSY' } as any);
+
+      await expectAsync(characterService.deleteCharacter('mara-vell')).toBeRejected();
+
+      // Restore failed: the staged folder is offered for Undo and commits when it expires.
+      expect(undoDelete.register).toHaveBeenCalled();
+      expect(links(HARBOR_PROMPT).characters).toEqual(['ben', 'mara-vell']);
+      expect(promptService.deletedName('characters', 'mara-vell')).toBe('Mara Vell');
+      expect(metadataOnDisk.deletedRecordNames.characters['mara-vell']).toBe('Mara Vell');
+    });
+
+    it('a prompts folder that cannot be listed keeps the name for its unknown links', async () => {
+      electron.readDirectoryRecursive.and.resolveTo({ success: false, error: 'EACCES: permission denied' } as any);
+
+      await characterService.deleteCharacter('mara-vell');
+
+      expect(undoDelete.register).toHaveBeenCalled();
+      expect(links(MARA_PROMPT).characters).toEqual(['mara-vell']);
+      expect(promptService.deletedName('characters', 'mara-vell')).toBe('Mara Vell');
+    });
+
+    it('the same holds for a location linked from an unreadable prompt file', async () => {
+      const PLACE = `${PROMPTS}/places/Docks.md`;
+      disk.set(PLACE, '---\nlocations:\n  - grey-harbor\n---\nnight\n');
+      electron.readFile.and.callFake(async (p: string) =>
+        p === PLACE
+          ? { success: false, error: 'EACCES: permission denied' }
+          : disk.has(p) ? { success: true, content: disk.get(p)! } : { success: false, error: 'missing' }
+      );
+
+      await locationService.deleteLocation('grey-harbor');
+
+      expect(undoDelete.register).toHaveBeenCalled();
+      expect(promptService.deletedName('locations', 'grey-harbor')).toBe('Grey Harbor');
+      expect(metadataOnDisk.deletedRecordNames.locations).toEqual({ 'grey-harbor': 'Grey Harbor' });
+    });
+
+    it('cancels the delete before anything moves when the name cannot be saved', async () => {
+      const before = { mara: links(MARA_PROMPT), harbor: links(HARBOR_PROMPT) };
+      projectService.updateMetadata.and.rejectWith(new Error('Save metadata failed: EACCES'));
+
+      await expectAsync(characterService.deleteCharacter('mara-vell')).toBeRejected();
+
+      expect(electron.stageForTrash).not.toHaveBeenCalled();
+      expect(undoDelete.register).not.toHaveBeenCalled();
+      expect(characterService.getCharacterById('mara-vell')?.name).toBe('Mara Vell');
+      expect(links(MARA_PROMPT)).toEqual(before.mara);
+      expect(links(HARBOR_PROMPT)).toEqual(before.harbor);
+      expect(notifications.showError).toHaveBeenCalledWith(
+        jasmine.stringMatching(/Couldn't delete "Mara Vell".*Nothing was changed/)
+      );
+    });
+
+    it('does not touch ensemble.json for a record no prompt links (all files readable)', async () => {
+      await characterService.deleteCharacter('ben');
+      // Ben is linked from Grey Harbor.md, so his name is stored...
+      expect(metadataOnDisk.deletedRecordNames.characters).toEqual({ ben: 'Ben' });
+      projectService.updateMetadata.calls.reset();
+      (characterService as any).charactersSubject.next([
+        ...characterService.getCharactersSnapshot(),
+        record({ id: 'nobody', name: 'Nobody', relativePath: 'nobody/nobody.md', filePath: `${PROJECT}/characters/nobody/nobody.md` }),
+      ]);
+      // ...but nobody links "nobody": no write.
+      await characterService.deleteCharacter('nobody');
+      expect(projectService.updateMetadata).not.toHaveBeenCalled();
+    });
+
+    it('drops stored names no prompt links any more when it stores a new one', async () => {
+      await characterService.deleteCharacter('ben');
+      expect(metadataOnDisk.deletedRecordNames.characters).toEqual({ ben: 'Ben' });
+
+      await characterService.deleteCharacter('mara-vell');
+
+      // Ben's link was cleaned from Grey Harbor.md, so his entry is pruned.
+      expect(metadataOnDisk.deletedRecordNames.characters).toEqual({ 'mara-vell': 'Mara Vell' });
     });
   });
 });

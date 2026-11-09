@@ -117,7 +117,9 @@ describe('LocationService', () => {
     const cleanupSpy = jasmine.createSpyObj('ReferenceCleanupService', [
       'clearLocationReferences',
       'restoreLocationReferences',
+      'rememberPromptLinkName',
     ]);
+    cleanupSpy.rememberPromptLinkName.and.resolveTo();
     cleanupSpy.clearLocationReferences.and.returnValue(
       Promise.resolve({ locationId: '', seats: [] })
     );

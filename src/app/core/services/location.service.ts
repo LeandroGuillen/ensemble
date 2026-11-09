@@ -353,6 +353,16 @@ export class LocationService {
 
       const project = requireProject(this.projectService.getCurrentProject());
       const name = location.name || 'Untitled';
+      // Before anything moves: a prompt link left behind (unreadable prompt
+      // file, failed rollback) must show this name, not "Missing location".
+      try {
+        await this.referenceCleanup.rememberPromptLinkName('locations', location.id, name);
+      } catch (nameError) {
+        const err = `could not save its name for prompt links (${errorMessage(nameError)})`;
+        this.notificationService.showError(trashStagingFailureMessage(name, err));
+        throw new TrashStagingError(err);
+      }
+
       const stageResult = await this.electronService.stageForTrash(
         project.path,
         location.filePath,

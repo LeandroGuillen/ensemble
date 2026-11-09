@@ -95,6 +95,8 @@ export class PromptService {
   private loadPromise: Promise<void> | null = null;
   private migrating = false;
   private readonly imageCache = new Map<string, string>();
+  /** Prompt files (relative paths) that could not be read or parsed; their links are unknown. */
+  private readonly unreadable = new Set<string>();
 
   constructor(
     private electronService: ElectronService,
@@ -114,6 +116,7 @@ export class PromptService {
         this.loadedProjectPath = null;
         this.loadPromise = null;
         this.imageCache.clear();
+        this.unreadable.clear();
         this.promptsSubject.next([]);
       }
     });
@@ -166,22 +169,31 @@ export class PromptService {
     try {
       const root = this.projectService.getPromptsFolderPath();
       if (!(await this.electronService.fileExists(root))) {
+        this.unreadable.clear();
         this.promptsSubject.next([]);
         return;
       }
       const result = await this.electronService.readDirectoryRecursive(root, '*.md');
       if (!result.success || !result.files) {
         this.logger.warn('Could not scan the prompts folder', result.error);
+        if (this.projectService.getCurrentProject()?.path !== projectPath) return;
+        // Links are unknown: deletes keep the name for any prompt still linking.
+        this.unreadable.clear();
+        this.unreadable.add('.');
         this.promptsSubject.next([]);
         return;
       }
       const loaded: PromptFile[] = [];
+      const unreadable: string[] = [];
       for (const { relativePath, absolutePath } of result.files) {
         const file = await this.readPromptFile(absolutePath, relativePath);
         if (file) loaded.push(file);
+        else unreadable.push(normalizeRelative(relativePath));
       }
       // A project switch during the scan makes this result stale.
       if (this.projectService.getCurrentProject()?.path !== projectPath) return;
+      this.unreadable.clear();
+      unreadable.forEach((path) => this.unreadable.add(path));
       this.promptsSubject.next(sortPrompts(loaded));
     } finally {
       this.loadingSubject.next(false);
@@ -337,6 +349,46 @@ export class PromptService {
       ? [...existing.characters, characterId]
       : existing.characters.filter((id) => id !== characterId);
     await this.savePrompt(relativePath, { ...existing, characters });
+  }
+
+  /**
+   * Name a deleted character or location had, for prompt links that still
+   * point at it (see `rememberDeletedName()`); null when none is stored.
+   */
+  deletedName(field: PromptLinkField, targetId: string): string | null {
+    const names = this.projectService.getCurrentProject()?.metadata.deletedRecordNames?.[field];
+    return names?.[targetId] || null;
+  }
+
+  /**
+   * Stores a character's or location's name in `ensemble.json`
+   * (`deletedRecordNames`) before it is deleted, so a prompt link that still
+   * points at it afterwards (a prompt file that could not be read, or a failed
+   * unlink whose rollback also failed) shows that name, never an anonymous
+   * "Missing character". Writes only when a prompt links the id or some prompt
+   * file could not be read; drops names no loaded prompt links any more
+   * (unless some file is unreadable). Throws when `ensemble.json` cannot be
+   * written, so the caller cancels the delete before anything is changed.
+   */
+  async rememberDeletedName(field: PromptLinkField, targetId: string, name: string): Promise<void> {
+    await this.ensureLoaded();
+    const project = this.projectService.getCurrentProject();
+    if (!project) return;
+    const files = this.promptsSubject.value;
+    const linked = (id: string) => files.some((file) => file[field].includes(id));
+    if (!linked(targetId) && this.unreadable.size === 0) return;
+
+    const stored = project.metadata.deletedRecordNames ?? {};
+    const current = stored[field] ?? {};
+    const next: Record<string, string> = {};
+    for (const [id, oldName] of Object.entries(current)) {
+      if (this.unreadable.size > 0 || linked(id)) next[id] = oldName;
+    }
+    next[targetId] = name.trim() || (field === 'characters' ? 'Unnamed character' : 'Unnamed location');
+    if (JSON.stringify(next) === JSON.stringify(current)) return;
+    await this.projectService.updateMetadata({
+      deletedRecordNames: { ...stored, [field]: next },
+    });
   }
 
   /** Prompt files whose `characters:` / `locations:` list holds `targetId` (for delete dialogs). */
@@ -526,11 +578,16 @@ export class PromptService {
     if (!relative || relative.split('/').includes('.ensemble-trash')) return;
 
     if (event.type === 'unlink') {
+      this.unreadable.delete(relative);
       this.promptsSubject.next(this.promptsSubject.value.filter((f) => f.relativePath !== relative));
       return;
     }
     const file = await this.readPromptFile(event.path, relative);
-    if (!file) return;
+    if (!file) {
+      this.unreadable.add(relative);
+      return;
+    }
+    this.unreadable.delete(relative);
     const current = this.getPrompt(relative);
     if (current && serializePromptFile(current) === serializePromptFile(file)) return;
     this.upsert(file);

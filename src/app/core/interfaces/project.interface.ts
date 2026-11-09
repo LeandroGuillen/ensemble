@@ -47,6 +47,15 @@ export interface ProjectMetadata {
   settings: ProjectSettings;
   pinboards?: Pinboard[];  // New: array of pinboards
   lastSession?: ProjectLastSession;
+  /**
+   * Names of deleted characters / locations, by id, that prompt files may
+   * still link (`PromptService.rememberDeletedName()`), so such a link shows
+   * the old name instead of an anonymous "Missing character".
+   */
+  deletedRecordNames?: {
+    characters?: Record<string, string>;
+    locations?: Record<string, string>;
+  };
 }
 
 export interface PinboardConnection {

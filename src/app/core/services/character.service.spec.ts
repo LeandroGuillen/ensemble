@@ -124,7 +124,9 @@ describe('CharacterService', () => {
       'restoreCharacterReferences',
       'countDraftReferences',
       'removeDraftReferences',
+      'rememberPromptLinkName',
     ]);
+    referenceCleanupSpy.rememberPromptLinkName.and.resolveTo();
     referenceCleanupSpy.countCharacterReferences.and.returnValue(Promise.resolve({ houses: [], casts: [], pinboards: [], plotBoards: [], prompts: [] }));
     referenceCleanupSpy.countDraftReferences.and.returnValue(Promise.resolve({ prompts: [] }));
     referenceCleanupSpy.removeDraftReferences.and.callFake(async (id: string) => emptyCharacterSnapshot(id));

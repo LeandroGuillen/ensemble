@@ -136,4 +136,12 @@ child
 - A variant heading starts at the beginning of the line. An indented `##` line
   (space or tab) is notes, also when it is the first line of the file body.
 - Unknown frontmatter keys are preserved.
+- Deleting a character, draft or location removes its ID from every prompt file
+  that links it (Undo puts it back). If a link may survive (a prompt file that
+  can't be read, or a failed update that couldn't be rolled back), the deleted
+  record's name is first saved in `ensemble.json` under
+  `deletedRecordNames.characters` / `deletedRecordNames.locations` (ID → name),
+  and the link shows it as "Name (deleted)" instead of "Missing character".
+  If that name can't be saved, the delete is cancelled. Names no readable prompt
+  links any more are dropped the next time one is saved.
 
