@@ -127,7 +127,7 @@ test('opening the committed demo through the app, navigating and an update snaps
     const reopened = await resolveOpen(demo);
     assert.equal(reopened.path, project);
     assert.equal((await invoke(IPC.setWorkFolder, reopened.path)).success, true);
-    const snapshots = await fsp.readdir(path.join(project, '.ensemble-backup', 'snapshots'));
+    const snapshots = (await fsp.readdir(path.join(project, '.ensemble-backup', 'snapshots'))).filter((name) => name.endsWith('.zip'));
     assert.equal(snapshots.length, 1, 'update snapshot taken in the opened folder');
 
     assert.equal(git(checkout, 'status', '--porcelain', '--untracked-files=all', '--ignored'), '');

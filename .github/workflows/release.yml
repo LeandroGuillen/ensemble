@@ -42,7 +42,16 @@ jobs:
       - run: npm run build-icons
       - run: npm run build -- --configuration production
       - name: Build Linux packages and update metadata
-        run: npx electron-builder --linux AppImage deb rpm --publish never
+        # electron-builder downloads its AppImage/fpm tools from GitHub on first use; a transient
+        # 5xx there (HTTP 504 on appimage-12.0.1.7z failed v1.26.33) is retried with a backoff.
+        run: |
+          for attempt in 1 2 3 4; do
+            npx electron-builder --linux AppImage deb rpm --publish never && exit 0
+            echo "electron-builder failed (attempt $attempt); retrying"
+            rm -rf release
+            sleep $((attempt * 30))
+          done
+          exit 1
       - uses: actions/upload-artifact@v4
         with:
           name: linux-release
