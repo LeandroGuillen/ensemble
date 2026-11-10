@@ -10,6 +10,10 @@ books:
 thumbnails:
   default: img/joren-hale.webp
 prompts: []
+born: 295
+residence:
+  - from: 295
+    place: saltmere-docks
 created: '2026-10-31T12:00:00.000Z'
 modified: '2026-10-31T12:00:00.000Z'
 ---

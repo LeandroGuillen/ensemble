@@ -20,6 +20,7 @@ import {
 } from './settings-section';
 import { SETTINGS_FIELD_INDEX, SettingsFieldIndex } from './settings-field-index';
 import { SettingsSearchService } from './settings-search.service';
+import { TimelineSettingsComponent } from '../timeline-settings/timeline-settings.component';
 
 interface SettingsNavLeaf {
   id: SettingsSectionId;
@@ -51,7 +52,7 @@ const SETTINGS_NAV_EXPANDED_GROUPS_KEY = 'settingsNavExpandedGroups';
 
 @Component({
   selector: 'app-settings',
-  imports: [FormsModule, PageHeaderComponent, MetadataManagementComponent, AiSettingsComponent, BackupSettingsComponent],
+  imports: [FormsModule, PageHeaderComponent, MetadataManagementComponent, AiSettingsComponent, BackupSettingsComponent, TimelineSettingsComponent],
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.scss'],
 })
@@ -76,6 +77,12 @@ export class SettingsComponent implements OnInit, OnDestroy {
       id: 'appearance',
       label: 'Appearance',
       description: 'Theme, skin, colors, and interface zoom',
+    },
+    {
+      kind: 'leaf',
+      id: 'timeline',
+      label: 'Timeline',
+      description: 'World calendar and chronicle file',
     },
     {
       kind: 'leaf',

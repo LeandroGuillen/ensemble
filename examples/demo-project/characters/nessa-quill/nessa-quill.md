@@ -10,6 +10,10 @@ books:
 thumbnails:
   default: img/nessa-quill.webp
 prompts: []
+born: 299
+residence:
+  - from: 299
+    place: saltmere-docks
 created: '2026-10-31T12:00:00.000Z'
 modified: '2026-10-31T12:00:00.000Z'
 ---

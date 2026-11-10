@@ -3,6 +3,10 @@ export interface HouseLeadership {
   id: string;
   characterIds: string[];
   period: string;
+  /** World date the reign starts, as written (`212`, `322-04`); used by timelines. */
+  from?: string;
+  /** World date the reign ends, as written. Open-ended when missing. */
+  to?: string;
   books: string[];
   notes: string;
 }

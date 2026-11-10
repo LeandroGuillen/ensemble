@@ -10,6 +10,10 @@ books:
 thumbnails:
   default: img/ilse-dunmore.webp
 prompts: []
+born: 304
+residence:
+  - from: 304
+    place: port-saltmere
 created: '2026-10-31T12:00:00.000Z'
 modified: '2026-10-31T12:00:00.000Z'
 bookCategories:

@@ -12,6 +12,18 @@ export interface SettingsFieldIndex {
 /** Static catalog of searchable settings fields (labels + keywords). Live values are resolved at query time. */
 export const SETTINGS_FIELD_INDEX: SettingsFieldIndex[] = [
   {
+    id: 'calendar',
+    section: 'timeline',
+    label: 'Calendar',
+    keywords: ['calendar', 'months', 'year', 'dates', 'era', 'timeline'],
+  },
+  {
+    id: 'chronicle-file',
+    section: 'timeline',
+    label: 'Chronicle file',
+    keywords: ['chronicle', 'timeline', 'history', 'events', 'file'],
+  },
+  {
     id: 'default-category',
     section: 'categories',
     label: 'Default Category',

@@ -1,0 +1,58 @@
+<div class="timeline-settings">
+  <div class="form-section" [settingsSearchable]="['calendar', 'months', 'year', 'era', 'suffix', 'dates']">
+    <h3 class="form-section-title">Calendar</h3>
+    <p class="field-hint">
+      Dates on the Timeline, in chapter <code>When:</code> lines and in <b>Born</b>/<b>Died</b> use this calendar:
+      <code>322</code>, <code>322-03</code> (month), <code>322-03-09</code> (day), <code>c. 322</code> (approximate).
+      Years have no leap days.
+    </p>
+    <div class="row">
+      <div class="form-group">
+        <label class="form-label" for="calendar-name">Name</label>
+        <input id="calendar-name" class="form-control" [(ngModel)]="name" placeholder="Coast Reckoning" />
+      </div>
+      <div class="form-group suffix">
+        <label class="form-label" for="calendar-suffix">Year suffix</label>
+        <input id="calendar-suffix" class="form-control" [(ngModel)]="suffix" placeholder="CR" maxlength="8" />
+      </div>
+    </div>
+    <div class="form-group">
+      <span class="form-label" id="months-label">Months · {{ months.length }} · {{ yearLength }} days a year</span>
+      <ol class="months" aria-labelledby="months-label">
+        @for (month of months; track $index; let i = $index; let first = $first; let last = $last) {
+          <li class="month">
+            <span class="month-number">{{ i + 1 }}</span>
+            <input class="form-control" [(ngModel)]="month.name" [attr.aria-label]="'Month ' + (i + 1) + ' name'" />
+            <input class="form-control days" type="number" min="1" max="400" [(ngModel)]="month.days" [attr.aria-label]="'Month ' + (i + 1) + ' days'" />
+            <span class="days-label">days</span>
+            <button type="button" class="icon-btn" (click)="moveMonth(i, -1)" [disabled]="first" [attr.aria-label]="'Move month ' + (i + 1) + ' up'" title="Move up">↑</button>
+            <button type="button" class="icon-btn" (click)="moveMonth(i, 1)" [disabled]="last" [attr.aria-label]="'Move month ' + (i + 1) + ' down'" title="Move down">↓</button>
+            <button type="button" class="icon-btn" (click)="removeMonth(i)" [disabled]="months.length === 1" [attr.aria-label]="'Remove month ' + (i + 1)" title="Remove">×</button>
+          </li>
+        }
+      </ol>
+      <div class="month-actions">
+        <button type="button" class="btn btn-ghost btn-sm" (click)="addMonth()">+ Add month</button>
+        <button type="button" class="btn btn-ghost btn-sm" (click)="useDefaultMonths()">Use January–December</button>
+      </div>
+      <p class="field-hint">Renaming months is safe; changing their number or lengths moves dates written with months and days.</p>
+    </div>
+  </div>
+
+  <div class="form-section" [settingsSearchable]="['chronicle', 'timeline file', 'history', 'events']">
+    <h3 class="form-section-title">Chronicle file</h3>
+    <div class="form-group">
+      <label class="form-label" for="chronicle-file">Path in the project</label>
+      <input id="chronicle-file" class="form-control mono" [(ngModel)]="chronicleFile" [placeholder]="defaultChronicle" />
+      <p class="field-hint">
+        Dated world events for the Timeline: <code>#</code> headings are eras, <code>## 322-03 · Title</code> headings are entries.
+        The file is created when you add the first entry.
+      </p>
+    </div>
+  </div>
+
+  <div class="save-row">
+    <button type="button" class="btn btn-primary" (click)="save()" [disabled]="!dirty || saving || !monthsValid">{{ saving ? 'Saving…' : 'Save' }}</button>
+    @if (dirty) { <button type="button" class="btn btn-ghost" (click)="revert()">Revert</button> }
+  </div>
+</div>

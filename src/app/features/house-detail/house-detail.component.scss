@@ -136,3 +136,6 @@ label { display: block; color: var(--color-text-secondary); font-size: 13px; mar
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
+
+.reign-dates { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; .mono { font-family: var(--font-mono); } }
+.leadership-dates { font-family: var(--font-mono); font-size: 12px; color: var(--color-text-muted); }

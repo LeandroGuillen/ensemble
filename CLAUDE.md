@@ -43,6 +43,7 @@ Located in `src/app/core/services/`:
 - **WikiLinkTargetsService**: `[[wikilink]]` resolver and completion entries (characters, locations, Houses) for the Markdown description editors; `recordName$()` feeds the `excerpt` / `wikiText` preview pipes so `[[C#]]` shows the `C#` record it opens
 - **SkinService**: Applies the UI skin (`settings.skin`, per project) by setting `html[data-skin]`. Skins change shape/type/motion independently of the color theme; registry in `src/app/core/skins/`, styles in `src/styles/skins/_<id>.scss` scoped to `html[data-skin='<id>']`
 - **PendingEditsService**: Debounced autosaves that must survive leaving. Pages `register()` a flusher while open and `track()` the save they start on destroy; `AppComponent` (quit/reload/close) and `ProjectService` (project switch) call `flushAll()` first. Used by Settings (Project Name and the settings form)
+- **TimelineService**: Data for the Timeline page and the book page's story time: loads and watches the chronicle file (`settings.chronicleFile`, default `chronicle.md`) and every book's plan (the open plan comes live from `BookPlanService`), exposes the project calendar (`settings.calendar`) and a combined `context$`. Chronicle edits rewrite only the touched entry and refuse when the file changed on disk; `setChapterWhen()` writes a chapter's `When:` line
 - **UndoDeleteService**: 15 s Undo toast after staging a delete; restores files via `restoreFromTrash` and reapplies snapshots. Subscribes once to sticky `trash-commit-failed` errors.
 
 ### OS trash (deletes)
@@ -58,7 +59,10 @@ Located in `src/app/core/utils/`:
 - **slug.utils.ts**: Slug generation for folder names, filename-to-field-name conversion, plot-board duplicate stem utilities
 - **markdown.utils.ts**: Markdown parsing and frontmatter handling
 - **character-alias.utils.ts**: Normalize and search character alternative names (a.k.a.'s)
-- **book-plan.utils.ts** / **plan-search.utils.ts**: Book plan parser (outline, PoV lines, markers, focus targets) and plan search (`2180`, `@name`, `!todo`…)
+- **book-plan.utils.ts** / **plan-search.utils.ts**: Book plan parser (outline, PoV and `When:` lines, markers, focus targets) and plan search (`2180`, `@name`, `!todo`…)
+- **world-date.utils.ts**: In-world calendar: parse/format `322`, `322-03-09`, `c. 1`, spans with `→`; day numbers and decimal years
+- **chronicle-file.utils.ts** / **timeline.utils.ts**: Chronicle file parser and line-preserving edits; Chronicle items (authored + derived births, deaths, reigns, book spans), story-time chapters, continuity checks and lifelines
+- **character-life.utils.ts**: Normalize/serialize character `born`, `died`, `residence` (YAML may read dates as numbers or Dates)
 
 ### Data Flow
 
@@ -134,7 +138,8 @@ Each project has this structure:
 
 ```
 project-folder/
-├── ensemble.json           # Project metadata: categories, tags, settings, lastSession, pinboards
+├── ensemble.json           # Project metadata: categories, tags, settings (incl. calendar), lastSession, pinboards
+├── chronicle.md            # Timeline chronicle: `#` eras, `## <date> · <title>` entries (path configurable)
 ├── .ensemble-trash/        # Staged deletes before OS trash (exclude from backups/exports)
 ├── comfyui-workflows/      # ComfyUI API-format workflow JSON (optional; image generation)
 ├── world-map.md            # World map: location pins and roads (created on first pin)
@@ -189,6 +194,8 @@ modified: "2024-01-20T14:45:00Z"
 (single markdown body, no required section headers)
 ```
 
+Optional timeline fields: `born`, `died` (world dates such as `312`, `c. 1`) and `residence` (`[{ from, place: <location id>, note? }]`).
+
 Character ID is a stable value stored in frontmatter (`id`). The file path under `characters/` is location only and can change on rename. Existing files without `id` are assigned one on first load, and leftover path-based refs (casts, pinboards, book PoVs, plot threads) are remapped.
 
 **Character drafts**: A character folder below `@drafts` is shown only in the Character Drawer. Draft user fields (including `name` and `category`) may be empty, and book assignments do not promote a draft. `CharacterService` exposes drafts separately from active characters so casts, pinboards, plot boards, PoV pickers, and ordinary character counts do not include them. Promotion is explicit, preserves the stable ID and all content, requires the normal character fields (`name` and `category`), and moves the whole folder out of `@drafts`.
@@ -203,6 +210,7 @@ A book's plan is any Markdown file in the project, set per book in the Edit Book
 # Fase 1: El Prodigio            ← section (phase); intro text below it
 ## 2010 - Llegando (T)           ← chapter: `<code> - <title>`; a trailing `(…)` is hidden in the outline
 PoV: m0k3r5abc123 Terom Bardez   ← optional, one or more, directly below the chapter heading
+When: 2010-03-09 → 2010-03-12    ← optional story-time date (project calendar), next to PoV lines
 - Lugar: …
 ### 1. Escena                    ← scene
 ```
@@ -272,11 +280,12 @@ All routes defined in `src/app/app.routes.ts`:
 - `/character-draft/:id` - Edit existing character draft
 - `/character-draft` - Create new character draft
 - `/pinboard` - Pinboard visualization (vis.js)
-- `/settings` - Settings (General, Appearance, Backup, Categories, Tags, Character Styles, AI, Image Generation)
+- `/settings` - Settings (General, Appearance, Timeline, Backup, Categories, Tags, Character Styles, AI, Image Generation)
 - `/metadata` - Manage categories/tags
 - `/ai-settings` - AI provider configuration
 - `/library` - Books page (series, sagas and books; clicking a book opens `/book/:id`)
-- `/book/:id` - Book page: the book's plan (outline + focused Markdown editor, `?line=` jumps); "Edit book…" opens the Edit Book modal
+- `/book/:id` - Book page: the book's plan (outline + focused Markdown editor, `?line=` jumps); `?view=timeline` shows its chapters in story time (`StoryTimeComponent`) with continuity checks; "Edit book…" opens the Edit Book modal
+- `/timeline` - Timeline: Chronicle (default) and Lifelines (`?view=lifelines`)
 - `/concepts` - Concepts (titled notes in `concepts.md`)
 - `/names` - Name lists
 - `/backstage` - Backstage (concept/name generation)

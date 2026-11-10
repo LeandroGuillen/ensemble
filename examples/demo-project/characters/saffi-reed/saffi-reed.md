@@ -10,6 +10,10 @@ books:
 thumbnails:
   default: img/saffi-reed.webp
 prompts: []
+born: 306
+residence:
+  - from: 306
+    place: saltmere-docks
 created: '2026-10-31T12:00:00.000Z'
 modified: '2026-10-31T12:00:00.000Z'
 aliases: Gull

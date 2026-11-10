@@ -25,6 +25,9 @@ import { debounceTime } from "rxjs/operators";
 import { combineLatest, merge } from "rxjs";
 import { ResolvedWikiLink } from '../../core/utils/wiki-links.utils';
 import { WikiLinkTargetsService } from '../../core/services/wiki-link-targets.service';
+import { LocationService } from '../../core/services/location.service';
+import { CharacterResidence } from '../../core/interfaces/character.interface';
+import { formatWorldDate, parseWorldDate, resolveCalendar } from '../../core/utils/world-date.utils';
 import { MarkdownEditorComponent, WikiLinkSuggestion } from '../../shared/markdown-editor/markdown-editor.component';
 import { MentionedInComponent } from '../../shared/mentioned-in/mentioned-in.component';
 import { buildCharacterDeleteMessage } from './character-delete-message.utils';
@@ -159,6 +162,13 @@ export class CharacterDetailComponent
   bookPageOriginalContent: Record<string, string> = {};
   newCharacterFromLink: string | null = null;
   private readonly wikiLinkTargets = inject(WikiLinkTargetsService);
+  private readonly locationService = inject(LocationService);
+
+  /** Timeline fields: where the character lived (`residence:`), edited as rows. */
+  residence: CharacterResidence[] = [];
+  /** Locations for the residence picker. */
+  residenceLocations: { id: string; name: string }[] = [];
+  private lifeOpenChoice: boolean | null = null;
   private leavePrompt: Promise<boolean> | null = null;
   /** Resolves [[wikilinks]] in the description editors; replaced when link targets change. */
   linkResolver: (target: string) => ResolvedWikiLink | null = () => null;
@@ -227,6 +237,12 @@ export class CharacterDetailComponent
   }
 
   ngOnInit(): void {
+    this.locationService.getLocations()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((locations) => {
+        this.residenceLocations = locations.map((l) => ({ id: l.id, name: l.name })).sort((a, b) => a.name.localeCompare(b.name));
+        this.cdr.markForCheck();
+      });
     this.wikiLinkTargets.targets$('character')
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(({ resolve, suggestions }) => {
@@ -331,8 +347,11 @@ export class CharacterDetailComponent
             category: defaultCategory?.id || '',
             tags: [],
             books: [],
+            born: '',
+            died: '',
             content: this.isDraftMode ? history.state?.initialContent || '' : '',
           });
+          this.residence = [];
           this.thumbnailsMap = {};
           this.bookCategoriesMap = {};
           this.bookTagsMap = {};
@@ -499,6 +518,8 @@ export class CharacterDetailComponent
       ],
       tags: [[]],
       books: [[]],
+      born: [''],
+      died: [''],
       content: [
         "",
         {
@@ -559,8 +580,11 @@ export class CharacterDetailComponent
           category: this.character.category,
           tags: this.character.tags,
           books: this.character.books,
+          born: this.character.born ?? '',
+          died: this.character.died ?? '',
           content: this.character.content || '',
         });
+        this.residence = (this.character.residence ?? []).map((row) => ({ ...row }));
 
         this.thumbnailsMap = { ...(this.character.thumbnails || {}) };
         this.bookCategoriesMap = { ...(this.character.bookCategories || {}) };
@@ -909,8 +933,56 @@ export class CharacterDetailComponent
       bookTags: normalizeBookTags(this.bookTagsMap, books),
       thumbnails: { ...this.thumbnailsMap },
       bookThumbnails: normalizeBookThumbnailsMap(this.bookThumbnailsMap, books),
+      born: (this.characterForm.value.born || '').trim() || undefined,
+      died: (this.characterForm.value.died || '').trim() || undefined,
+      residence: (this.residence ?? [])
+        .map((row) => ({ from: row.from.trim(), place: row.place, ...(row.note?.trim() ? { note: row.note.trim() } : {}) }))
+        .filter((row) => row.from && row.place),
       content: this.characterForm.value.content || '',
     };
+  }
+
+  // ------------------------------------------------------------ Life & timeline
+
+  get lifeOpen(): boolean {
+    return this.lifeOpenChoice ?? !!(this.character?.born || this.character?.died || this.character?.residence?.length);
+  }
+
+  onLifeToggle(event: Event): void {
+    const open = (event.target as HTMLDetailsElement).open;
+    if (open !== this.lifeOpen) this.lifeOpenChoice = open;
+  }
+
+  get lifeSummary(): string {
+    const born = (this.characterForm.value.born || '').trim();
+    const died = (this.characterForm.value.died || '').trim();
+    if (!born && !died) return 'No dates';
+    return died ? `${born || '?'} – ${died}` : `b. ${born}`;
+  }
+
+  /** Reading of a typed world date, or a warning when the calendar can't read it. */
+  lifeDateHint(value: string | null | undefined): { text: string; bad: boolean } {
+    const text = (value || '').trim();
+    if (!text) return { text: '', bad: false };
+    const calendar = resolveCalendar(this.currentProject?.metadata.settings.calendar);
+    const date = parseWorldDate(text, calendar);
+    return date
+      ? { text: formatWorldDate(date, calendar, { suffix: true, longMonth: true }), bad: false }
+      : { text: 'Use a year like 312, or 312-05 / 312-05-09', bad: true };
+  }
+
+  addResidence(): void {
+    this.residence = [...this.residence, { from: (this.characterForm.value.born || '').trim() && !this.residence.length ? this.characterForm.value.born.trim() : '', place: '' }];
+    this.characterForm.markAsDirty();
+  }
+
+  removeResidence(index: number): void {
+    this.residence = this.residence.filter((_, i) => i !== index);
+    this.characterForm.markAsDirty();
+  }
+
+  onResidenceChange(): void {
+    this.characterForm.markAsDirty();
   }
 
   async convertDraft(collection: 'characters' | 'lore'): Promise<void> {

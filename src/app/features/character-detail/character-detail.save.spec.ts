@@ -55,6 +55,24 @@ describe('Character detail save', () => {
     expect(component.characterForm.valid).toBeFalse();
   });
 
+  it('sends born, died and the filled-in residence rows', () => {
+    Object.assign(component, { fb: new FormBuilder(), isLoreMode: false });
+    component.characterForm = (component as any).createForm();
+    component.characterForm.patchValue({ name: 'Wren', category: 'person', born: ' 312 ', died: '' });
+    component.residence = [
+      { from: '312', place: 'port-saltmere' },
+      { from: '322-05', place: 'the-undertide', note: ' lost ' },
+      { from: '330', place: '' },
+    ];
+    const data = (component as any).buildFormData();
+    expect(data.born).toBe('312');
+    expect(data.died).toBeUndefined();
+    expect(data.residence).toEqual([
+      { from: '312', place: 'port-saltmere' },
+      { from: '322-05', place: 'the-undertide', note: 'lost' },
+    ]);
+  });
+
   it('saves a changed book description when saving from General', async () => {
     component.activeContentTab = 'main';
     component.characterForm.patchValue({ content: 'Updated general notes' });

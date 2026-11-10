@@ -3,14 +3,20 @@ import {
   PlanHeading,
   PlanLine,
   PlanMarker,
-  PlanPov,
+  PlanWhen,
 } from '../interfaces/book-plan.interface';
 
 const HEADING_RE = /^(#{1,6})\s+(.*?)\s*#*\s*$/;
 /** `2180 - Paseo por Nueva Alascar (D)` → code + rest. */
-const CHAPTER_RE = /^(\d{3,5})\s*[-–—]\s*(.*)$/;
+const CHAPTER_RE = /^(\d{2,5})\s*[-–—]\s*(.*)$/;
 const TRAILING_PAREN_RE = /\s*\([^()]*\)\s*$/;
 const POV_RE = /^PoV:\s*(\S+)\s*(.*)$/i;
+const WHEN_RE = /^When:\s*(.*)$/i;
+
+/** The line written for a chapter's story-time date. */
+export function formatWhenLine(text: string): string {
+  return `When: ${text.trim()}`;
+}
 
 /** The line written for a chapter's point of view. */
 export function formatPovLine(characterId: string, name: string): string {
@@ -114,7 +120,7 @@ export function parseBookPlan(text: string): ParsedBookPlan {
       (parent ? parent.children : outline).push(heading);
       if (kind === 'chapter') {
         chapters.push(heading);
-        i = readPovLines(rawLines, lineStarts, i + 1, heading.pov) - 1;
+        i = readChapterProperties(rawLines, lineStarts, i + 1, heading) - 1;
       }
       open.push(heading);
       continue;
@@ -153,15 +159,27 @@ export function parseBookPlan(text: string): ParsedBookPlan {
   return { outline, chapters, lines };
 }
 
-/** Collect consecutive `PoV:` lines (blank lines allowed between). Returns the first line after them. */
-function readPovLines(rawLines: string[], lineStarts: number[], from: number, into: PlanPov[]): number {
+/**
+ * Collect consecutive `PoV:` and `When:` lines below a chapter heading (blank lines allowed
+ * between, in any order). Returns the first line after them.
+ */
+function readChapterProperties(rawLines: string[], lineStarts: number[], from: number, heading: PlanHeading): number {
   let next = from;
   for (let i = from; i < rawLines.length; i++) {
     const trimmed = rawLines[i].trim();
     if (!trimmed) continue;
+    const when = WHEN_RE.exec(trimmed);
+    if (when) {
+      // The first `When:` wins; later ones are ordinary text.
+      if (heading.when) break;
+      const value: PlanWhen = { text: when[1].trim(), line: i, from: lineStarts[i], to: lineStarts[i] + rawLines[i].length };
+      heading.when = value;
+      next = i + 1;
+      continue;
+    }
     const match = POV_RE.exec(trimmed);
     if (!match) break;
-    into.push({
+    heading.pov.push({
       characterId: match[1],
       name: match[2].trim(),
       line: i,
@@ -173,10 +191,28 @@ function readPovLines(rawLines: string[], lineStarts: number[], from: number, in
   return next;
 }
 
+/**
+ * Plan text with a chapter's `When:` line set to `value` (removed when empty). A new line goes
+ * below the heading's `PoV:` lines, or right below the heading.
+ */
+export function setChapterWhen(text: string, chapter: PlanHeading, value: string): string {
+  const lines = text.split('\n');
+  const trimmed = value.trim();
+  if (chapter.when) {
+    if (trimmed) lines[chapter.when.line] = formatWhenLine(trimmed);
+    else lines.splice(chapter.when.line, 1);
+    return lines.join('\n');
+  }
+  if (!trimmed) return text;
+  const after = Math.max(chapter.line, ...chapter.pov.map((pov) => pov.line));
+  lines.splice(after + 1, 0, formatWhenLine(trimmed));
+  return lines.join('\n');
+}
+
 /** Leading chapter code of a manuscript file name (`2180-paseo.typ` → "2180"). */
 export function manuscriptChapterCode(fileName: string): string | null {
   const base = fileName.replace(/^.*[\\/]/, '');
-  return /^(\d{3,5})(?=[-_ .])/.exec(base)?.[1] ?? null;
+  return /^(\d{2,5})(?=[-_ .])/.exec(base)?.[1] ?? null;
 }
 
 /** A part of the plan the focus editor can show on its own: a `#` section's intro, or a `##` section/chapter. */

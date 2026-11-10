@@ -4,7 +4,26 @@ export interface CharacterPrompt {
   negative: string;
 }
 
-export interface Character {
+/** Where a character lives from a date on (until the next row). */
+export interface CharacterResidence {
+  /** World date as written, e.g. "322-05". */
+  from: string;
+  /** Location id. */
+  place: string;
+  /** e.g. "lost at sea"; shown as a missing (dashed) stretch on lifelines when set. */
+  note?: string;
+}
+
+/** Timeline fields shared by characters, their form data and frontmatter. */
+export interface CharacterLife {
+  /** World date of birth as written (`312`, `c. 1`). */
+  born?: string;
+  /** World date of death as written. */
+  died?: string;
+  residence?: CharacterResidence[];
+}
+
+export interface Character extends CharacterLife {
   /** Background figure; separate from active characters and incomplete drafts. */
   lore?: boolean;
   /** Stable identity stored in frontmatter; survives rename/move. */
@@ -38,7 +57,7 @@ export interface Character {
   filePath: string;
 }
 
-export interface CharacterFormData {
+export interface CharacterFormData extends CharacterLife {
   lore?: boolean;
   name: string;
   /** Alternative names (a.k.a.'s); omitted or empty when none. */
@@ -79,6 +98,10 @@ export interface CharacterFrontmatter {
   /** Optional per-book map of character-style id → opaque wiki-link / path string. */
   bookThumbnails?: Record<string, Record<string, string>>;
   prompts?: CharacterPrompt[];
+  /** YAML may read these as numbers or Dates; see `normalizeLifeDate`. */
+  born?: string | number | Date;
+  died?: string | number | Date;
+  residence?: unknown;
   created?: string;
   modified?: string;
 }

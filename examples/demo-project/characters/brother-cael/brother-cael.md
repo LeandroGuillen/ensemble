@@ -10,6 +10,12 @@ books:
 thumbnails:
   default: img/brother-cael.webp
 prompts: []
+born: 280
+residence:
+  - from: 280
+    place: saltmere-docks
+  - from: 309
+    place: vellhaven-lighthouse
 created: '2026-10-31T12:00:00.000Z'
 modified: '2026-10-31T12:00:00.000Z'
 ---

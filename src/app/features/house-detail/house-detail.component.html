@@ -151,7 +151,7 @@
                       } @empty { <span class="hint">Heads not selected</span> }
                       @if (model.currentLeadershipId === entry.id) { <span class="current-label">Current</span> }
                     </div>
-                    @if (entry.period) { <p class="leadership-period">{{ entry.period }}</p> }
+                    @if (entry.period || entry.from) { <p class="leadership-period">{{ entry.period }}@if (entry.from) {<span class="leadership-dates">{{ entry.period ? ' · ' : '' }}{{ entry.from }}–{{ entry.to || '' }}</span>}</p> }
                   </div>
                 </li>
               } @empty { <li class="empty">No leadership recorded yet.</li> }
@@ -208,6 +208,16 @@
                   <div>
                     <label [for]="'period-' + entry.id">Reign / period</label>
                     <input class="form-control" [id]="'period-' + entry.id" [(ngModel)]="entry.period" (ngModelChange)="changed()" placeholder="Years 120–148, or During the Northern War" />
+                    <div class="reign-dates">
+                      <div>
+                        <label [for]="'from-' + entry.id">From <span class="hint">for the Timeline</span></label>
+                        <input class="form-control mono" [id]="'from-' + entry.id" [(ngModel)]="entry.from" (ngModelChange)="changed()" placeholder="120" autocomplete="off" spellcheck="false" />
+                      </div>
+                      <div>
+                        <label [for]="'to-' + entry.id">To</label>
+                        <input class="form-control mono" [id]="'to-' + entry.id" [(ngModel)]="entry.to" (ngModelChange)="changed()" placeholder="148" autocomplete="off" spellcheck="false" />
+                      </div>
+                    </div>
                     <label [for]="'notes-' + entry.id">Notes</label>
                     <textarea class="form-control" [id]="'notes-' + entry.id" [(ngModel)]="entry.notes" (ngModelChange)="changed()" placeholder="Accession, succession, or historical context" rows="3"></textarea>
                   </div>

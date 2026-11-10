@@ -1,6 +1,6 @@
 # Data format
 
-How Ensemble stores Houses, Lore figures, Locations and Prompts on disk. See the [README](../README.md) for the project overview.
+How Ensemble stores Houses, Lore figures, Locations, Prompts and the Timeline on disk. See the [README](../README.md) for the project overview.
 
 ## File and folder names
 
@@ -26,6 +26,9 @@ the current reign; an omitted value means unspecified or no current head.
 External Markdown edits refresh Houses. Open editors with unsaved changes require
 a reload before saving a changed file. Deleting a House preserves characters
 and other files in its folder.
+
+Reigns may also have `from` and `to` world dates (for example `from: 318`,
+`to: 322-03`). They place the reign on the Timeline; they never reorder the list.
 
 ## Lore figures
 
@@ -148,4 +151,68 @@ child
   and the link shows it as "Name (deleted)" instead of "Missing character".
   If that name can't be saved, the delete is cancelled. Names no readable prompt
   links any more are dropped the next time one is saved.
+
+## Timeline
+
+### Calendar
+
+`ensemble.json → settings.calendar` defines the project's months (no leap years):
+
+```json
+"calendar": {
+  "name": "Coast Reckoning",
+  "suffix": "CR",
+  "months": [{ "name": "Firstlight", "days": 30 }, { "name": "Gales", "days": 30 }]
+}
+```
+
+Without it, a 12-month January–December calendar is used. World dates are written
+`322`, `322-03`, `322-03-09` or `c. 322` (approximate); years may be negative.
+Ranges join two dates with `→` (or `->`, `..`).
+
+### Chronicle
+
+The chronicle is a Markdown file at the project root, `chronicle.md` by default
+(`settings.chronicleFile` changes it). `#` headings are eras; text below an era
+heading is its description, and an optional `From:` line sets its start (otherwise
+its earliest entry). `##` headings are entries: `<date> · <title>` (` - ` also works);
+`? · <title>`, or a heading without a date, is an undated entry. Optional property
+lines directly below an entry heading:
+
+```markdown
+## 322-03 · The blackout
+Where: [[Vellhaven Lighthouse]]
+With: [[Mara Vell]], [[Saffi Reed]]
+Book: lc1
+Kind: legend
+
+Free Markdown text.
+```
+
+`Kind: legend` marks uncertain or mythical entries. Ensemble edits only the lines of
+the entry being changed, in date order within its era; it refuses to save when the
+file changed on disk since it was read.
+
+### Characters
+
+Character frontmatter may have `born` and `died` world dates and a `residence` list
+(where the character lives from a date on, until the next row; `place` is a location
+ID and `note` marks a missing or away stretch):
+
+```yaml
+born: 312
+residence:
+  - from: 312
+    place: port-saltmere
+  - from: 322-05
+    place: the-undertide
+    note: taken by the sea
+```
+
+### Book plans
+
+A chapter's story-time date is a `When:` line directly below its heading, next to
+`PoV:` lines (in any order): `When: 330-03-09` or `When: 330-03-09 → 330-03-12`.
+A chapter's place comes from its first `Lugar:` line (a location wikilink or plain
+text). Chapter codes are 2 to 5 digits (`## 01 - Title`, `## 2180 - Title`).
 

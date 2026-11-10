@@ -20,6 +20,8 @@ leadership:
     period: Founding years
     books: []
     notes: The basket light.
+    from: 212
+    to: 251
   - id: vell-mara-first
     characterIds:
       - mara-vell
@@ -27,6 +29,8 @@ leadership:
     books:
       - lc1
     notes: Interrupted by the harbor levy.
+    from: 318
+    to: 322-03
   - id: vell-regency
     characterIds:
       - ilse-dunmore
@@ -34,6 +38,8 @@ leadership:
     books:
       - lc1
     notes: Temporary stewardship under the salt charter.
+    from: 322-03
+    to: 330-04
   - id: vell-joint
     characterIds:
       - mara-vell
@@ -42,6 +48,7 @@ leadership:
     books:
       - lc2
     notes: Joint keepers; Mara resumes leadership.
+    from: 330-05
 currentLeadershipId: vell-joint
 created: '2026-10-31T12:00:00.000Z'
 modified: '2026-10-31T12:00:00.000Z'

@@ -39,6 +39,7 @@ import { PageHeaderComponent } from '../../shared/page-header/page-header.compon
 import { BookEditorComponent } from '../library-management/components/book-editor/book-editor.component';
 import { PLAN_MARKER_LABELS, PlanSearchComponent } from './plan-search/plan-search.component';
 import { PovChipComponent } from './pov-chip.component';
+import { StoryTimeComponent } from './story-time/story-time.component';
 import { OverscrollDirection, OverscrollState, OverscrollTracker } from './overscroll';
 
 /** Markers shown as badges in the outline. */
@@ -64,6 +65,7 @@ const SLIDE_IN_MS = 340;
     BookEditorComponent,
     PlanSearchComponent,
     PovChipComponent,
+    StoryTimeComponent,
   ],
   templateUrl: './book-plan.component.html',
   styleUrl: './book-plan.component.scss',
@@ -108,6 +110,8 @@ export class BookPlanComponent implements OnInit, OnDestroy {
   readonly outlineMarkers = OUTLINE_MARKERS;
 
   bookId = '';
+  /** `plan` (outline + editor) or `timeline` (chapters in story time), from `?view=`. */
+  view: 'plan' | 'timeline' = 'plan';
   book: Book | null = null;
   state: BookPlanState | null = null;
   loading = true;
@@ -170,6 +174,7 @@ export class BookPlanComponent implements OnInit, OnDestroy {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(([params, query]) => {
         const id = params.get('id') ?? '';
+        this.view = query.get('view') === 'timeline' ? 'timeline' : 'plan';
         const line = Number(query.get('line'));
         this.pendingLine = query.has('line') && Number.isFinite(line) ? line : null;
         if (id !== this.bookId) {
@@ -425,6 +430,21 @@ export class BookPlanComponent implements OnInit, OnDestroy {
     this.povThumbnails = thumbnails;
   }
 
+  setView(view: 'plan' | 'timeline'): void {
+    if (view === this.view) return;
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { view: view === 'timeline' ? 'timeline' : null, line: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
+  /** Story time → plan: open a chapter heading in the editor. */
+  openFromTimeline(target: { bookId: string; line: number }): void {
+    void this.router.navigate(['/book', target.bookId], { queryParams: { line: target.line } });
+  }
+
   isDrafted(heading: PlanHeading): boolean {
     return !!heading.code && !!this.state?.drafts[heading.code];
   }
@@ -622,7 +642,7 @@ export class BookPlanComponent implements OnInit, OnDestroy {
 
   @HostListener('document:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
-    if (this.searchOpen || this.showEditor || !this.state) return;
+    if (this.searchOpen || this.showEditor || !this.state || this.view !== 'plan') return;
     const mod = event.ctrlKey || event.metaKey;
 
     let handled = true;

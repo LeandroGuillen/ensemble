@@ -1,5 +1,6 @@
 import { BookPlanSettings } from "./book-plan.interface";
 import { BackupSettings } from "./backup.interface";
+import { WorldCalendar } from "./timeline.interface";
 
 export interface Pinboard {
   id: string;
@@ -212,6 +213,10 @@ export interface ProjectSettings {
   theme?: string; // Theme ID (e.g., "blue-gold")
   skin?: string; // Skin ID (e.g., "classic", "pixel")
   colorPalette?: import('./color-palette.interface').ColorPaletteConfig;
+  /** In-world calendar for timelines (month names and lengths). Defaults to a 12-month calendar. */
+  calendar?: WorldCalendar;
+  /** Relative path from project root for the chronicle file (default: 'chronicle.md') */
+  chronicleFile?: string;
 }
 
 export interface PinboardViewState {

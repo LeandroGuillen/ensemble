@@ -9,6 +9,15 @@ books:
 thumbnails:
   default: img/wren-dunmore.webp
 prompts: []
+born: 312
+residence:
+  - from: 312
+    place: port-saltmere
+  - from: 322-05
+    place: the-undertide
+    note: taken by the sea
+  - from: 330-03
+    place: port-saltmere
 created: '2026-10-31T12:00:00.000Z'
 modified: '2026-10-31T12:00:00.000Z'
 ---

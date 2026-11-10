@@ -2,6 +2,8 @@
 
 ## 01 - A dry arrival
 PoV: mara-vell Mara Vell
+When: 330-03-03
+- Lugar: [[Vellhaven Lighthouse]]
 
 [[Mara Vell]] finds a blue flame. [[Ilse Dunmore]] impounds a skiff. [[Wren Dunmore]] returns without a shadow.
 
@@ -11,6 +13,8 @@ TODO: Clarify the cost of this choice.
 
 ## 02 - The closed gate
 PoV: ilse-dunmore Ilse Dunmore
+When: 330-03-04 → 330-03-05
+- Lugar: [[Port Saltmere]]
 
 [[Oren Vell]] hides a broken lens. [[Teodor Dunmore]] locks the charter room. [[Nessa Quill]] measures the wrong tide.
 
@@ -20,6 +24,8 @@ The tide changes before the answer comes.
 
 ## 03 - A missing island
 PoV: wren-dunmore Wren Dunmore
+When: 330-03-09 → 330-03-10
+- Lugar: [[The Drowned Reach]]
 
 The crew leaves [[Vellhaven Lighthouse]]. Ilse follows [[Joren Hale]] to the reef. An orchard rises in [[The Drowned Reach]].
 
@@ -31,6 +37,8 @@ TODO: Clarify the cost of this choice.
 
 ## 04 - The memory price
 PoV: mara-vell Mara Vell
+When: 330-03-30 → 330-04-01
+- Lugar: [[Vellhaven Lighthouse]]
 
 Mara offers her mother’s song. Ilse admits the levy’s mistake. Wren refuses the sea’s old bargain.
 
@@ -40,6 +48,8 @@ The tide changes before the answer comes.
 
 ## 05 - Below the harbor
 PoV: ilse-dunmore Ilse Dunmore
+When: 330-03-26 → 330-03-28
+- Lugar: [[Port Saltmere]]
 
 Oren relights the submerged beacon. The charter seal breaks at [[Port Saltmere]]. Nessa maps [[The Undertide]].
 
@@ -49,6 +59,8 @@ TODO: Clarify the cost of this choice.
 
 ## 06 - A new promise
 PoV: wren-dunmore Wren Dunmore
+When: 330-05
+- Lugar: [[Vellhaven Lighthouse]]
 
 The keepers share the cost of the light. The harbor opens to every homeward sail. Wren leaves a path for those still below.
 

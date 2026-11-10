@@ -67,7 +67,10 @@
         "mara-vell",
         "saffi-reed"
       ],
-      "seriesId": "lantern-coast"
+      "seriesId": "lantern-coast",
+      "plan": {
+        "path": "books/lc1/lc1.plan.md"
+      }
     },
     {
       "id": "lc2",
@@ -110,7 +113,61 @@
         "name": "Default"
       }
     ],
-    "defaultCharacterStyle": "default"
+    "defaultCharacterStyle": "default",
+    "calendar": {
+      "name": "Coast Reckoning",
+      "suffix": "CR",
+      "months": [
+        {
+          "name": "Firstlight",
+          "days": 30
+        },
+        {
+          "name": "Gales",
+          "days": 30
+        },
+        {
+          "name": "Saltmoon",
+          "days": 30
+        },
+        {
+          "name": "Seedtide",
+          "days": 30
+        },
+        {
+          "name": "Bloom",
+          "days": 30
+        },
+        {
+          "name": "Highsun",
+          "days": 30
+        },
+        {
+          "name": "Lanterns",
+          "days": 30
+        },
+        {
+          "name": "Harvest",
+          "days": 30
+        },
+        {
+          "name": "Ebb",
+          "days": 30
+        },
+        {
+          "name": "Fogmoon",
+          "days": 30
+        },
+        {
+          "name": "Darkwater",
+          "days": 30
+        },
+        {
+          "name": "Yearsend",
+          "days": 30
+        }
+      ]
+    }
   },
   "pinboards": [
     {

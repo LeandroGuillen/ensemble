@@ -1,0 +1,320 @@
+<div class="chronicle">
+  <div class="filters" role="group" aria-label="Filter the chronicle">
+    <input
+      class="form-control search"
+      type="search"
+      placeholder="Search events, people, places…"
+      aria-label="Search the chronicle"
+      [(ngModel)]="query"
+      (ngModelChange)="rebuild()"
+    />
+    <div class="chips">
+      @for (filter of kindFilters; track filter.id) {
+        <button type="button" class="chip" [attr.data-kind]="filter.id" [attr.aria-pressed]="kind === filter.id" (click)="setKind(filter.id)">
+          @if (filter.id !== 'all') { <span class="swatch" aria-hidden="true"></span> }
+          {{ filter.label }}
+        </button>
+      }
+    </div>
+    <select class="form-control select" aria-label="Filter by person" [(ngModel)]="personId" (ngModelChange)="rebuild()">
+      <option value="">Everyone</option>
+      @for (person of people; track person.id) { <option [value]="person.id">{{ person.name }}{{ person.lore ? ' (Lore)' : '' }}</option> }
+    </select>
+    @if (ctx?.books?.length) {
+      <select class="form-control select" aria-label="Filter by book" [(ngModel)]="bookId" (ngModelChange)="rebuild()">
+        <option value="">All books</option>
+        @for (book of ctx!.books; track book.id) { <option [value]="book.id">{{ book.name }}</option> }
+      </select>
+    }
+    <label class="toggle" title="Births and deaths from characters, House reigns and book spans">
+      <input type="checkbox" [(ngModel)]="showDerived" (ngModelChange)="rebuild()" /> Derived entries
+    </label>
+    <span class="grow"></span>
+    <span class="count" aria-live="polite">{{ visibleCount }} of {{ totalCount }}</span>
+    <button type="button" class="btn btn-secondary btn-sm" (click)="toggleComposer()" [attr.aria-expanded]="composerOpen" title="Type a whole entry on one line">Quick add</button>
+    <button type="button" class="btn btn-primary btn-sm" (click)="newEntry()">
+      <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
+      Add entry
+    </button>
+  </div>
+
+  @if (composerOpen) {
+    <div class="composer">
+      <div class="composer-row">
+        <input
+          #quickInput
+          class="form-control quick-input"
+          placeholder="322-03 The blackout @Vellhaven +Mara +Saffi"
+          aria-label="Quick add entry"
+          autocomplete="off"
+          spellcheck="false"
+          [(ngModel)]="quickText"
+          (ngModelChange)="onQuickInput()"
+          (keydown)="onQuickKeydown($event)"
+        />
+        <button type="button" class="btn btn-primary btn-sm" (click)="addQuick()" [disabled]="saving">Add</button>
+      </div>
+      @if (quick; as q) {
+        <div class="parsed" aria-live="polite">
+          @if (q.date) { <span class="tok">When <b>{{ quickDateLabel(q) }}</b></span> }
+          @else if (q.dateInvalid) { <span class="tok bad">Can’t read “{{ q.dateText }}”</span> }
+          @else { <span class="tok muted">No date: goes to Undated</span> }
+          @if (q.title) { <span class="tok">Title <b>{{ q.title }}</b></span> }
+          @for (place of q.where; track place) {
+            <span class="tok" [class.bad]="q.unknownPlaces.includes(place)">Where <b>{{ place }}</b>{{ q.unknownPlaces.includes(place) ? ' (no such location)' : '' }}</span>
+          }
+          @for (person of q.with; track person) {
+            <span class="tok" [class.bad]="q.unknownPeople.includes(person)">With <b>{{ person }}</b>{{ q.unknownPeople.includes(person) ? ' (no one by that name)' : '' }}</span>
+          }
+        </div>
+      }
+      <p class="hint">
+        Date first (<code>322</code>, <code>322-03</code>, <code>322-03-09</code>, <code>c. 1</code>), then the title.
+        <code>&#64;place</code> and <code>+person</code> match by name. <kbd>Enter</kbd> adds, <kbd>Esc</kbd> closes.
+      </p>
+    </div>
+  }
+
+  <div class="body">
+    <nav class="rail" aria-label="Eras">
+      @for (group of groups; track group.index) {
+        <button
+          type="button"
+          class="rail-era"
+          [class.current]="currentEra === group.index"
+          (click)="jumpToEra(group)"
+          [title]="group.title + (group.range ? ' · ' + group.range : '') + ' · ' + group.items.length + ' entries'"
+          [attr.aria-label]="'Jump to ' + group.title"
+        >
+          <span class="rail-ticks" aria-hidden="true">
+            @for (item of group.items.slice(0, 14); track item.key) {
+              <i [class.authored]="item.entryLine !== undefined"></i>
+            }
+          </span>
+          <span class="rail-label">{{ group.title }}</span>
+        </button>
+      }
+      @if (undated.length) {
+        <button type="button" class="rail-era rail-undated" (click)="jumpToUndated()" title="Undated entries">
+          <span class="rail-label">Undated</span>
+        </button>
+      }
+    </nav>
+
+    <div class="stream" #stream (scroll)="onStreamScroll()" tabindex="-1">
+      @if (!loaded) {
+        <p class="empty">Loading…</p>
+      } @else if (!totalCount) {
+        <div class="empty">
+          <svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="assets/ui-icons.svg#timeline" /></svg>
+          <h2>Your world’s history starts here</h2>
+          <p>
+            Write dated events in <code>{{ chroniclePath }}</code>. Births and deaths (a character’s
+            <b>Born</b>/<b>Died</b>), House reigns with dates, and books with dated chapters appear here too.
+          </p>
+          <button type="button" class="btn btn-primary" (click)="chronicleExists ? newEntry() : createChronicle()">
+            {{ chronicleExists ? 'Add the first entry' : 'Create ' + chroniclePath }}
+          </button>
+        </div>
+      } @else if (!visibleCount) {
+        <div class="empty">
+          <p>Nothing matches these filters.</p>
+          <button type="button" class="btn btn-secondary btn-sm" (click)="clearFilters()">Clear filters</button>
+        </div>
+      } @else {
+        @for (row of rows; track trackRow(row)) {
+          @switch (row.type) {
+            @case ('era') {
+              <div class="era-anchor" [attr.data-era]="row.group.index" aria-hidden="true"></div>
+              <div class="era-head">
+                <h3>{{ row.group.title }}</h3>
+                @if (row.group.range) { <span class="era-range">{{ row.group.range }}</span> }
+                @if (row.group.description) { <p>{{ row.group.description }}</p> }
+              </div>
+            }
+            @case ('gap') {
+              <div class="gap"><span class="gap-line" aria-hidden="true"></span><span>{{ row.years }} quiet years</span></div>
+            }
+            @case ('item') {
+              @let item = row.item;
+              <div
+                class="entry"
+                [attr.data-key]="item.key"
+                [attr.data-kind]="item.kind"
+                [class.derived]="item.entryLine === undefined"
+                [class.approx]="item.date?.start?.approx"
+                [class.selected]="item.key === selectedKey"
+                [style.--entry-color]="itemColor(item) || null"
+              >
+                @let parts = dateParts(item);
+                <div class="date">
+                  <b>@if (parts.approx) {<span class="approx">c.</span>}{{ parts.year }}</b>
+                  @if (parts.rest) { <small>{{ parts.rest }}</small> }
+                </div>
+                <div class="line" aria-hidden="true"><span class="dot"></span></div>
+                <div class="card" (dblclick)="editEntry(item, true)" role="button" tabindex="0" (click)="select(item)" (keydown.enter)="select(item)" (keydown.space)="$event.preventDefault(); select(item)" [attr.aria-pressed]="item.key === selectedKey">
+                  <span class="card-title">
+                    @if (form && form.line !== null && item.key === selectedKey) {
+                      <input class="form-control inline-title" aria-label="Event title" [(ngModel)]="form.title" (click)="$event.stopPropagation()" (dblclick)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" (keydown.enter)="saveForm()" (keydown.escape)="cancelEdit()" />
+                    } @else {
+                      <span class="title">{{ item.title }}</span>
+                    }
+                    <span class="kind">{{ kindLabels[item.kind] }}</span>
+                    @for (book of item.books; track book) {
+                      <span class="book" [style.--book-color]="bookColor(book)">{{ book }}</span>
+                    }
+                  </span>
+                  @if (item.entryLine !== undefined && item.body) { <span class="body-text">{{ plainBody(item.body) }}</span> }
+                  @if (item.entryLine === undefined && item.derivedFrom) { <span class="source-note">from {{ item.derivedFrom.label }}</span> }
+                  @if (item.entryLine !== undefined || item.kind === 'reign') {
+                    @if (item.people.length || item.places.length || item.unresolved.length) {
+                      <span class="meta">
+                        @for (id of item.people; track id) {
+                          <span class="person"><app-pov-chip [characterId]="id" [name]="personName(id)" [thumbnail]="portrait(id)"></app-pov-chip>{{ personName(id) }}</span>
+                        }
+                        @for (id of item.places; track id) { <span class="place">⌖ {{ placeName(id) }}</span> }
+                        @for (name of item.unresolved; track name) { <span class="unresolved" title="No character or location with this name">{{ name }}</span> }
+                      </span>
+                    }
+                  }
+                </div>
+              </div>
+            }
+          }
+        }
+        @if (undated.length) {
+          <section class="undated" aria-label="Undated entries">
+            <h4>Undated · {{ undated.length }}</h4>
+            @for (item of undated; track item.key) {
+              <div class="undated-row" (dblclick)="editEntry(item, true)" role="button" tabindex="0" [class.selected]="item.key === selectedKey" (click)="select(item)" (keydown.enter)="select(item)" (keydown.space)="$event.preventDefault(); select(item)">
+                @if (form && form.line !== null && item.key === selectedKey) {
+                  <input class="form-control inline-title" aria-label="Event title" [(ngModel)]="form.title" (click)="$event.stopPropagation()" (dblclick)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" (keydown.enter)="saveForm()" (keydown.escape)="cancelEdit()" />
+                } @else {
+                  <span>{{ item.title }}</span>
+                }
+                <small>{{ item.dateInvalid ? 'Unreadable date' : 'Set a date' }}</small>
+              </div>
+            }
+          </section>
+        }
+      }
+    </div>
+
+    <aside class="detail" aria-live="polite">
+      @if (form) {
+        <form class="entry-form" (ngSubmit)="saveForm()">
+          <div class="label">{{ form.line === null ? 'New entry' : 'Edit entry' }}</div>
+          <label for="entry-date">When</label>
+          <input id="entry-date" class="form-control mono" [class.invalid]="formDateInvalid" name="date" [(ngModel)]="form.date" placeholder="322-03-09, c. 1, 330 → 331" autocomplete="off" />
+          <small class="field-hint" [class.warn]="formDateInvalid">{{ formDateStatus }}</small>
+          <label for="entry-title">Title</label>
+          <input id="entry-title" class="form-control" name="title" [(ngModel)]="form.title" required autocomplete="off" />
+          <span id="entry-kind-label" class="label-inline">Kind</span>
+          <div class="kind-switch" role="group" aria-labelledby="entry-kind-label">
+            <label class="kind-option">
+              <input type="radio" name="kind" value="event" [(ngModel)]="form.kind" />
+              <span>Event</span>
+            </label>
+            <label class="kind-option" title="Uncertain or mythical">
+              <input type="radio" name="kind" value="legend" [(ngModel)]="form.kind" />
+              <span>Legend</span>
+            </label>
+          </div>
+
+          <label for="entry-where">Where</label>
+          <div class="link-chips">
+            @for (name of form.where; track name) {
+              <span class="link-chip">⌖ {{ name }}<button type="button" (click)="removeLink('where', name)" [attr.aria-label]="'Remove ' + name">×</button></span>
+            }
+          </div>
+          <select id="entry-where" class="form-control" #wherePick (change)="addLink('where', wherePick.value); wherePick.value = ''">
+            <option value="">Add a location…</option>
+            @for (location of ctx?.locations ?? []; track location.id) { <option [value]="location.name">{{ location.name }}</option> }
+          </select>
+
+          <label for="entry-with">With</label>
+          <div class="link-chips">
+            @for (name of form.with; track name) {
+              <span class="link-chip">{{ name }}<button type="button" (click)="removeLink('with', name)" [attr.aria-label]="'Remove ' + name">×</button></span>
+            }
+          </div>
+          <select id="entry-with" class="form-control" #withPick (change)="addLink('with', withPick.value); withPick.value = ''">
+            <option value="">Add a character…</option>
+            @for (person of people; track person.id) { <option [value]="person.name">{{ person.name }}{{ person.lore ? ' (Lore)' : '' }}</option> }
+          </select>
+
+          @if (ctx?.books?.length) {
+            <span class="label-inline">Books</span>
+            <div class="book-toggles">
+              @for (book of ctx!.books; track book.id) {
+                <button type="button" class="chip" [attr.aria-pressed]="form.books.includes(book.id)" (click)="toggleBook(book.id)">
+                  <span class="swatch" [style.background]="book.color"></span>{{ book.name }}
+                </button>
+              }
+            </div>
+          }
+
+          <label for="entry-body">Notes</label>
+          <textarea id="entry-body" class="form-control" name="body" rows="6" [(ngModel)]="form.body" placeholder="What happened. [[Wikilinks]] work."></textarea>
+
+          @if (formError) { <p class="form-error" role="alert">{{ formError }}</p> }
+          <div class="actions">
+            <button type="button" class="btn btn-ghost btn-sm" (click)="cancelEdit()">Cancel</button>
+            <button type="submit" class="btn btn-primary btn-sm" [disabled]="saving">{{ form.line === null ? 'Add entry' : 'Save' }}</button>
+          </div>
+          <p class="file-note">Saved to <code>{{ chroniclePath }}</code></p>
+        </form>
+      } @else if (selected; as item) {
+        <div class="label">{{ kindLabels[item.kind] }}{{ item.entryLine === undefined ? ' · derived' : '' }}</div>
+        <h3>{{ item.title }}</h3>
+        <div class="when">{{ formatDate(item) }}</div>
+        @if (eraTitle(item)) { <div class="era-name">{{ eraTitle(item) }}</div> }
+
+        @if (item.places.length) {
+          <div class="label">Where</div>
+          @for (id of item.places; track id) { <a class="place-link" [routerLink]="['/location', id]">⌖ {{ placeName(id) }}</a> }
+        }
+        @if (item.houses.length) {
+          <div class="label">House</div>
+          @for (id of item.houses; track id) { <a class="place-link" [routerLink]="['/house', id]">{{ houseName(id) }}</a> }
+        }
+        @if (item.people.length) {
+          <div class="label">People, then</div>
+          <div class="ages">
+            @for (row of agesFor(item); track row.id) {
+              <a class="age-row" [routerLink]="['/character', row.id]">
+                <app-pov-chip [characterId]="row.id" [name]="row.name" [thumbnail]="portrait(row.id)"></app-pov-chip>
+                <span class="age-name">{{ row.name }}</span>
+                <span class="age" [class.muted]="row.tone === 'muted'" [class.warn]="row.tone === 'warn'">{{ row.text }}</span>
+              </a>
+            }
+          </div>
+        }
+        @if (item.unresolved.length) {
+          <div class="label">Not found</div>
+          <p class="small muted">{{ item.unresolved.join(', ') }} don’t match a character or location.</p>
+        }
+        @if (item.books.length && item.kind !== 'book') {
+          <div class="label">Books</div>
+          @for (id of item.books; track id) { <a class="place-link" [routerLink]="['/book', id]">{{ bookName(id) }}</a> }
+        }
+        @if (item.entryLine !== undefined) {
+          <div class="label">In {{ chroniclePath }}</div>
+          <pre class="source">{{ sourceText(item) }}</pre>
+          <div class="actions">
+            <button type="button" class="btn btn-secondary btn-sm" (click)="editEntry(item)">Edit</button>
+            <button type="button" class="btn btn-ghost btn-sm" (click)="openChronicleFile()">Open file</button>
+            <button type="button" class="btn btn-ghost btn-sm danger" (click)="deleteEntry(item)">Delete</button>
+          </div>
+        } @else if (item.derivedFrom) {
+          @if (item.body) { <p class="small">{{ plainBody(item.body) }}</p> }
+          <div class="label">Source</div>
+          <a class="btn btn-secondary btn-sm" [routerLink]="item.derivedFrom.route" [queryParams]="item.derivedFrom.queryParams ?? null">Open {{ item.derivedFrom.label }}</a>
+          <p class="small muted">Derived entries change where their data lives.</p>
+        }
+      } @else {
+        <p class="muted small">Select an entry to see who was there and how old they were.</p>
+      }
+    </aside>
+  </div>
+</div>

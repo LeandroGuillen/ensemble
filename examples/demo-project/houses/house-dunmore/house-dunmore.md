@@ -20,6 +20,8 @@ leadership:
     books:
       - lc1
     notes: Held the harbor seal.
+    from: 296
+    to: 321-11
   - id: dunmore-joint
     characterIds:
       - ilse-dunmore
@@ -29,6 +31,7 @@ leadership:
       - lc1
       - lc2
     notes: Joint command; succession remains unresolved.
+    from: 321-11
 created: '2026-10-31T12:00:00.000Z'
 modified: '2026-10-31T12:00:00.000Z'
 ---

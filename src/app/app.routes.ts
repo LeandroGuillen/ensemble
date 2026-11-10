@@ -208,6 +208,14 @@ export const routes: Routes = [
     canActivate: [projectGuard],
   },
   {
+    path: "timeline",
+    loadComponent: () =>
+      import("./features/timeline/timeline.component").then(
+        (m) => m.TimelineComponent
+      ),
+    canActivate: [projectGuard],
+  },
+  {
     path: "houses",
     loadComponent: () => import("./features/house-list/house-list.component").then(m => m.HouseListComponent),
     canActivate: [projectGuard],

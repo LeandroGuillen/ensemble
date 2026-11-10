@@ -22,6 +22,16 @@ export interface PlanPov {
   to: number;
 }
 
+/** A `When: <date or span>` line directly below a chapter heading (story time). */
+export interface PlanWhen {
+  /** Date text as written, e.g. "330-03-09 → 330-03-10". */
+  text: string;
+  /** 0-based line of the `When:` line, and its character offsets (line break excluded). */
+  line: number;
+  from: number;
+  to: number;
+}
+
 export interface PlanHeading {
   /** `#` sections (phases, Setup…), `## <code> - <title>` chapters, `###` scenes inside a chapter. */
   kind: 'section' | 'chapter' | 'scene';
@@ -33,6 +43,8 @@ export interface PlanHeading {
   /** Chapter code, e.g. "2180". Only on chapters. */
   code?: string;
   pov: PlanPov[];
+  /** Story-time date of a chapter, when it has a `When:` line. */
+  when?: PlanWhen;
   /** 0-based line of the heading. */
   line: number;
   /** 0-based line where this heading's content ends (exclusive): next heading of the same or higher level, or EOF. */

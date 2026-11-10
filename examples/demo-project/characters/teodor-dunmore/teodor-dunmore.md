@@ -10,6 +10,10 @@ books:
 thumbnails:
   default: img/teodor-dunmore.webp
 prompts: []
+born: 268
+residence:
+  - from: 268
+    place: port-saltmere
 created: '2026-10-31T12:00:00.000Z'
 modified: '2026-10-31T12:00:00.000Z'
 ---

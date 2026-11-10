@@ -41,4 +41,5 @@
   </defs>
 <symbol id="shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 7v6c0 5 9 9 9 9s9-4 9-9V7z"/></symbol>
 <symbol id="crown" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 8 5 4 5-8 5 8 5-4-2 12H4Z"/><path d="M4 17h16"/></symbol>
+<symbol id="timeline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18"/><circle cx="7" cy="12" r="2"/><circle cx="17" cy="12" r="2"/><path d="M7 5v3M17 16v3M12 7v10"/></symbol>
 </svg>

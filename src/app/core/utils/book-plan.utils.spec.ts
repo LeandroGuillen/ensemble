@@ -7,6 +7,7 @@ import {
   manuscriptChapterCode,
   parseBookPlan,
   planFocusTargets,
+  setChapterWhen,
 } from './book-plan.utils';
 
 const PLAN = [
@@ -152,5 +153,27 @@ describe('plan navigation helpers', () => {
 
   it('flattens the outline in document order', () => {
     expect(flattenOutline(plan).map((h) => h.line)).toEqual([0, 1, 3, 5, 12, 13, 20]);
+  });
+});
+
+describe('book-plan.utils When: lines', () => {
+  const plan = ['## 01 - Arrival', 'When: 330-03-03', 'PoV: mara Mara', '', 'Text', '## 02 - Gate', 'PoV: ilse Ilse', 'Body'].join('\n');
+
+  it('reads When: lines next to PoV lines', () => {
+    const parsed = parseBookPlan(plan);
+    expect(parsed.chapters[0].when).toEqual({ text: '330-03-03', line: 1, from: 16, to: 31 });
+    expect(parsed.chapters[0].pov.map((p) => p.characterId)).toEqual(['mara']);
+    expect(parsed.chapters[1].when).toBeUndefined();
+    expect(parsed.lines.map((l) => l.text)).toEqual(['Text', 'Body']);
+  });
+
+  it('sets, replaces and removes the When: line', () => {
+    const parsed = parseBookPlan(plan);
+    const added = setChapterWhen(plan, parsed.chapters[1], '330-03-04');
+    expect(added.split('\n').slice(5, 8)).toEqual(['## 02 - Gate', 'PoV: ilse Ilse', 'When: 330-03-04']);
+    const replaced = setChapterWhen(plan, parsed.chapters[0], '330-03-05 → 330-03-06');
+    expect(replaced.split('\n')[1]).toBe('When: 330-03-05 → 330-03-06');
+    const removed = setChapterWhen(plan, parsed.chapters[0], '');
+    expect(removed.split('\n').slice(0, 2)).toEqual(['## 01 - Arrival', 'PoV: mara Mara']);
   });
 });

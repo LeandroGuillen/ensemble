@@ -142,6 +142,9 @@
         @if (isBackupSection(activeSection)) {
           <app-backup-settings [activeSection]="activeSection"></app-backup-settings>
         }
+        @if (activeSection === 'timeline') {
+          <app-timeline-settings></app-timeline-settings>
+        }
       </div>
     </div>
   </div>

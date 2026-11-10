@@ -1,5 +1,7 @@
 import { HouseFormData } from '../interfaces/house.interface';
 import { generateId } from './id.utils';
+import { normalizeLifeDate, yamlDate } from './character-life.utils';
+import { HouseLeadership } from '../interfaces/house.interface';
 
 function strings(value: unknown, deduplicate = true): string[] {
   if (!Array.isArray(value)) return [];
@@ -19,7 +21,9 @@ export function normalizeHouseData(raw: Record<string, unknown>, content: string
     let id = text(entry['id']);
     if (!id || seen.has(id)) id = generateId();
     seen.add(id);
-    return { id, characterIds: strings(entry['characterIds']), period: text(entry['period']), books: strings(entry['books']), notes: text(entry['notes']) };
+    const from = normalizeLifeDate(entry['from']);
+    const to = normalizeLifeDate(entry['to']);
+    return { id, characterIds: strings(entry['characterIds']), period: text(entry['period']), ...(from ? { from } : {}), ...(to ? { to } : {}), books: strings(entry['books']), notes: text(entry['notes']) };
   });
   const data: HouseFormData = {
     name: text(raw['name']), motto: text(raw['motto']), colors: strings(raw['colors'], false),
@@ -52,4 +56,13 @@ export function validateHouseData(data: HouseFormData): void {
     if (!entry.characterIds.length) throw new Error('Choose at least one head for each leadership entry.');
   }
   if (data.currentLeadershipId && !ids.has(data.currentLeadershipId)) throw new Error('The current head must reference a leadership entry.');
+}
+
+/** Leadership as written to frontmatter: empty dates dropped, plain years as YAML numbers. */
+export function leadershipFrontmatter(leadership: HouseLeadership[]): Record<string, unknown>[] {
+  return leadership.map(({ from, to, ...entry }) => {
+    const start = normalizeLifeDate(from);
+    const end = normalizeLifeDate(to);
+    return { ...entry, ...(start ? { from: yamlDate(start) } : {}), ...(end ? { to: yamlDate(end) } : {}) };
+  });
 }

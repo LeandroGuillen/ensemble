@@ -1,0 +1,197 @@
+<div class="story-time">
+  <div class="controls" role="group" aria-label="Story time options">
+    @if (seriesBooks.length > 1) {
+      <span class="ctl">Show</span>
+      <div class="seg" role="group" aria-label="Books shown">
+        <button type="button" [attr.aria-pressed]="scope === 'book'" (click)="setScope('book')">This book</button>
+        <button type="button" [attr.aria-pressed]="scope === 'series'" (click)="setScope('series')">Whole series</button>
+      </div>
+    }
+    <span class="ctl">Order</span>
+    <div class="seg" role="group" aria-label="Order">
+      <button type="button" [attr.aria-pressed]="mode === 'story'" (click)="setMode('story')">Story time</button>
+      <button type="button" [attr.aria-pressed]="mode === 'reading'" (click)="setMode('reading')">Reading order</button>
+    </div>
+    <span class="ctl">Lanes</span>
+    <div class="seg" role="group" aria-label="Lanes">
+      <button type="button" [attr.aria-pressed]="laneBy === 'pov'" (click)="setLaneBy('pov')">PoV</button>
+      <button type="button" [attr.aria-pressed]="laneBy === 'place'" (click)="setLaneBy('place')">Place</button>
+    </div>
+    <span class="grow"></span>
+    @if (mode === 'story') {
+      <label class="zoom">Zoom <input type="range" min="1" max="60" [(ngModel)]="zoom" (ngModelChange)="onZoom()" aria-label="Zoom" /></label>
+      <button type="button" class="btn btn-ghost btn-sm" (click)="fitToWidth()">Fit</button>
+    }
+  </div>
+  <div class="legend">
+    <span><i class="path-swatch"></i>reading path</span>
+    <span><i class="back-swatch"></i>jumps back in time</span>
+    <span><i class="conflict-swatch"></i>continuity conflict</span>
+    @if (mode === 'story') { <span><i class="gap-swatch"></i>folded gap</span> }
+  </div>
+
+  <div class="canvas-wrap" #canvasWrap>
+    @if (!chapters.length) {
+      <p class="empty">This plan has no chapters yet. Chapters are <code>## 01 - Title</code> headings.</p>
+    } @else if (!blocks.length) {
+      <div class="empty">
+        <p><b>No chapter has a date yet.</b> Add a <code>When:</code> line under a chapter heading, next to <code>PoV:</code>, or pick a chapter below and type its date.</p>
+        <p class="muted">Dates use the project calendar: <code>330</code>, <code>330-03</code>, <code>330-03-09</code>, or a range <code>330-03-09 → 330-03-12</code>.</p>
+      </div>
+    } @else {
+      <div class="canvas" [style.width.px]="width" [style.height.px]="height">
+        <div class="lane-labels" [style.height.px]="height">
+          @for (lane of lanes; track lane.key) {
+            <div class="lane-label" [style.top.px]="lane.y" [style.height.px]="lane.height">
+              @if (lane.personId) {
+                <app-pov-chip class="lane-avatar" [characterId]="lane.personId" [name]="lane.label" [thumbnail]="portrait(lane.personId)"></app-pov-chip>
+              } @else {
+                <span class="place-icon" aria-hidden="true">⌖</span>
+              }
+              <span class="lane-name">{{ lane.label }}</span>
+            </div>
+          }
+        </div>
+        @for (lane of lanes; track lane.key; let i = $index) {
+          <div class="lane-bg" [class.alt]="i % 2 === 1" [style.top.px]="lane.y" [style.height.px]="lane.height"></div>
+        }
+        <div class="axis">
+          @if (mode === 'story') {
+            @for (tick of ticks; track $index) {
+              <div class="tick" [class.major]="tick.major" [style.left.px]="tick.x">@if (tick.label) {<span>{{ tick.label }}</span>}</div>
+            }
+            @for (label of clusterLabels; track $index) { <div class="cluster-label" [style.left.px]="label.x + 2">{{ label.label }}</div> }
+            @for (gap of breaks; track $index) {
+              <div class="break" [style.left.px]="gap.x" [style.height.px]="height"><span>{{ gap.label }}</span></div>
+            }
+          } @else {
+            @for (label of readingLabels; track $index) {
+              <div class="reading-label" [style.left.px]="label.x" [style.width.px]="label.w">{{ label.label }}<small [class.back]="label.back">{{ label.back ? '↶ ' : '' }}{{ label.sub }}</small></div>
+            }
+          }
+        </div>
+        <svg class="path" [attr.width]="width" [attr.height]="height" aria-hidden="true">
+          @for (segment of path; track $index) {
+            <path [attr.d]="segment.d" [class.back]="segment.back" />
+            @if (segment.label) { <text [attr.x]="segment.lx" [attr.y]="segment.ly">{{ segment.label }}</text> }
+          }
+        </svg>
+        @for (block of blocks; track block.chapter.key) {
+          <button
+            type="button"
+            class="chapter"
+            [class.selected]="block.chapter.key === selectedKey"
+            [class.conflict]="block.conflict"
+            [style.left.px]="block.x"
+            [style.top.px]="block.y"
+            [style.width.px]="block.w"
+            [style.--chapter-width]="block.w + 'px'"
+            [style.--book-color]="bookColor(block.chapter.bookId)"
+            [title]="chapterLabel(block.chapter) + ' · ' + block.chapter.title + (block.chapter.range ? ' · ' + rangeText(block.chapter) : '')"
+            (click)="select(block.chapter)"
+            (dblclick)="openInPlan(block.chapter)"
+          >
+            <b>{{ scope === 'series' ? block.chapter.bookId + '·' : '' }}{{ block.chapter.code }}</b>
+            <span>{{ block.chapter.title }}</span>
+          </button>
+        }
+      </div>
+    }
+  </div>
+
+  <div class="below">
+    <section class="pane detail" aria-live="polite">
+      @if (selected; as chapter) {
+        <div class="label">Chapter</div>
+        <div class="codes">{{ bookName(chapter.bookId) }} · ch {{ chapter.code }}</div>
+        <h3>{{ chapter.title }}</h3>
+        <dl class="kv">
+          <dt><label for="story-when">When</label></dt>
+          <dd>
+            <input
+              id="story-when"
+              class="form-control when-input"
+              [class.invalid]="whenStatus.bad"
+              [(ngModel)]="whenDraft"
+              (keydown)="onWhenKeydown($event)"
+              (blur)="commitWhen()"
+              placeholder="330-03-09 → 330-03-12"
+              spellcheck="false"
+              autocomplete="off"
+            />
+            <span class="status" [class.bad]="whenStatus.bad">{{ whenStatus.text }}</span>
+          </dd>
+          <dt>Where</dt>
+          <dd>
+            @if (placeText(chapter)) { ⌖ {{ placeText(chapter) }} } @else { <span class="muted">No <code>Lugar:</code> line</span> }
+          </dd>
+          <dt>People</dt>
+          <dd class="people">
+            @for (person of people(chapter); track person.id) {
+              <span class="person">
+                <app-pov-chip class="person-avatar" [characterId]="person.id" [name]="person.name" [thumbnail]="portrait(person.id)"></app-pov-chip>
+                {{ person.name }}@if (chapter.pov.includes(person.id)) {<span class="muted"> · PoV</span>}
+              </span>
+            } @empty { <span class="muted">No PoV or linked characters</span> }
+          </dd>
+        </dl>
+        <button type="button" class="btn btn-secondary btn-sm" (click)="openInPlan(chapter)">Open in plan</button>
+        <p class="file-note">Saved as a <code>When:</code> line under the chapter heading.</p>
+      }
+    </section>
+    <section class="pane issues">
+      <div class="label">Continuity · {{ conflictCount }} conflict{{ conflictCount === 1 ? '' : 's' }}, {{ flashbackCount }} flashback{{ flashbackCount === 1 ? '' : 's' }}</div>
+      @if (!issues.length && chapters.length) {
+        <p class="ok">✓ Every chapter is dated and nobody is in two places at once.</p>
+      }
+      @for (issue of issues; track issueKey(issue, $index)) {
+        @switch (issue.type) {
+          @case ('conflict') {
+            <div class="issue err">
+              <span class="icon">!</span>
+              <div>
+                <b>{{ personName(issue.personId) }}</b> is in two places at once
+                <p>{{ chapterLabel(issue.a) }} at {{ placeText(issue.a) }} ({{ rangeText(issue.a) }}) overlaps {{ chapterLabel(issue.b) }} at {{ placeText(issue.b) }} ({{ rangeText(issue.b) }}).</p>
+                <button type="button" class="go" (click)="goTo(issue.b)">Show {{ chapterLabel(issue.b) }}</button>
+              </div>
+            </div>
+          }
+          @case ('lifespan') {
+            <div class="issue warn">
+              <span class="icon">!</span>
+              <div>
+                <b>{{ personName(issue.personId) }}</b> {{ issue.reason === 'unborn' ? 'isn’t born yet' : 'has already died' }} in {{ chapterLabel(issue.chapter) }}
+                <p>The PoV’s Born/Died dates don’t match this chapter’s date ({{ rangeText(issue.chapter) }}).</p>
+                <button type="button" class="go" (click)="goTo(issue.chapter)">Show</button>
+              </div>
+            </div>
+          }
+          @case ('flashback') {
+            <div class="issue info">
+              <span class="icon">↶</span>
+              <div>
+                {{ chapterLabel(issue.chapter) }} · <b>{{ issue.chapter.title }}</b> steps back in time
+                <p>Happens {{ gapText(issue.back) }} before a chapter the reader has already seen. Fine if intended.</p>
+                <button type="button" class="go" (click)="goTo(issue.chapter)">Show</button>
+              </div>
+            </div>
+          }
+        }
+      }
+      @if (undatedIssues().length) {
+        <div class="issue warn">
+          <span class="icon">?</span>
+          <div>
+            {{ undatedIssues().length }} chapter{{ undatedIssues().length === 1 ? '' : 's' }} without a usable date
+            <p>Not placed on the story-time axis. Pick one and type its date.</p>
+            <div class="tray">
+              @for (chapter of undatedIssues(); track chapter.key) {
+                <button type="button" [class.invalid]="chapter.invalid" (click)="select(chapter)">{{ chapterLabel(chapter) }} · {{ chapter.title }}</button>
+              }
+            </div>
+          </div>
+        </div>
+      }
+    </section>
+  </div>
+</div>

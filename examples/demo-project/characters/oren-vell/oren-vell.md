@@ -10,6 +10,10 @@ books:
 thumbnails:
   default: img/oren-vell.webp
 prompts: []
+born: 297
+residence:
+  - from: 297
+    place: vellhaven-lighthouse
 created: '2026-10-31T12:00:00.000Z'
 modified: '2026-10-31T12:00:00.000Z'
 ---

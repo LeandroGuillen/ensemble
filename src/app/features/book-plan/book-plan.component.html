@@ -8,7 +8,7 @@
       <span pageHeaderPrefix class="book-code">{{ book?.code }}</span>
     }
     <div class="header-actions">
-      @if (state) {
+      @if (state && view === 'plan') {
         <span class="save-status" [class.warn]="state.conflict !== null || state.error">{{ saveStatus }}</span>
         <button type="button" class="btn btn-ghost btn-sm" (click)="openSearch()" title="Search plan (Ctrl+J)">
           Search <kbd>Ctrl J</kbd>
@@ -25,6 +25,12 @@
       }
       @if (book) {
         <button type="button" class="edit-book-link" (click)="openBookEditor()">Edit book…</button>
+      }
+      @if (state) {
+        <div class="view-toggle" role="tablist" aria-label="Book view">
+          <button type="button" role="tab" [attr.aria-selected]="view === 'plan'" (click)="setView('plan')">Plan</button>
+          <button type="button" role="tab" [attr.aria-selected]="view === 'timeline'" (click)="setView('timeline')" title="Chapters in story time">Timeline</button>
+        </div>
       }
     </div>
   </app-page-header>
@@ -57,6 +63,8 @@
         <button type="button" class="btn btn-secondary" (click)="openBookEditor()">Choose an existing file…</button>
       </div>
     </div>
+  } @else if (view === 'timeline') {
+    <app-story-time [bookId]="bookId" (openLine)="openFromTimeline($event)"></app-story-time>
   } @else {
     <div class="plan-layout" [class.outline-right]="outlineSide === 'right'">
       <nav class="plan-outline" aria-label="Plan outline">

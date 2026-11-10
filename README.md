@@ -48,6 +48,7 @@ Ensemble keeps your cast, your world and your plot in one folder of Markdown fil
 - **Book plan search**: jump to a year, a character or a marker with `Ctrl+J`.
 - **Plan conflicts**: when the plan file changed outside Ensemble, the app offers to keep your version or reload from disk.
 - **Plot board**: lay plot threads out in a grid of rows and move between cells with the keyboard.
+- **Timeline**: a Chronicle of your world's history (eras, dated events, births, deaths and reigns), Lifelines showing everyone's life and age on one chart, and a story-time view of each book with continuity checks, all on your own calendar.
 
 ### Comfort
 

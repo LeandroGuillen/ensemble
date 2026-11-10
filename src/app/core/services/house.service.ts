@@ -13,6 +13,7 @@ import {
   houseLinkUpdateFailureMessage,
   normalizeHouseData,
   validateHouseData,
+  leadershipFrontmatter,
 } from '../utils/house.utils';
 import { parseMarkdown, generateMarkdown } from '../utils/markdown.utils';
 import { asciiSlugify } from '../utils/slug.utils';
@@ -258,7 +259,7 @@ export class HouseService {
     else if (await this.electron.fileExists(house.filePath)) throw new Error('A House file already exists at this path.');
     const previous = parseMarkdown<Record<string, unknown>>(house.raw).data?.frontmatter || {};
     const { name, motto, colors, thumbnail, seatId, characterIds, leadership, currentLeadershipId } = house;
-    const fm = { ...previous, type: 'house', id: house.id, name, motto, colors, thumbnail: thumbnail || undefined, seatId: seatId || undefined, characterIds, leadership, currentLeadershipId: currentLeadershipId || undefined, created: house.created.toISOString(), modified: house.modified.toISOString() };
+    const fm = { ...previous, type: 'house', id: house.id, name, motto, colors, thumbnail: thumbnail || undefined, seatId: seatId || undefined, characterIds, leadership: leadershipFrontmatter(leadership), currentLeadershipId: currentLeadershipId || undefined, created: house.created.toISOString(), modified: house.modified.toISOString() };
     const raw = generateMarkdown(fm, house.content);
     assertIpcSuccess(await this.electron.writeFileAtomic(house.filePath, raw), 'Save house');
     house.raw = raw;

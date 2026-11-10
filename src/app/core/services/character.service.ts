@@ -44,6 +44,7 @@ import { MetadataService } from './metadata.service';
 import { PlotBoardService } from './plot-board.service';
 import { CastService } from './cast.service';
 import { ReferenceCleanupService } from './reference-cleanup.service';
+import { lifeFields, lifeFrontmatter, normalizeLifeDate, normalizeResidence } from '../utils/character-life.utils';
 import { NotificationService } from './notification.service';
 import { createNamesakeConflictCheck, UndoDeleteEntry, UndoDeleteService } from './undo-delete.service';
 
@@ -519,6 +520,7 @@ export class CharacterService {
         thumbnails: normalizeThumbnailsMap(frontmatter.thumbnails),
         bookThumbnails: normalizeBookThumbnailsMap(frontmatter.bookThumbnails, books),
         prompts: normalizePrompts(frontmatter.prompts),
+        ...lifeFields(frontmatter.born, frontmatter.died, frontmatter.residence),
         content: content || '',
         created,
         modified,
@@ -708,6 +710,7 @@ export class CharacterService {
         thumbnails: normalizeThumbnailsMap(data.thumbnails),
         bookThumbnails: normalizeBookThumbnailsMap(data.bookThumbnails, books),
         prompts: normalizePrompts(data.prompts),
+        ...lifeFields(data.born, data.died, data.residence),
         content: data.content || '',
         created: now,
         modified: now,
@@ -774,6 +777,7 @@ export class CharacterService {
         thumbnails: normalizeThumbnailsMap(data.thumbnails),
         bookThumbnails: normalizeBookThumbnailsMap(data.bookThumbnails, books),
         prompts: normalizePrompts(data.prompts),
+        ...lifeFields(data.born, data.died, data.residence),
         content: data.content || '',
         created: now,
         modified: now,
@@ -1185,6 +1189,9 @@ export class CharacterService {
           : relocatedCharacter.thumbnails,
         bookThumbnails: nextBookThumbnails,
         prompts: data.prompts !== undefined ? normalizePrompts(data.prompts) : existingCharacter.prompts,
+        born: 'born' in data ? normalizeLifeDate(data.born) : existingCharacter.born,
+        died: 'died' in data ? normalizeLifeDate(data.died) : existingCharacter.died,
+        residence: 'residence' in data ? normalizeResidence(data.residence) : existingCharacter.residence,
         content: data.content !== undefined ? data.content : existingCharacter.content,
         modified: new Date(),
         relativePath: newRelativePath,
@@ -1491,6 +1498,7 @@ export class CharacterService {
           ? { bookThumbnails: character.bookThumbnails }
           : {}),
         ...(character.prompts && character.prompts.length > 0 ? { prompts: character.prompts } : {}),
+        ...lifeFrontmatter(character),
         created: character.created.toISOString(),
         modified: character.modified.toISOString(),
       };

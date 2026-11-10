@@ -103,6 +103,31 @@ the side, and a cell of notes for each. Move between cells with the keyboard.
 Plot boards are Markdown files (`*.pinboard.md`) saved anywhere in your project,
 so they travel with your files and diff cleanly in Git.
 
+## Timeline
+
+The **Timeline** page (sidebar → Timeline) shows your world's history in two views,
+both using the project's own calendar (Settings → Timeline: month names and lengths,
+a name and a year suffix such as *CR*). Dates are written `322`, `322-03` (a month),
+`322-03-09` (a day) or `c. 322` (approximate); ranges use `→`.
+
+- **Chronicle**: one stream of dated entries grouped by era. You write events in
+  `chronicle.md` (add them with **Add entry** or **Quick add**, for example
+  `322-03 The blackout @Vellhaven +Mara`). Births and deaths (a character's
+  **Born**/**Died**), House reigns with **From**/**To** dates and the span of each
+  book's dated chapters appear automatically as dashed *derived* entries. Select an
+  entry to see how old everyone involved was at the time.
+- **Lifelines**: one line per character from birth to death, grouped by House and
+  coloured by where they lived (the character's **Lived at** list), with House reigns,
+  chronicle events joining the people involved, and book bands. Hover to read
+  everyone's age; click to pin a year and see who was alive, where, and who ruled.
+
+On a book's page, the **Timeline** tab lays out the chapters by their `When:` dates,
+in PoV or place lanes. Switch to **Reading order** to see flashbacks. Continuity
+checks flag anyone who is in two places at once (from the chapters' `Lugar:` lines
+and linked characters), a PoV who isn't born yet or has died, chapters that step
+back in time, and chapters without a date. Edit a chapter's date there and it is
+written back to the plan.
+
 ## Linking with wikilinks
 
 Type `[[` in any description to link a character, location or House by name

@@ -1,0 +1,282 @@
+<div class="lifelines">
+  <div class="toolbar" role="group" aria-label="Lifelines options">
+    <span class="ctl">Range</span>
+    <div class="seg" role="group" aria-label="Range">
+      <button type="button" [attr.aria-pressed]="preset === 'all'" (click)="applyPreset('all')">All history</button>
+      <button type="button" [attr.aria-pressed]="preset === 'living'" (click)="applyPreset('living')">Living memory</button>
+      @if (books.length) {
+        <button type="button" [attr.aria-pressed]="preset === 'books'" (click)="applyPreset('books')">The books</button>
+      }
+    </div>
+    <span class="ctl">Color</span>
+    <div class="seg" role="group" aria-label="Color lines by">
+      <button type="button" [attr.aria-pressed]="colorBy === 'place'" (click)="setColorBy('place')">Place</button>
+      <button type="button" [attr.aria-pressed]="colorBy === 'house'" (click)="setColorBy('house')">House</button>
+    </div>
+    <span class="ctl">Group</span>
+    <div class="seg" role="group" aria-label="Group lines by">
+      <button type="button" [attr.aria-pressed]="groupBy === 'house'" (click)="setGroupBy('house')">House</button>
+      <button type="button" [attr.aria-pressed]="groupBy === 'age'" (click)="setGroupBy('age')">Age</button>
+    </div>
+    <span class="grow"></span>
+    <span class="count">{{ lines.length }} with a birth date</span>
+  </div>
+
+  <div class="body">
+    <div class="chart-col">
+      <div class="chart-host" #chartHost>
+        @if (!lines.length) {
+          <div class="empty">
+            <svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="assets/ui-icons.svg#timeline" /></svg>
+            <h2>No lifelines yet</h2>
+            <p>
+              Give characters a <b>Born</b> date (and <b>Died</b>, if they did) in their page’s
+              <i>Life &amp; timeline</i> section. Add where they lived to colour the line by place;
+              House reigns with <b>From</b>/<b>To</b> dates show who ruled.
+            </p>
+          </div>
+        } @else {
+          <svg
+            #chart
+            class="chart"
+            [attr.viewBox]="'0 0 ' + width + ' ' + height"
+            [attr.width]="width"
+            [attr.height]="height"
+            tabindex="0"
+            role="img"
+            aria-label="Character lifelines. Use the left and right arrow keys to move the pinned year."
+            (mousemove)="onMove($event)"
+            (mouseleave)="onLeave()"
+            (click)="onClick($event)"
+            (keydown)="onKeydown($event)"
+          >
+            <defs>
+              <clipPath id="lifelines-clip"><rect [attr.x]="left" y="0" [attr.width]="width - left - right" [attr.height]="height" /></clipPath>
+            </defs>
+
+            <g clip-path="url(#lifelines-clip)">
+              @for (band of eraBands; track band.label; let i = $index) {
+                @if (i % 2 === 1) { <rect class="era-band" [attr.x]="band.x" [attr.y]="axis" [attr.width]="band.w" [attr.height]="height - axis" /> }
+                @if (band.x > left + 1) { <line class="era-line" [attr.x1]="band.x" [attr.x2]="band.x" y1="4" [attr.y2]="height" /> }
+                @if (band.showLabel) { <text class="era-label" [attr.x]="band.x + 6" y="14">{{ band.label }}</text> }
+              }
+              @for (band of bookBands; track band.label) {
+                <rect class="book-band" [attr.x]="band.x" [attr.y]="axis" [attr.width]="band.w" [attr.height]="height - axis" [attr.fill]="band.color" />
+                <rect [attr.x]="band.x" [attr.y]="axis - 4" [attr.width]="band.w" height="3" rx="1.5" [attr.fill]="band.color" />
+                <text class="book-label" [attr.x]="band.x + band.w / 2" y="30" [attr.fill]="band.color">{{ band.label }}</text>
+              }
+            </g>
+
+            <line class="axis-line" [attr.x1]="left" [attr.x2]="width - right" [attr.y1]="axis" [attr.y2]="axis" />
+            @for (tick of ticks; track tick.x) {
+              <line class="tick" [class.major]="tick.major" [attr.x1]="tick.x" [attr.x2]="tick.x" [attr.y1]="axis - 5" [attr.y2]="height - 8" />
+              <text class="tick-label" [attr.x]="tick.x" [attr.y]="axis - 12">{{ tick.label }}</text>
+            }
+
+            @for (group of groupRows; track group.label) {
+              <text class="group-label" x="16" [attr.y]="group.y + 17" [attr.fill]="group.color">{{ group.label }}</text>
+              <line class="group-line" x1="16" [attr.x2]="width - right" [attr.y1]="group.y + 23" [attr.y2]="group.y + 23" />
+            }
+
+            @for (lane of lanes; track lane.id) {
+              <g
+                class="lane-name"
+                [class.dim]="lane.dim"
+                [class.focused]="focusId === lane.id"
+                role="button"
+                tabindex="0"
+                [attr.aria-label]="'Focus on ' + lane.name"
+                (click)="toggleFocus(lane.id); $event.stopPropagation()"
+                (keydown.enter)="toggleFocus(lane.id)"
+                (keydown.space)="toggleFocus(lane.id); $event.preventDefault()"
+              >
+                <rect x="8" [attr.y]="lane.y + 2" [attr.width]="left - 14" [attr.height]="34 - 4" rx="6" class="lane-hit" />
+                <foreignObject x="14" [attr.y]="lane.cy - 11" width="22" height="22">
+                  <app-pov-chip class="lane-avatar" [characterId]="lane.id" [name]="lane.name" [thumbnail]="portrait(lane.id)"></app-pov-chip>
+                </foreignObject>
+                <text class="lane-label" x="42" [attr.y]="lane.cy + 4">{{ lane.name }}</text>
+              </g>
+              <g clip-path="url(#lifelines-clip)" [class.dim]="lane.dim">
+                @for (segment of lane.segments; track $index) {
+                  <line
+                    class="segment"
+                    [class.lost]="segment.lost"
+                    [attr.x1]="segment.x1"
+                    [attr.x2]="segment.x2"
+                    [attr.y1]="lane.cy"
+                    [attr.y2]="lane.cy"
+                    [attr.stroke]="segment.color"
+                  ><title>{{ segment.title }}</title></line>
+                }
+                @for (reign of lane.reigns; track $index) {
+                  <rect class="reign" [attr.x]="reign.x" [attr.y]="lane.cy - 9" [attr.width]="reign.w" height="2.5" rx="1"><title>{{ reign.title }}</title></rect>
+                }
+                @if (lane.bornX !== null) {
+                  <circle class="born" [attr.cx]="lane.bornX" [attr.cy]="lane.cy" r="4.5" [attr.stroke]="lane.bornColor"><title>Born</title></circle>
+                }
+                @if (lane.diedX !== null) {
+                  <text class="died" [attr.x]="lane.diedX + 4" [attr.y]="lane.cy + 4">†</text>
+                }
+                @if (lane.openEndX !== null) {
+                  <path class="open-end" [attr.d]="'M' + lane.openEndX + ' ' + (lane.cy - 5) + ' l6 5 l-6 5'" />
+                }
+                @if (lane.diedBefore) {
+                  <text class="died-before" [attr.x]="left + 6" [attr.y]="lane.cy + 4">← {{ lane.diedBefore }}</text>
+                }
+              </g>
+            }
+
+            <g clip-path="url(#lifelines-clip)">
+              @for (mark of marks; track mark.index) {
+                <g
+                  class="event"
+                  [class.dim]="mark.dim"
+                  [class.selected]="eventIndex === mark.index"
+                  [attr.data-event]="mark.index"
+                  role="button"
+                  tabindex="0"
+                  [attr.aria-label]="mark.title"
+                  (click)="selectEvent(mark.index, $event)"
+                  (keydown.enter)="selectEvent(mark.index)"
+                >
+                  @if (mark.ys.length > 1) { <line [attr.x1]="mark.x" [attr.x2]="mark.x" [attr.y1]="mark.minY" [attr.y2]="mark.maxY" /> }
+                  @for (y of mark.ys; track $index) { <circle [attr.cx]="mark.x" [attr.cy]="y" r="4.5" /> }
+                  <rect class="event-hit" [attr.x]="mark.x - 7" [attr.y]="mark.minY - 8" width="14" [attr.height]="mark.maxY - mark.minY + 16" />
+                </g>
+              }
+            </g>
+
+            @if (undated.length) {
+              <text class="undated" x="16" [attr.y]="undatedY + 16">No birth date: {{ undatedNames }}</text>
+            }
+
+            @if (cursor) {
+              <g class="cursor" [class.pinned]="cursor.pinned" pointer-events="none">
+                <line [attr.x1]="cursor.x" [attr.x2]="cursor.x" [attr.y1]="axis - 4" [attr.y2]="height - 10" />
+                <rect class="cursor-tag" [attr.x]="cursor.x - cursor.labelWidth / 2" [attr.y]="axis - 28" [attr.width]="cursor.labelWidth" height="18" rx="9" />
+                <text class="cursor-text" [attr.x]="cursor.x" [attr.y]="axis - 15">{{ cursor.label }}</text>
+                @for (pill of cursor.pills; track $index) {
+                  <rect class="pill" [attr.x]="pill.x" [attr.y]="pill.y - 9" [attr.width]="pill.w" height="18" rx="5" />
+                  <text class="pill-text" [class.muted]="pill.muted" [attr.x]="pill.x + pill.w / 2" [attr.y]="pill.y + 4">{{ pill.text }}</text>
+                }
+              </g>
+            }
+          </svg>
+        }
+      </div>
+
+      @if (lines.length) {
+        <div class="legend">
+          @for (entry of legend; track entry.label) { <span><i [style.background]="entry.color"></i>{{ entry.label }}</span> }
+          <span><i class="lost-swatch"></i>away / missing</span>
+          <span><i class="reign-swatch"></i>heads a House</span>
+          <span><i class="event-swatch"></i>chronicle event</span>
+        </div>
+        <div class="overview-wrap">
+          <div class="overview-head"><span>Overview · drag the window to pan, its edges to zoom</span><span>{{ rangeLabel }}</span></div>
+          <svg
+            #overview
+            class="overview"
+            [attr.viewBox]="'0 0 ' + overviewWidth + ' 56'"
+            preserveAspectRatio="none"
+            aria-label="Visible range"
+            (pointerdown)="onOverviewDown($event, 'jump')"
+            (pointermove)="onOverviewMove($event)"
+            (pointerup)="onOverviewUp()"
+            (pointercancel)="onOverviewUp()"
+          >
+            <rect class="ov-bg" x="0" y="0" [attr.width]="overviewWidth" height="56" rx="6" />
+            @for (tick of overviewTicks; track tick.x) { <text class="ov-tick" [attr.x]="tick.x" y="52">{{ tick.label }}</text> }
+            @for (line of overviewLines; track $index) { <line [attr.x1]="line.x1" [attr.x2]="line.x2" [attr.y1]="line.y" [attr.y2]="line.y" [attr.stroke]="line.color" class="ov-line" /> }
+            @for (x of overviewEvents; track $index) { <line class="ov-event" [attr.x1]="x" [attr.x2]="x" y1="4" y2="42" /> }
+            <rect class="ov-shade" x="0" y="0" [attr.width]="windowX" height="56" />
+            <rect class="ov-shade" [attr.x]="windowX + windowW" y="0" [attr.width]="overviewWidth - windowX - windowW" height="56" />
+            <rect class="ov-window" [attr.x]="windowX" y="1" [attr.width]="windowW" height="54" rx="5" (pointerdown)="onOverviewDown($event, 'move')" />
+            <rect class="ov-handle" [attr.x]="windowX - 4" y="12" width="8" height="32" rx="3" (pointerdown)="onOverviewDown($event, 'left')" />
+            <rect class="ov-handle" [attr.x]="windowX + windowW - 4" y="12" width="8" height="32" rx="3" (pointerdown)="onOverviewDown($event, 'right')" />
+          </svg>
+        </div>
+        <p class="hint">
+          Hover to read ages · click to pin a year · <kbd>←</kbd> <kbd>→</kbd> move the pin (<kbd>Shift</kbd> ×10) ·
+          click a name to see who they meet · click a joined dot for the event.
+        </p>
+      }
+    </div>
+
+    <aside class="panel" aria-live="polite">
+      @if (focused; as f) {
+        <div class="label">Person</div>
+        <div class="person-card">
+          <app-pov-chip class="big-avatar" [characterId]="f.line.id" [name]="f.line.name" [thumbnail]="portrait(f.line.id)"></app-pov-chip>
+          <div>
+            <a class="person-name" [routerLink]="['/character', f.line.id]">{{ f.line.name }}</a>
+            <small>{{ f.houses || 'No House' }}</small>
+          </div>
+        </div>
+        <div class="stats">
+          <div><b>{{ f.ageNote }}</b></div>
+          <div><b>{{ f.events.length }}</b> events · <b>{{ f.met }}</b> crossed paths</div>
+        </div>
+        @if (f.stays.length) {
+          <div class="label">Lived at</div>
+          @for (stay of f.stays; track $index) {
+            <div class="stay"><i [style.background]="stay.color"></i>{{ stay.place }}{{ stay.note ? ' (' + stay.note + ')' : '' }}<span>{{ stay.from }}–{{ stay.to }}</span></div>
+          }
+        }
+        @if (f.reigns.length) {
+          <div class="label">Reigns</div>
+          @for (reign of f.reigns; track $index) {
+            <div class="stay"><i class="reign-dot"></i>{{ reign.house }}{{ reign.label ? ' · ' + reign.label : '' }}<span>{{ reign.from }}–{{ reign.to }}</span></div>
+          }
+        }
+        <div class="label">Events</div>
+        @for (event of f.events; track event.index) {
+          <button type="button" class="event-row" (click)="selectEvent(event.index)">
+            {{ event.title }}<small>{{ event.date }} · age {{ event.age }}{{ event.book ? ' · ' + event.book : '' }}</small>
+          </button>
+        } @empty { <p class="muted small">No chronicle events with them yet.</p> }
+        <button type="button" class="link-btn" (click)="clearFocus()">Show everyone</button>
+      } @else if (ctx && lines.length) {
+        @let snap = snapshot;
+        @if (selectedEvent; as event) {
+          <div class="label">Event</div>
+          <div class="event-row static">{{ event.title }}<small>{{ itemDate(event) }} · {{ peopleNames(event) }}</small></div>
+        }
+        <div class="label">Pinned year</div>
+        <div class="year">{{ yearLabel(pinnedYear) }}@if (calendar?.suffix) {<small>{{ calendar!.suffix }}</small>}</div>
+        @if (eraAtPin) { <div class="era">{{ eraAtPin }}</div> }
+        @for (book of snap.books; track book.id) {
+          <a class="book-link" [routerLink]="['/book', book.id]" [queryParams]="{ view: 'timeline' }" [style.--book-color]="book.color">{{ book.name }}</a>
+        }
+        <div class="label">Alive · {{ snap.alive.length }}</div>
+        @for (person of snap.alive; track person.id) {
+          <button type="button" class="alive-row" (click)="toggleFocus(person.id)">
+            <app-pov-chip class="row-avatar" [characterId]="person.id" [name]="person.name" [thumbnail]="portrait(person.id)"></app-pov-chip>
+            <span class="who">
+              {{ person.name }}
+              <small>
+                @if (person.reign) { <span class="crown">♛</span> heads {{ person.reign }}@if (person.place) { · } }
+                {{ person.place ?? '' }}{{ person.note ? ' (' + person.note + ')' : '' }}
+              </small>
+            </span>
+            <span class="age">{{ person.age }}</span>
+          </button>
+        } @empty { <p class="muted small">No one with a birth date is alive then.</p> }
+        @if (snap.unborn.length) {
+          <div class="label">Not born yet</div>
+          <p class="muted small">
+            @for (line of snap.unborn; track line.id; let last = $last) { {{ line.name }} ({{ line.bornDate?.year }}){{ last ? '' : ', ' }} }
+          </p>
+        }
+        <div class="label">Events in {{ yearLabel(pinnedYear).split(' ').pop() }}</div>
+        @for (row of snap.events; track row.index) {
+          <button type="button" class="event-row" (click)="selectEvent(row.index)">{{ row.e.title }}<small>{{ itemDate(row.e) }}</small></button>
+        } @empty { <p class="muted small">Nothing in the chronicle.</p> }
+      }
+    </aside>
+  </div>
+
+  @if (tooltip) {
+    <div class="tooltip" [style.left.px]="tooltip.x" [style.top.px]="tooltip.y">{{ tooltip.title }}<small>{{ tooltip.detail }}</small></div>
+  }
+</div>
