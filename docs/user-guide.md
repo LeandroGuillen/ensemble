@@ -35,6 +35,15 @@ checkout stays unchanged.
 Every character has a stable **id** stored in its file, so links and references
 survive a rename or a move.
 
+**Duplicate** makes a near-copy — a sibling, a variant, a template. Use the
+Duplicate button on a character's page, the copy icon on a card in the grid or
+list view, or *Duplicate character…* in the command palette. The copy is named
+*Name (copy)*, then *(copy 2)*…, gets its own id, and opens with the name ready
+to edit. It keeps the description, category, tags, aliases, books (with their
+per-book pages and overrides) and gets its own copies of every portrait.
+House membership, casts, pinboards, plot threads and book PoV are not copied.
+A draft is copied into the Drawer and a Lore figure stays Lore.
+
 **Aliases** (a.k.a. names) attach alternate names to a character so search and
 `[[wikilinks]]` can find them.
 

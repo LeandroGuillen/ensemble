@@ -82,6 +82,15 @@
         </button>
         <button
           type="button"
+          class="icon-btn duplicate-btn"
+          (click)="onCharacterDuplicate(character, $event)"
+          title="Duplicate character"
+          [attr.aria-label]="'Duplicate ' + getCharacterDisplayName(character)"
+          >
+          <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#copy" /></svg>
+        </button>
+        <button
+          type="button"
           class="icon-btn delete-btn"
           (click)="onCharacterDelete(character, $event)"
           title="Delete character"

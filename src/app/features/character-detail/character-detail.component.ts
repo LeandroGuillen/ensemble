@@ -80,6 +80,7 @@ import { PageHeaderComponent } from "../../shared/page-header/page-header.compon
 import { ImagePickerDialogComponent } from "../../shared/image-picker-dialog/image-picker-dialog.component";
 import { CharacterLinkedPromptsComponent, CharacterPromptGenerateRequest } from "./components/character-linked-prompts/character-linked-prompts.component";
 import { GeneratePortraitDialogComponent } from "./components/generate-portrait-dialog/generate-portrait-dialog.component";
+import { CharacterDuplicateService, DuplicatedCharacterState } from "../../core/services/character-duplicate.service";
 
 /** Where a character lives; changed from the infobox and applied on save. */
 type CharacterCollection = 'characters' | 'lore' | 'draft';
@@ -136,6 +137,10 @@ export class CharacterDetailComponent
   isEditing = false;
   isDraftMode = false;
   isLoreMode = false;
+  /** Name of the original when this page was just opened on a fresh duplicate. */
+  duplicatedFrom: string | null = null;
+  /** True while Duplicate runs (separate from isSaving so the leave guard lets us open the copy). */
+  isDuplicating = false;
   /** Draft page: collection the draft moves to on save (null = stays a draft). */
   pendingConvert: 'characters' | 'lore' | null = null;
   /** Character/Lore page: move to drafts on save. */
@@ -169,6 +174,7 @@ export class CharacterDetailComponent
   /** Locations for the residence picker. */
   residenceLocations: { id: string; name: string }[] = [];
   private lifeOpenChoice: boolean | null = null;
+  private readonly characterDuplicate = inject(CharacterDuplicateService);
   private leavePrompt: Promise<boolean> | null = null;
   /** Resolves [[wikilinks]] in the description editors; replaced when link targets change. */
   linkResolver: (target: string) => ResolvedWikiLink | null = () => null;
@@ -604,6 +610,7 @@ export class CharacterDetailComponent
         this.characterForm.markAsPristine();
         this.externalMainConflict = false;
         this.externalBookConflicts.clear();
+        this.consumeDuplicatedState();
       } else {
         this.notificationService.showError("Character not found");
       }
@@ -1845,6 +1852,53 @@ export class CharacterDetailComponent
       this.isSaving = false;
       this.cdr.markForCheck();
     }
+  }
+
+  get duplicateLabel(): string {
+    return this.isDraftMode ? 'Duplicate draft' : this.isLoreMode ? 'Duplicate Lore figure' : 'Duplicate character';
+  }
+
+  /** Duplicates the saved record and opens the copy (see CharacterDuplicateService). */
+  async duplicateCharacter(): Promise<void> {
+    if (!this.character || !this.isEditing || this.isSaving || this.isDuplicating) {
+      return;
+    }
+    if (this.characterForm.dirty || this.hasAnyBookPageDirty()) {
+      this.notificationService.showWarning('Save your changes before duplicating.');
+      return;
+    }
+
+    // Not `isSaving`: canLeave() blocks navigation while saving, which would
+    // cancel the move to the copy and leave the user on the original.
+    this.isDuplicating = true;
+    this.cdr.markForCheck();
+    try {
+      await this.characterDuplicate.duplicate(this.character);
+    } finally {
+      this.isDuplicating = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  /** After a duplicate lands here: focus the name and say what was not copied (once per navigation). */
+  private consumeDuplicatedState(): void {
+    const state = (typeof history !== 'undefined' ? history.state : null) as Partial<DuplicatedCharacterState> | null;
+    if (!state?.duplicatedFrom) {
+      this.duplicatedFrom = null;
+      return;
+    }
+    this.duplicatedFrom = state.duplicatedFrom;
+    history.replaceState({ ...state, duplicatedFrom: undefined }, '');
+    setTimeout(() => {
+      const input = this.nameInput?.nativeElement;
+      input?.focus();
+      input?.select();
+    });
+  }
+
+  dismissDuplicatedNote(): void {
+    this.duplicatedFrom = null;
+    this.cdr.markForCheck();
   }
 
   async deleteCharacter(): Promise<void> {

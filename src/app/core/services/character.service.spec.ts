@@ -79,6 +79,7 @@ describe('CharacterService', () => {
       'copyFile',
       'deleteFile',
       'deleteDirectoryRecursive',
+      'isDirectory',
       'stageForTrash',
       'restoreFromTrash',
       'getFileStats',
@@ -1313,6 +1314,207 @@ describe('CharacterService', () => {
       await expectAsync(service.deleteCharacter('char-orphan')).toBeRejected();
       expect(electronService.restoreFromTrash).toHaveBeenCalledWith('tok-char');
       expect(registerCalls).toBe(2);
+    });
+  });
+
+  describe('duplicateCharacter', () => {
+    const P = '/test/project';
+    const C = `${P}/characters`;
+    /** In-memory project tree behind a fake ElectronService. */
+    let files: Map<string, string>;
+    let dirs: Set<string>;
+    let failCopiesTo: RegExp | null;
+
+    const parentOf = (path: string) => path.slice(0, path.lastIndexOf('/'));
+    const snapshot = () => new Map(files);
+
+    const sourceCharacter = (): Character => ({
+      id: 'src-id',
+      name: 'Mara Vell',
+      aliases: ['Dess'],
+      category: 'main-character',
+      tags: ['magic-user'],
+      books: ['b1', 'b2'],
+      bookCategories: { b1: 'main-character' },
+      bookTags: { b1: ['magic-user'] },
+      thumbnails: {
+        default: '[[characters/mara-vell/portrait.png]]',
+        shared: '[[img/shared.png]]',
+        local: 'face.png',
+      },
+      bookThumbnails: { b1: { default: '[[img/shared.png]]' } },
+      prompts: [{ name: 'Portrait', positive: 'a witch', negative: '' }],
+      content: 'Notes about Mara',
+      created: new Date('2024-01-01T00:00:00Z'),
+      modified: new Date('2024-01-02T00:00:00Z'),
+      relativePath: 'mara-vell/mara-vell.md',
+      filePath: `${C}/mara-vell/mara-vell.md`,
+    });
+
+    beforeEach(() => {
+      failCopiesTo = null;
+      dirs = new Set([P, C, `${C}/@drafts`, `${C}/mara-vell`, `${P}/img`, `${P}/houses`]);
+      files = new Map([
+        [`${P}/ensemble.json`, '{"projectName":"Test"}'],
+        [`${C}/mara-vell/mara-vell.md`, '---\nid: src-id\nname: Mara Vell\n---\nNotes about Mara'],
+        [`${C}/mara-vell/mara-vell.lc1.md`, 'Mara in book one'],
+        [`${C}/mara-vell/mara-vell.unrelated.md`, 'not a book page of a current book'],
+        [`${C}/mara-vell/portrait.png`, 'PNG-portrait'],
+        [`${C}/mara-vell/face.png`, 'PNG-face'],
+        [`${P}/img/shared.png`, 'PNG-shared'],
+        [`${P}/houses/vell.md`, '---\nmembers: [src-id]\n---'],
+      ]);
+
+      const project = createValidProject();
+      project.metadata.books = [
+        { id: 'b1', code: 'LC1', name: 'Book One' },
+        { id: 'b2', code: 'LC2', name: 'Book Two' },
+      ] as any;
+      projectService.getCurrentProject.and.returnValue(project);
+
+      const ok = { success: true };
+      electronService.fileExists.and.callFake(async (path: string) => files.has(path) || dirs.has(path));
+      electronService.isDirectory.and.callFake(async (path: string) => dirs.has(path));
+      electronService.createDirectory.and.callFake(async (path: string) => {
+        if (!dirs.has(parentOf(path))) return { success: false, error: 'ENOENT' };
+        dirs.add(path);
+        return ok;
+      });
+      electronService.copyFile.and.callFake(async (from: string, to: string) => {
+        if (failCopiesTo?.test(to)) return { success: false, error: 'EIO' };
+        if (!files.has(from) || !dirs.has(parentOf(to))) return { success: false, error: 'ENOENT' };
+        files.set(to, files.get(from)!);
+        return ok;
+      });
+      electronService.writeFileAtomic.and.callFake(async (path: string, content: string) => {
+        if (!dirs.has(parentOf(path))) return { success: false, error: 'ENOENT' };
+        files.set(path, content);
+        return ok;
+      });
+      electronService.deleteDirectoryRecursive.and.callFake(async (path: string) => {
+        for (const key of [...files.keys()]) if (key.startsWith(`${path}/`)) files.delete(key);
+        for (const key of [...dirs]) if (key === path || key.startsWith(`${path}/`)) dirs.delete(key);
+        return ok;
+      });
+    });
+
+    /** Files added since `before`, and whether every file in `before` is byte-identical. */
+    const diffSince = (before: Map<string, string>) => ({
+      added: [...files.keys()].filter((key) => !before.has(key)).sort(),
+      unchanged: [...before].every(([key, value]) => files.get(key) === value),
+    });
+
+    it('copies fields, renamed book pages and separate portraits into a new folder only', async () => {
+      (service as any).charactersSubject.next([sourceCharacter()]);
+      const before = snapshot();
+
+      const copy = await service.duplicateCharacter('src-id', 'Mara Vell (copy)');
+
+      const dir = `${C}/mara-vell-copy`;
+      expect(copy.id).not.toBe('src-id');
+      expect(copy.name).toBe('Mara Vell (copy)');
+      expect(copy.relativePath).toBe('mara-vell-copy/mara-vell-copy.md');
+      expect(copy.created.getTime()).toBeGreaterThan(new Date('2024-01-02T00:00:00Z').getTime());
+      const source = sourceCharacter();
+      for (const key of ['aliases', 'category', 'tags', 'books', 'bookCategories', 'bookTags', 'prompts', 'content'] as const) {
+        expect(copy[key]).withContext(key).toEqual(source[key] as any);
+      }
+      expect(copy.thumbnails).toEqual({
+        default: '[[characters/mara-vell-copy/img/portrait.png]]',
+        shared: '[[characters/mara-vell-copy/img/shared.png]]',
+        local: '[[characters/mara-vell-copy/img/face.png]]',
+      });
+      expect(copy.bookThumbnails).toEqual({ b1: { default: '[[characters/mara-vell-copy/img/shared.png]]' } });
+
+      const { added, unchanged } = diffSince(before);
+      expect(unchanged).toBeTrue();
+      expect(added).toEqual([
+        `${dir}/img/face.png`,
+        `${dir}/img/portrait.png`,
+        `${dir}/img/shared.png`,
+        `${dir}/mara-vell-copy.lc1.md`,
+        `${dir}/mara-vell-copy.md`,
+      ]);
+      expect(files.get(`${dir}/mara-vell-copy.lc1.md`)).toBe('Mara in book one');
+      expect(files.get(`${dir}/img/shared.png`)).toBe('PNG-shared');
+      expect(files.get(`${dir}/mara-vell-copy.md`)).toContain(`id: ${copy.id}`);
+      expect(files.get(`${dir}/mara-vell-copy.md`)).toContain('name: Mara Vell (copy)');
+
+      // Separate files: changing the copy's portrait leaves the original byte-identical.
+      files.set(`${dir}/img/portrait.png`, 'edited');
+      expect(files.get(`${C}/mara-vell/portrait.png`)).toBe('PNG-portrait');
+
+      expect(service.getCharactersSnapshot().map((c) => c.id)).toEqual(jasmine.arrayContaining(['src-id', copy.id]));
+      expect(electronService.stageForTrash).not.toHaveBeenCalled();
+    });
+
+    it('never overwrites an existing folder', async () => {
+      (service as any).charactersSubject.next([sourceCharacter()]);
+      dirs.add(`${C}/mara-vell-copy`);
+      files.set(`${C}/mara-vell-copy/mara-vell-copy.md`, 'someone else');
+      const before = snapshot();
+
+      const copy = await service.duplicateCharacter('src-id', 'Mara Vell (copy)');
+
+      expect(copy.relativePath).not.toBe('mara-vell-copy/mara-vell-copy.md');
+      expect(copy.relativePath.startsWith('mara-vell-copy-')).toBeTrue();
+      expect(diffSince(before).unchanged).toBeTrue();
+    });
+
+    it('duplicates a draft into @drafts and Lore as Lore', async () => {
+      const draft = {
+        ...sourceCharacter(),
+        id: 'draft-id',
+        draft: true,
+        thumbnails: {},
+        bookThumbnails: {},
+        relativePath: '@drafts/mara-vell/mara-vell.md',
+        filePath: `${C}/@drafts/mara-vell/mara-vell.md`,
+      };
+      dirs.add(`${C}/@drafts/mara-vell`);
+      files.set(draft.filePath, 'draft');
+      const lore = { ...sourceCharacter(), id: 'lore-id', lore: true, thumbnails: {}, bookThumbnails: {} };
+      (service as any).draftsSubject.next([draft]);
+      (service as any).loreSubject.next([lore]);
+
+      const draftCopy = await service.duplicateCharacter('draft-id', 'Mara Vell (copy)');
+      const loreCopy = await service.duplicateCharacter('lore-id', 'Mara Vell (copy 2)');
+
+      expect(draftCopy.draft).toBeTrue();
+      expect(draftCopy.relativePath).toBe('@drafts/mara-vell-copy/mara-vell-copy.md');
+      expect(service.getDraftsSnapshot().map((c) => c.id)).toContain(draftCopy.id);
+      expect(loreCopy.lore).toBeTrue();
+      expect(files.get(loreCopy.filePath)).toContain('lore: true');
+      expect(service.getCharactersSnapshot().length).toBe(0);
+    });
+
+    it('rolls back the half-made folder when a copy fails and leaves everything else as it was', async () => {
+      (service as any).charactersSubject.next([sourceCharacter()]);
+      const before = snapshot();
+      failCopiesTo = /\/img\/shared\.png$/;
+
+      await expectAsync(service.duplicateCharacter('src-id', 'Mara Vell (copy)')).toBeRejectedWithError(
+        /Failed to duplicate character/
+      );
+
+      expect(diffSince(before)).toEqual({ added: [], unchanged: true });
+      expect(dirs.has(`${C}/mara-vell-copy`)).toBeFalse();
+      expect(service.getCharactersSnapshot().length).toBe(1);
+      expect(electronService.stageForTrash).not.toHaveBeenCalled();
+    });
+
+    it('deleting the copy stages only the copy folder for the OS trash', async () => {
+      (service as any).charactersSubject.next([sourceCharacter()]);
+      const copy = await service.duplicateCharacter('src-id', 'Mara Vell (copy)');
+
+      await service.deleteCharacter(copy.id);
+
+      expect(electronService.stageForTrash).toHaveBeenCalledOnceWith(
+        P,
+        `${C}/mara-vell-copy`,
+        jasmine.objectContaining({ kind: 'character' })
+      );
+      expect(service.getCharactersSnapshot().map((c) => c.id)).toEqual(['src-id']);
     });
   });
 

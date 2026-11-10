@@ -5,6 +5,7 @@ import { ChangeDetectorRef, Component, DestroyRef, ElementRef, HostListener, inj
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { House } from '../../core/interfaces/house.interface';
 import { HouseService } from '../../core/services/house.service';
+import { CharacterDuplicateService } from '../../core/services/character-duplicate.service';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Observable } from 'rxjs';
@@ -76,6 +77,7 @@ export class CharacterListComponent implements OnInit {
   private readonly dragAutoScrollMaxStepPx = 18;
 
   private readonly destroyRef = inject(DestroyRef);
+  private readonly characterDuplicate = inject(CharacterDuplicateService);
 
   characters$: Observable<Character[]>;
   drafts$: Observable<Character[]>;
@@ -1376,6 +1378,10 @@ getFilterSummary(): string {
 
   onViewCharacterDelete(event: { character: Character; event: Event }): void {
     this.deleteCharacter(event.character, event.event);
+  }
+
+  onViewCharacterDuplicate(character: Character): void {
+    void this.characterDuplicate.duplicate(character);
   }
 
   onViewCharacterSelectionToggle(characterId: string): void {

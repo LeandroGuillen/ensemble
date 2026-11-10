@@ -29,8 +29,19 @@ describe('CharacterGridViewComponent card actions', () => {
     expect(card.getAttribute('role')).toBeNull();
     expect(card.hasAttribute('tabindex')).toBeFalse();
     const buttons = Array.from(card.querySelectorAll('button')) as HTMLButtonElement[];
-    expect(buttons.map(b => b.getAttribute('aria-label'))).toEqual(['Edit Mara Vell', 'Delete Mara Vell']);
+    expect(buttons.map(b => b.getAttribute('aria-label'))).toEqual(['Edit Mara Vell', 'Duplicate Mara Vell', 'Delete Mara Vell']);
     expect(buttons.every(b => b.type === 'button')).toBeTrue();
+  });
+
+  it('emits characterDuplicate from the Duplicate button without opening the card', async () => {
+    const { root, component } = await setup();
+    const duplicated: string[] = [];
+    const opened: string[] = [];
+    component.characterDuplicate.subscribe(c => duplicated.push(c.id));
+    component.characterClick.subscribe(c => opened.push(c.id));
+    (root.querySelector('.duplicate-btn') as HTMLButtonElement).click();
+    expect(duplicated.length).toBe(1);
+    expect(opened).toEqual([]);
   });
 
   it('leaves Enter and Space on Edit/Delete to the native button (nothing calls preventDefault)', async () => {

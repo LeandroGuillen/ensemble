@@ -145,6 +145,18 @@
 
           <!-- Article layout: title + text, with the infobox (portrait, category, tags)
                beside it on wide screens and above the text on narrow ones. -->
+          @if (duplicatedFrom && isEditing) {
+            <div class="duplicate-note" role="status">
+              <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#copy" /></svg>
+              <p>
+                Copy of <strong>{{ duplicatedFrom }}</strong>. Houses, casts, pinboards, plot threads and book PoV
+                were not copied — add this {{ isDraftMode ? 'draft' : isLoreMode ? 'Lore figure' : 'character' }} to them as needed.
+              </p>
+              <button type="button" class="duplicate-note-close" (click)="dismissDuplicatedNote()" aria-label="Dismiss">
+                <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg>
+              </button>
+            </div>
+          }
           <section class="hero-card article-layout">
             <div class="hero-main article-head">
               <div class="hero-field">
@@ -472,6 +484,14 @@
 
               @if (isEditing) {
                 <div class="infobox-danger">
+                  <button
+                    type="button"
+                    class="danger-link secondary-link"
+                    (click)="duplicateCharacter()"
+                    [disabled]="isSaving || isDuplicating || savingBookPageId"
+                    [attr.aria-busy]="isDuplicating"
+                    title="Copy into a new {{ isDraftMode ? 'draft' : isLoreMode ? 'Lore figure' : 'character' }} (last saved version, with its own portraits and book pages)"
+                  >{{ isDuplicating ? 'Duplicating…' : duplicateLabel }}</button>
                   <button
                     type="button"
                     class="danger-link"

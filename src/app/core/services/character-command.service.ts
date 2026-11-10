@@ -2,6 +2,8 @@ import { Injectable } from '@angular/core';
 import { Character } from '../interfaces/character.interface';
 import { CommandPaletteService } from '../../shared/command-palette/command-palette.service';
 import { CharacterEditDialogService } from './character-edit-dialog.service';
+import { CharacterDuplicateService } from './character-duplicate.service';
+import { CharacterPickerService } from './character-picker.service';
 import { CharacterService } from './character.service';
 import { MetadataHelperService } from './metadata-helper.service';
 
@@ -18,6 +20,8 @@ export class CharacterCommandService {
     private commandPaletteService: CommandPaletteService,
     private characterEditDialog: CharacterEditDialogService,
     private metadataHelper: MetadataHelperService,
+    private characterPicker: CharacterPickerService,
+    private characterDuplicate: CharacterDuplicateService,
   ) {}
 
   activate(): void {
@@ -50,6 +54,14 @@ export class CharacterCommandService {
         group: 'characters',
         action: () => this.characterEditDialog.openCreate(),
       },
+      {
+        id: 'duplicate-character',
+        label: 'Duplicate character…',
+        icon: 'copy',
+        keywords: ['duplicate', 'copy', 'clone', 'character', 'variant'],
+        group: 'characters',
+        action: () => void this.duplicatePicked(),
+      },
       ...characters.map((character) => ({
         id: `character-${character.id}`,
         label: character.name,
@@ -67,6 +79,13 @@ export class CharacterCommandService {
         action: () => this.characterEditDialog.openEdit(character.id),
       })),
     ]);
+  }
+
+  private async duplicatePicked(): Promise<void> {
+    const character = await this.characterPicker.pick();
+    if (character) {
+      await this.characterDuplicate.duplicate(character);
+    }
   }
 
   private publishAndLoadThumbnails(characters: Character[]): void {

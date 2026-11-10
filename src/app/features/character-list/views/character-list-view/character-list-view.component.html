@@ -85,6 +85,19 @@
           <p class="list-item-description">{{ character.content | excerpt:180 }}</p>
         }
       </div>
+      @if (!showPrompts) {
+        <div class="list-item-actions" role="group" [attr.aria-label]="getCharacterDisplayName(character) + ' actions'">
+          <button
+            type="button"
+            class="icon-btn duplicate-btn"
+            (click)="onCharacterDuplicate(character, $event)"
+            title="Duplicate character"
+            [attr.aria-label]="'Duplicate ' + getCharacterDisplayName(character)"
+          >
+            <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#copy" /></svg>
+          </button>
+        </div>
+      }
       @if (showPrompts && promptImagesFor(character).length) {
         <div class="list-item-prompt-images" aria-hidden="true">
           @for (image of promptImagesFor(character); track $index) {

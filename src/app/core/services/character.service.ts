@@ -809,30 +809,49 @@ export class CharacterService {
     if (!character.draft || !isFolderBasedCharacterPath(character.relativePath)) {
       return character;
     }
-    const projectPath = this.projectService.getCurrentProject()?.path;
-    if (!projectPath) {
-      return character;
-    }
-
     const imagesRoot = (
       this.projectService.getCurrentProject()?.metadata?.settings?.imagesFolder?.trim() || 'img'
     ).replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
     if (!imagesRoot) {
       return character;
     }
+    const prefix = `${imagesRoot}/`;
+    return this.copyReferencedImages(character, character, (ref) => ref.startsWith(prefix), false);
+  }
 
+  /**
+   * Copies each portrait of `source` accepted by `shouldCopy` into `<target folder>/img/`
+   * (never overwriting: names get `-1`, `-2`…) and returns `target` with those
+   * references rewritten to project-relative wikilinks. Missing images keep their
+   * reference. With `strict`, a failed copy throws instead of keeping the reference.
+   */
+  private async copyReferencedImages(
+    target: Character,
+    source: Character,
+    shouldCopy: (projectRelativeRef: string) => boolean,
+    strict: boolean
+  ): Promise<Character> {
+    const projectPath = this.projectService.getCurrentProject()?.path;
+    if (!projectPath) return target;
+    const projectRoot = projectPath.replace(/\\/g, '/').replace(/\/+$/, '');
+    const sourceDirectory = isFolderBasedCharacterPath(source.relativePath)
+      ? pathDirname(source.filePath)
+      : undefined;
+    const targetDirectory = pathJoin(pathDirname(target.filePath), 'img');
+    const targetRelativeDirectory = targetDirectory.replace(/\\/g, '/').startsWith(`${projectRoot}/`)
+      ? targetDirectory.replace(/\\/g, '/').slice(projectRoot.length + 1)
+      : null;
+    if (!targetRelativeDirectory) return target;
+
+    const copied = new Map<string, string>();
     const copyOne = async (raw: string): Promise<string> => {
       const parsed = parseThumbnailReference(raw || '');
       if (!parsed) return raw;
       const normalized = parsed.replace(/\\/g, '/').replace(/^\.?\/+/, '');
-      const prefix = `${imagesRoot}/`;
-      if (!normalized.startsWith(prefix) || normalized === prefix.slice(0, -1)) {
-        return raw;
-      }
-
-      const sourceAbsolute = resolveThumbnailPath(projectPath, normalized);
-      const draftFolder = pathDirname(character.filePath);
-      const targetDirectory = pathJoin(draftFolder, 'img');
+      if (!shouldCopy(normalized)) return raw;
+      const sourceAbsolute = resolveThumbnailPath(projectPath, normalized, sourceDirectory);
+      const already = copied.get(sourceAbsolute);
+      if (already) return already;
       try {
         if (!(await this.electronService.fileExists(sourceAbsolute))) {
           return raw;
@@ -840,15 +859,15 @@ export class CharacterService {
         if (!(await this.electronService.isDirectory(targetDirectory))) {
           assertIpcSuccess(
             await this.electronService.createDirectory(targetDirectory),
-            'Create draft image directory'
+            'Create character image directory'
           );
         }
 
-        const name = normalized.split('/').pop() || 'image';
-        const dotIndex = name.lastIndexOf('.');
-        const stem = dotIndex > 0 ? name.slice(0, dotIndex) : name;
-        const extension = dotIndex > 0 ? name.slice(dotIndex) : '';
-        let availableName = name;
+        const fileName = normalized.split('/').pop() || 'image';
+        const dotIndex = fileName.lastIndexOf('.');
+        const stem = dotIndex > 0 ? fileName.slice(0, dotIndex) : fileName;
+        const extension = dotIndex > 0 ? fileName.slice(dotIndex) : '';
+        let availableName = fileName;
         for (
           let attempt = 1;
           await this.electronService.fileExists(pathJoin(targetDirectory, availableName));
@@ -858,31 +877,28 @@ export class CharacterService {
         }
 
         assertIpcSuccess(
-          await this.electronService.copyFile(
-            sourceAbsolute,
-            pathJoin(targetDirectory, availableName)
-          ),
-          'Copy image into draft folder'
+          await this.electronService.copyFile(sourceAbsolute, pathJoin(targetDirectory, availableName)),
+          'Copy image into character folder'
         );
-        const draftDirectory = pathDirname(character.relativePath);
-        return formatThumbnailWikiLink(
-          `${draftDirectory}${pathJoin('/img', availableName)}`.replace(/\\/g, '/')
-        );
+        const rewritten = formatThumbnailWikiLink(`${targetRelativeDirectory}/${availableName}`);
+        copied.set(sourceAbsolute, rewritten);
+        return rewritten;
       } catch (error) {
-        this.logger.error('Failed to copy image into draft folder', error);
+        if (strict) throw error;
+        this.logger.error('Failed to copy image into character folder', error);
         return raw;
       }
     };
 
     let changed = false;
     const nextThumbnails: Record<string, string> = {};
-    for (const [style, raw] of Object.entries(character.thumbnails || {})) {
+    for (const [style, raw] of Object.entries(source.thumbnails || {})) {
       const rewritten = await copyOne(raw);
       if (rewritten !== raw) changed = true;
       nextThumbnails[style] = rewritten;
     }
     const nextBookThumbnails: Record<string, Record<string, string>> = {};
-    for (const [bookId, bookMap] of Object.entries(character.bookThumbnails || {})) {
+    for (const [bookId, bookMap] of Object.entries(source.bookThumbnails || {})) {
       const inner: Record<string, string> = {};
       for (const [style, raw] of Object.entries(bookMap || {})) {
         const rewritten = await copyOne(raw);
@@ -893,12 +909,12 @@ export class CharacterService {
     }
 
     if (!changed) {
-      return character;
+      return target;
     }
     return {
-      ...character,
-      thumbnails: nextThumbnails,
-      bookThumbnails: nextBookThumbnails,
+      ...target,
+      thumbnails: source.thumbnails ? nextThumbnails : target.thumbnails,
+      bookThumbnails: source.bookThumbnails ? nextBookThumbnails : target.bookThumbnails,
     };
   }
 
@@ -1016,6 +1032,91 @@ export class CharacterService {
       relativePath: destination.relativePath,
       filePath: destination.filePath,
     };
+  }
+
+  /**
+   * Duplicates a character, Lore figure or draft (as last saved) under `name`.
+   * The copy gets a new id, its own folder (in `@drafts/` for a draft), copies of
+   * its per-book pages renamed to the new slug, and its own copy of every
+   * referenced portrait in `<folder>/img/`. Only files inside the new folder are
+   * written: the original and House, cast, pinboard, plot-board and project
+   * files are untouched, so the copy belongs to none of them. On failure the new
+   * folder is removed. Callers pick a unique name ({@link nextCopyName}).
+   */
+  async duplicateCharacter(id: string, name: string): Promise<Character> {
+    const source = this.findRecord(id);
+    if (!source) throw new Error('Character not found');
+
+    let createdFolderPath: string | null = null;
+    try {
+      const newId = generateId();
+      const draft = !!source.draft;
+      const charactersPath = this.projectService.getCharactersFolderPath();
+      const parentPath = draft ? pathJoin(charactersPath, CHARACTER_DRAFTS_FOLDER) : charactersPath;
+      const folderName = await this.findAvailableFolderName(parentPath, name, newId);
+      const { folderPath, filePath, relativePath } = this.characterPaths(charactersPath, folderName, draft);
+      assertIpcSuccess(
+        await this.electronService.createDirectory(folderPath),
+        'Create character directory'
+      );
+      createdFolderPath = folderPath;
+
+      const now = new Date();
+      let copy: Character = {
+        ...source,
+        id: newId,
+        name,
+        aliases: source.aliases ? [...source.aliases] : undefined,
+        tags: [...source.tags],
+        books: [...source.books],
+        bookCategories: source.bookCategories ? { ...source.bookCategories } : undefined,
+        bookTags: source.bookTags
+          ? Object.fromEntries(Object.entries(source.bookTags).map(([book, tags]) => [book, [...tags]]))
+          : undefined,
+        prompts: (source.prompts || []).map((prompt) => ({ ...prompt })),
+        created: now,
+        modified: now,
+        relativePath,
+        filePath,
+      };
+
+      for (const bookId of source.books) {
+        const from = this.getBookPageFilePath(source, bookId);
+        if (!(await this.electronService.fileExists(from))) continue;
+        assertIpcSuccess(
+          await this.electronService.copyFile(from, this.getBookPageFilePath(copy, bookId)),
+          'Copy book page'
+        );
+      }
+
+      copy = await this.copyReferencedImages(copy, source, () => true, true);
+      await this.saveCharacterToFile(copy);
+
+      const subject = this.collectionFor(copy);
+      if (!subject.value.some((candidate) => candidate.id === copy.id)) {
+        subject.next(
+          draft
+            ? [copy, ...subject.value]
+            : [...subject.value, copy].sort((a, b) => a.name.localeCompare(b.name))
+        );
+      }
+      return copy;
+    } catch (error) {
+      if (createdFolderPath) {
+        // Rollback only: permanent delete of a folder we just created. Never stage.
+        await this.electronService.deleteDirectoryRecursive(createdFolderPath);
+      }
+      this.logger.error('Failed to duplicate character', error);
+      throw new Error(`Failed to duplicate character: ${error instanceof Error ? error.message : error}`);
+    }
+  }
+
+  /** All names and wikilink stems used by characters, Lore and drafts. */
+  getRecordNames(): string[] {
+    return [...this.getReferenceCharactersSnapshot(), ...this.draftsSubject.value].flatMap((record) => [
+      record.name,
+      pathBasename(record.relativePath.replace(/\\/g, '/'), '.md'),
+    ]);
   }
 
   /** Moves an explicitly saved draft into Characters or Lore, preserving its identity. */

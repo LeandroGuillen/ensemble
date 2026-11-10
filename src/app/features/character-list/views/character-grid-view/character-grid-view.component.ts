@@ -32,6 +32,7 @@ export class CharacterGridViewComponent {
   @Input() povBadgeColor = 'var(--color-accent-primary)';
 
   @Output() characterClick = new EventEmitter<Character>();
+  @Output() characterDuplicate = new EventEmitter<Character>();
   @Output() characterDelete = new EventEmitter<{
     character: Character;
     event: Event;
@@ -99,6 +100,12 @@ export class CharacterGridViewComponent {
     if (img) {
       img.style.display = "none";
     }
+  }
+
+  onCharacterDuplicate(character: Character, event: Event): void {
+    event.stopPropagation();
+    if (this.dragInProgress) return;
+    this.characterDuplicate.emit(character);
   }
 
   onDragStarted(): void {

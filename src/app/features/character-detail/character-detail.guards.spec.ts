@@ -63,6 +63,31 @@ describe('CharacterDetailComponent unsaved changes guards', () => {
     expect(component.canLeave()).toBeFalse();
   });
 
+  it('lets Duplicate open the copy (the leave guard does not block it) and only one copy per click', async () => {
+    component.hasAnyBookPageDirty = jasmine.createSpy().and.returnValue(false);
+    component.isEditing = true;
+    component.character = { id: 'draft-1', name: '', draft: true } as any;
+    (component as any).cdr = { markForCheck: () => {} };
+    (component as any).notificationService = jasmine.createSpyObj('NotificationService', ['showWarning']);
+    const guardDuringNavigation: Array<boolean | Promise<boolean>> = [];
+    let release!: () => void;
+    const duplicate = jasmine.createSpy('duplicate').and.callFake(async () => {
+      guardDuringNavigation.push(component.canLeave());
+      await new Promise<void>((resolve) => (release = resolve));
+      return null;
+    });
+    (component as any).characterDuplicate = { duplicate };
+
+    const first = component.duplicateCharacter();
+    await component.duplicateCharacter(); // second click while the first is running
+    release();
+    await first;
+
+    expect(guardDuringNavigation).toEqual([true]);
+    expect(duplicate).toHaveBeenCalledTimes(1);
+    expect(component.isDuplicating).toBeFalse();
+  });
+
   it('allows navigation after successful save', () => {
     component.hasAnyBookPageDirty = jasmine.createSpy().and.returnValue(false);
     component.characterForm.markAsDirty();

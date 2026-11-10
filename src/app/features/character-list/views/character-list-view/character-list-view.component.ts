@@ -48,6 +48,7 @@ export class CharacterListViewComponent implements OnInit {
   @Input() showPrompts = false;
 
   @Output() characterClick = new EventEmitter<Character>();
+  @Output() characterDuplicate = new EventEmitter<Character>();
   @Output() characterSelectionToggle = new EventEmitter<string>();
   @Output() dragStarted = new EventEmitter<void>();
   @Output() dragEnded = new EventEmitter<void>();
@@ -176,6 +177,12 @@ export class CharacterListViewComponent implements OnInit {
     if (img) {
       img.style.display = 'none';
     }
+  }
+
+  onCharacterDuplicate(character: Character, event: Event): void {
+    event.stopPropagation();
+    if (this.dragInProgress) return;
+    this.characterDuplicate.emit(character);
   }
 
   onDragStarted(): void {
