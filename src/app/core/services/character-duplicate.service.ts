@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { Character } from '../interfaces/character.interface';
 import { normalizeAliases } from '../utils/character-alias.utils';
 import { nextCopyName } from '../utils/copy-name.utils';
+import { CharacterDuplicateNoticeService } from './character-duplicate-notice.service';
 import { CharacterService } from './character.service';
 import { HouseService } from './house.service';
 import { LocationService } from './location.service';
@@ -28,6 +29,7 @@ export class CharacterDuplicateService {
   private readonly notifications = inject(NotificationService);
   private readonly logger = inject(LoggingService);
   private readonly router = inject(Router);
+  private readonly notices = inject(CharacterDuplicateNoticeService);
   private inFlight = false;
 
   /** Duplicates and navigates to the copy. Returns null (after an error toast) on failure. */
@@ -35,9 +37,11 @@ export class CharacterDuplicateService {
     if (this.inFlight) return null;
     this.inFlight = true;
     try {
+      const projectPath = this.projects.getCurrentProject()?.path;
       const name = nextCopyName(character.name, await this.takenNames());
       const copy = await this.characters.duplicateCharacter(character.id, name);
       const state: DuplicatedCharacterState = { duplicatedFrom: character.name || 'Untitled draft' };
+      if (projectPath) this.notices.remember(projectPath, copy.id, state.duplicatedFrom);
       this.notifications.showSuccess(
         copy.name ? `Created “${copy.name}”.` : `Created a copy of “${state.duplicatedFrom}”.`
       );

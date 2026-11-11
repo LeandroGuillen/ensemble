@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BehaviorSubject, combineLatest, map, Observable } from 'rxjs';
 import { Character, CharacterFormData, CharacterFrontmatter, CharacterPrompt } from '../interfaces/character.interface';
@@ -36,6 +36,7 @@ import {
   errorMessage,
   restoreStagedOrOfferUndo,
 } from '../trash/trash-delete-rollback';
+import { CharacterDuplicateNoticeService } from './character-duplicate-notice.service';
 import { ElectronService } from './electron.service';
 import { FileWatcherService } from './file-watcher.service';
 import { ProjectService } from './project.service';
@@ -69,6 +70,7 @@ export interface BookPageMove {
   providedIn: 'root',
 })
 export class CharacterService {
+  private readonly duplicateNotices = inject(CharacterDuplicateNoticeService);
   private charactersSubject = new BehaviorSubject<Character[]>([]);
   public characters$ = this.charactersSubject.asObservable();
   private loreSubject = new BehaviorSubject<Character[]>([]);
@@ -1492,6 +1494,7 @@ export class CharacterService {
         throw new TrashStagingError(errMsg);
       }
 
+      this.duplicateNotices.dismiss(project.path, id);
       return true;
     } catch (error) {
       if (isTrashStagingError(error)) {

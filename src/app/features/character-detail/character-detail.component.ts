@@ -82,6 +82,7 @@ import { PageHeaderComponent } from "../../shared/page-header/page-header.compon
 import { ImagePickerDialogComponent } from "../../shared/image-picker-dialog/image-picker-dialog.component";
 import { CharacterLinkedPromptsComponent, CharacterPromptGenerateRequest } from "./components/character-linked-prompts/character-linked-prompts.component";
 import { GeneratePortraitDialogComponent } from "./components/generate-portrait-dialog/generate-portrait-dialog.component";
+import { CharacterDuplicateNoticeService } from "../../core/services/character-duplicate-notice.service";
 import { CharacterDuplicateService, DuplicatedCharacterState } from "../../core/services/character-duplicate.service";
 
 /** Where a character lives; changed from the infobox and applied on save. */
@@ -178,6 +179,7 @@ export class CharacterDetailComponent
   /** Locations for the residence picker. */
   residenceLocations: { id: string; name: string }[] = [];
   private lifeOpenChoice: boolean | null = null;
+  private readonly duplicateNotices = inject(CharacterDuplicateNoticeService);
   private readonly characterDuplicate = inject(CharacterDuplicateService);
   private leavePrompt: Promise<boolean> | null = null;
   /** Resolves [[wikilinks]] in the description editors; replaced when link targets change. */
@@ -1894,16 +1896,14 @@ export class CharacterDetailComponent
     }
   }
 
-  /** Keep the notice in this history entry until dismissed, including across data refreshes. */
+  /** Session memory is authoritative; old history entries cannot revive a dismissed notice. */
   private readDuplicatedState(): void {
     // Angular may use the Navigation API, whose state is separate from native history.state.
     const state = this.location.getState() as Partial<DuplicatedCharacterState> | null;
-    if (!state?.duplicatedFrom) {
-      this.duplicatedFrom = null;
-      return;
-    }
-    const shouldFocus = this.duplicatedFrom !== state.duplicatedFrom;
-    this.duplicatedFrom = state.duplicatedFrom;
+    const sourceName = this.currentProject && this.character
+      ? this.duplicateNotices.get(this.currentProject.path, this.character.id) : null;
+    const shouldFocus = !!sourceName && !!state?.duplicatedFrom && this.duplicatedFrom !== sourceName;
+    this.duplicatedFrom = sourceName;
     if (!shouldFocus) return;
     setTimeout(() => {
       const input = this.nameInput?.nativeElement;
@@ -1913,6 +1913,9 @@ export class CharacterDetailComponent
   }
 
   dismissDuplicatedNote(): void {
+    if (this.currentProject && this.character) {
+      this.duplicateNotices.dismiss(this.currentProject.path, this.character.id);
+    }
     const state = this.location.getState() as Partial<DuplicatedCharacterState> | null;
     if (state?.duplicatedFrom) {
       const { duplicatedFrom, ...rest } = state;

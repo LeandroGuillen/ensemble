@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { asciiSlugify } from '../utils/slug.utils';
 import { buildWikiLinkTargets } from '../utils/wiki-links.utils';
 import { Character } from '../interfaces/character.interface';
+import { CharacterDuplicateNoticeService } from './character-duplicate-notice.service';
 import { CharacterDuplicateService } from './character-duplicate.service';
 import { CharacterService } from './character.service';
 import { HouseService } from './house.service';
@@ -100,4 +101,28 @@ describe('CharacterDuplicateService', () => {
     expect(notifications.showSuccess).not.toHaveBeenCalled();
     expect(router.navigate).not.toHaveBeenCalled();
   });
+  it('keeps independent notices for multiple copies and isolates matching ids in other projects', async () => {
+    const notices = TestBed.inject(CharacterDuplicateNoticeService);
+    characters.duplicateCharacter.and.resolveTo({ ...mara, id: 'copy-1' });
+    await service.duplicate(mara);
+    characters.duplicateCharacter.and.resolveTo({ ...mara, id: 'copy-2' });
+    await service.duplicate({ ...mara, name: 'Second original' });
+
+    expect(notices.get('/p', 'copy-1')).toBe('Mara');
+    expect(notices.get('/p', 'copy-2')).toBe('Second original');
+    expect(notices.get('/another-project', 'copy-1')).toBeNull();
+    notices.remember('/another-project', 'copy-1', 'Other original');
+    notices.dismiss('/p', 'copy-1');
+    expect(notices.get('/p', 'copy-1')).toBeNull();
+    expect(notices.get('/p', 'copy-2')).toBe('Second original');
+    expect(notices.get('/another-project', 'copy-1')).toBe('Other original');
+  });
+
+  it('retains the notice when navigation to a successfully created copy is cancelled', async () => {
+    characters.duplicateCharacter.and.resolveTo({ ...mara, id: 'copy' });
+    router.navigate.and.resolveTo(false);
+    await service.duplicate(mara);
+    expect(TestBed.inject(CharacterDuplicateNoticeService).get('/p', 'copy')).toBe('Mara');
+  });
+
 });

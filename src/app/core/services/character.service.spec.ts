@@ -3,6 +3,7 @@ import { BehaviorSubject } from 'rxjs';
 import { asciiSlugify } from '../utils/slug.utils';
 import { buildWikiLinkTargets } from '../utils/wiki-links.utils';
 import { nextCopyName } from '../utils/copy-name.utils';
+import { CharacterDuplicateNoticeService } from './character-duplicate-notice.service';
 import { CharacterService } from './character.service';
 import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
@@ -1048,6 +1049,27 @@ describe('CharacterService', () => {
   });
 
   describe('deleteCharacter', () => {
+    for (const kind of ['character', 'draft', 'lore']) {
+      it(`clears the deleted ${kind}'s duplicate notice without clearing other copies`, async () => {
+        const project = createValidProject();
+        projectService.getCurrentProject.and.returnValue(project);
+        const character = {
+          id: 'copy', name: 'Copy', draft: kind === 'draft', lore: kind === 'lore',
+          relativePath: 'copy/copy.md', filePath: '/test/project/characters/copy/copy.md',
+        } as Character;
+        const collection = kind === 'draft' ? 'draftsSubject' : kind === 'lore' ? 'loreSubject' : 'charactersSubject';
+        (service as any)[collection].next([character]);
+        const notices = TestBed.inject(CharacterDuplicateNoticeService);
+        notices.remember(project.path, character.id, 'Original');
+        notices.remember(project.path, 'other-copy', 'Another original');
+
+        expect(await service.deleteCharacter(character.id)).toBeTrue();
+
+        expect(notices.get(project.path, character.id)).toBeNull();
+        expect(notices.get(project.path, 'other-copy')).toBe('Another original');
+      });
+    }
+
     it('stages a single-file character and does not deleteFile/deleteDirectoryRecursive', async () => {
       const project = createValidProject();
       projectService.getCurrentProject.and.returnValue(project);
@@ -1269,7 +1291,10 @@ describe('CharacterService', () => {
         Promise.resolve({ success: false, error: 'disk full' })
       );
 
+      const notices = TestBed.inject(CharacterDuplicateNoticeService);
+      notices.remember(project.path, character.id, 'Original');
       await expectAsync(service.deleteCharacter('char-fail')).toBeRejected();
+      expect(notices.get(project.path, character.id)).toBe('Original');
       expect((service as any).charactersSubject.value).toEqual([character]);
       expect(referenceCleanupService.removeCharacterReferences).not.toHaveBeenCalled();
       expect(undoDeleteService.register).not.toHaveBeenCalled();
@@ -1300,7 +1325,10 @@ describe('CharacterService', () => {
       electronService.restoreFromTrash.and.returnValue(Promise.resolve({ success: true }));
       undoDeleteService.register.and.throwError('register boom');
 
+      const notices = TestBed.inject(CharacterDuplicateNoticeService);
+      notices.remember(project.path, character.id, 'Original');
       await expectAsync(service.deleteCharacter('char-post')).toBeRejected();
+      expect(notices.get(project.path, character.id)).toBe('Original');
       expect(electronService.restoreFromTrash).toHaveBeenCalledWith('tok-char');
       expect((service as any).charactersSubject.value).toEqual([character]);
       expect(notificationService.showError).toHaveBeenCalledWith(

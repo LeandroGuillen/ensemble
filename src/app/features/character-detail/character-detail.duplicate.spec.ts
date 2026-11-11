@@ -20,13 +20,15 @@ import { CharacterDuplicateService } from '../../core/services/character-duplica
 import { MarkdownEditorComponent } from '../../shared/markdown-editor/markdown-editor.component';
 
 describe('Character duplicate notice with router navigation', () => {
-  const source = { id: 'source', name: 'Saffi Reed', category: '', tags: [], books: [] } as unknown as Character;
+  let source = { id: 'source', name: 'Saffi Reed', category: '', tags: [], books: [] } as unknown as Character;
   const project = { path: '/test-project', metadata: { settings: {} } };
-  const copy = { ...source, id: 'copy', name: 'Saffi Reed (copy)' };
+  let copy = { ...source, id: 'copy', name: 'Saffi Reed (copy)' };
   let harness: RouterTestingHarness;
   let changes: Subject<{ type: string; path: string }>;
 
   beforeEach(async () => {
+    source = { id: 'source', name: 'Saffi Reed', category: '', tags: [], books: [] } as unknown as Character;
+    copy = { ...source, id: 'copy', name: 'Saffi Reed (copy)' };
     changes = new Subject();
     await TestBed.configureTestingModule({
       imports: [CharacterDetailComponent],
@@ -34,9 +36,11 @@ describe('Character duplicate notice with router navigation', () => {
         provideRouter([
           { path: 'characters', component: CharacterDetailComponent },
           { path: 'character/:id', component: CharacterDetailComponent },
+          { path: 'character-draft/:id', component: CharacterDetailComponent, data: { draft: true } },
         ], withHashLocation()),
         { provide: CharacterService, useValue: {
           getCharacterById: (id: string) => id === 'copy' ? copy : source,
+          getDraftById: (id: string) => id === 'copy' ? copy : source,
           refreshCharacter: async (id: string) => id === 'copy' ? copy : source,
           duplicateCharacter: async () => copy, getRecordNames: () => [source.name],
         } },
@@ -114,4 +118,42 @@ describe('Character duplicate notice with router navigation', () => {
       expect(note()).toBeNull();
     });
   }
+  for (const kind of ['character', 'draft', 'Lore']) {
+    it(`retains an undismissed ${kind} notice across leaving and returning, and never restores a dismissed notice`, async () => {
+      source = { ...source, draft: kind === 'draft', lore: kind === 'Lore' };
+      copy = { ...copy, draft: source.draft, lore: source.lore };
+      const route = kind === 'draft' ? 'character-draft' : 'character';
+      await harness.navigateByUrl(`/${route}/source`);
+      await settle();
+      await TestBed.inject(CharacterDuplicateService).duplicate(source);
+      await settle();
+      const note = () => harness.routeNativeElement!.querySelector('.duplicate-note');
+      expect(note()).not.toBeNull();
+
+      // Reuse the detail component for another id, then return without duplicate router state.
+      await harness.navigateByUrl(`/${route}/source`);
+      await settle();
+      expect(note()).toBeNull();
+      await harness.navigateByUrl(`/${route}/copy`);
+      await settle();
+      expect(note()?.textContent).toContain('Copy of Saffi Reed');
+
+      // Leaving for another route destroys the page; the notice must survive that too.
+      await harness.navigateByUrl('/characters');
+      await settle();
+      await harness.navigateByUrl(`/${route}/copy`);
+      await settle();
+      expect(note()?.textContent).toContain('Copy of Saffi Reed');
+      (note()?.querySelector('button') as HTMLButtonElement | null)?.click();
+      await settle();
+      expect(note()).toBeNull();
+      await harness.navigateByUrl('/characters');
+      await settle();
+      // Even an older history entry carrying the original state cannot resurrect the notice.
+      await TestBed.inject(Router).navigate([`/${route}`, 'copy'], { state: { duplicatedFrom: source.name } });
+      await settle();
+      expect(note()).toBeNull();
+    });
+  }
+
 });
