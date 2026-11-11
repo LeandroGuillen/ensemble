@@ -338,6 +338,7 @@ export class CharacterDetailComponent
           this.loadCharacter(decodeURIComponent(characterId));
         } else {
           this.isEditing = false;
+          this.duplicatedFrom = null;
           if (!this.isDraftMode) this.setLoreMode(queryParams.get('lore') === 'true', false);
           this.character = null;
           this.activeContentTab = 'main';
@@ -616,7 +617,7 @@ export class CharacterDetailComponent
         this.characterForm.markAsPristine();
         this.externalMainConflict = false;
         this.externalBookConflicts.clear();
-        this.consumeDuplicatedState();
+        this.readDuplicatedState();
       } else {
         this.notificationService.showError("Character not found");
       }
@@ -1893,15 +1894,17 @@ export class CharacterDetailComponent
     }
   }
 
-  /** After a duplicate lands here: focus the name and say what was not copied (once per navigation). */
-  private consumeDuplicatedState(): void {
-    const state = (typeof history !== 'undefined' ? history.state : null) as Partial<DuplicatedCharacterState> | null;
+  /** Keep the notice in this history entry until dismissed, including across data refreshes. */
+  private readDuplicatedState(): void {
+    // Angular may use the Navigation API, whose state is separate from native history.state.
+    const state = this.location.getState() as Partial<DuplicatedCharacterState> | null;
     if (!state?.duplicatedFrom) {
       this.duplicatedFrom = null;
       return;
     }
+    const shouldFocus = this.duplicatedFrom !== state.duplicatedFrom;
     this.duplicatedFrom = state.duplicatedFrom;
-    history.replaceState({ ...state, duplicatedFrom: undefined }, '');
+    if (!shouldFocus) return;
     setTimeout(() => {
       const input = this.nameInput?.nativeElement;
       input?.focus();
@@ -1910,6 +1913,11 @@ export class CharacterDetailComponent
   }
 
   dismissDuplicatedNote(): void {
+    const state = this.location.getState() as Partial<DuplicatedCharacterState> | null;
+    if (state?.duplicatedFrom) {
+      const { duplicatedFrom, ...rest } = state;
+      this.location.replaceState(this.location.path(), '', rest);
+    }
     this.duplicatedFrom = null;
     this.cdr.markForCheck();
   }
