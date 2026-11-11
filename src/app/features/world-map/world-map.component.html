@@ -1,26 +1,120 @@
 <div class="world-map">
-  <app-page-header [title]="'World map'">
-    <button class="icon-btn" (click)="loadAll(true)" title="Reload map and locations" aria-label="Reload map and locations">
-      <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#refresh" /></svg>
-    </button>
-    @if (hasLocations && !readOnly) {
-      <button
-        class="btn btn-secondary"
-        [class.road-toggle-on]="roadMode"
-        [attr.aria-pressed]="roadMode"
-        (click)="toggleRoadMode()"
-        title="Click two pins to connect them; click a connected pair again to remove the road (Esc to stop)"
-      >
-        {{ roadMode ? 'Done drawing roads' : 'Draw roads' }}
-      </button>
-    }
-    @if (unplaced.length > 0 && !readOnly) {
-      <button class="btn btn-primary" (click)="pinAllUnplaced()" data-testid="pin-all">
-        <svg class="ui-icon plus-glyph" aria-hidden="true"><use href="assets/ui-icons.svg#pin" /></svg>
-        Pin all unplaced ({{ unplaced.length }})
-      </button>
-    }
-  </app-page-header>
+  <header class="map-toolbar" aria-label="Map tools">
+    <h1>Map</h1>
+    <select id="active-map" class="form-control map-picker" aria-label="Current map" [ngModel]="activeMapId" [disabled]="!state || mapBusy || backgroundBusy || areaSaving" (ngModelChange)="switchMap($event)">
+      @for (entry of maps; track entry.id) { <option [value]="entry.id">{{ entry.name }}</option> }
+    </select>
+    <details #options class="map-options">
+      <summary class="icon-btn" title="Map options" aria-label="Map options"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#settings" /></svg></summary>
+      <div class="map-options-panel">
+        <button class="option-action map-overflow-action" [disabled]="readOnly || mapBusy || backgroundBusy" (click)="openMapForm('rename'); options.open = false"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#edit" /></svg>Rename map</button>
+        <button class="option-action map-overflow-action" [disabled]="mapBusy || backgroundBusy" (click)="loadAll(true); options.open = false"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#refresh" /></svg>Reload</button>
+        <button class="option-action map-overflow-action" [disabled]="readOnly || mapBusy || backgroundBusy" (click)="duplicateActiveMap(); options.open = false"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#copy" /></svg>Duplicate map</button>
+        <button class="option-action" [disabled]="readOnly || mapBusy || backgroundBusy || areaSaving || maps.length <= 1" [title]="maps.length <= 1 ? 'Keep at least one map. Create another map first.' : 'Delete this map'" (click)="openDeleteMap(); options.open = false"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#trash" /></svg>Delete map…</button>
+        <div class="option-section">
+          <span class="option-label">Markers</span>
+          <div class="marker-switch" role="group" aria-label="Map markers">
+            <button title="Icon markers" aria-label="Icon markers" [class.active]="markerMode === 'icon'" [attr.aria-pressed]="markerMode === 'icon'" (click)="setMarkerMode('icon')"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#map-pin" /></svg></button>
+            <button title="Image markers" aria-label="Image markers" [class.active]="markerMode === 'image'" [attr.aria-pressed]="markerMode === 'image'" (click)="setMarkerMode('image')"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#film" /></svg></button>
+          </div>
+        </div>
+        <div class="option-section background-options">
+          <span class="option-label">Background</span>
+          <input #backgroundInput type="file" [accept]="mapImageAccept" hidden (change)="uploadBackground($event)" />
+          <button class="option-action" [disabled]="readOnly || backgroundBusy" (click)="backgroundInput.click()"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#folder" /></svg>{{ backgroundBusy ? 'Uploading…' : background ? 'Replace image…' : 'Upload image…' }}</button>
+          @if (background; as bg) {
+            <span class="background-name" [title]="bg.name">{{ bg.name }}</span>
+            <label class="opacity-control">Opacity<input #opacity type="range" min="0" max="1" step="0.05" [value]="bg.opacity" [disabled]="readOnly" (change)="setBackgroundOpacity(opacity.value)" /></label>
+            <div class="background-actions"><label><input type="checkbox" [checked]="bg.visible" [disabled]="readOnly" (change)="toggleBackground()" />Visible</label><button class="icon-btn" title="Remove background" aria-label="Remove background" [disabled]="readOnly || backgroundBusy" (click)="removeBackground()"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#trash" /></svg></button></div>
+          }
+        </div>
+      </div>
+    </details>
+    <button class="icon-btn" title="New map" aria-label="New map" [disabled]="readOnly || mapBusy || backgroundBusy" (click)="openMapForm('create')"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg></button>
+    <button class="map-inline-action" title="Rename map" [disabled]="readOnly || mapBusy || backgroundBusy" (click)="openMapForm('rename')"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#edit" /></svg>Rename map</button>
+    <button class="map-inline-action" title="Reload" [disabled]="mapBusy || backgroundBusy" (click)="loadAll(true)"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#refresh" /></svg>Reload</button>
+    <button class="map-inline-action" title="Duplicate map" [disabled]="readOnly || mapBusy || backgroundBusy" (click)="duplicateActiveMap()"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#copy" /></svg>Duplicate map</button>
+    <span class="toolbar-divider"></span>
+    <button class="locations-trigger" title="Manage Locations" aria-label="Manage Locations" [disabled]="!state || mapBusy || backgroundBusy" (click)="openMembership()"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#map-pin" /></svg><span class="locations-label">Manage Locations</span><span class="toolbar-count">{{ mapLocations.length }}</span></button>
+    <input class="form-control map-search" type="search" placeholder="Search this map…" aria-label="Search this map" [(ngModel)]="searchTerm" (ngModelChange)="filtersChanged()" />
+    <button #filterButton cdkOverlayOrigin #filterOrigin="cdkOverlayOrigin" class="icon-btn" title="Filter this map" aria-label="Filter this map" [attr.aria-expanded]="filtersOpen" [class.active]="filtersOpen" (click)="filtersOpen = !filtersOpen"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#sort" /></svg></button>
+  </header>
+  <ng-template cdkConnectedOverlay [cdkConnectedOverlayOrigin]="filterOrigin"
+    [cdkConnectedOverlayOpen]="filtersOpen" [cdkConnectedOverlayPositions]="filterPositions"
+    [cdkConnectedOverlayFlexibleDimensions]="true" [cdkConnectedOverlayPush]="false" [cdkConnectedOverlayViewportMargin]="8"
+    (overlayOutsideClick)="onFilterOutsideClick($event)" (detach)="filtersOpen = false">
+        <div class="map-filter-panel" aria-label="Map filters">
+          <div class="filter-heading"><strong>Filter view</strong><button class="icon-btn" title="Close filters" aria-label="Close filters" (click)="filtersOpen = false"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg></button></div>
+          <label>Book<select class="form-control" [(ngModel)]="selectedBook" (ngModelChange)="filtersChanged()"><option value="">All books</option>@for (book of books; track book.id) { <option [value]="book.id">{{ bookLabel(book) }}</option> }</select></label>
+          <div class="filter-types" aria-label="Filter by type">@for (type of locationTypes; track type.value) { <button class="icon-btn" [class.active]="selectedType === type.value" [attr.aria-pressed]="selectedType === type.value" [title]="type.label" [attr.aria-label]="'Filter ' + type.label" (click)="selectedType = selectedType === type.value ? '' : type.value; filtersChanged()"><svg class="ui-icon" aria-hidden="true"><use [attr.href]="'assets/ui-icons.svg#' + type.icon" /></svg></button> }</div>
+          <label>Images<select class="form-control" [(ngModel)]="selectedPictureFilter" (ngModelChange)="filtersChanged()"><option value="">All images</option><option value="with">With image</option><option value="without">Without image</option></select></label>
+          <button class="option-action" (click)="clearFilters()"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg>Clear filters</button>
+        </div>
+  </ng-template>
+
+
+  @if (deleteMapTarget; as target) {
+    <app-modal-frame title="Delete map" dialogClass="map-name-dialog" [closeOnEscape]="!mapBusy" [closeOnBackdrop]="!mapBusy" [showCloseButton]="!mapBusy" (closed)="deleteMapTarget = null">
+      <div class="map-form">
+        <p>Delete <strong>{{ target.name }}</strong> and its pins, areas, roads and location rules? Your location records and imported images will be kept. Undo can restore this map.</p>
+        @if (deletedMapLinkCount) { <p>{{ deletedMapLinkCount }} location(s) link to this map. Those destinations will be unavailable until you restore the map or choose a different destination.</p> }
+        <div class="modal-actions"><button class="btn btn-secondary" [disabled]="mapBusy" (click)="deleteMapTarget = null">Cancel</button><button class="btn btn-danger" [disabled]="mapBusy || readOnly" (click)="deleteActiveMap()">{{ mapBusy ? 'Deleting…' : 'Delete map' }}</button></div>
+      </div>
+    </app-modal-frame>
+  }
+  @if (mapForm) {
+    <app-modal-frame dialogClass="map-name-dialog" [title]="mapForm === 'create' ? 'New map' : 'Rename map'" [closeOnEscape]="!mapBusy" [closeOnBackdrop]="!mapBusy" [showCloseButton]="!mapBusy" (closed)="mapForm = null">
+      <form class="map-form" (ngSubmit)="saveMapName()">
+        <label class="field"><span>Map name</span><input name="mapName" [(ngModel)]="mapNameDraft" maxlength="120" required [disabled]="mapBusy" placeholder="e.g. The Continent, Capital City" /></label>
+        @if (mapForm === 'create') {
+          <fieldset class="automatic-types" [disabled]="mapBusy"><legend>Automatically include</legend>
+            @for (type of locationTypes; track type.value) {
+              <button type="button" class="type-chip" [class.active]="newMapTypes.has(type.value)" [attr.aria-pressed]="newMapTypes.has(type.value)" (click)="toggleNewMapType(type.value)"><svg class="ui-icon" aria-hidden="true"><use [attr.href]="'assets/ui-icons.svg#' + type.icon" /></svg>{{ type.label }}</button>
+            }
+            <button type="button" class="type-chip" [class.active]="newMapTypes.has('unspecified')" [attr.aria-pressed]="newMapTypes.has('unspecified')" (click)="toggleNewMapType('unspecified')"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#map" /></svg>Unspecified</button>
+          </fieldset>
+          <p class="panel-empty">New locations of these types will join this map automatically. You can add individual places or exclude exceptions later.</p>
+          <p class="selection-preview" role="status">{{ newMapMatchCount }} locations included · positions are set by clicking the map</p>
+        }
+        @if (mapFormError) { <p class="map-form-error" role="alert">{{ mapFormError }}</p> }
+        <div class="modal-actions"><button type="button" class="btn btn-secondary" [disabled]="mapBusy" (click)="mapForm = null">Cancel</button><button type="submit" class="btn btn-primary" [disabled]="mapBusy || !mapNameDraft.trim()">{{ mapBusy ? 'Saving…' : mapForm === 'create' ? 'Create map' : 'Save name' }}</button></div>
+      </form>
+    </app-modal-frame>
+  }
+  @if (membershipOpen) {
+    <app-modal-frame dialogClass="map-membership-dialog" [title]="'Locations · ' + activeMapName" [closeOnEscape]="!mapBusy" [closeOnBackdrop]="!mapBusy" [showCloseButton]="!mapBusy" (closed)="membershipOpen = false">
+      <div class="membership-editor">
+        <fieldset class="automatic-types" [disabled]="mapBusy || readOnly"><legend>Automatically include</legend>
+          @for (type of locationTypes; track type.value) {
+            <button class="type-chip" [class.active]="membershipTypes.has(type.value)" [attr.aria-pressed]="membershipTypes.has(type.value)" (click)="toggleMembershipType(type.value)"><svg class="ui-icon" aria-hidden="true"><use [attr.href]="'assets/ui-icons.svg#' + type.icon" /></svg>{{ type.label }}</button>
+          }
+          <button class="type-chip" [class.active]="membershipTypes.has('unspecified')" [attr.aria-pressed]="membershipTypes.has('unspecified')" (click)="toggleMembershipType('unspecified')"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#map" /></svg>Unspecified</button>
+        </fieldset>
+        <p class="panel-empty">Types include current and future locations. Use the list for individual additions or exclusions. Positions you keep will stay in place.</p>
+        <div class="membership-search"><input class="form-control" type="search" aria-label="Search locations to add" placeholder="Find a location…" [(ngModel)]="membershipSearch" [disabled]="mapBusy" /><button class="icon-btn" title="Create location" aria-label="Create location" [disabled]="readOnly || mapBusy" (click)="membershipOpen = false; createLocation()"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg></button></div>
+        @let candidates = membershipCandidates;
+        @let selected = membershipDraft;
+        <div class="selection-preview" role="status">{{ selected.size }} included · {{ draftUnpositionedCount }} to position</div>
+        <div class="membership-list">
+          @for (location of candidates; track location.id) {
+            <div class="membership-location">
+              <label><input #member type="checkbox" [checked]="selected.has(location.id)" [disabled]="mapBusy || readOnly" (change)="setMember(location.id, member.checked)" /><svg class="ui-icon location-type-icon" [attr.aria-label]="getTypeLabel(location.type)" role="img" [attr.title]="getTypeLabel(location.type)"><use [attr.href]="getTypeIcon(location.type)" /></svg><span>{{ location.name }}</span></label>
+              @if (selected.has(location.id)) {
+                <button class="btn btn-sm btn-secondary" [disabled]="readOnly || mapBusy" (click)="beginArea(location)">{{ hasArea(location.id) ? 'Edit area' : 'Draw area' }}</button>
+                @if (hasArea(location.id) && hasPin(location.id)) { <button class="btn btn-sm btn-secondary" [disabled]="readOnly || areaSaving" title="Remove the pin and its connected roads; keep the area" (click)="removePinKeepArea(location.id)">Remove pin, keep area</button> }
+            @if (hasArea(location.id)) { <button class="icon-btn" title="Remove area" aria-label="Remove area" [disabled]="readOnly || mapBusy" (click)="removeArea(location.id)"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#trash" /></svg></button> }
+                <small>{{ hasPosition(location.id) ? 'Positioned' : 'To position' }}</small>
+                <button class="icon-btn" [attr.title]="'Set position of ' + location.name" [attr.aria-label]="'Set position of ' + location.name" [disabled]="readOnly || mapBusy" (click)="beginPlacement(location)"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#locate" /></svg></button>
+              }
+              <button class="icon-btn" [attr.title]="'Open ' + location.name" [attr.aria-label]="'Open ' + location.name" [disabled]="mapBusy" (click)="membershipOpen = false; openLocation(location)"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#chevron-right" /></svg></button>
+            </div>
+          } @empty { <p class="panel-empty">No matching locations.</p> }
+        </div>
+        @if (membershipError) { <p class="map-form-error" role="alert">{{ membershipError }}</p> }
+        <div class="modal-actions"><button class="btn btn-secondary" [disabled]="mapBusy" (click)="membershipOpen = false">{{ readOnly ? 'Close' : 'Cancel' }}</button>@if (!readOnly) { <button class="btn btn-primary" [disabled]="mapBusy" (click)="saveMembership()">{{ mapBusy ? 'Saving…' : 'Apply changes' }}</button> }</div>
+      </div>
+    </app-modal-frame>
+  }
 
   @if (state?.error) {
     <div class="map-banner map-banner-error" role="alert">
@@ -30,17 +124,41 @@
     </div>
   } @else if (state?.readOnly) {
     <div class="map-banner" role="status" data-testid="read-only-banner">
-      <strong>Read-only project.</strong> You can look around and open locations, but pins and roads can't be changed.
+      <strong>Read-only project.</strong> You can switch maps, look around and open locations. Map changes are disabled.
     </div>
   }
 
-  <div class="map-body">
+  @if (backgroundError) { <div class="map-banner map-banner-error" role="alert">{{ backgroundError }}. Replace the background or reload to try again.</div> }
+  <div class="map-body" [class.details-left]="detailsSide === 'left'">
     <section class="map-stage" aria-label="World map canvas">
+      @if (areaLocation; as location) {
+        <div class="area-tools" role="group" [attr.aria-label]="areaEditing ? 'Edit location area' : 'Draw location area'">
+          <strong>Area · {{ location.name }}</strong>
+          <span role="status">{{ areaEditing ? 'Drag points to move them. Use + to insert a point; select a point to remove it.' : 'Click boundary points, then finish.' }} Drag the background to pan. {{ areaPoints.length }} points.</span>
+          <label>Color <input type="color" [(ngModel)]="areaColor" [disabled]="areaSaving" aria-label="Area color" /></label>
+          @if (areaEditing) {
+            <button class="btn btn-sm btn-secondary" [disabled]="selectedAreaPoint === null || areaPoints.length <= 3 || areaSaving || readOnly" (click)="deleteAreaPoint()">Remove selected point</button>
+          } @else {
+            <button class="btn btn-sm btn-secondary" [disabled]="!areaPoints.length || areaSaving" (click)="areaPoints = areaPoints.slice(0, -1)">Undo point</button>
+          }
+          <button class="btn btn-sm btn-primary" [disabled]="areaPoints.length < 3 || areaSaving || readOnly" (click)="finishArea()">{{ areaSaving ? 'Saving…' : areaEditing ? 'Save area' : 'Finish area' }}</button>
+          <button class="btn btn-sm btn-secondary" [disabled]="areaSaving" (click)="cancelArea()">Cancel</button>
+          @if (areaError) { <span class="map-form-error" role="alert">{{ areaError }}</span> }
+        </div>
+      }
+      @if (unpositionedLocations.length && !placementLocation && !areaLocation) {
+        <button class="position-queue" (click)="openMembership()" title="Open locations to set their positions"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#locate" /></svg>{{ unpositionedLocations.length }} to position</button>
+      }
+      @if (placementLocation; as location) {
+        <div class="placement-hint" role="status"><svg class="ui-icon" aria-hidden="true"><use [attr.href]="getTypeIcon(location.type)" /></svg><span>Click the map to position <strong>{{ location.name }}</strong></span><button class="icon-btn" title="Cancel positioning (Esc)" aria-label="Cancel positioning" (click)="placementLocation = null"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg></button></div>
+      }
       <svg
         #canvas
         class="map-canvas"
         [class.panning]="!!dragPosition"
         [class.road-mode]="roadMode"
+        [class.placing]="!!placementLocation || !!areaLocation"
+        [class.drawing-area]="!!areaLocation"
         [class.drop-active]="dropActive"
         role="application"
         aria-roledescription="map"
@@ -55,19 +173,63 @@
         (drop)="onCanvasDrop($event)"
       >
         <defs>
+          <clipPath id="location-image-clip"><circle r="18" /></clipPath>
           <pattern
             id="world-map-grid"
-            width="80"
-            height="80"
+            [attr.width]="gridSpacing"
+            [attr.height]="gridSpacing"
             patternUnits="userSpaceOnUse"
             [attr.patternTransform]="transform"
           >
-            <path d="M 80 0 L 0 0 0 80" class="grid-line" />
+            <path [attr.d]="'M ' + gridSpacing + ' 0 L 0 0 0 ' + gridSpacing" class="grid-line" />
           </pattern>
         </defs>
-        <rect class="grid" width="100%" height="100%" fill="url(#world-map-grid)" />
+        @if (!backgroundVisible) { <rect class="grid" width="100%" height="100%" fill="url(#world-map-grid)" /> }
+        @let labels = visiblePinLabels;
+        @let markerScale = markerTransform;
+        @let labelScale = labelTransform;
+        @let nameY = labelY;
 
         <g [attr.transform]="transform">
+          @if (background; as bg) {
+            @if (backgroundVisible) {
+              <image class="map-background" [attr.href]="backgroundUrl" [attr.x]="bg.x" [attr.y]="bg.y" [attr.width]="bg.width" [attr.height]="bg.height" [attr.opacity]="bg.opacity" preserveAspectRatio="xMidYMid meet" pointer-events="none" (error)="onBackgroundImageError()" />
+            }
+          }
+          @for (area of areas; track area.locationId) {
+            <g class="location-area" [class.selected]="selectedLocationId === area.locationId" [class.editing]="areaLocation?.id === area.locationId">
+              <polygon [attr.points]="area.shape" [attr.fill]="area.color" [attr.stroke]="area.color"
+                tabindex="0" role="button" [attr.aria-label]="area.location.name + ' area. Press Enter to open'"
+                (pointerdown)="areaLocation || $event.button === 1 ? null : $event.stopPropagation()" (click)="onLocationClick(area.location)" (dblclick)="onLocationDoubleClick(area.location, $event)"
+                (keydown.enter)="openLocation(area.location)" (keydown.space)="$event.preventDefault(); openLocation(area.location)"
+                #areaMenuTrigger="cdkContextMenuTriggerFor" [cdkContextMenuTriggerFor]="areaContextMenu" [cdkContextMenuTriggerData]="{ location: area.location }" (cdkContextMenuOpened)="onPinMenuOpened(areaMenuTrigger)">
+                <title>{{ area.location.name }}</title>
+              </polygon>
+              <text class="area-label" [attr.transform]="'translate(' + area.x + ' ' + area.y + ') ' + labelScale" text-anchor="middle">{{ area.location.name }}</text>
+            </g>
+          }
+          @if (areaLocation && areaPoints.length) {
+            <polygon class="area-draft" [attr.points]="areaShape(areaPoints)" [attr.fill]="areaColor" [attr.stroke]="areaColor" />
+            @for (point of areaPoints; track $index) {
+              @if (areaEditing) {
+                @let next = areaPoints[($index + 1) % areaPoints.length];
+                <g class="area-insert" [attr.transform]="'translate(' + (point.x + next.x) / 2 + ' ' + (point.y + next.y) / 2 + ') ' + labelScale"
+                  tabindex="0" role="button" [attr.aria-label]="'Insert point after point ' + ($index + 1)"
+                  (pointerdown)="onAreaEdgeDown($index, $event)"
+                  (keydown.enter)="$event.preventDefault(); $event.stopPropagation(); insertAreaPoint($index)"
+                  (keydown.space)="$event.preventDefault(); $event.stopPropagation(); insertAreaPoint($index)">
+                  <circle r="9" /><text text-anchor="middle" dy="4">+</text>
+                </g>
+              }
+            }
+            @for (point of areaPoints; track $index) {
+              <circle class="area-vertex" [class.editable]="areaEditing" [class.selected]="selectedAreaPoint === $index"
+                [attr.cx]="point.x" [attr.cy]="point.y" [attr.r]="(areaEditing ? 7 : 4) / view.k"
+                [attr.tabindex]="areaEditing ? 0 : null" [attr.role]="areaEditing ? 'button' : null"
+                [attr.aria-label]="areaEditing ? 'Boundary point ' + ($index + 1) + '. Drag or use arrow keys to move; Delete to remove.' : null"
+                (focus)="selectedAreaPoint = $index" (pointerdown)="onAreaPointDown($index, $event)" (keydown)="onAreaPointKeydown($index, $event)" />
+            }
+          }
           @for (road of roads; track road.key) {
             <g
               class="road"
@@ -80,8 +242,8 @@
               @if (road.label) {
                 <text
                   class="road-label"
-                  [attr.x]="(road.from.x + road.to.x) / 2"
-                  [attr.y]="(road.from.y + road.to.y) / 2 - 6"
+                  [attr.transform]="'translate(' + (road.from.x + road.to.x) / 2 + ' ' + (road.from.y + road.to.y) / 2 + ') ' + labelScale"
+                  y="-6"
                   text-anchor="middle"
                 >{{ road.label }}</text>
               }
@@ -91,6 +253,8 @@
           @for (pin of placed; track pin.location.id) {
             <g
               class="pin"
+              [class.selected]="selectedLocationId === pin.location.id"
+              [class.label-visible]="labels.has(pin.location.id)"
               [class.dragging]="dragPosition?.id === pin.location.id"
               [class.road-from]="roadFrom === pin.location.id"
               [attr.transform]="'translate(' + pin.x + ' ' + pin.y + ')'"
@@ -99,63 +263,45 @@
               [attr.aria-label]="pin.location.name + ', ' + pin.typeLabel + (roadMode ? '. Press Enter to connect' : '. Press Enter to open')"
               [attr.data-location-id]="pin.location.id"
               (pointerdown)="onPinPointerDown(pin, $event)"
-              (keydown)="onPinKeydown(pin, $event)"
+              (dblclick)="onLocationDoubleClick(pin.location, $event)"
+              aria-haspopup="menu"
+              #pinMenuTrigger="cdkContextMenuTriggerFor"
+              [cdkContextMenuTriggerFor]="pinContextMenu"
+              [cdkContextMenuTriggerData]="{ pin: pin }"
+              (cdkContextMenuOpened)="onPinMenuOpened(pinMenuTrigger)"
+              (keydown)="onPinKeydown(pin, $event, pinMenuTrigger)"
             >
               <title>{{ pin.location.name }} ({{ pin.typeLabel }})</title>
-              <circle class="pin-disc" r="18" />
-              <use class="pin-icon" [attr.href]="pin.icon" x="-10" y="-10" width="20" height="20" />
-              <text class="pin-label" y="34" text-anchor="middle">{{ pin.location.name }}</text>
+              <g [attr.transform]="markerScale">
+                <circle class="pin-disc" r="18" />
+                @if (markerMode === 'image' && thumbnailUrls.get(pin.location.id); as imageUrl) {
+                  <image [attr.href]="imageUrl" x="-18" y="-18" width="36" height="36" preserveAspectRatio="xMidYMid slice" clip-path="url(#location-image-clip)" pointer-events="none" />
+                } @else {
+                  <use class="pin-icon" [attr.href]="pin.icon" x="-10" y="-10" width="20" height="20" />
+                }
+              </g>
+              <text class="pin-label" [attr.transform]="labelScale" [attr.y]="nameY" text-anchor="middle">{{ pin.location.name }}</text>
             </g>
           }
         </g>
       </svg>
 
       <div class="map-controls" role="toolbar" aria-label="Map view">
-        <button class="icon-btn" (click)="zoomBy(1.25)" title="Zoom in" aria-label="Zoom in">
+        <button class="icon-btn" (click)="zoomBy(1.25)" [disabled]="view.k >= zoomLimits.max" title="Zoom in" aria-label="Zoom in">
           <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
         </button>
-        <button class="icon-btn" (click)="zoomBy(0.8)" title="Zoom out" aria-label="Zoom out">
+        <button class="icon-btn" (click)="zoomBy(0.8)" [disabled]="view.k <= zoomLimits.min" title="Zoom out" aria-label="Zoom out">
           <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#minus" /></svg>
         </button>
-        <button class="btn btn-sm btn-secondary" (click)="fitToView()" title="Fit all pins in view">Fit</button>
+        @if (background) { <button class="icon-btn" (click)="fitMap()" title="Fit map" aria-label="Fit map"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#map" /></svg></button> }
+        <button class="icon-btn" (click)="fitToView()" title="Fit locations" aria-label="Fit locations"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#map-pin" /></svg></button>
         @if (!readOnly) {
-          <button class="btn btn-sm btn-secondary" (click)="undo()" [disabled]="!state?.canUndo" title="Undo (Ctrl+Z)">Undo</button>
-          <button class="btn btn-sm btn-secondary" (click)="redo()" [disabled]="!state?.canRedo" title="Redo (Ctrl+Shift+Z)">Redo</button>
+          <button class="icon-btn" (click)="undo()" [disabled]="!state?.canUndo" title="Undo (Ctrl+Z)" aria-label="Undo"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#arrow-left" /></svg></button>
+          <button class="icon-btn" (click)="redo()" [disabled]="!state?.canRedo" title="Redo (Ctrl+Shift+Z)" aria-label="Redo"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#chevron-right" /></svg></button>
         }
       </div>
 
-      @if (roadMode) {
-        <div class="map-hint" role="status">
-          {{ roadFrom ? 'Now click the pin to connect to.' : 'Click a pin to start a road.' }}
-          Clicking a connected pair again removes the road.
-        </div>
-      }
-
-      @if (!isLoading && state) {
-        @if (!hasLocations) {
-          <div class="map-empty" data-testid="empty-no-locations">
-            <svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="assets/ui-icons.svg#map" /></svg>
-            <h3>No locations yet</h3>
-            <p>Create a few places first, then pin them here to see what is near what.</p>
-            <button appProjectReadOnly class="btn btn-primary" (click)="createLocation()">Create a location</button>
-          </div>
-        } @else if (placed.length === 0) {
-          <div class="map-empty" data-testid="empty-no-pins">
-            <svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="assets/ui-icons.svg#map-pin" /></svg>
-            <h3>Drop locations onto the map</h3>
-            @if (readOnly) {
-              <p>Nothing has been placed on this map yet.</p>
-            } @else {
-              <p>Drag a place from the list, or let Ensemble lay them all out roughly so you can move them where they belong.</p>
-              <button class="btn btn-primary" (click)="pinAllUnplaced()">Pin all unplaced locations</button>
-            }
-          </div>
-        }
-      }
-    </section>
-
-    @if (hasLocations) {
-      <aside class="map-panel" aria-label="Map details">
+      <div class="road-details">
         @if (selectedRoad; as road) {
           <section class="panel-section" data-testid="road-panel">
             <h2 class="panel-title">Road</h2>
@@ -177,59 +323,82 @@
             }
           </section>
         }
+      </div>
+      @if (roadMode) {
+        <div class="map-hint" role="status">
+          {{ roadFrom ? 'Now click the pin to connect to.' : 'Click a pin to start a road.' }}
+          Clicking a connected pair again removes the road.
+        </div>
+      }
 
-        <section class="panel-section">
-          <h2 class="panel-title">Not on the map <span class="count">{{ unplaced.length }}</span></h2>
-          @if (unplaced.length === 0) {
-            <p class="panel-empty">Every location is on the map.</p>
-          } @else {
-            @if (unplaced.length > 8) {
-              <input
-                type="text"
-                class="panel-filter"
-                [(ngModel)]="unplacedFilter"
-                placeholder="Filter…"
-                aria-label="Filter unplaced locations"
-              />
+      @if (!isLoading && state && !backgroundVisible && !placementLocation && !areaLocation) {
+        @if (!hasLocations) {
+          <div class="map-empty" data-testid="empty-no-locations">
+            <svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="assets/ui-icons.svg#map" /></svg>
+            <h3>No locations yet</h3>
+            <p>Open Locations to choose types or create a place.</p>
+            <button class="btn btn-primary" (click)="openMembership()">Locations</button>
+          </div>
+        } @else if (filteredLocations.length === 0) {
+          <div class="map-empty"><h3>No matching locations</h3><p>Try changing your filters.</p><button class="btn btn-secondary" (click)="clearFilters()">Clear filters</button></div>
+        } @else if (placed.length === 0 && areas.length === 0) {
+          <div class="map-empty" data-testid="empty-no-pins">
+            <svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="assets/ui-icons.svg#map-pin" /></svg>
+            <h3>{{ mapLocations.length ? 'Ready to position' : 'Choose what belongs here' }}</h3>
+            @if (readOnly) {
+              <p>Nothing has been placed on this map yet.</p>
+            } @else {
+              <p>Choose automatic location types or individual places, then click their positions on the map.</p>
+              <button class="btn btn-primary" (click)="openMembership()">Locations</button>
             }
-            <ul class="place-list" data-testid="unplaced-list">
-              @for (location of filteredUnplaced; track location.id) {
-                <li
-                  class="place"
-                  [attr.draggable]="!readOnly"
-                  (dragstart)="onListDragStart(location, $event)"
-                  [title]="readOnly ? location.name : 'Drag onto the map, or use Pin'"
-                >
-                  <svg class="ui-icon place-icon" aria-hidden="true"><use [attr.href]="getIcon(location)" /></svg>
-                  <button class="place-name link-btn" (click)="openLocation(location)">{{ location.name }}</button>
-                  @if (!readOnly) {
-                    <button class="btn btn-sm btn-secondary" (click)="pinAtCenter(location)" [attr.aria-label]="'Pin ' + location.name + ' at the centre of the map'">Pin</button>
-                  }
-                </li>
-              }
-            </ul>
-          }
-        </section>
-
-        @if (placed.length > 0) {
-          <section class="panel-section">
-            <h2 class="panel-title">On the map <span class="count">{{ placed.length }}</span></h2>
-            <ul class="place-list">
-              @for (pin of placed; track pin.location.id) {
-                <li class="place">
-                  <svg class="ui-icon place-icon" aria-hidden="true"><use [attr.href]="pin.icon" /></svg>
-                  <button class="place-name link-btn" (click)="openLocation(pin.location)">{{ pin.location.name }}</button>
-                  @if (!readOnly) {
-                    <button class="icon-btn" (click)="unpin(pin.location.id)" [attr.aria-label]="'Remove ' + pin.location.name + ' from the map'" title="Remove from map">
-                      <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg>
-                    </button>
-                  }
-                </li>
-              }
-            </ul>
-          </section>
+          </div>
         }
+      }
+    </section>
+
+    @if (drawerOpen) {
+      <aside class="location-drawer" aria-label="Location details">
+        @if (selectedLocation; as location) {
+          <div class="location-area-actions">
+            <button class="btn btn-sm btn-secondary" [disabled]="readOnly || areaSaving" (click)="beginArea(location)">{{ hasArea(location.id) ? 'Edit area' : 'Draw area' }}</button>
+            @if (hasArea(location.id) && hasPin(location.id)) { <button class="btn btn-sm btn-secondary" [disabled]="readOnly || areaSaving" title="Remove the pin and its connected roads; keep the area" (click)="removePinKeepArea(location.id)">Remove pin, keep area</button> }
+            @if (hasArea(location.id)) { <button class="btn btn-sm btn-secondary" [disabled]="readOnly || areaSaving" (click)="removeArea(location.id)">Remove area</button> }
+          </div>
+        }
+        <app-location-detail [embedded]="true" [destinationMaps]="maps" [activeMapId]="activeMapId" (destinationOpen)="openDestinationMap($event)" [onMap]="!!selectedPin || !!(selectedLocationId && hasArea(selectedLocationId))" [mapReadOnly]="readOnly" (placementChange)="changePlacement($event)"></app-location-detail>
       </aside>
     }
   </div>
 </div>
+
+<ng-template #pinContextMenu let-pin="pin">
+  <div cdkMenu class="pin-context-menu" [attr.aria-label]="pin.location.name + ' actions'">
+    <div class="pin-context-title"><svg class="ui-icon" aria-hidden="true"><use [attr.href]="pin.icon" /></svg><span>{{ pin.location.name }}</span></div>
+    <button cdkMenuItem (keydown.escape)="onPinMenuEscape(pin, $event)" (cdkMenuItemTriggered)="pinMenuAction(pin, 'open')"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#edit" /></svg>Open details</button>
+    @if (destinationMap(pin.location); as destination) {
+      <button cdkMenuItem [cdkMenuItemDisabled]="destination.id === activeMapId || mapBusy || backgroundBusy" [disabled]="destination.id === activeMapId || mapBusy || backgroundBusy" (cdkMenuItemTriggered)="pinMenuAction(pin, 'destination')"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#map" /></svg>Open {{ destination.name }}</button>
+    }
+    <button cdkMenuItem (keydown.escape)="onPinMenuEscape(pin, $event)" (cdkMenuItemTriggered)="pinMenuAction(pin, 'center')"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#map" /></svg>Center on location</button>
+    <button cdkMenuItem (keydown.escape)="onPinMenuEscape(pin, $event)" [cdkMenuItemDisabled]="readOnly" [disabled]="readOnly" (cdkMenuItemTriggered)="pinMenuAction(pin, 'position')"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#locate" /></svg>Reposition</button>
+    <button cdkMenuItem (keydown.escape)="onPinMenuEscape(pin, $event)" [cdkMenuItemDisabled]="readOnly" [disabled]="readOnly" (cdkMenuItemTriggered)="pinMenuAction(pin, 'road')"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#road" /></svg>Draw road from here</button>
+    <button cdkMenuItem [cdkMenuItemDisabled]="readOnly" [disabled]="readOnly" (cdkMenuItemTriggered)="pinMenuAction(pin, 'area')"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#map" /></svg>{{ hasArea(pin.location.id) ? 'Edit area' : 'Draw area' }}</button>
+    @if (hasArea(pin.location.id)) {
+      <button cdkMenuItem (keydown.escape)="onPinMenuEscape(pin, $event)" [cdkMenuItemDisabled]="readOnly" [disabled]="readOnly" title="Remove the pin and its connected roads; keep the area" (cdkMenuItemTriggered)="pinMenuAction(pin, 'remove-pin')"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#map-pin" /></svg>Remove pin, keep area</button>
+      <button cdkMenuItem [cdkMenuItemDisabled]="readOnly" [disabled]="readOnly" (cdkMenuItemTriggered)="pinMenuAction(pin, 'remove-area')">Remove area</button> }
+    <button cdkMenuItem (keydown.escape)="onPinMenuEscape(pin, $event)" class="remove-pin-action" [cdkMenuItemDisabled]="readOnly" [disabled]="readOnly" (cdkMenuItemTriggered)="pinMenuAction(pin, 'remove')"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg>Remove from this map</button>
+  </div>
+</ng-template>
+
+<ng-template #areaContextMenu let-location="location">
+  <div cdkMenu class="pin-context-menu" [attr.aria-label]="location.name + ' area actions'">
+    <div class="pin-context-title">{{ location.name }}</div>
+    <button cdkMenuItem (cdkMenuItemTriggered)="openLocation(location)">Open details</button>
+    @if (destinationMap(location); as destination) {
+      <button cdkMenuItem [cdkMenuItemDisabled]="destination.id === activeMapId || mapBusy || backgroundBusy" [disabled]="destination.id === activeMapId || mapBusy || backgroundBusy" (cdkMenuItemTriggered)="openDestinationMap(destination.id)">Open {{ destination.name }}</button>
+    }
+    <button cdkMenuItem [cdkMenuItemDisabled]="readOnly" [disabled]="readOnly" (cdkMenuItemTriggered)="beginArea(location)">Edit area</button>
+    <button cdkMenuItem [cdkMenuItemDisabled]="readOnly" [disabled]="readOnly" (cdkMenuItemTriggered)="beginArea(location, false)">Redraw area</button>
+    @if (hasPin(location.id)) { <button cdkMenuItem [cdkMenuItemDisabled]="readOnly" [disabled]="readOnly" title="Remove the pin and its connected roads; keep the area" (cdkMenuItemTriggered)="removePinKeepArea(location.id)">Remove pin, keep area</button> }
+    <button cdkMenuItem [cdkMenuItemDisabled]="readOnly" [disabled]="readOnly" (cdkMenuItemTriggered)="removeArea(location.id)">Remove area</button>
+  </div>
+</ng-template>

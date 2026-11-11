@@ -11,6 +11,13 @@ export interface SettingsFieldIndex {
 
 /** Static catalog of searchable settings fields (labels + keywords). Live values are resolved at query time. */
 export const SETTINGS_FIELD_INDEX: SettingsFieldIndex[] = [
+  { id: 'location-details-side', section: 'appearance', label: 'Location details side', keywords: ['locations', 'map', 'sidebar', 'left', 'right'] },
+  {
+    id: 'project-health',
+    section: 'project-health',
+    label: 'Project health',
+    keywords: ['health', 'checks', 'broken links', 'orphaned', 'references', 'portraits'],
+  },
   {
     id: 'calendar',
     section: 'timeline',

@@ -176,28 +176,35 @@ export const routes: Routes = [
   {
     path: "locations",
     loadComponent: () =>
-      import("./features/location-list/location-list.component").then(
-        (m) => m.LocationListComponent
+      import("./features/world-map/world-map.component").then(
+        (m) => m.WorldMapComponent
       ),
     canActivate: [projectGuard],
+    canDeactivate: [locationEditorGuard],
+    data: { mapCanvas: true },
+    runGuardsAndResolvers: 'paramsOrQueryParamsChange',
   },
   {
     path: "location/:id",
     loadComponent: () =>
-      import("./features/location-detail/location-detail.component").then(
-        (m) => m.LocationDetailComponent
+      import("./features/world-map/world-map.component").then(
+        (m) => m.WorldMapComponent
       ),
     canActivate: [projectGuard],
     canDeactivate: [locationEditorGuard],
+    data: { mapCanvas: true },
+    runGuardsAndResolvers: 'paramsOrQueryParamsChange',
   },
   {
     path: "location",
     loadComponent: () =>
-      import("./features/location-detail/location-detail.component").then(
-        (m) => m.LocationDetailComponent
+      import("./features/world-map/world-map.component").then(
+        (m) => m.WorldMapComponent
       ),
     canActivate: [projectGuard],
     canDeactivate: [locationEditorGuard],
+    data: { mapCanvas: true },
+    runGuardsAndResolvers: 'paramsOrQueryParamsChange',
   },
   {
     path: "world-map",
@@ -206,6 +213,9 @@ export const routes: Routes = [
         (m) => m.WorldMapComponent
       ),
     canActivate: [projectGuard],
+    canDeactivate: [locationEditorGuard],
+    data: { mapCanvas: true },
+    runGuardsAndResolvers: 'paramsOrQueryParamsChange',
   },
   {
     path: "timeline",

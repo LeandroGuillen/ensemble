@@ -1,4 +1,5 @@
 export type SettingsSectionId =
+  | 'project-health'
   | 'general'
   | 'appearance'
   | 'categories'
@@ -21,6 +22,7 @@ export const DEFAULT_SETTINGS_SECTION: SettingsSectionId = 'general';
 
 export const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
   'general',
+  'project-health',
   'appearance',
   'categories',
   'tags',

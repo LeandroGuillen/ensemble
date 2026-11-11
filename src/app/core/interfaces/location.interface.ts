@@ -26,6 +26,24 @@ export function getLocationPlaceholderIcon(value: LocationType | undefined): str
   return `assets/ui-icons.svg#${icon}`;
 }
 
+/** Map symbols are chosen from the shared icon set; empty means follow the type. */
+export const LOCATION_MAP_ICONS = [
+  ...LOCATION_TYPES.map(type => ({ value: type.icon, label: type.label })),
+  { value: 'shield', label: 'Shield' }, { value: 'crown', label: 'Crown' },
+  { value: 'star', label: 'Star' }, { value: 'book-open', label: 'Book' },
+];
+export function normalizeLocationMapIcon(value: unknown): string | undefined {
+  return LOCATION_MAP_ICONS.some(icon => icon.value === value) ? value as string : undefined;
+}
+export function getLocationMapIcon(location: Pick<Location, 'type' | 'mapIcon'>): string {
+  const custom = normalizeLocationMapIcon(location.mapIcon);
+  return custom ? `assets/ui-icons.svg#${custom}` : getLocationPlaceholderIcon(location.type);
+}
+
+export function normalizeDestinationMapId(value: unknown): string | undefined {
+  return typeof value === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(value) ? value : undefined;
+}
+
 export interface Location {
   /** Stable identity stored in frontmatter; survives rename/move. */
   id: string;
@@ -35,6 +53,9 @@ export interface Location {
   books: string[];
   /** Opaque wiki-link / path string for a single thumbnail. */
   thumbnail?: string;
+  mapIcon?: string;
+  /** Stable ID of the map opened from this location. */
+  destinationMapId?: string;
   content: string;
   created: Date;
   modified: Date;
@@ -49,6 +70,9 @@ export interface LocationFormData {
   type?: LocationType;
   books: string[];
   thumbnail?: string;
+  mapIcon?: string;
+  /** Stable ID of the map opened from this location. */
+  destinationMapId?: string;
   content: string;
 }
 
@@ -60,6 +84,9 @@ export interface LocationFrontmatter {
   type?: LocationType;
   books: string[];
   thumbnail?: string;
+  mapIcon?: string;
+  /** Stable ID of the map opened from this location. */
+  destinationMapId?: string;
   created?: string;
   modified?: string;
 }

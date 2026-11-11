@@ -36,7 +36,7 @@ Ensemble keeps your cast, your world and your plot in one folder of Markdown fil
 ### World
 
 - **Locations**: record places with one of nine types, such as Country, Settlement, Building or Natural Feature.
-- **World map**: pin your locations on a canvas and join them with labelled roads.
+- **Maps**: create named maps for continents, regions, cities, or any other scope. Choose automatic location types when creating a map, with optional individual additions and exclusions. New matching locations join automatically and wait to be positioned by clicking their spot; existing pins stay put. Placements, roads, and background images are independent. Switch maps without changing shared location details. Upload an SVG, PNG, JPEG, WebP or GIF background, pin locations over it, and join them with labelled roads. Zoom limits follow the background size, with up to 64× the fitted overview. Right-click a pin for details, centering, repositioning, roads, or removal from the current map. Pins and labels stay readable as you zoom; background visibility, opacity, replacement, and removal support Undo. Raster uploads support files up to 25 MB. SVGs must be self-contained, up to 10 MB, with a valid `viewBox` or explicit dimensions. Duplicate a map with its placements, roads, rules and background; Rename, Reload and Duplicate appear in the toolbar when space allows and in the gear menu at narrower widths. Backgrounds are copied into the project; replacing one preserves pin coordinates.
 - **Location filters**: filter by type, book and picture, and clear the filters in one click.
 - **Location icons**: give every type its own icon.
 - **Houses**: record crests, mottos, colors, seats, members and an ordered list of reigns with joint heads.
@@ -123,8 +123,9 @@ project-folder/
 │   ├── concepts.md                # Concepts
 │   └── names.md                   # Name lists
 ├── locations/             # Locations, one file each
-├── world-map.md           # World map pins and roads
 │   └── _port-saltmere.md
+├── world-map.md           # Named maps: backgrounds, pins and roads
+├── assets/maps/           # Imported background images (kept for Undo)
 ├── houses/                 # Family and dynasty records
 │   └── house-vell/
 │       └── house-vell.md    # House frontmatter + Markdown history

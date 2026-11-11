@@ -88,3 +88,15 @@
     white-space: nowrap;
   }
 }
+
+// Map editors fill the dialog's available content width, including at large font sizes.
+@layer components {
+  .modal-dialog.map-name-dialog { max-width: 560px; }
+  .modal-dialog.map-membership-dialog { max-width: 720px; }
+  .modal-dialog.map-name-dialog, .modal-dialog.map-membership-dialog {
+    min-width: 0;
+    .modal-header h3 { min-width: 0; overflow-wrap: anywhere; }
+    .modal-header .close-btn { flex-shrink: 0; }
+    .modal-body { min-width: 0; }
+  }
+}

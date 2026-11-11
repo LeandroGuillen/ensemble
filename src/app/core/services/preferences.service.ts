@@ -121,6 +121,22 @@ export class PreferencesService {
     return localStorage.getItem('planOutlineSide') === 'right' ? 'right' : 'left';
   }
 
+  getMapMarkerMode(): 'image' | 'icon' {
+    return localStorage.getItem('mapMarkerMode') === 'icon' ? 'icon' : 'image';
+  }
+
+  setMapMarkerMode(mode: 'image' | 'icon'): void {
+    localStorage.setItem('mapMarkerMode', mode);
+  }
+
+  getLocationDetailsSide(): 'left' | 'right' {
+    return localStorage.getItem('locationDetailsSide') === 'left' ? 'left' : 'right';
+  }
+
+  setLocationDetailsSide(side: 'left' | 'right'): void {
+    localStorage.setItem('locationDetailsSide', side);
+  }
+
   setPlanOutlineSide(side: 'left' | 'right'): void {
     localStorage.setItem('planOutlineSide', side);
   }

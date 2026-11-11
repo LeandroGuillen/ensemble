@@ -135,6 +135,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
 
   zoomPercent = 100;
   planOutlineSide: 'left' | 'right' = 'left';
+  locationDetailsSide: 'left' | 'right' = 'right';
 
   // Color presets - uses the shared color palette
   colorPresets: string[] = [];
@@ -183,6 +184,11 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
     });
   }
 
+  setLocationDetailsSide(side: 'left' | 'right'): void {
+    this.locationDetailsSide = side;
+    this.preferences.setLocationDetailsSide(side);
+  }
+
   setPlanOutlineSide(side: 'left' | 'right'): void {
     this.planOutlineSide = side;
     this.preferences.setPlanOutlineSide(side);
@@ -220,6 +226,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
       });
     this.zoomPercent = this.zoomService.getZoomPercent();
     this.planOutlineSide = this.preferences.getPlanOutlineSide();
+    this.locationDetailsSide = this.preferences.getLocationDetailsSide();
 
     // Subscribe to update status changes
     this.updateService.updateStatus$

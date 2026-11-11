@@ -29,6 +29,7 @@ describe('PinboardService', () => {
             currentProject$: of(null),
             getCurrentProject: () => ({ path: '/w', metadata: { pinboards: [] } }),
             getCurrentPinboard: () => ({ id: 'board1', nodes: [], edges: [] }),
+            getDefaultCharacterStyle: () => 'default',
             updatePinboard,
             setCurrentPinboard: jasmine.createSpy('setCurrentPinboard').and.resolveTo(),
           },
@@ -40,6 +41,42 @@ describe('PinboardService', () => {
       ],
     });
     service = TestBed.inject(PinboardService);
+  });
+
+  describe('visible characters', () => {
+    it('hides deleted characters, former cast members, and their connections without changing saved data', async () => {
+      const projects = TestBed.inject(ProjectService);
+      const board = {
+        id: 'board1',
+        nodes: ['c1', 'c2', 'deleted', 'former'].map(id => ({ id, name: id, position: { x: 10, y: 20 } })),
+        edges: [
+          { id: 'valid', source: 'c1', target: 'c2' },
+          { id: 'deleted-edge', source: 'c1', target: 'deleted' },
+          { id: 'former-edge', source: 'c1', target: 'former' },
+        ],
+      };
+      spyOn(projects, 'getCurrentPinboard').and.returnValue(board as any);
+      cast.characterIds = ['c1', 'c2', 'deleted'];
+      await service.switchPinboard('board1');
+
+      const data = await service.getVisJsDataWithThumbnails([
+        { id: 'c1', name: 'Mara' }, { id: 'c2', name: 'Ivo' }, { id: 'former', name: 'Former' },
+      ]);
+      expect(data.nodes.map(node => node.id)).toEqual(['c1', 'c2']);
+      expect(data.nodes[0].label).toBe('Mara');
+      expect(data.nodes[0].x).toBe(10);
+      expect(data.edges.map(edge => edge.id)).toEqual(['valid']);
+      expect(service.getCurrentPinboardDataSnapshot().nodes.length).toBe(4);
+      expect(updatePinboard).not.toHaveBeenCalled();
+
+      // A restored character becomes visible again from the same saved board.
+      const restored = await service.getVisJsDataWithThumbnails([
+        { id: 'c1', name: 'Mara' }, { id: 'c2', name: 'Ivo' }, { id: 'deleted', name: 'Restored' },
+      ]);
+      expect(restored.nodes.map(node => node.id)).toEqual(['c1', 'c2', 'deleted']);
+      expect(restored.edges.map(edge => edge.id)).toEqual(['valid', 'deleted-edge']);
+      expect((await service.getVisJsDataWithThumbnails([])).nodes).toEqual([]);
+    });
   });
 
   describe('edge operations', () => {

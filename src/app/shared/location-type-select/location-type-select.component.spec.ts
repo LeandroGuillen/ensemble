@@ -74,3 +74,73 @@ describe('LocationTypeSelectComponent', () => {
     }
   });
 });
+
+@Component({
+  imports: [ReactiveFormsModule, LocationTypeSelectComponent],
+  template: `<app-location-type-select [formControl]="type" />
+    <app-location-type-select mode="icon" [locationType]="type.value || ''" [formControl]="icon" />`,
+})
+class IconTestHost {
+  type = new FormControl<'settlement' | 'country'>('settlement');
+  icon = new FormControl('');
+}
+
+describe('Location icon selection', () => {
+  it('shows the current type icon for the default and updates it when the type changes', () => {
+    const fixture = TestBed.createComponent(IconTestHost);
+    fixture.detectChanges();
+    const trigger: HTMLButtonElement = fixture.nativeElement.querySelector('#mapIcon');
+    expect(trigger.textContent).toContain('Default for type');
+    expect(trigger.querySelector('use')!.getAttribute('href')).toBe('assets/ui-icons.svg#settlement');
+    fixture.componentInstance.type.setValue('country');
+    fixture.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    expect(trigger.querySelector('use')!.getAttribute('href')).toBe('assets/ui-icons.svg#flag');
+    expect(fixture.componentInstance.icon.pristine).toBeTrue();
+  });
+
+  it('shows the real icon in every choice and the selected value without affecting the type', () => {
+    const fixture = TestBed.createComponent(IconTestHost);
+    fixture.detectChanges();
+    const trigger: HTMLButtonElement = fixture.nativeElement.querySelector('#mapIcon');
+    trigger.click();
+    fixture.detectChanges();
+    const overlay = TestBed.inject(OverlayContainer).getContainerElement();
+    const options = Array.from(overlay.querySelectorAll<HTMLElement>('[role="option"]'));
+    options.forEach(option => expect(option.querySelector('svg use')).not.toBeNull());
+    options.find(option => option.textContent?.trim() === 'Crown')!.click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.icon.value).toBe('crown');
+    expect(fixture.componentInstance.icon.dirty).toBeTrue();
+    expect(fixture.componentInstance.type.value).toBe('settlement');
+    expect(trigger.querySelector('use')!.getAttribute('href')).toBe('assets/ui-icons.svg#crown');
+    expect(trigger.textContent).toContain('Crown');
+    fixture.componentInstance.type.setValue('country');
+    fixture.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    expect(trigger.querySelector('use')!.getAttribute('href')).toBe('assets/ui-icons.svg#crown');
+    fixture.componentInstance.icon.disable();
+    fixture.detectChanges();
+    expect(trigger.disabled).toBeTrue();
+  });
+
+  it('keeps listbox and keyboard focus IDs independent for type and icon controls', () => {
+    const fixture = TestBed.createComponent(IconTestHost);
+    fixture.detectChanges();
+    const triggers = Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
+    triggers[0].click();
+    fixture.detectChanges();
+    const typeId = triggers[0].getAttribute('aria-controls');
+    triggers[1].click();
+    fixture.detectChanges();
+    expect(triggers[1].getAttribute('aria-controls')).not.toBe(typeId);
+    const event = new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true });
+    triggers[1].dispatchEvent(event);
+    fixture.detectChanges();
+    const activeId = triggers[1].getAttribute('aria-activedescendant')!;
+    expect(document.getElementById(activeId)?.textContent).toContain('Book');
+    triggers[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    fixture.detectChanges();
+    expect(fixture.componentInstance.icon.value).toBe('book-open');
+  });
+});

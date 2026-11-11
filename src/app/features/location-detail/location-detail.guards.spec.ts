@@ -15,11 +15,63 @@ describe('LocationDetailComponent unsaved changes guards', () => {
 
     const fb = new FormBuilder();
     component = Object.create(LocationDetailComponent.prototype);
-    component.locationForm = fb.group({ name: [''], content: [''] });
+    component.locationForm = fb.group({ name: [''], content: [''], aliasesText: [''] });
     component.isSaving = false;
     (component as any).imagePickerService = imagePickerService;
     (component as any).modalService = { confirm: confirmSpy };
     (component as any).leavePrompt = null;
+  });
+
+  it('opens the created location sidebar after saving without the leave guard blocking it', async () => {
+    component.embedded = true;
+    component.isNewLocation = true;
+    component.locationForm.patchValue({ name: 'Harbor', content: 'Coastal port' });
+    component.locationForm.markAsDirty();
+    (component as any).locationService = { createLocation: jasmine.createSpy().and.resolveTo({ id: 'new-id', name: 'Harbor' }) };
+    const navigate = jasmine.createSpy().and.callFake(async () => {
+      expect(component.canLeave()).toBeTrue();
+      return true;
+    });
+    (component as any).router = { navigate };
+    (component as any).notificationService = { showSuccess: () => {} };
+    (component as any).logger = { error: () => {} };
+    (component as any).cdr = { markForCheck: () => {} };
+    await component.saveLocation();
+    expect(navigate).toHaveBeenCalledWith(['/location', 'new-id'], { queryParamsHandling: 'preserve' });
+    expect(component.locationForm.pristine).toBeTrue();
+    expect(component.isSaving).toBeFalse();
+  });
+
+  it('keeps renamed links and aliases in the open sidebar for subsequent saves', async () => {
+    component.embedded = true;
+    component.isNewLocation = false;
+    component.locationId = 'a';
+    component.location = { id: 'a', name: 'Old harbor' } as any;
+    component.locationForm.patchValue({ name: 'New harbor', content: 'Original' });
+    const updated = { id: 'a', name: 'New harbor', aliases: ['Old harbor'], content: 'Rewritten [[New harbor]]' };
+    (component as any).linkRename = { run: jasmine.createSpy().and.resolveTo(updated) };
+    (component as any).notificationService = { showSuccess: () => {} };
+    (component as any).logger = { error: () => {} };
+    (component as any).cdr = { markForCheck: () => {} };
+    const navigate = jasmine.createSpy();
+    (component as any).router = { navigate };
+    await component.saveLocation();
+    expect(component.locationForm.get('content')?.value).toBe(updated.content);
+    expect(component.locationForm.get('aliasesText')?.value).toBe('Old harbor');
+    expect(component.locationForm.pristine).toBeTrue();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('blocks saves while another location is loading or failed to load', async () => {
+    const create = jasmine.createSpy();
+    (component as any).locationService = { createLocation: create };
+    component.isNewLocation = true;
+    component.isLoading = true;
+    await component.saveLocation();
+    component.isLoading = false;
+    component.loadError = 'Location not found';
+    await component.saveLocation();
+    expect(create).not.toHaveBeenCalled();
   });
 
   it('allows navigation when form is clean', () => {

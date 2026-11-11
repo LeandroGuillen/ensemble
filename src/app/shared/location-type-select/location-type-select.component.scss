@@ -8,9 +8,12 @@
   align-items: center;
   gap: var(--spacing-sm);
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   text-align: left;
   cursor: pointer;
 
+  span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .chevron { margin-left: auto; }
   .ui-icon { flex-shrink: 0; }
 }

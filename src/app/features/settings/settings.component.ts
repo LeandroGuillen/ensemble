@@ -1,3 +1,4 @@
+import { ProjectHealthComponent } from '../project-health/project-health.component';
 import { Component, OnDestroy, OnInit, DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -52,7 +53,7 @@ const SETTINGS_NAV_EXPANDED_GROUPS_KEY = 'settingsNavExpandedGroups';
 
 @Component({
   selector: 'app-settings',
-  imports: [FormsModule, PageHeaderComponent, MetadataManagementComponent, AiSettingsComponent, BackupSettingsComponent, TimelineSettingsComponent],
+  imports: [ProjectHealthComponent, FormsModule, PageHeaderComponent, MetadataManagementComponent, AiSettingsComponent, BackupSettingsComponent, TimelineSettingsComponent],
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.scss'],
 })
@@ -89,6 +90,12 @@ export class SettingsComponent implements OnInit, OnDestroy {
       id: 'backup',
       label: 'Backup',
       description: 'Project snapshots and restore',
+    },
+    {
+      kind: 'leaf',
+      id: 'project-health',
+      label: 'Project health',
+      description: 'Check links, references, and portraits',
     },
     {
       kind: 'group',

@@ -409,8 +409,20 @@ export class PinboardService {
    * Gets vis.js data with character images loaded dynamically
    */
   async getVisJsDataWithThumbnails(characters: any[]): Promise<{ nodes: any[], edges: any[] }> {
-    const currentData = this.pinboardDataSubject.value;
+    const savedData = this.pinboardDataSubject.value;
     const characterMap = new Map(characters.map(char => [char.id, char]));
+    const boardId = this.currentPinboardIdSubject.value;
+    const cast = this.editorSession.cast || this.castService.getCastsSnapshot()
+      .find(cast => cast.pinboardId === boardId);
+    const memberIds = cast ? new Set(cast.characterIds) : null;
+    // Legacy boards can retain deleted characters or former cast members. Hide
+    // them without mutating saved data while characters/casts are still loading.
+    const nodes = savedData.nodes.filter(node => characterMap.has(node.id) && (!memberIds || memberIds.has(node.id)));
+    const visibleIds = new Set(nodes.map(node => node.id));
+    const currentData = {
+      nodes,
+      edges: savedData.edges.filter(edge => visibleIds.has(edge.source) && visibleIds.has(edge.target)),
+    };
     
     const visNodes = await Promise.all(currentData.nodes.map(async node => {
       const character = characterMap.get(node.id);

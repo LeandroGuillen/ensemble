@@ -4,6 +4,9 @@ import {
   DestroyRef,
   inject,
   Component,
+  Input,
+  Output,
+  EventEmitter,
   OnInit,
   AfterViewInit,
   OnDestroy,
@@ -11,21 +14,19 @@ import {
   ElementRef,
   ViewChild,
   NgZone,
-  HostListener,
 } from '@angular/core';
 import { combineLatest, debounceTime } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Location as AngularLocation } from '@angular/common';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import {
-  FormsModule,
   ReactiveFormsModule,
   FormBuilder,
   FormGroup,
   Validators,
 } from '@angular/forms';
 import { Book } from '../../core/interfaces/project.interface';
-import { LOCATION_TYPES, Location, getLocationPlaceholderIcon } from '../../core/interfaces/location.interface';
+import { LOCATION_TYPES, Location } from '../../core/interfaces/location.interface';
 import { ProjectImage } from '../../core/interfaces';
 import {
   MetadataService,
@@ -37,7 +38,6 @@ import {
   ImagePickerService,
   ElectronService,
 } from '../../core/services';
-import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { MultiSelectButtonsComponent, SelectableItem } from '../../shared/multi-select-buttons/multi-select-buttons.component';
 import { ImagePickerDialogComponent } from '../../shared/image-picker-dialog/image-picker-dialog.component';
 import { formatThumbnailWikiLink, parseThumbnailReference, resolveThumbnailPath } from '../../core/utils/thumbnail.utils';
@@ -54,10 +54,7 @@ import { buildDeleteReferencesMessage } from '../../shared/utils/reference-messa
   selector: 'app-location-detail',
   imports: [
     ProjectReadOnlyDirective,
-    FormsModule,
     ReactiveFormsModule,
-    RouterLink,
-    PageHeaderComponent,
     MultiSelectButtonsComponent,
     ImagePickerDialogComponent,
     LocationTypeSelectComponent,
@@ -68,6 +65,24 @@ import { buildDeleteReferencesMessage } from '../../shared/utils/reference-messa
   styleUrls: ['./location-detail.component.scss'],
 })
 export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy {
+  @Input() embedded = false;
+  @Input() onMap = false;
+  @Input() mapReadOnly = false;
+  @Input() destinationMaps: { id: string; name: string }[] = [];
+  @Input() activeMapId = '';
+  @Output() destinationOpen = new EventEmitter<string>();
+  get destinationMap() { return this.destinationMaps.find(map => map.id === this.locationForm.get('destinationMapId')?.value); }
+  async openDestination(): Promise<void> {
+    const id = this.destinationMap?.id;
+    if (!id || id === this.activeMapId) return;
+    if (await this.flushAutoSave(false)) this.destinationOpen.emit(id);
+  }
+  @Output() placementChange = new EventEmitter<boolean>();
+  aliasDraft = '';
+  saveError = '';
+  private pendingAutoSave: Promise<void> | null = null;
+  private createdRoutePending = false;
+  private deleting = false;
   private readonly linkRename = inject(WikiLinkRenameService);
   private readonly toasts = inject(NotificationService);
   private readonly destroyRef = inject(DestroyRef);
@@ -75,14 +90,6 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
   @ViewChild('nameInput') nameInput?: ElementRef<HTMLInputElement>;
 
   readonly locationTypes = LOCATION_TYPES;
-
-  get placeholderIcon(): string {
-    return getLocationPlaceholderIcon(this.locationForm.get('type')?.value);
-  }
-
-  get selectedTypeInfo() {
-    return LOCATION_TYPES.find((type) => type.value === this.locationForm.get('type')?.value);
-  }
 
   locationId: string | null = null;
   isNewLocation = false;
@@ -103,6 +110,8 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
   private readonly wikiLinkTargets = inject(WikiLinkTargetsService);
   private leavePrompt: Promise<boolean> | null = null;
 
+  loadError = '';
+  private loadGeneration = 0;
   isLoading = false;
   isSaving = false;
 
@@ -123,7 +132,10 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
     private ngZone: NgZone
   ) {
     this.locationForm = this.fb.group({
-      name: ['', [Validators.required, Validators.maxLength(100)]],
+      name: ['', [Validators.required, Validators.maxLength(100), Validators.pattern(/\S/)]],
+      aliasesText: [''],
+      mapIcon: [''],
+      destinationMapId: [''],
       type: [''],
       books: [[] as string[]],
       thumbnail: [''],
@@ -138,6 +150,10 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
         this.linkResolver = resolve;
         this.linkSuggestions = suggestions;
         this.cdr.markForCheck();
+      });
+    this.locationForm.valueChanges.pipe(debounceTime(700), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        if (this.embedded && this.locationForm.dirty && document.activeElement !== this.nameInput?.nativeElement) void this.flushAutoSave();
       });
     void this.ensureLocationsLoaded();
 
@@ -186,6 +202,7 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
   private keydownListener = (event: KeyboardEvent) => {
     // The description editor uses Escape itself (closing completion/search).
     if (event.key === 'Escape' && !event.defaultPrevented) {
+      if (document.querySelector('.location-help:popover-open')) return;
       event.preventDefault();
       this.ngZone.run(() => {
         if (this.showImagePickerDialog || this.imagePickerService.isOpen) {
@@ -199,7 +216,7 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
     if (event.ctrlKey && event.key === 'Enter') {
       event.preventDefault();
       this.ngZone.run(() => {
-        void this.saveLocation();
+        void this.flushAutoSave();
       });
     }
   };
@@ -217,15 +234,22 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private async loadLocation(): Promise<void> {
+    const generation = ++this.loadGeneration;
+    this.loadError = '';
+    this.saveError = '';
+    this.aliasDraft = '';
     if (this.isNewLocation) {
       this.location = null;
       this.locationForm.reset({
         name: this.newLocationFromLink || '',
+        aliasesText: '',
+        mapIcon: '',
+        destinationMapId: '',
         type: '',
         books: [],
         thumbnail: '',
         content: '',
-      });
+      }, { emitEvent: false });
       this.thumbnailPreviewUrl = null;
       return;
     }
@@ -237,8 +261,11 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
     this.isLoading = true;
     try {
       await this.ensureLocationsLoaded();
+      if (generation !== this.loadGeneration || this.destroyRef.destroyed) return;
       const location = this.locationService.getLocationById(this.locationId);
       if (!location) {
+        this.location = null;
+        this.loadError = 'Location not found';
         this.toasts.showError('Location not found');
         return;
       }
@@ -246,19 +273,25 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
       this.location = location;
       this.locationForm.patchValue({
         name: location.name,
+        aliasesText: (location.aliases || []).join('\n'),
+        mapIcon: location.mapIcon || '',
+        destinationMapId: location.destinationMapId || '',
         type: location.type || '',
         books: location.books || [],
         thumbnail: location.thumbnail || '',
         content: location.content || '',
-      });
+      }, { emitEvent: false });
       this.locationForm.markAsPristine();
       await this.refreshThumbnailPreview();
     } catch (error) {
-      this.toasts.showError(`Failed to load location: ${error}`);
+      this.loadError = `Failed to load location: ${error}`;
+      this.toasts.showError(this.loadError);
       this.logger.error('Failed to load location:', error);
     } finally {
-      this.isLoading = false;
-      this.cdr.markForCheck();
+      if (generation === this.loadGeneration && !this.destroyRef.destroyed) {
+        this.isLoading = false;
+        this.cdr.markForCheck();
+      }
     }
   }
 
@@ -346,48 +379,114 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   private async navigateBackAfterSave(): Promise<void> {
+    if (this.embedded) {
+      if (this.locationId && this.isNewLocation) await this.router.navigate(['/location', this.locationId], { queryParamsHandling: 'preserve' });
+      return;
+    }
     if (window.history.length > 1) {
       this.angularLocation.back();
       return;
     }
-    await this.router.navigate(['/locations']);
+    await this.router.navigate(['/locations'], { queryParamsHandling: 'preserve' });
   }
 
-  async saveLocation(): Promise<void> {
-    if (this.locationForm.invalid) {
-      this.locationForm.markAllAsTouched();
-      return;
-    }
+  get aliases(): string[] {
+    return (this.locationForm.get('aliasesText')?.value || '').split('\n').filter(Boolean);
+  }
+  onAliasInput(event: Event): void { this.aliasDraft = (event.target as HTMLInputElement).value; }
+  onAliasKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Enter' || event.key === ',') { event.preventDefault(); this.addAlias(); }
+    else if (event.key === 'Backspace' && !this.aliasDraft && this.aliases.length) this.removeAlias(this.aliases.length - 1);
+  }
+  addAlias(): void {
+    const value = this.aliasDraft?.trim();
+    this.aliasDraft = '';
+    if (!value || value.toLowerCase() === this.locationForm.get('name')?.value.trim().toLowerCase() || this.aliases.some(alias => alias.toLowerCase() === value.toLowerCase())) return;
+    this.locationForm.patchValue({ aliasesText: [...this.aliases, value].join('\n') });
+    this.locationForm.markAsDirty();
+  }
+  removeAlias(index: number): void {
+    this.locationForm.patchValue({ aliasesText: this.aliases.filter((_, i) => i !== index).join('\n') });
+    this.locationForm.markAsDirty();
+  }
+  onFieldBlur(): void {
+    // Name edits commit on blur, so renaming never runs halfway through typing.
+    if (this.embedded) void this.flushAutoSave();
+  }
 
+  async flushAutoSave(updateRoute = true): Promise<boolean> {
+    this.addAlias();
+    if (this.deleting) return true;
+    if (!this.pendingAutoSave) {
+      this.pendingAutoSave = (async () => {
+        while (this.locationForm.dirty) {
+          if (this.locationForm.invalid || this.isLoading || this.loadError || this.projectService?.getCurrentProject()?.readOnly) {
+            this.locationForm.markAllAsTouched();
+            return;
+          }
+          const before = JSON.stringify(this.locationForm.getRawValue());
+          await this.saveLocation(true);
+          // Failure keeps the form dirty and stops automatic retries until another
+          // edit or Retry. New edits made during a write get their own next save.
+          if (this.saveError || (this.locationForm.dirty && before === JSON.stringify(this.locationForm.getRawValue()))) return;
+        }
+      })();
+    }
+    try { await this.pendingAutoSave; }
+    finally { this.pendingAutoSave = null; }
+    const saved = !this.locationForm.dirty;
+    if (saved && updateRoute && this.createdRoutePending && !this.router.getCurrentNavigation?.()) {
+      this.createdRoutePending = false;
+      await this.router.navigate(['/location', this.locationId], { replaceUrl: true, queryParamsHandling: 'preserve' });
+    }
+    return saved;
+  }
+
+  async saveLocation(automatic = false): Promise<void> {
+    if (this.isSaving || this.isLoading || this.loadError || this.deleting || this.projectService?.getCurrentProject()?.readOnly) return;
+    if (this.locationForm.invalid) { this.locationForm.markAllAsTouched(); return; }
     this.isSaving = true;
+    this.saveError = '';
+    const formData = this.locationForm.getRawValue();
+    const fingerprint = JSON.stringify(formData);
     try {
-      const formData = this.locationForm.getRawValue();
       const payload = {
         name: formData.name.trim(),
+        aliases: (formData.aliasesText || '').split('\n').map((alias: string) => alias.trim()).filter(Boolean),
+        mapIcon: formData.mapIcon || undefined,
+        destinationMapId: formData.destinationMapId || undefined,
         type: formData.type || undefined,
         books: formData.books || [],
         thumbnail: formData.thumbnail?.trim() || undefined,
         content: formData.content || '',
       };
-
-      if (this.isNewLocation) {
-        const created = await this.locationService.createLocation(payload);
-        this.notificationService.showSuccess(`Created ${created.name}`);
-        this.locationForm.markAsPristine();
-        await this.navigateBackAfterSave();
-      } else if (this.locationId) {
-        const updated = await this.linkRename.run(this.location!, payload.name, 'location', () => this.locationService.updateLocation(this.locationId!, payload));
-        if (!updated) {
-          throw new Error('Location not found');
-        }
-        this.location = updated;
-        this.locationId = updated.id;
-        this.locationForm.markAsPristine();
-        this.notificationService.showSuccess(`Saved ${updated.name}`);
+      const wasNew = this.isNewLocation;
+      const updated = wasNew
+        ? await this.locationService.createLocation(payload)
+        : await this.linkRename.run(this.location!, payload.name, 'location', () => this.locationService.updateLocation(this.locationId!, payload));
+      if (!updated) throw new Error('Location not found');
+      this.location = updated;
+      this.locationId = updated.id;
+      // Never overwrite typing that happened while the disk write or rename
+      // dialog was pending. Keep link rewrites for fields that weren't edited.
+      const current = this.locationForm.getRawValue();
+      const patch: Record<string, unknown> = {};
+      if (current.name === formData.name) patch['name'] = updated.name;
+      if (current.aliasesText === formData.aliasesText) patch['aliasesText'] = (updated.aliases || []).join('\n');
+      if (current.content === formData.content) patch['content'] = updated.content;
+      this.locationForm.patchValue(patch, { emitEvent: false });
+      if (fingerprint === JSON.stringify(current)) this.locationForm.markAsPristine();
+      this.isSaving = false;
+      if (automatic) {
+        if (wasNew) { this.isNewLocation = false; this.createdRoutePending = true; }
+      } else {
+        this.notificationService.showSuccess(`${wasNew ? 'Created' : 'Saved'} ${updated.name}`);
         await this.navigateBackAfterSave();
       }
     } catch (error) {
-      this.logger.error('Failed to save location:', error); // one toast; the banner is for load failures
+      this.saveError = error instanceof Error ? error.message : 'Could not save location';
+      this.logger.error('Failed to save location:', error);
+      if (!automatic) this.toasts.showError(this.saveError);
     } finally {
       this.isSaving = false;
       this.cdr.markForCheck();
@@ -417,14 +516,18 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
       return;
     }
 
+    this.deleting = true;
+    if (this.pendingAutoSave) await this.pendingAutoSave;
     try {
       await this.locationService.deleteLocation(this.location.id);
+      this.locationForm.markAsPristine();
       // Undo toast is shown by UndoDeleteService.register.
-      await this.router.navigate(['/locations']);
+      await this.router.navigate(['/locations'], { queryParamsHandling: 'preserve' });
     } catch (error) {
       this.logger.error('Failed to delete location:', error);
       // Staging/rollback toasts come from the service (TrashStagingError).
       // Service already prefixes "Failed to delete location:"; use its message once.
+      this.deleting = false;
       if (!isTrashStagingError(error)) {
         this.toasts.showError(error instanceof Error ? error.message : `Failed to delete location: ${error}`);
       }
@@ -433,7 +536,7 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
 
   /** Unsaved changes are confirmed once, by the route's leave guard (`canLeave`). */
   async cancel(): Promise<void> {
-    await this.router.navigate(['/locations']);
+    await this.router.navigate(['/locations'], { queryParamsHandling: 'preserve' });
   }
 
   getFieldError(field: string): string | null {
@@ -444,6 +547,7 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
     if (control.errors['required']) {
       return 'This field is required';
     }
+    if (control.errors['pattern']) return 'Enter a location name';
     if (control.errors['maxlength']) {
       return 'Value is too long';
     }
@@ -455,8 +559,12 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
    * window unable to take keyboard focus. A prompt already on screen is reused.
    */
   canLeave(discardAndClose = false): boolean | Promise<boolean> {
-    if (!discardAndClose && (this.isSaving || !this.imagePickerService.handleNavigationAway())) return false;
-    if (!this.locationForm.dirty) return true;
+    if (this.deleting) return true;
+    this.addAlias();
+    if (!discardAndClose && !this.imagePickerService.handleNavigationAway()) return false;
+    if (!this.locationForm.dirty && !this.isSaving) return true;
+    if (!discardAndClose && this.embedded && !this.locationForm.invalid && (!this.isSaving || this.pendingAutoSave)) return this.flushAutoSave(false);
+    if (!discardAndClose && this.isSaving) return false;
     this.leavePrompt ??= this.modalService.confirm(
       discardAndClose ? 'This project is read-only. Discard your unsaved changes and close?' : 'You have unsaved changes. Are you sure you want to leave?', 'Discard Changes',
       { confirmText: discardAndClose ? 'Discard and close' : 'Discard', cancelText: 'Keep Editing', danger: false }

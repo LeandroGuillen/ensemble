@@ -149,7 +149,7 @@ describe('MetadataManagementComponent pending autosave on leave', () => {
         { provide: UpdateService, useValue: { updateStatus$: of({ status: 'idle' }) } },
         { provide: ElectronService, useValue: { getVersion: () => Promise.resolve('0.0.0') } },
         { provide: ZoomService, useValue: { zoomLevel$: of(1), getZoomPercent: () => 100 } },
-        { provide: PreferencesService, useValue: { getPlanOutlineSide: () => 'left', setPlanOutlineSide: () => undefined } },
+        { provide: PreferencesService, useValue: { getLocationDetailsSide: () => 'right', setLocationDetailsSide: () => undefined, getPlanOutlineSide: () => 'left', setPlanOutlineSide: () => undefined } },
         { provide: ModalService, useValue: {} },
         { provide: LoggingService, useValue: logger },
         { provide: NotificationService, useValue: toasts },

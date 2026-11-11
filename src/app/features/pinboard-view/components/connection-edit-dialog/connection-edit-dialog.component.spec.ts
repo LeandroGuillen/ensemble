@@ -22,17 +22,17 @@ describe('Connection arrow preview', () => {
         await fixture.whenStable();
 
         const session = new CastEditorSessionService();
-        const board = { id: 'board', name: 'Cast', nodes: [], edges: [{ ...form, id: 'edge', type: '' }] };
+        const board = { id: 'board', name: 'Cast', nodes: ['a', 'b'].map(id => ({ id, name: id, position: { x: 0, y: 0 } })), edges: [{ ...form, id: 'edge', type: '' }] };
         session.begin({ id: 'cast', name: 'Cast', pinboardId: 'board', characterIds: ['a', 'b'] }, board);
         const project = { path: '/test', metadata: { lastSession: { lastPinboardId: 'board' } } };
         const projects = {
           currentProject$: new BehaviorSubject(project), getCurrentProject: () => project,
-          getCurrentPinboard: () => board,
+          getCurrentPinboard: () => board, getDefaultCharacterStyle: () => 'default',
         } as unknown as ProjectService;
         const service = TestBed.runInInjectionContext(() => new PinboardService(
           projects, {} as CharacterService, {} as CastService, session, {} as LoggingService,
         ));
-        const graph = await service.getVisJsDataWithThumbnails([]);
+        const graph = await service.getVisJsDataWithThumbnails([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }]);
         const ends = fixture.nativeElement.querySelectorAll('.preview-node-container');
         expect(!!ends[0].querySelector('.preview-arrow-indicator')).toBe(graph.edges[0].arrows.from.enabled);
         expect(!!ends[1].querySelector('.preview-arrow-indicator')).toBe(graph.edges[0].arrows.to.enabled);

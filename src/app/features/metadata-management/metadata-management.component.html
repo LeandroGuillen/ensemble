@@ -608,6 +608,13 @@
                 </select>
                 <small class="form-help">Where the chapter outline sits on a book's page. Saved on this computer.</small>
               </div>
+              <div class="form-group" [settingsSearchable]="['Location details side', 'locations', 'map', 'sidebar', 'left', 'right']">
+                <label for="locationDetailsSide">Location details side</label>
+                <select id="locationDetailsSide" class="form-control" [value]="locationDetailsSide" (change)="setLocationDetailsSide($any($event.target).value)">
+                  <option value="left">Left</option><option value="right">Right</option>
+                </select>
+                <small class="form-help">Where location details open beside the map. Saved on this computer.</small>
+              </div>
               @if (zoomService.isElectron()) {
                 <div class="form-group" [settingsSearchable]="['Interface zoom', 'zoom', 'scale', zoomPercent + '%']">
                   <label>Interface zoom</label>

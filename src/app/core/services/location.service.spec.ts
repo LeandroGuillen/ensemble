@@ -246,6 +246,37 @@ A foggy port.`,
     }
   });
 
+  it('persists destination maps across reloads and unrelated edits, and allows unlinking', async () => {
+    projectService.getCurrentProject.and.returnValue(createValidProject());
+    existingFiles.add('/test/project/locations');
+    const created = await service.createLocation({ ...createFormData(), destinationMapId: 'city-map' });
+    const markdown = electronService.writeFileAtomic.calls.mostRecent().args[1];
+    expect(markdown).toContain('destinationMapId: city-map');
+    electronService.readDirectoryRecursive.and.resolveTo({ success: true, files: [{ relativePath: created.relativePath, absolutePath: created.filePath }] });
+    electronService.readFile.and.resolveTo({ success: true, content: markdown });
+    await service.forceReloadLocations();
+    expect(service.getLocationById(created.id)?.destinationMapId).toBe('city-map');
+    expect((await service.updateLocation(created.id, { content: 'New notes' }))?.destinationMapId).toBe('city-map');
+    expect((await service.updateLocation(created.id, { destinationMapId: undefined }))?.destinationMapId).toBeUndefined();
+    expect(electronService.writeFileAtomic.calls.mostRecent().args[1]).not.toContain('destinationMapId:');
+  });
+
+  it('persists custom icons, preserves them on edits, and resets to the type default', async () => {
+    projectService.getCurrentProject.and.returnValue(createValidProject());
+    existingFiles.add('/test/project/locations');
+    const created = await service.createLocation({ ...createFormData(), type: 'building', mapIcon: 'crown' });
+    const markdown = electronService.writeFileAtomic.calls.mostRecent().args[1];
+    expect(markdown).toContain('mapIcon: crown');
+    electronService.readDirectoryRecursive.and.resolveTo({ success: true, files: [{ relativePath: created.relativePath, absolutePath: created.filePath }] });
+    electronService.readFile.and.resolveTo({ success: true, content: markdown });
+    await service.forceReloadLocations();
+    expect(service.getLocationById(created.id)?.mapIcon).toBe('crown');
+    const edited = await service.updateLocation(created.id, { content: 'New notes' });
+    expect(edited?.mapIcon).toBe('crown');
+    expect((await service.updateLocation(created.id, { mapIcon: undefined }))?.mapIcon).toBeUndefined();
+    expect(electronService.writeFileAtomic.calls.mostRecent().args[1]).not.toContain('mapIcon:');
+  });
+
   it('preserves type on unrelated edits and allows clearing it', async () => {
     projectService.getCurrentProject.and.returnValue(createValidProject());
     electronService.writeFileAtomic.and.returnValue(Promise.resolve({ success: true }));

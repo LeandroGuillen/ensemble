@@ -1,7 +1,9 @@
-import { Component, ElementRef, ViewChild, forwardRef } from '@angular/core';
+import { Component, ElementRef, Input, ViewChild, forwardRef } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { OverlayModule } from '@angular/cdk/overlay';
-import { LOCATION_TYPES, LocationType, getLocationPlaceholderIcon, getLocationTypeLabel, isLocationType } from '../../core/interfaces/location.interface';
+import { LOCATION_TYPES, LOCATION_MAP_ICONS, normalizeLocationMapIcon, LocationType, getLocationPlaceholderIcon, isLocationType } from '../../core/interfaces/location.interface';
+
+let nextSelectId = 0;
 
 @Component({
   selector: 'app-location-type-select',
@@ -12,24 +14,35 @@ import { LOCATION_TYPES, LocationType, getLocationPlaceholderIcon, getLocationTy
 })
 export class LocationTypeSelectComponent implements ControlValueAccessor {
   @ViewChild('trigger') trigger?: ElementRef<HTMLButtonElement>;
-  readonly options = [
-    { value: '' as const, label: 'Unspecified', icon: 'map' },
-    ...LOCATION_TYPES,
-  ];
-  readonly getIcon = getLocationPlaceholderIcon;
-  readonly getLabel = getLocationTypeLabel;
-  value: LocationType | '' = '';
+  @Input() mode: 'type' | 'icon' = 'type';
+  @Input() locationType: LocationType | '' | undefined;
+  readonly instanceId = `location-select-${++nextSelectId}`;
+  get controlId(): string { return this.mode === 'icon' ? 'mapIcon' : 'locationType'; }
+  get options() {
+    return this.mode === 'icon'
+      ? [{ value: '', label: 'Default for type' }, ...LOCATION_MAP_ICONS]
+      : [{ value: '', label: 'Unspecified' }, ...LOCATION_TYPES];
+  }
+  getIcon(value: string | undefined): string {
+    return this.mode === 'icon'
+      ? value ? `assets/ui-icons.svg#${value}` : getLocationPlaceholderIcon(this.locationType || undefined)
+      : getLocationPlaceholderIcon(isLocationType(value) ? value : undefined);
+  }
+  getLabel(value: string | undefined): string {
+    return this.options.find(option => option.value === (value || ''))?.label || '';
+  }
+  value = '';
   disabled = false;
   open = false;
   activeIndex = 0;
-  private onChange: (value: LocationType | '') => void = () => {};
+  private onChange: (value: string) => void = () => {};
   private onTouched: () => void = () => {};
 
   writeValue(value: unknown): void {
-    this.value = isLocationType(value) ? value : '';
+    this.value = this.mode === 'icon' ? normalizeLocationMapIcon(value) || '' : isLocationType(value) ? value : '';
   }
 
-  registerOnChange(fn: (value: LocationType | '') => void): void { this.onChange = fn; }
+  registerOnChange(fn: (value: string) => void): void { this.onChange = fn; }
   registerOnTouched(fn: () => void): void { this.onTouched = fn; }
   setDisabledState(disabled: boolean): void {
     this.disabled = disabled;
@@ -105,7 +118,7 @@ export class LocationTypeSelectComponent implements ControlValueAccessor {
   }
 
   scrollActiveOption(): void {
-    setTimeout(() => document.getElementById(`location-type-option-${this.activeIndex}`)
+    setTimeout(() => document.getElementById(`${this.instanceId}-option-${this.activeIndex}`)
       ?.scrollIntoView({ block: 'nearest' }));
   }
 }

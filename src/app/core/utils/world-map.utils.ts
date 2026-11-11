@@ -1,4 +1,5 @@
 import * as yaml from 'js-yaml';
+import { Location, LOCATION_TYPES } from '../interfaces/location.interface';
 import { parseMarkdown } from './markdown.utils';
 
 /**
@@ -29,13 +30,44 @@ export interface WorldMapPin {
   y: number;
 }
 
+export interface MapPoint { x: number; y: number; }
+
+export interface WorldMapArea {
+  locationId: string;
+  points: MapPoint[];
+  color: string;
+}
+
+export const DEFAULT_AREA_COLOR = '#6c8ebf';
+
 export interface WorldMapRoad {
   from: string;
   to: string;
   label?: string;
 }
 
+export interface WorldMapBackground {
+  /** Project-relative background image asset. Kept on disk for undo after replacement/removal. */
+  file: string;
+  name: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  opacity: number;
+  visible: boolean;
+}
+
+export interface MapMembership {
+  types: string[];
+  include: string[];
+  exclude: string[];
+}
+
 export interface WorldMap {
+  membership?: MapMembership;
+  background?: WorldMapBackground;
+  areas?: WorldMapArea[];
   pins: WorldMapPin[];
   roads: WorldMapRoad[];
   /** Markdown body below the frontmatter, preserved verbatim. */
@@ -112,12 +144,49 @@ export function parseWorldMap(text: string): WorldMapParseResult {
     roads.push(label ? { from, to, label } : { from, to });
   }
 
-  return { map: { pins, roads, notes: parsed.data.content } };
+  const areas: WorldMapArea[] = [];
+  if (fm['areas'] != null) {
+    if (!Array.isArray(fm['areas'])) return { map: emptyWorldMap(), error: 'Invalid map areas.' };
+    const areaIds = new Set<string>();
+    for (const raw of fm['areas']) {
+      const entry = raw as Record<string, unknown> | null;
+      const locationId = entry && toId(entry['location']);
+      const points = entry && normalizeAreaPoints(entry['points']);
+      const color = entry?.['color'] ?? DEFAULT_AREA_COLOR;
+      if (!locationId || !points || typeof color !== 'string' || !/^#[0-9a-f]{6}$/i.test(color) || areaIds.has(locationId)) {
+        return { map: emptyWorldMap(), error: 'Invalid map area. Areas need a location, a color and at least three distinct boundary points.' };
+      }
+      areaIds.add(locationId);
+      areas.push({ locationId, points, color });
+    }
+  }
+  const membership = parseMapMembership(fm['membership']);
+  if (fm['membership'] != null && !membership) {
+    return { map: emptyWorldMap(), error: 'Invalid map location rules.' };
+  }
+  const background = parseMapBackground(fm['background']);
+  if (fm['background'] != null && !background) {
+    return { map: emptyWorldMap(), error: 'Invalid map background metadata. Check its asset path and dimensions.' };
+  }
+  return { map: { pins, roads, ...(areas.length ? { areas } : {}), notes: parsed.data.content, ...(background ? { background } : {}), ...(membership ? { membership } : {}) } };
 }
 
 /** `names` adds a readable `name:` beside each id (ignored when reading). */
 export function serializeWorldMap(map: WorldMap, names?: ReadonlyMap<string, string>): string {
-  const frontmatter = {
+  const frontmatter = worldMapFrontmatter(map, names);
+  const body = yaml.dump(frontmatter, { indent: 2, lineWidth: -1, noRefs: true, sortKeys: false });
+  const notes = map.notes.trim();
+  return `---\n${body}---\n${notes ? `\n${notes}\n` : ''}`;
+}
+
+function worldMapFrontmatter(map: WorldMap, names?: ReadonlyMap<string, string>) {
+  return {
+    ...(map.background ? { background: map.background } : {}),
+    ...(map.membership ? { membership: map.membership } : {}),
+    ...(map.areas?.length ? { areas: map.areas.map(area => ({
+      location: area.locationId, ...(names?.get(area.locationId) ? { name: names.get(area.locationId) } : {}),
+      color: area.color, points: area.points,
+    })) } : {}),
     pins: map.pins.map((pin) => {
       const name = names?.get(pin.locationId);
       return name
@@ -128,34 +197,6 @@ export function serializeWorldMap(map: WorldMap, names?: ReadonlyMap<string, str
       road.label ? { from: road.from, to: road.to, label: road.label } : { from: road.from, to: road.to }
     ),
   };
-  const body = yaml.dump(frontmatter, { indent: 2, lineWidth: -1, noRefs: true, sortKeys: false });
-  const notes = map.notes.trim();
-  return `---\n${body}---\n${notes ? `\n${notes}\n` : ''}`;
-}
-
-export const AUTO_LAYOUT_SPACING = 160;
-
-/**
- * Places `locationIds` in a rough grid below whatever is already on the map
- * (or around the origin on an empty map). Returns only the new pins.
- */
-export function autoLayoutPins(existing: readonly WorldMapPin[], locationIds: readonly string[]): WorldMapPin[] {
-  if (locationIds.length === 0) return [];
-  const columns = Math.max(1, Math.ceil(Math.sqrt(locationIds.length)));
-  let originX = 0;
-  let originY = 0;
-  if (existing.length > 0) {
-    originX = Math.min(...existing.map((p) => p.x));
-    originY = Math.max(...existing.map((p) => p.y)) + AUTO_LAYOUT_SPACING;
-  } else {
-    originX = -((columns - 1) * AUTO_LAYOUT_SPACING) / 2;
-    originY = -((Math.ceil(locationIds.length / columns) - 1) * AUTO_LAYOUT_SPACING) / 2;
-  }
-  return locationIds.map((locationId, index) => ({
-    locationId,
-    x: Math.round(originX + (index % columns) * AUTO_LAYOUT_SPACING),
-    y: Math.round(originY + Math.floor(index / columns) * AUTO_LAYOUT_SPACING),
-  }));
 }
 
 /** Pure edits used by the service (each returns a new map). */
@@ -171,9 +212,25 @@ export function setPinPosition(map: WorldMap, locationId: string, x: number, y: 
   };
 }
 
+/** Convert a pinned area to an area-only location; roads need pin endpoints. */
+export function removeAreaPin(map: WorldMap, locationId: string): WorldMap {
+  if (!map.areas?.some(area => area.locationId === locationId)) return map;
+  return {
+    ...map,
+    pins: map.pins.filter(pin => pin.locationId !== locationId),
+    roads: map.roads.filter(road => road.from !== locationId && road.to !== locationId),
+  };
+}
+
 export function removePin(map: WorldMap, locationId: string): WorldMap {
   return {
     ...map,
+    ...(map.membership ? { membership: {
+      ...map.membership,
+      include: map.membership.include.filter(id => id !== locationId),
+      exclude: [...new Set([...map.membership.exclude, locationId])],
+    } } : {}),
+    ...(map.areas ? { areas: map.areas.filter(area => area.locationId !== locationId) } : {}),
     pins: map.pins.filter((p) => p.locationId !== locationId),
     roads: map.roads.filter((r) => r.from !== locationId && r.to !== locationId),
   };
@@ -200,4 +257,145 @@ export function setRoadLabel(map: WorldMap, from: string, to: string, label: str
       return trimmed ? { from: r.from, to: r.to, label: trimmed } : { from: r.from, to: r.to };
     }),
   };
+}
+
+/** Restrict disk reads to imported assets inside this project. */
+export function parseMapBackground(raw: unknown): WorldMapBackground | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const b = raw as Record<string, unknown>;
+  if (typeof b['file'] !== 'string' || !/^assets\/maps\/[a-zA-Z0-9_-]+\.(?:svg|png|jpe?g|webp|gif)$/.test(b['file'])) return undefined;
+  const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+  if (![b['x'], b['y'], b['width'], b['height']].every(finite)) return undefined;
+  const { x, y, width, height } = b as unknown as WorldMapBackground;
+  if (Math.abs(x) > COORD_LIMIT || Math.abs(y) > COORD_LIMIT || width <= 0 || height <= 0 || width > COORD_LIMIT || height > COORD_LIMIT) return undefined;
+  return {
+    file: b['file'], name: typeof b['name'] === 'string' ? b['name'].slice(0, 255) : 'Map image',
+    x, y, width, height,
+    opacity: finite(b['opacity']) ? Math.max(0, Math.min(1, b['opacity'])) : 1,
+    visible: b['visible'] !== false,
+  };
+}
+
+
+export interface NamedWorldMap {
+  id: string;
+  name: string;
+  map: WorldMap;
+}
+
+export interface WorldMapCollection {
+  maps: NamedWorldMap[];
+}
+
+export function emptyWorldMaps(): WorldMapCollection {
+  return { maps: [{ id: 'world', name: 'World map', map: emptyWorldMap() }] };
+}
+
+/** Legacy files become the first map in memory; loading never rewrites them. */
+export function parseWorldMaps(text: string): { collection: WorldMapCollection; error?: string } {
+  const fail = (error: string) => ({ collection: emptyWorldMaps(), error });
+  const parsed = parseMarkdown<Record<string, unknown>>(text);
+  if (!text.trim()) return { collection: emptyWorldMaps() };
+  if (!parsed.success || !parsed.data) return fail(parsed.error || 'Could not read the maps file.');
+  const fm = parsed.data.frontmatter && typeof parsed.data.frontmatter === 'object' ? parsed.data.frontmatter : {};
+  if (!('maps' in fm) && !('version' in fm)) {
+    const legacy = parseWorldMap(text);
+    return legacy.error ? fail(legacy.error) : { collection: { maps: [{ id: 'world', name: 'World map', map: legacy.map }] } };
+  }
+  if (fm['version'] !== 2 || !Array.isArray(fm['maps']) || fm['maps'].length === 0) {
+    return fail('Unsupported or invalid map collection. Expected version 2 with at least one map.');
+  }
+  const ids = new Set<string>();
+  const names = new Set<string>();
+  const maps: NamedWorldMap[] = [];
+  for (const raw of fm['maps']) {
+    if (!raw || typeof raw !== 'object') return fail('Invalid map entry.');
+    const entry = raw as Record<string, unknown>;
+    const id = entry['id'];
+    const name = typeof entry['name'] === 'string' ? entry['name'].trim() : '';
+    if (typeof id !== 'string' || !/^[a-zA-Z0-9_-]{1,100}$/.test(id) || ids.has(id) || !name || name.length > 120 || names.has(name.toLowerCase())) {
+      return fail('Each map needs a unique ID and name (up to 120 characters).');
+    }
+    if (!Array.isArray(entry['pins']) || !Array.isArray(entry['roads'])) return fail(`Invalid pins or roads in map "${name}".`);
+    ids.add(id);
+    names.add(name.toLowerCase());
+    const notes = maps.length === 0 ? parsed.data.content : typeof entry['notes'] === 'string' ? entry['notes'] : '';
+    const result = parseWorldMap(`---\n${yaml.dump({ membership: entry['membership'], background: entry['background'], areas: entry['areas'], pins: entry['pins'], roads: entry['roads'] })}---\n${notes}`);
+    if (result.error) return fail(`${name}: ${result.error}`);
+    maps.push({ id, name, map: result.map });
+  }
+  return { collection: { maps } };
+}
+
+export function serializeWorldMaps(collection: WorldMapCollection, names?: ReadonlyMap<string, string>): string {
+  const first = collection.maps[0];
+  // Preserve the original format until the user actually creates or renames a map.
+  if (collection.maps.length === 1 && first.id === 'world' && first.name === 'World map') return serializeWorldMap(first.map, names);
+  const fm = { version: 2, maps: collection.maps.map((entry, index) => ({
+    id: entry.id, name: entry.name, ...worldMapFrontmatter(entry.map, names),
+    ...(index > 0 && entry.map.notes ? { notes: entry.map.notes } : {}),
+  })) };
+  const body = yaml.dump(fm, { indent: 2, lineWidth: -1, noRefs: true, sortKeys: false });
+  return `---\n${body}---\n${first.map.notes.trim() ? `\n${first.map.notes.trim()}\n` : ''}`;
+}
+
+function parseMapMembership(raw: unknown): MapMembership | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const value = raw as Record<string, unknown>;
+  const strings = (v: unknown): v is string[] => Array.isArray(v) && v.every(id => typeof id === 'string' && id.trim().length > 0);
+  if (!strings(value['types']) || !strings(value['include']) || !strings(value['exclude'])) return undefined;
+  const validTypes = new Set<string>([...LOCATION_TYPES.map(type => type.value), 'unspecified']);
+  if (!value['types'].every(type => validTypes.has(type))) return undefined;
+  return { types: [...new Set(value['types'])], include: [...new Set(value['include'])], exclude: [...new Set(value['exclude'])] };
+}
+
+export function mapMembership(map: WorldMap): MapMembership {
+  return map.membership || { types: [], include: [...new Set([...map.pins.map(pin => pin.locationId), ...(map.areas || []).map(area => area.locationId)])], exclude: [] };
+}
+
+export function isMapMember(map: WorldMap, location: Pick<Location, 'id' | 'type'>): boolean {
+  const rules = mapMembership(map);
+  return !rules.exclude.includes(location.id) && (rules.types.includes(location.type || 'unspecified') || rules.include.includes(location.id));
+}
+
+/** Save rules without guessing geographical positions. Retained pins never move. */
+export function setMapRules(map: WorldMap, membership: MapMembership, locations: readonly Pick<Location, 'id' | 'type'>[]): WorldMap {
+  const next = { ...map, membership };
+  const removed = new Set(locations.filter(location => !isMapMember(next, location)).map(location => location.id));
+  return { ...next, ...(map.areas ? { areas: map.areas.filter(area => !removed.has(area.locationId)) } : {}), pins: map.pins.filter(pin => !removed.has(pin.locationId)), roads: map.roads.filter(road => !removed.has(road.from) && !removed.has(road.to)) };
+}
+
+export function includeMapLocation(map: WorldMap, id: string): WorldMap {
+  const rules = mapMembership(map);
+  return { ...map, membership: { ...rules, include: [...new Set([...rules.include, id])], exclude: rules.exclude.filter(value => value !== id) } };
+}
+
+/** Normalize to the same bounded canvas units as pins; reject degenerate boundaries. */
+export function normalizeAreaPoints(raw: unknown): MapPoint[] | null {
+  if (!Array.isArray(raw) || raw.length < 3 || raw.length > 2000) return null;
+  const points: MapPoint[] = [];
+  for (const point of raw) {
+    if (!point || typeof point !== 'object') return null;
+    const x = toCoord(point.x), y = toCoord(point.y);
+    if (x === null || y === null) return null;
+    points.push({ x, y });
+  }
+  if (new Set(points.map(p => `${p.x},${p.y}`)).size !== points.length) return null;
+  const twiceArea = points.reduce((sum, p, i) => {
+    const q = points[(i + 1) % points.length];
+    return sum + p.x * q.y - q.x * p.y;
+  }, 0);
+  return Math.abs(twiceArea) > 0 ? points : null;
+}
+
+export function setLocationArea(map: WorldMap, locationId: string, points: MapPoint[], color = DEFAULT_AREA_COLOR): WorldMap {
+  const boundary = normalizeAreaPoints(points);
+  if (!locationId || !boundary || !/^#[0-9a-f]{6}$/i.test(color)) return map;
+  const next = includeMapLocation(map, locationId);
+  return { ...next, areas: [...(map.areas || []).filter(area => area.locationId !== locationId), { locationId, points: boundary, color }] };
+}
+
+/** Removing just the overlay keeps membership, pins and roads. */
+export function removeLocationArea(map: WorldMap, locationId: string): WorldMap {
+  return { ...map, areas: (map.areas || []).filter(area => area.locationId !== locationId) };
 }

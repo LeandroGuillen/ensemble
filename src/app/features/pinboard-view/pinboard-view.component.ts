@@ -413,12 +413,11 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
     this.characters$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(async (characters) => {
-        const hadNoCharacters = this.characters.length === 0;
         this.characters = characters;
         await this.pinboardService.ensurePinsForCharacters(characters);
         await this.loadThumbnailDataUrls(characters);
 
-        if (hadNoCharacters && characters.length > 0 && this.networkService.getNetwork()) {
+        if (this.networkService.getNetwork()) {
           await this.refreshPinboardData();
         }
       });

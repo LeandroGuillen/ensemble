@@ -1,191 +1,92 @@
 <div class="location-detail">
-  <app-page-header [title]="isNewLocation ? 'New Location' : 'Edit Location'">
-    <a pageHeaderPrefix class="header-back-link" routerLink="/locations" aria-label="Back to Locations">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
-      <span>Locations</span>
-    </a>
-    @if (locationForm.dirty) {
-      <span class="dirty-pill" title="You have unsaved changes">● Unsaved</span>
-    }
-    <button
-      type="button"
-      class="btn btn-ghost"
-      (click)="cancel()"
-      [disabled]="isSaving"
-      title="Cancel (ESC)"
-    >
-      Cancel
-      <kbd class="shortcut-hint">ESC</kbd>
-    </button>
-    <button appProjectReadOnly
-      type="button"
-      class="btn btn-primary"
-      (click)="saveLocation()"
-      [disabled]="isSaving || locationForm.invalid"
-      title="Save (Ctrl+Enter)"
-    >
-      @if (isSaving) {
-        <span class="spinner spinner-sm"></span>
-      }
-      {{ isSaving ? 'Saving…' : isNewLocation ? 'Create Location' : 'Save Changes' }}
-      @if (!isSaving) {
-        <kbd class="shortcut-hint">⌃↵</kbd>
-      }
-    </button>
-  </app-page-header>
-
   <div class="location-detail-content">
-    <div class="location-detail-inner">
-      @if (isLoading) {
-        <div class="loading-state">
-          <div class="spinner spinner-lg"></div>
-          <p>Loading location...</p>
+    @if (isLoading) { <p class="quiet-status">Loading location…</p> }
+    @if (loadError) { <p class="field-error" role="alert">{{ loadError }}</p> }
+    @if (!isLoading && !loadError) {
+      <form [formGroup]="locationForm" (ngSubmit)="$event.preventDefault()" (focusout)="onFieldBlur()" class="location-form">
+        <header class="location-identity">
+          <div class="identity-text">
+            <input appProjectReadOnly #nameInput id="locationName" class="location-title" (keydown.enter)="$event.preventDefault(); nameInput.blur()" formControlName="name" placeholder="New location" aria-label="Location name" [class.error]="getFieldError('name')" />
+            @if (getFieldError('name')) { <p class="field-error">{{ getFieldError('name') }}</p> }
+            <div class="alias-editor">
+              @for (alias of aliases; track $index) {
+                <span class="alias-chip">{{ alias }}<button appProjectReadOnly type="button" class="alias-chip-remove" (click)="removeAlias($index)" [attr.aria-label]="'Remove alternative name ' + alias">×</button></span>
+              }
+              <input appProjectReadOnly class="alias-input" [value]="aliasDraft" (input)="onAliasInput($event)" (keydown)="onAliasKeydown($event)" (blur)="addAlias()" placeholder="+ a.k.a." aria-label="Add an alternative name (a.k.a.)" title="Press Enter or comma to add" />
+            </div>
+            @if (!thumbnailPreviewUrl) {
+              <button appProjectReadOnly type="button" class="text-action add-image" (click)="openImagePicker()">+ Image</button>
+            }
+          </div>
+          @if (thumbnailPreviewUrl) {
+            <button appProjectReadOnly type="button" class="location-image" (click)="openImagePicker()" title="Change image"><img [src]="thumbnailPreviewUrl" [alt]="locationForm.get('name')?.value || 'Location'" /></button>
+          }
+          <details #actions class="location-actions">
+            <summary aria-label="Location actions" title="Location actions">•••</summary>
+            <div class="actions-menu">
+              @if (thumbnailPreviewUrl) { <button appProjectReadOnly type="button" (click)="removeThumbnail(); actions.open = false">Remove image</button> }
+              @if (location) {
+                <button appProjectReadOnly type="button" [disabled]="mapReadOnly" (click)="placementChange.emit(!onMap); actions.open = false">{{ onMap ? 'Move off map' : 'Place on map' }}<small>{{ onMap ? 'Keep the location; clear its position and roads.' : 'Choose this location’s position by clicking the map.' }}</small></button>
+                <button appProjectReadOnly type="button" class="delete-action" (click)="actions.open = false; deleteLocation()" [disabled]="isSaving">Delete location…<small>Move the location to Trash. Undo is available.</small></button>
+              }
+            </div>
+          </details>
+        </header>
+        <div class="save-status" role="status" aria-live="polite">
+          @if (saveError) { <span class="field-error">{{ saveError }}</span> <button type="button" class="text-action" (click)="flushAutoSave()">Retry</button> }
+          @else if (isSaving) { Saving… }
+          @else if (locationForm.dirty) { Unsaved changes }
+          @else if (location) { Saved automatically }
+          @else { Add a name to create a location }
         </div>
-      }
 
-      @if (!isLoading) {
-        <form [formGroup]="locationForm" (ngSubmit)="saveLocation()" class="location-form">
-
-          @if (newLocationFromLink) {
-            <p class="link-warning" role="status">The linked location “{{ newLocationFromLink }}” does not exist yet. Its name has been filled in below. Choose Create Location to save it.</p>
-          }
-
-          <div class="form-section hero-section">
-            <div class="hero-layout">
-              <div class="thumbnail-panel">
-                <label class="form-label">Thumbnail</label>
-                <div appProjectReadOnly
-                  class="thumbnail-clickable-area"
-                  (click)="openImagePicker()"
-                  [class.has-thumbnail]="!!thumbnailPreviewUrl"
-                >
-                  @if (thumbnailPreviewUrl) {
-                    <div class="thumbnail-preview">
-                      <img [src]="thumbnailPreviewUrl" alt="Location thumbnail" />
-                      <div class="thumbnail-overlay"><span>Click to change</span></div>
-                      <button appProjectReadOnly
-                        type="button"
-                        class="thumbnail-remove-btn"
-                        title="Remove thumbnail"
-                        aria-label="Remove thumbnail"
-                        (click)="removeThumbnail(); $event.stopPropagation()"
-                      >
-                        <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg>
-                      </button>
-                    </div>
-                  } @else {
-                    <div class="thumbnail-placeholder">
-                      <svg class="ui-icon placeholder-icon" aria-hidden="true"><use [attr.href]="placeholderIcon" /></svg>
-                      <span class="placeholder-text">Click to add thumbnail</span>
-                    </div>
-                  }
-                </div>
-              </div>
-
-              <div class="hero-fields">
-                <div class="form-group">
-                  <label for="locationName" class="form-label">Name *</label>
-                  <input appProjectReadOnly
-                    #nameInput
-                    id="locationName"
-                    type="text"
-                    formControlName="name"
-                    class="form-control"
-                    placeholder="e.g., Grey Harbor, The Whispering Woods"
-                    [class.error]="getFieldError('name')"
-                  />
-                  @if (getFieldError('name')) {
-                    <div class="field-error">{{ getFieldError('name') }}</div>
-                  }
-                </div>
-
-                <div class="form-group">
-                  <label for="locationType" class="form-label">Type</label>
-                  <app-location-type-select appProjectReadOnly formControlName="type"></app-location-type-select>
-                  <p class="field-hint" id="locationTypeHint">
-                    @if (selectedTypeInfo; as type) {
-                      {{ type.description }} Examples: {{ type.examples }}
-                    } @else {
-                      Choose the kind of place this is.
-                    }
-                  </p>
-                  <details class="type-guide">
-                    <summary>Location types and examples</summary>
-                    <dl>
-                      @for (type of locationTypes; track type.value) {
-                        <dt>{{ type.label }}</dt>
-                        <dd>{{ type.description }} Examples: {{ type.examples }}</dd>
-                      }
-                    </dl>
-                  </details>
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label">Books</label>
-                  @if (bookSelectItems.length > 0) {
-                    <app-multi-select-buttons appProjectReadOnly
-                      [items]="bookSelectItems"
-                      [selectedIds]="locationForm.get('books')?.value || []"
-                      (selectionChange)="onBooksChange($event)"
-                    ></app-multi-select-buttons>
-                  } @else {
-                    <span class="meta-group-hint">None defined</span>
-                  }
-                </div>
-              </div>
-            </div>
+        <div class="location-properties">
+          <div class="property">
+            <div class="field-heading"><label>Type</label><button type="button" class="info-button type-info" popovertarget="location-type-help" aria-label="Location types and examples">i</button></div>
+            <span id="locationTypeHint" class="sr-only">Choose a location type. Use the information button for examples.</span>
+            <app-location-type-select appProjectReadOnly formControlName="type"></app-location-type-select>
           </div>
-
-          <div class="form-section">
-            <div class="description-heading">
-              <h2 class="section-title">Description</h2>
-            </div>
-            <div class="form-group">
-              <p class="field-hint" id="locationLinkHint">Type [[ to link a location, character, or House ([[Name]] or [[Name|display text]]); file paths such as [[locations/_grey-harbor.md]] also work. Ctrl+click a link to open it. Shortcuts: Ctrl+B bold, Ctrl+I italic, Ctrl+K link, Ctrl+F find.</p>
-              <app-markdown-editor appProjectReadOnly
-                id="locationContent"
-                class="description-editor"
-                formControlName="content"
-                placeholder="Describe this place…"
-                [linkResolver]="linkResolver"
-                [linkSuggestions]="linkSuggestions"
-                (linkOpen)="openDescriptionLink($event)"
-                aria-describedby="locationLinkHint"
-              ></app-markdown-editor>
-            </div>
+          <div class="property">
+            <label for="mapIcon">Icon</label>
+            <app-location-type-select appProjectReadOnly mode="icon" [locationType]="locationForm.get('type')?.value" formControlName="mapIcon"></app-location-type-select>
           </div>
-
-          @if (location) {
-            <div class="form-section">
-              <app-mentioned-in
-                [targetId]="location.id"
-                [targetName]="location.name"
-              ></app-mentioned-in>
-            </div>
-          }
-
-          @if (!isNewLocation) {
-            <div class="danger-zone">
-              <button appProjectReadOnly
-                type="button"
-                class="danger-link"
-                (click)="deleteLocation()"
-                [disabled]="isSaving"
-                title="Delete location"
-              >
-                Delete this location
-              </button>
-            </div>
-          }
-        </form>
-      }
-    </div>
+        </div>
+        @if (embedded) {
+          <section class="destination-map-field">
+            <label for="destinationMap">Destination map</label>
+            <select appProjectReadOnly id="destinationMap" class="form-control" formControlName="destinationMapId">
+              <option value="">None</option>
+              @for (map of destinationMaps; track map.id) { <option [value]="map.id">{{ map.name }}</option> }
+              @if (locationForm.get('destinationMapId')?.value && !destinationMap) { <option [value]="locationForm.get('destinationMapId')?.value">Unavailable map</option> }
+            </select>
+            @if (destinationMap; as map) {
+              <button type="button" class="btn btn-sm btn-secondary" [disabled]="map.id === activeMapId || isSaving" (click)="openDestination()"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#map" /></svg>Open {{ map.name }}</button>
+            }
+            <small>Double-click this location’s icon or area to open its destination map.</small>
+          </section>
+        }
+        @if (bookSelectItems.length) {
+          <section class="books-field"><label>Books</label><app-multi-select-buttons appProjectReadOnly [items]="bookSelectItems" [selectedIds]="locationForm.get('books')?.value || []" (selectionChange)="onBooksChange($event)"></app-multi-select-buttons></section>
+        }
+        <section class="description-field">
+          <div class="field-heading"><label for="locationContent">Description</label><button type="button" class="info-button description-info" popovertarget="location-description-help" aria-label="Description formatting and links">i</button></div>
+          <app-markdown-editor appProjectReadOnly id="locationContent" class="description-editor" formControlName="content" placeholder="Describe this place…" [linkResolver]="linkResolver" [linkSuggestions]="linkSuggestions" (linkOpen)="openDescriptionLink($event)"></app-markdown-editor>
+        </section>
+        @for (record of location ? [location] : []; track record.id) {
+          <app-mentioned-in [targetId]="record.id" [targetName]="record.name" [targetAliases]="record.aliases || []"></app-mentioned-in>
+        }
+      </form>
+    }
   </div>
 </div>
 
-<app-image-picker-dialog
-  [visible]="showImagePickerDialog"
-  (visibleChange)="showImagePickerDialog = $event"
-  (imageSelected)="onImageSelected($event)"
-  (closed)="closeImagePicker()"
-></app-image-picker-dialog>
+<div id="location-type-help" popover class="location-help type-help">
+  <h3>Location types and examples</h3>
+  <dl>@for (type of locationTypes; track type.value) { <dt>{{ type.label }}</dt><dd>{{ type.description }} {{ type.examples }}</dd> }</dl>
+</div>
+<div id="location-description-help" popover class="location-help description-help">
+  <h3>Description</h3>
+  <p>Type [[ to link a location, character, or House. Use [[Name|display text]] for a different label, or a path such as [[locations/_grey-harbor.md]]. Ctrl+click a link to open it.</p>
+  <p>Ctrl+B bold · Ctrl+I italic · Ctrl+K link · Ctrl+F find</p>
+</div>
+<app-image-picker-dialog [visible]="showImagePickerDialog" (visibleChange)="showImagePickerDialog = $event" (imageSelected)="onImageSelected($event)" (closed)="closeImagePicker()"></app-image-picker-dialog>

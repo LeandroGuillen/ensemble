@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, Input, DestroyRef, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { PageHeaderComponent } from '../../shared/page-header/page-header.component';
 import { ProjectHealthService } from '../../core/services/project-health.service';
@@ -9,9 +9,13 @@ import { HealthFinding } from '../../core/utils/project-health.utils';
   selector: 'app-project-health',
   imports: [RouterLink, PageHeaderComponent],
   template: `
+    @if (embedded) {
+      <button class="btn btn-secondary" (click)="refresh()" [disabled]="busy">Run checks</button>
+    } @else {
     <app-page-header title="Project health">
       <button class="btn btn-secondary" (click)="refresh()" [disabled]="busy">Run checks</button>
     </app-page-header>
+    }
     <main [attr.aria-busy]="busy">
       <p>Check wiki links, names and aliases, references, and portraits for the selected character style.</p>
       <label>Portrait style
@@ -64,6 +68,7 @@ import { HealthFinding } from '../../core/utils/project-health.utils';
   `],
 })
 export class ProjectHealthComponent implements OnInit {
+  @Input() embedded = false;
   private readonly health = inject(ProjectHealthService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);

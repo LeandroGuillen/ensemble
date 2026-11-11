@@ -1,3 +1,4 @@
+import { normalizeLocationMapIcon, normalizeDestinationMapId } from '../interfaces/location.interface';
 import { normalizeAliases } from '../utils/character-alias.utils';
 import { Injectable } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -261,6 +262,8 @@ export class LocationService {
         name: data.name,
         aliases: normalizeAliases(data.aliases),
         type: isLocationType(data.type) ? data.type : undefined,
+        mapIcon: normalizeLocationMapIcon(data.mapIcon),
+        destinationMapId: normalizeDestinationMapId(data.destinationMapId),
         books,
         thumbnail: data.thumbnail?.trim() || undefined,
         content: data.content || '',
@@ -338,6 +341,8 @@ export class LocationService {
         name: data.name ?? existing.name,
         aliases: 'aliases' in data ? normalizeAliases(data.aliases) : existing.aliases,
         type: 'type' in data ? (isLocationType(data.type) ? data.type : undefined) : existing.type,
+        mapIcon: 'mapIcon' in data ? normalizeLocationMapIcon(data.mapIcon) : existing.mapIcon,
+        destinationMapId: 'destinationMapId' in data ? normalizeDestinationMapId(data.destinationMapId) : existing.destinationMapId,
         books: data.books ?? existing.books,
         thumbnail: nextThumbnail,
         content: data.content !== undefined ? data.content : existing.content,
@@ -584,6 +589,8 @@ export class LocationService {
         name: frontmatter.name,
         aliases: normalizeAliases(frontmatter.aliases),
         type: isLocationType(frontmatter.type) ? frontmatter.type : undefined,
+        mapIcon: normalizeLocationMapIcon(frontmatter.mapIcon),
+        destinationMapId: normalizeDestinationMapId(frontmatter.destinationMapId),
         books: frontmatter.books || [],
         thumbnail: thumbnail || undefined,
         content: content || '',
@@ -656,6 +663,8 @@ export class LocationService {
         id: location.id,
         name: location.name,
         ...(location.type ? { type: location.type } : {}),
+        ...(location.mapIcon ? { mapIcon: location.mapIcon } : {}),
+        ...(location.destinationMapId ? { destinationMapId: location.destinationMapId } : {}),
         books: location.books,
         ...(location.thumbnail ? { thumbnail: location.thumbnail } : {}),
         created: location.created.toISOString(),

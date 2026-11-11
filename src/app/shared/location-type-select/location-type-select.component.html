@@ -1,8 +1,8 @@
-<button #trigger id="locationType" type="button" class="form-control type-trigger"
+<button #trigger [id]="controlId" type="button" class="form-control type-trigger"
   cdkOverlayOrigin #origin="cdkOverlayOrigin"
-  role="combobox" aria-label="Type" aria-haspopup="listbox" aria-describedby="locationTypeHint"
-  [attr.aria-expanded]="open" [attr.aria-controls]="open ? 'location-type-options' : null"
-  [attr.aria-activedescendant]="open ? 'location-type-option-' + activeIndex : null"
+  role="combobox" [attr.aria-label]="mode === 'icon' ? 'Icon' : 'Type'" aria-haspopup="listbox" [attr.aria-describedby]="mode === 'type' ? 'locationTypeHint' : null"
+  [attr.aria-expanded]="open" [attr.aria-controls]="open ? instanceId + '-options' : null"
+  [attr.aria-activedescendant]="open ? instanceId + '-option-' + activeIndex : null"
   [disabled]="disabled" (click)="toggle()" (keydown)="onKeydown($event)" (blur)="onBlur()">
   <svg class="ui-icon" aria-hidden="true"><use [attr.href]="getIcon(value || undefined)" /></svg>
   <span>{{ getLabel(value || undefined) }}</span>
@@ -13,9 +13,9 @@
   [cdkConnectedOverlayWidth]="trigger.getBoundingClientRect().width"
   [cdkConnectedOverlayPush]="true" [cdkConnectedOverlayViewportMargin]="8"
   (overlayOutsideClick)="close()" (detach)="close()" (attach)="scrollActiveOption()">
-  <div id="location-type-options" class="type-options" role="listbox" aria-label="Location types">
+  <div [id]="instanceId + '-options'" class="type-options" role="listbox" [attr.aria-label]="mode === 'icon' ? 'Location icons' : 'Location types'">
     @for (option of options; track option.value; let i = $index) {
-      <div class="type-option" role="option" [id]="'location-type-option-' + i"
+      <div class="type-option" role="option" [id]="instanceId + '-option-' + i"
         [attr.aria-selected]="value === option.value" [class.active]="activeIndex === i"
         [class.selected]="value === option.value" (mouseenter)="activeIndex = i"
         (mousedown)="$event.preventDefault()" (click)="select(i)">

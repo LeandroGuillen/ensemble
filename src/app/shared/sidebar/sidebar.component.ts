@@ -75,20 +75,24 @@ export class SidebarComponent implements OnInit {
         { icon: 'users', label: 'Characters', route: '/characters', title: 'Characters' },
         { icon: 'lightbulb', label: 'Concepts', route: '/concepts', title: 'Concepts' },
         { icon: 'type', label: 'Names', route: '/names', title: 'Names' },
-        { icon: 'theater', label: 'Casts', route: '/casts', title: 'Casts' },
         { icon: 'sparkles', label: 'Prompts', route: '/prompts', title: 'Prompts' }
       ]
     },
     {
-      id: 'references',
-      label: 'World & story',
+      id: 'world',
+      label: 'World',
+      items: [
+        { icon: 'shield', label: 'Houses', route: '/houses', title: 'Houses' },
+        { icon: 'map', label: 'Map', route: '/locations', title: 'Map' },
+        { icon: 'timeline', label: 'Timeline', route: '/timeline', title: 'Timeline' }
+      ]
+    },
+    {
+      id: 'story',
+      label: 'Story',
       items: [
         { icon: 'book', label: 'Books', route: '/library', title: 'Books' },
-        { icon: 'shield', label: 'Houses', route: '/houses', title: 'Houses' },
-        { icon: 'map-pin', label: 'Locations', route: '/locations', title: 'Locations' },
-        { icon: 'map', label: 'World map', route: '/world-map', title: 'World map' },
-        { icon: 'shield', label: 'Project health', route: '/project-health', title: 'Project health' },
-        { icon: 'timeline', label: 'Timeline', route: '/timeline', title: 'Timeline' },
+        { icon: 'theater', label: 'Casts', route: '/casts', title: 'Casts' },
         { icon: 'plot-board', label: 'Plot Board', route: '/plot-board', title: 'Plot Board' }
       ]
     }
@@ -162,7 +166,7 @@ export class SidebarComponent implements OnInit {
     '/characters': ['/characters', '/character/', '/character?', '/character-draft'],
     '/library': ['/library', '/book/'],
     '/houses': ['/houses', '/house/', '/house?'],
-    '/locations': ['/locations', '/location/', '/location?'],
+    '/locations': ['/locations', '/location/', '/location?', '/world-map'],
     '/casts': ['/casts', '/cast/'],
   };
 

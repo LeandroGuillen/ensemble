@@ -70,8 +70,10 @@ The toolbar wraps below the page title as space becomes limited.
 
 ## World map
 
-The World map page places locations as pins on a blank canvas. It is stored in
-`world-map.md` at the project root, created the first time you pin something:
+The Map page contains named maps, each with its own background, pins and roads.
+They are stored in `world-map.md` at the project root. Existing single-map files
+open as **World map** and retain the original format until you create another map
+or rename the first one. The original format is:
 
 ```markdown
 ---
@@ -96,6 +98,83 @@ location that is restored with Undo returns to the same spot. Roads join two
 pins; one pair has at most one road, in either direction. The `'y'` quotes come
 from the YAML writer; `y:` without quotes reads the same. If the file cannot be
 parsed, the map opens read-only and leaves the file untouched.
+
+Creating or renaming a map writes a version 2 collection:
+
+```markdown
+---
+version: 2
+maps:
+  - id: world
+    name: The Continent
+    pins:
+      - location: m0k3r5abc123
+        name: Grey Harbor
+        x: 120
+        y: -40
+    roads: []
+  - id: capital
+    name: Capital City
+    membership:
+      types: [district, building]
+      include: []
+      exclude: []
+    background:
+      file: assets/maps/capital.svg
+      name: Capital.svg
+      x: -500
+      y: -300
+      width: 1000
+      height: 600
+      opacity: 1
+      visible: true
+    pins: []
+    roads: []
+---
+
+Notes for the first map remain below the frontmatter.
+```
+
+Map IDs and names must be unique. Subsequent maps can store `notes` inside their
+entry. A location ID may appear on several maps with different coordinates.
+The optional `membership` rule includes current and future Locations of the chosen
+`types`. Its `include` and `exclude` lists hold individual location IDs; exclusions
+take priority. `unspecified` matches Locations without a type. Without a membership
+rule, existing pin IDs define the map's membership, preserving older files.
+
+Membership and geographic position are separate. Newly included locations wait in
+the map's **to position** list; their positions are saved only after the user clicks
+their spot on the map. Changing rules never generates coordinates or rearranges
+retained pins. Rule changes are previewed until **Apply changes**. Removing a
+placement explicitly excludes that location from automatic membership and removes
+only that map's connected roads; its Location file and placements elsewhere remain
+intact. Missing location IDs are
+retained to support undoing Location deletes.
+
+SVG, PNG, JPEG, WebP and GIF backgrounds are copied unchanged into `assets/maps/`.
+Raster uploads are limited to 25 MB and validated using their file signatures and
+image decoder; SVGs are limited to 10 MB, must be self-contained, and need a valid
+`viewBox` or explicit dimensions. Raster dimensions determine the initial frame,
+with aspect ratio preserved. Each map stores its own frame, opacity and visibility. Assets remain available for
+Undo when a background is replaced or detached. Zoom limits are relative to fitting
+the background into the canvas: 0.8× to 64× that fitted scale. Resizing the canvas
+revalidates the camera without changing stored pin coordinates. Panning keeps at
+least half the background visible along each axis. When the image is larger than
+the viewport, the minimum visible extent is half the viewport instead, allowing
+navigation to every part of a zoomed map. Right-click a pin
+(or use Shift+F10) for details, centering, repositioning, starting a road, or removing
+its placement from this map. Read-only projects allow navigation but disable editing
+actions in this menu.
+
+Duplicating a map assigns a new ID and a unique “copy” name and selects the copy.
+Pins, roads, notes, background settings and location membership rules are copied
+independently; both maps may reference the same immutable background asset. Replacing
+a background on either map imports a new asset and does not alter the other map.
+
+Map creation, duplication, renaming, placement, and background changes support
+session Undo/Redo. Switching maps is a local
+preference and does not write the project. Unsupported versions or invalid map
+identities make the file read-only instead of overwriting it.
 
 ## Prompts
 
