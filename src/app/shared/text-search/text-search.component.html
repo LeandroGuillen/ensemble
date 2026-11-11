@@ -1,0 +1,28 @@
+@if (isOpen) {
+  <app-modal-frame title="Search project text" dialogClass="text-search-dialog" (closed)="isOpen = false">
+    <label for="project-text-query">Search descriptions and book notes</label>
+    <input id="project-text-query" type="search" [(ngModel)]="query" (ngModelChange)="search()"
+      placeholder="Search text…" autocomplete="off" spellcheck="false">
+    <p role="status" aria-live="polite">
+      @if (error) { {{ error }} }
+      @else if (loading) { Updating search… }
+      @else if (!query.trim()) { Type to search across this project. }
+      @else if (count === 0) { No matches. }
+      @else { {{ count }} results }
+    </p>
+    <div class="text-results">
+      @for (group of groups; track group.type) {
+        <section [attr.aria-label]="group.type">
+          <h4>{{ group.type }}</h4>
+          @for (result of group.results; track result.id) {
+            <button type="button" class="text-result" (click)="select(result)">
+              <strong>{{ result.title }}</strong>
+              @if (result.book) { <span class="book">Book: {{ result.book }}</span> }
+              <span class="snippet">@for (part of result.snippet; track $index) {@if (part.hit) {<mark>{{ part.text }}</mark>} @else {{{ part.text }}}}</span>
+            </button>
+          }
+        </section>
+      }
+    </div>
+  </app-modal-frame>
+}

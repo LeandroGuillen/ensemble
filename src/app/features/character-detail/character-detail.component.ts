@@ -609,6 +609,8 @@ export class CharacterDetailComponent
         this.activeContentTab = 'main';
         this.updateContentTabs();
         await this.loadBookPages();
+        const searchBook = this.route.snapshot.queryParamMap?.get('book');
+        if (searchBook && this.character.books.includes(searchBook)) this.activeContentTab = searchBook;
         this.characterForm.markAsPristine();
         this.externalMainConflict = false;
         this.externalBookConflicts.clear();

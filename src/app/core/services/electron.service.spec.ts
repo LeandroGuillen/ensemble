@@ -39,6 +39,20 @@ describe('ElectronService trash wrappers', () => {
     delete (window as any).require;
   });
 
+  it('notifies the text index only after successful file writes', async () => {
+    const changed = jasmine.createSpy('changed');
+    const subscription = service.filesWritten$.subscribe(changed);
+    await service.writeFile('/p/notes.md', 'Notes');
+    await service.writeFileAtomic('/p/book.md', 'Book notes');
+    await service.rewriteWikiLinks([{ path: '/p/notes.md', expected: 'Notes', content: 'Updated' }]);
+    expect(changed).toHaveBeenCalledTimes(3);
+    ipcRenderer.invoke.and.resolveTo({ success: false, error: 'Read only' });
+    await service.writeFile('/p/notes.md', 'Failed');
+    await service.writeFileAtomic('/p/book.md', 'Failed');
+    expect(changed).toHaveBeenCalledTimes(3);
+    subscription.unsubscribe();
+  });
+
   it('stageForTrash invokes trash-stage', async () => {
     const meta = { kind: 'character', recordId: 'id1', name: 'Ada' };
     ipcRenderer.invoke.and.returnValue(

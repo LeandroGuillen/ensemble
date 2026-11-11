@@ -1,0 +1,11 @@
+:host ::ng-deep .text-search-dialog { width: min(800px, 92vw); }
+label { display: block; margin-bottom: 8px; }
+input { width: 100%; box-sizing: border-box; padding: 10px; color: var(--color-text-primary); background: var(--color-bg-primary); border: 1px solid var(--color-border); border-radius: 6px; }
+p { color: var(--color-text-secondary); }
+.text-results { max-height: 60vh; overflow-y: auto; }
+h4 { margin: 16px 0 8px; }
+.text-result { display: block; width: 100%; text-align: left; padding: 12px; margin: 4px 0; border: 1px solid var(--color-border); border-radius: 6px; color: var(--color-text-primary); background: var(--color-bg-secondary); cursor: pointer; }
+.text-result:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+.book, .snippet { display: block; margin-top: 4px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.book { color: var(--color-text-secondary); }
+mark { color: #171717; background: #ffe48a; border-radius: 2px; }

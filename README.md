@@ -56,6 +56,7 @@ Ensemble keeps your cast, your world and your plot in one folder of Markdown fil
 - **Wikilinks**: link characters, locations and Houses with `[[Name]]`, complete them with `[[`, follow them with `Ctrl`/`Cmd` + click, and open a missing target as a new record.
 - **Live external edits**: files changed in Obsidian or another editor refresh in Ensemble, and the character and House editors ask you to reload from disk before saving over a file that changed outside the app.
 - **Command palette**: press `Ctrl+P` or `/` to search commands.
+- **Project text search**: press `Ctrl+Shift+F` (`Cmd+Shift+F` on macOS) to search descriptions, book pages, concepts, name lists and plot-board cells. Results are grouped by type, show matching snippets and book titles, and open the matching record. Search ignores accents and refreshes after saves and external edits.
 - **Shortcut list**: press `Ctrl+?` to see the shortcuts.
 - **Themes**: 7 color themes: Blue Gold, Catppuccin Mocha, Grayscale, Gruvbox, Rosé Pine, Sepia and Tokyo Night.
 - **Skins**: several skins, including Classic, Pixel and Liquid.

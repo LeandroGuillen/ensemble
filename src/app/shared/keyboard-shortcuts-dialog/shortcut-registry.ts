@@ -12,6 +12,7 @@ export interface Shortcut {
 /** Ordered registry consumed by the shortcuts dialog. */
 export const SHORTCUT_REGISTRY: readonly Shortcut[] = [
   // Global
+  { keys: ['Ctrl', 'Shift', 'F'], description: 'Search project text', category: 'Global' },
   { keys: ['Ctrl', 'P'], description: 'Open command palette', category: 'Global' },
   { keys: ['/'], description: 'Open command palette', category: 'Global' },
   { keys: ['Ctrl', '?'], description: 'Show keyboard shortcuts', category: 'Global' },

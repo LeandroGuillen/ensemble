@@ -1,3 +1,4 @@
+import { Subject } from 'rxjs';
 import { Injectable } from '@angular/core';
 import { IpcChannels } from '../ipc/ipc-channels';
 import { LoggingService } from './logging.service';
@@ -21,6 +22,8 @@ export interface IpcResult<T = void> {
 })
 export class ElectronService {
   private ipcRenderer: any;
+  /** Successful renderer writes, including book pages without a collection emission. */
+  readonly filesWritten$ = new Subject<void>();
 
   constructor(private logger: LoggingService) {
     if (this.isElectron()) {
@@ -73,19 +76,25 @@ export class ElectronService {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
-    return await this.ipcRenderer.invoke(IpcChannels.writeFile, filePath, content);
+    const result = await this.ipcRenderer.invoke(IpcChannels.writeFile, filePath, content);
+    if (result.success) this.filesWritten$.next();
+    return result;
   }
 
   async rewriteWikiLinks(changes: { path: string; expected: string; content: string }[]): Promise<{ success: boolean; error?: string }> {
     if (!this.isElectron()) return { success: false, error: 'File access requires Electron.' };
-    return this.ipcRenderer.invoke(IpcChannels.rewriteWikiLinks, changes);
+    const result = await this.ipcRenderer.invoke(IpcChannels.rewriteWikiLinks, changes);
+    if (result.success) this.filesWritten$.next();
+    return result;
   }
 
   async writeFileAtomic(filePath: string, content: string): Promise<{ success: boolean; error?: string }> {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
-    return await this.ipcRenderer.invoke(IpcChannels.writeFileAtomic, filePath, content);
+    const result = await this.ipcRenderer.invoke(IpcChannels.writeFileAtomic, filePath, content);
+    if (result.success) this.filesWritten$.next();
+    return result;
   }
 
   /**

@@ -19,11 +19,12 @@ import { KeyboardShortcutsService } from "./shared/keyboard-shortcuts-dialog/key
 import { ModalService, ConfirmationRequest } from "./core/services/modal.service";
 import { Book } from "./core/interfaces/project.interface";
 import { WORLD_MAP_FILE } from "./core/constants/project.constants";
+import { TextSearchComponent } from "./shared/text-search/text-search.component";
 import { PendingEditsService } from "./core/services/pending-edits.service";
 
 @Component({
     selector: "app-root",
-    imports: [RouterOutlet, CommandPaletteComponent, SidebarComponent, NotificationComponent, ConfirmationDialogComponent, KeyboardShortcutsDialogComponent],
+    imports: [TextSearchComponent, RouterOutlet, CommandPaletteComponent, SidebarComponent, NotificationComponent, ConfirmationDialogComponent, KeyboardShortcutsDialogComponent],
     templateUrl: "./app.component.html",
     styleUrls: ["./app.component.scss"]
 })
@@ -134,6 +135,8 @@ export class AppComponent implements OnInit {
       .subscribe((project: any) => {
         this.hasProject = !!project;
         const folders = project ? [
+          // Search includes plot boards and configured names files anywhere in the project.
+          '.',
           project.metadata.settings?.charactersFolder?.trim() || 'characters',
           project.metadata.settings?.locationsFolder?.trim() || 'locations',
           project.metadata.settings?.promptsFolder?.trim() || 'prompts',

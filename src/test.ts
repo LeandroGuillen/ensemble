@@ -41,3 +41,9 @@ import './app/shared/character-houses/character-houses.component.spec';
 import './app/features/character-list/character-list.pictures.spec';
 import './app/features/character-detail/character-detail.pictures.spec';
 import './app/features/character-detail/character-detail.focus.spec';
+
+import './app/core/utils/text-search.utils.spec';
+import './app/core/services/text-search.service.spec';
+import './app/core/services/electron.service.spec';
+import './app/shared/text-search/text-search.component.spec';
+import './app/shared/keyboard-shortcuts-dialog/shortcut-registry.spec';
