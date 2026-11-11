@@ -148,6 +148,20 @@ describe('LocationService', () => {
     referenceCleanup = TestBed.inject(ReferenceCleanupService) as jasmine.SpyObj<ReferenceCleanupService>;
   });
 
+  it('reads fresh health locations without persisting IDs or creating folders', async () => {
+    electronService.fileExists.and.resolveTo(true);
+    electronService.readDirectoryRecursive.and.resolveTo({ success: true, files: [
+      { absolutePath: '/test/project/locations/_harbor.md', relativePath: '_harbor.md' },
+    ] });
+    electronService.readFile.and.resolveTo({ success: true, content: '---\nname: Harbor\ncreated: 2025-01-01\nmodified: 2025-01-01\n---\n[[Gone]]' });
+    const records = await service.readHealthSnapshot();
+    expect(records.length).toBe(1);
+    expect(records[0].name).toBe('Harbor');
+    expect(electronService.writeFileAtomic).not.toHaveBeenCalled();
+    expect(electronService.createDirectory).not.toHaveBeenCalled();
+    expect(service.getLocationsSnapshot()).toEqual([]);
+  });
+
   it('should be created', () => {
     expect(service).toBeTruthy();
   });

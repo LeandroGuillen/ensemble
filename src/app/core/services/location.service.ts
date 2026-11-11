@@ -118,6 +118,26 @@ export class LocationService {
     }
   }
 
+  /** Fresh health-check input without directory creation or ID persistence. */
+  async readHealthSnapshot(): Promise<Location[]> {
+    const root = this.projectService.getLocationsFolderPath();
+    if (!(await this.electronService.fileExists(root))) return [];
+    const scan = await this.electronService.readDirectoryRecursive(root, '_*.md');
+    if (!scan.success || !scan.files) throw new Error(scan.error || 'Could not scan locations.');
+    const files = scan.files.filter(file => !file.relativePath.split(/[\\/]/).some(part => part.startsWith('.')));
+    const records: Location[] = [];
+    let next = 0;
+    await Promise.all(Array.from({ length: Math.min(12, files.length) }, async () => {
+      while (next < files.length) {
+        const file = files[next++];
+        const loaded = await this.loadLocationFromFile(file.absolutePath, file.relativePath);
+        if (!loaded) throw new Error(`Could not read location ${file.relativePath}.`);
+        records.push(loaded.location);
+      }
+    }));
+    return records;
+  }
+
   async loadLocations(projectPath: string): Promise<void> {
     if (this.currentProjectPath === projectPath && this.hasLoadedForCurrentProject) {
       return;

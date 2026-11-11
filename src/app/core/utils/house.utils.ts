@@ -13,7 +13,7 @@ function text(value: unknown): string {
 }
 
 /** Preserve leadership array order and dangling references in historical records. */
-export function normalizeHouseData(raw: Record<string, unknown>, content: string): HouseFormData {
+export function normalizeHouseData(raw: Record<string, unknown>, content: string, validate = true): HouseFormData {
   const seen = new Set<string>();
   const leadership = (Array.isArray(raw['leadership']) ? raw['leadership'] : []).map(value => {
     if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid leadership entry');
@@ -32,7 +32,7 @@ export function normalizeHouseData(raw: Record<string, unknown>, content: string
     characterIds: strings(raw['characterIds']), leadership,
     currentLeadershipId: text(raw['currentLeadershipId']) || undefined, content,
   };
-  validateHouseData(data);
+  if (validate) validateHouseData(data);
   return data;
 }
 

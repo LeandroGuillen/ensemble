@@ -232,5 +232,15 @@ export const routes: Routes = [
     canActivate: [projectGuard],
     canDeactivate: [houseEditorGuard],
   },
+  {
+    path: "project-health/pinboard/:pinboardId",
+    loadComponent: () => import("./features/project-health/project-health.component").then(m => m.ProjectHealthComponent),
+    canActivate: [projectGuard],
+  },
+  {
+    path: "project-health",
+    loadComponent: () => import("./features/project-health/project-health.component").then(m => m.ProjectHealthComponent),
+    canActivate: [projectGuard],
+  },
   { path: "**", redirectTo: "/project-selector" },
 ];

@@ -71,6 +71,37 @@ describe('HouseService', () => {
     service = TestBed.inject(HouseService);
   });
 
+  it('reads inconsistent Houses for health checks without migrations and repairs only the orphaned ID', async () => {
+    folders.add('/project/houses');
+    const path = '/project/houses/stark/stark.md';
+    const raw = generateMarkdown({ ...data(), type: 'house', id: 'stark', currentLeadershipId: 'lost-reign',
+      created: '2025-01-01', modified: '2025-01-01', custom: 'preserve me' }, 'Historical notes');
+    disk.set(path, raw);
+    const [house] = await service.readHealthSnapshot();
+    expect(house.currentLeadershipId).toBe('lost-reign');
+    expect(electron.writeFileAtomic).not.toHaveBeenCalled();
+    expect(electron.createDirectory).not.toHaveBeenCalled();
+    await service.removeOrphanedId(house, 'Current leadership', 'lost-reign');
+    const repaired = (await service.readHealthSnapshot())[0];
+    expect(repaired.currentLeadershipId).toBeUndefined();
+    expect(repaired.characterIds).toEqual(house.characterIds);
+    expect(parseMarkdown<any>(disk.get(path)!).data?.frontmatter.custom).toBe('preserve me');
+    await service.removeOrphanedId(repaired, 'Leadership:joint', 'ned');
+    const final = (await service.readHealthSnapshot())[0];
+    expect(final.leadership[1].characterIds).toEqual(['cat']);
+    await expectAsync(service.removeOrphanedId(final, 'Leadership:founder', 'founder')).toBeRejectedWithError(/replacement head/);
+    expect(final.leadership[0].notes).toBe('Before the books.');
+    expect(final.currentLeadershipId).toBeUndefined();
+    expect(final.content).toContain('Historical notes');
+  });
+
+  it('refuses a health repair if the House changed on disk', async () => {
+    const house = await service.createHouse(data());
+    disk.set(house.filePath, house.raw + '\nExternal edit');
+    await expectAsync(service.removeOrphanedId(house, 'Members', 'ned')).toBeRejectedWithError(/changed on disk/);
+    expect(disk.get(house.filePath)).toContain('External edit');
+  });
+
   it('round-trips ordered historical, joint and repeated reigns independently of book order', async () => {
     const created = await service.createHouse(data());
     expect(created.relativePath).toBe('house-stark/house-stark.md');

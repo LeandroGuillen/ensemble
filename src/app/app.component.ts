@@ -282,6 +282,11 @@ export class AppComponent implements OnInit {
 
     this.commandPaletteService.replaceGroup('Help', [
       {
+        id: 'project-health', label: 'Project health', group: 'Help',
+        keywords: ['consistency', 'check', 'orphan', 'duplicates', 'portraits', 'links'],
+        action: () => { void this.router.navigate(['/project-health']); },
+      },
+      {
         id: 'keyboard-shortcuts',
         label: 'Show Keyboard Shortcuts',
         keywords: ['shortcuts', 'keyboard', 'keys', 'help', '?'],

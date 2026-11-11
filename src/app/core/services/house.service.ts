@@ -70,6 +70,47 @@ export class HouseService {
   }
 
   getSnapshot(): House[] { return this.subject.value; }
+
+  /** Read inconsistent Houses without creating folders, assigning IDs on disk, or validating them away. */
+  async readHealthSnapshot(): Promise<House[]> {
+    const project = this.projects.getCurrentProject();
+    if (!project) return [];
+    const root = pathJoin(project.path, 'houses');
+    if (!(await this.electron.fileExists(root))) return [];
+    const scan = await this.electron.readDirectoryRecursive(root, '*.md');
+    if (!scan.success || !scan.files) throw new Error(scan.error || 'Could not read Houses.');
+    return Promise.all(scan.files.filter(file => !file.relativePath.split(/[\\/]/).some(part => part.startsWith('.'))).map(async file => {
+      const read = await this.electron.readFile(file.absolutePath);
+      if (!read.success || read.content === undefined) throw new Error(read.error || 'Could not read House.');
+      const parsed = parseMarkdown<Record<string, unknown>>(read.content);
+      if (!parsed.success || !parsed.data) throw new Error(`Could not parse ${file.relativePath}`);
+      const fm = parsed.data.frontmatter;
+      if (fm['type'] !== 'house') return null;
+      return { ...normalizeHouseData(fm, parsed.data.content, false), id: String(fm['id'] || ''),
+        created: new Date(String(fm['created'] || '1970-01-01')), modified: new Date(String(fm['modified'] || '1970-01-01')),
+        filePath: file.absolutePath, relativePath: file.relativePath, raw: read.content } as House;
+    })).then(houses => houses.filter((house): house is House => !!house));
+  }
+
+  /** Narrow repair preserves historical reigns and refuses to remove their last head. */
+  removeOrphanedId(house: House, field: string, missing: string): Promise<void> {
+    const projectPath = this.projects.getCurrentProject()?.path;
+    return this.serial(async () => {
+      if (!projectPath || projectPath !== this.projects.getCurrentProject()?.path) throw new Error('The project changed.');
+      const reign = house.leadership.find(entry => `Leadership:${entry.id}` === field);
+      if (reign && !reign.characterIds.some(id => id !== missing)) throw new Error('Choose a replacement head before removing the last head of a reign.');
+      const keep = (id: string) => id !== missing;
+      const updated = { ...house, modified: new Date() };
+      if (field === 'Seat') updated.seatId = undefined;
+      else if (field === 'Current leadership') updated.currentLeadershipId = undefined;
+      else if (field.startsWith('Leadership:')) updated.leadership = house.leadership.map(reign =>
+        reign.id === field.slice(11) ? { ...reign, characterIds: reign.characterIds.filter(keep) } : reign);
+      else updated.characterIds = house.characterIds.filter(keep);
+      await this.write(updated, house.raw);
+      this.publish([...this.subject.value.filter(item => item.id !== house.id), updated]);
+    });
+  }
+
   getById(id: string): House | undefined { return this.subject.value.find(house => house.id === id); }
 
   private serial<T>(operation: () => Promise<T>): Promise<T> {

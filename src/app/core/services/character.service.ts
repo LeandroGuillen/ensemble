@@ -348,6 +348,32 @@ export class CharacterService {
    * Loads one conventionally named main file per character folder. Drafts live
    * below `@drafts`; unrelated markdown and book pages are ignored.
    */
+  /** Fresh health-check input: no ID persistence, remapping, directory creation or publication. */
+  async readHealthSnapshot(): Promise<Character[]> {
+    const root = this.projectService.getCharactersFolderPath();
+    if (!(await this.electronService.fileExists(root))) return [];
+    const scan = await this.electronService.readDirectoryRecursive(root, '*.md');
+    if (!scan.success || !scan.files) throw new Error(scan.error || 'Could not scan characters.');
+    const files = scan.files.filter(file => !file.relativePath.split(/[\\/]/).some(part => part.startsWith('.')) &&
+      (parseCharacterMainFileLocation(file.relativePath) || isLegacyCharacterMainFile(file.relativePath)));
+    const records: Character[] = [];
+    let next = 0;
+    await Promise.all(Array.from({ length: Math.min(12, files.length) }, async () => {
+      while (next < files.length) {
+        const file = files[next++];
+        const loaded = await this.loadCharacterFromFile(file.absolutePath, file.relativePath,
+          parseCharacterMainFileLocation(file.relativePath)?.draft);
+        if (!loaded) throw new Error(`Could not read character ${file.relativePath}.`);
+        records.push(loaded.character);
+      }
+    }));
+    return records;
+  }
+
+  /**
+   * Loads one conventionally named main file per character folder. Drafts live
+   * below `@drafts`; unrelated markdown and book pages are ignored.
+   */
   async loadCharacters(projectPath: string): Promise<void> {
     // If this is the same project and we've already loaded, don't reload
     if (this.currentProjectPath === projectPath && this.hasLoadedForCurrentProject) {

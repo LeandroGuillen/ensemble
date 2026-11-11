@@ -67,6 +67,59 @@ export class CastService {
     return this.castsSubject.value.find((cast) => cast.id === id);
   }
 
+  /** Read the index without the normal loader's migrations or canvas reconciliation. */
+  async readHealthSnapshot(): Promise<Cast[]> {
+    if (!(await this.electronService.fileExists(this.getCastsJsonPath()))) {
+      return this.projectService.getCurrentProject()?.metadata.casts || this.getCastsSnapshot();
+    }
+    const read = await this.electronService.readFile(this.getCastsJsonPath());
+    if (!read.success || read.content === undefined) throw new Error('Could not read casts.json.');
+    const parsed = JSON.parse(read.content) as CastsFile;
+    if (!Array.isArray(parsed.casts)) throw new Error('Invalid casts.json.');
+    const casts: Cast[] = parsed.casts.map(entry => ({ ...this.getCastsSnapshot().find(cast => cast.id === entry.id),
+      ...entry, characterIds: entry.characterIds || [] }));
+    const root = this.projectService.getCastsFolderPath();
+    if (await this.electronService.fileExists(root)) {
+      const listing = await this.electronService.readDirectoryFiles(root);
+      if (!listing.success) throw new Error('Could not read cast folders.');
+      for (const folder of listing.directories || []) {
+        if (folder.startsWith('.') || folder === '_deleted') continue;
+        const folderPath = pathJoin(root, folder);
+        const idFile = await this.electronService.readFile(pathJoin(folderPath, '.castid'));
+        const cast = casts.find(item => item.id === idFile.content?.trim());
+        if (!cast) continue;
+        cast.folderPath = folderPath;
+        const descriptionPath = pathJoin(folderPath, 'description.md');
+        if (await this.electronService.fileExists(descriptionPath)) {
+          const description = await this.electronService.readFile(descriptionPath);
+          if (!description.success) throw new Error('Could not read cast description.');
+          cast.description = description.content || '';
+        }
+      }
+    }
+    return casts;
+  }
+
+  /** Repair only the stored ID; do not create folders or reconcile unrelated canvas data. */
+  async removeOrphanedId(castId: string, field: string, missing: string): Promise<void> {
+    const project = requireProject(this.projectService.getCurrentProject());
+    const path = this.getCastsJsonPath();
+    const read = await this.electronService.readFile(path);
+    if (!read.success || read.content === undefined) throw new Error('Could not read casts.json.');
+    const data = JSON.parse(read.content) as CastsFile;
+    const cast = data.casts.find(item => item.id === castId);
+    if (!cast) throw new Error('The cast no longer exists.');
+    if (field === 'Pinboard') delete cast.pinboardId;
+    else cast.characterIds = (cast.characterIds || []).filter(id => id !== missing);
+    const latest = await this.electronService.readFile(path);
+    if (!latest.success || latest.content !== read.content || this.projectService.getCurrentProject()?.path !== project.path) {
+      throw new Error('The cast or project changed. Run the health check again.');
+    }
+    assertIpcSuccess(await this.electronService.writeFileAtomic(path, JSON.stringify(data, null, 2)), 'Repair cast reference');
+    this.castsSubject.next(this.castsSubject.value.map(item => item.id === castId ? { ...item,
+      characterIds: cast.characterIds || [], pinboardId: cast.pinboardId } : item));
+  }
+
   /** Synchronous snapshot of the currently loaded casts. */
   getCastsSnapshot(): Cast[] {
     return this.castsSubject.value;

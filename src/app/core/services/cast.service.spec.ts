@@ -100,6 +100,23 @@ describe('Cast canvases', () => {
     );
   });
 
+  it('reads and repairs health references without creating folders or reconciling canvases', async () => {
+    directories.add('/project/casts');
+    const path = '/project/casts/casts.json';
+    files.set(path, JSON.stringify({ version: 1, casts: [{ id: 'court', name: 'Court',
+      characterIds: ['alive', 'gone'], pinboardId: 'missing-board' }] }));
+    const before = new Map(files);
+    expect((await service.readHealthSnapshot())[0].characterIds).toEqual(['alive', 'gone']);
+    expect(files).toEqual(before);
+    await service.removeOrphanedId('court', 'Members', 'gone');
+    expect(JSON.parse(files.get(path)!).casts[0].characterIds).toEqual(['alive']);
+    expect(project.metadata.pinboards).toEqual([]);
+    await service.removeOrphanedId('court', 'Pinboard', 'missing-board');
+    expect(JSON.parse(files.get(path)!).casts[0].pinboardId).toBeUndefined();
+    expect(project.metadata.pinboards).toEqual([]);
+    expect([...directories]).toEqual(['/project/casts']);
+  });
+
   it('migrates legacy boards once, preserving positions, relationships and view state', async () => {
     const legacy = board('legacy');
     project.metadata.pinboards = [legacy];

@@ -172,6 +172,22 @@ describe('CharacterService', () => {
     projectService.getCharactersFolderPath.and.returnValue('/test/project/characters');
   });
 
+  it('reads fresh health records without persisting generated IDs or publishing records', async () => {
+    electronService.fileExists.and.resolveTo(true);
+    electronService.readDirectoryRecursive.and.resolveTo({ success: true, files: [
+      { absolutePath: '/test/project/characters/mara/mara.md', relativePath: 'mara/mara.md' },
+      { absolutePath: '/test/project/characters/.ensemble-trash/old/old.md', relativePath: '.ensemble-trash/old/old.md' },
+    ] });
+    electronService.readFile.and.resolveTo({ success: true, content: '---\nname: Mara\ncreated: 2025-01-01\nmodified: 2025-01-01\n---\n[[Gone]]' });
+    const records = await service.readHealthSnapshot();
+    expect(records.length).toBe(1);
+    expect(records[0].name).toBe('Mara');
+    expect(records[0].content).toContain('[[Gone]]');
+    expect(electronService.writeFileAtomic).not.toHaveBeenCalled();
+    expect(electronService.createDirectory).not.toHaveBeenCalled();
+    expect(service.getReferenceCharactersSnapshot()).toEqual([]);
+  });
+
   it('should be created', () => {
     expect(service).toBeTruthy();
   });

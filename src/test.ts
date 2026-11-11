@@ -47,3 +47,7 @@ import './app/core/services/text-search.service.spec';
 import './app/core/services/electron.service.spec';
 import './app/shared/text-search/text-search.component.spec';
 import './app/shared/keyboard-shortcuts-dialog/shortcut-registry.spec';
+
+import './app/core/utils/project-health.utils.spec';
+import './app/core/services/project-health.service.spec';
+import './app/features/project-health/project-health.component.spec';
