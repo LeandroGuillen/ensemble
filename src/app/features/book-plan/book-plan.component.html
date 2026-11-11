@@ -249,18 +249,23 @@
     <div class="link-preview-backdrop" (click)="linkPreview = null">
       <section class="link-preview" cdkTrapFocus [cdkTrapFocusAutoCapture]="true" role="dialog" aria-modal="true" aria-labelledby="link-preview-title" tabindex="-1" (click)="$event.stopPropagation()" (keydown.escape)="linkPreview = null">
         <h2 id="link-preview-title">Link characters in {{ bookTitle }}</h2>
-        <p>{{ preview.count }} links will be added. {{ preview.ambiguous.length }} ambiguous mentions will stay unchanged.</p>
-        <p>Names and aliases match exact case and whole words. Common English/Spanish words and shortened names need review.</p>
+        <p>{{ characterLinkCount }} links will be added. Unchecked suggestions and unresolved mentions will stay unchanged.</p>
+        <p>Names and aliases match exact case and whole words. Common English/Spanish words are ignored. Tick a shortened name to link it.</p>
         @for (mention of preview.ambiguous; track $index) {
           <div class="link-mention">
-            <strong>{{ mention.mention }}</strong> — {{ mention.chapter }} · Line {{ mention.line + 1 }}
+            @if (mention.change) {
+              <label><input type="checkbox" [(ngModel)]="mention.selected"> Link <strong>{{ mention.mention }}</strong></label>
+            } @else {
+              <strong>{{ mention.mention }}</strong>
+            }
+            — {{ mention.chapter }} · Line {{ mention.line + 1 }}
             <p>{{ mention.text }}</p>
             <p>{{ mention.reason }}: {{ mention.candidates.join(', ') }}</p>
           </div>
         }
         <div class="link-preview-actions">
           <button type="button" class="btn btn-secondary" (click)="linkPreview = null">Cancel</button>
-          <button type="button" class="btn btn-primary" (click)="confirmCharacterLinks()">Confirm {{ preview.count }} links</button>
+          <button type="button" class="btn btn-primary" (click)="confirmCharacterLinks()">Confirm {{ characterLinkCount }} links</button>
         </div>
       </section>
     </div>

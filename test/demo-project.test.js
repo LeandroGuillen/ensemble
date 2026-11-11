@@ -202,3 +202,26 @@ test('electron-builder file filters exclude every demo file', () => {
   // Guard against an accidentally vacuous check: real application files are included.
   assert.ok(matchers.some(m => m.createFilter()(path.join(repo, 'main.js'), fs.statSync(path.join(repo, 'main.js')))));
 });
+
+
+test('Link characters ignores The on real demo plans and still links The Grey Pilot', async () => {
+  const { scanPlanCharacterLinks } = await esm('src/app/core/utils/plan-character-links.utils.ts');
+  const { parseCharacterMainFileLocation } = await characterPaths;
+  const { normalizeAliases } = await esm('src/app/core/utils/character-alias.utils.ts');
+  const characters = scan('characters', '*.md')
+    .filter(f => parseCharacterMainFileLocation(path.relative(path.join(root, 'characters'), f).replaceAll(path.sep, '/')))
+    .map(parse).filter(m => !m.fm.lore && !m.file.includes('/@drafts/'))
+    .map(m => ({ ...m.fm, aliases: normalizeAliases(m.fm.aliases), target: m.fm.name }));
+  const project = JSON.parse(read(path.join(root, 'ensemble.json')));
+  const otherNames = [...scan('locations', '_*.md'), ...scan('houses', '*.md')].map(parse).map(m => m.fm.name);
+  for (const book of project.books) {
+    const text = read(path.join(root, book.plan.path));
+    const result = scanPlanCharacterLinks(text, characters, otherNames);
+    assert.ok(!result.ambiguous.some(m => m.mention === 'The'), book.plan.path);
+    assert.ok(!result.changes.some(m => m.insert.endsWith('|The]]')), book.plan.path);
+    // The committed plans have no full Pilot mention; add one in memory using the real roster.
+    const withPilot = scanPlanCharacterLinks(text + '\nThe Grey Pilot arrives.\n', characters, otherNames);
+    assert.ok(withPilot.text.endsWith('\n[[The Grey Pilot]] arrives.\n'));
+    assert.ok(!withPilot.ambiguous.some(m => m.mention === 'The'));
+  }
+});

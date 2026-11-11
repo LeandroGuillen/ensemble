@@ -149,6 +149,11 @@ export class BookPlanComponent implements OnInit, OnDestroy {
       bookId: state.bookId, path: state.relativePath, revision: state.revision, suggestions: this.linkSuggestions };
   }
 
+  get characterLinkCount(): number {
+    const preview = this.linkPreview;
+    return preview ? preview.count + preview.ambiguous.filter(mention => mention.change && mention.selected).length : 0;
+  }
+
   confirmCharacterLinks(): void {
     const preview = this.linkPreview;
     const state = this.state;
@@ -160,8 +165,13 @@ export class BookPlanComponent implements OnInit, OnDestroy {
       return;
     }
     this.linkPreview = null;
-    if (preview.count) this.editor.applyUndoableChanges(preview.changes);
-    this.linkReport = preview;
+    const changes = [...preview.changes, ...preview.ambiguous.flatMap(mention => mention.change && mention.selected ? [mention.change] : [])]
+      .sort((a, b) => a.from - b.from);
+    let text = preview.source;
+    for (const change of [...changes].reverse()) text = text.slice(0, change.from) + change.insert + text.slice(change.to);
+    if (changes.length) this.editor.applyUndoableChanges(changes);
+    this.linkReport = { ...preview, text, count: changes.length, changes,
+      ambiguous: preview.ambiguous.filter(mention => !mention.change || !mention.selected) };
     // Let the preview focus trap restore focus first.
     setTimeout(() => this.editor?.focus());
   }

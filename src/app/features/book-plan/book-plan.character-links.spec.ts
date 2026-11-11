@@ -43,6 +43,29 @@ describe('Book plan character linking', () => {
     expect(component.linkReport?.count).toBe(2);
   });
 
+  for (const selected of [false, true]) {
+    it(`links a first-name suggestion only when checked (selected: ${selected})`, () => {
+      const characters = [{ id: 'm', name: 'Mara Vell', relativePath: 'mara/mara.md' }];
+      const targets = buildWikiLinkTargets([{ targets: characters, folder: 'characters', route: 'character', singular: 'Character' }]);
+      component.characters = characters;
+      component.linkSuggestions = targets.suggestions;
+      component.linkResolver = targets.resolve;
+      component.state!.text = 'Mara meets Mara Vell.';
+      component.previewCharacterLinks();
+      const suggestion = component.linkPreview!.ambiguous[0];
+      expect(suggestion.selected).toBeFalse();
+      expect(component.characterLinkCount).toBe(1);
+      suggestion.selected = selected;
+      expect(component.characterLinkCount).toBe(selected ? 2 : 1);
+      component.confirmCharacterLinks();
+      const full = { from: 11, to: 20, insert: '[[Mara Vell]]' };
+      expect(editor.applyUndoableChanges).toHaveBeenCalledOnceWith(selected
+        ? [{ from: 0, to: 4, insert: '[[Mara Vell|Mara]]' }, full] : [full]);
+      expect(component.linkReport!.text).toBe(selected ? '[[Mara Vell|Mara]] meets [[Mara Vell]].' : 'Mara meets [[Mara Vell]].');
+      expect(component.linkReport!.ambiguous.length).toBe(selected ? 0 : 1);
+    });
+  }
+
   for (const change of ['text', 'book', 'path', 'revision', 'conflict', 'error', 'characters']) {
     it(`refuses confirmation after ${change} changes`, () => {
       component.previewCharacterLinks();

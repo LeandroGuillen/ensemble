@@ -16,6 +16,9 @@ export interface PlanLinkAmbiguity {
   mention: string;
   candidates: string[];
   reason: string;
+  /** A unique shortened name can be explicitly selected in the preview. */
+  change?: { from: number; to: number; insert: string };
+  selected?: boolean;
 }
 export interface PlanCharacterLinkScan {
   text: string;
@@ -23,7 +26,7 @@ export interface PlanCharacterLinkScan {
   changes: { from: number; to: number; insert: string }[];
   ambiguous: PlanLinkAmbiguity[];
 }
-// Conservative: ordinary English/Spanish words used as names need a writer's review.
+// Ordinary English/Spanish words cannot stand alone as character mentions.
 const COMMON_WORDS = new Set(('will may can rose hope grace faith joy summer autumn winter spring dawn ' +
   'mark bill pat robin ash reed clay brook river sky rain snow storm stone amber pearl jade ruby ' +
   'chase hunter grant drew rob art frank earnest august chance destiny harmony ' +
@@ -53,7 +56,7 @@ export function scanPlanCharacterLinks(text: string, characters: PlanLinkCharact
   const explicit = new Set<string>();
   const add = (name: string, character: PlanLinkCharacter, isExplicit: boolean) => {
     name = name.trim();
-    if (!name || /[\n\r|\[\]]/.test(name)) return;
+    if (!name || /[\n\r|\[\]]/.test(name) || COMMON_WORDS.has(name.toLowerCase())) return;
     const entries = terms.get(name) ?? new Map();
     entries.set(character.id, character);
     terms.set(name, entries);
@@ -89,15 +92,17 @@ export function scanPlanCharacterLinks(text: string, characters: PlanLinkCharact
       const candidates = [...terms.get(mention)!.values()];
       const reason = candidates.length > 1 ? 'Multiple characters'
         : collisions.has(mention.toLowerCase()) ? 'Location or House with the same name'
-        : COMMON_WORDS.has(mention.toLowerCase()) ? 'Common word'
         : !explicit.has(mention) ? 'Shortened name; confirm the character' : '';
+      const target = candidates[0].target;
+      const change = { from, to, insert: target === mention ? `[[${target}]]` : `[[${target}|${mention}]]` };
       if (reason) {
         const chapter = parsed.chapters.find(chapter => line >= chapter.line && line < chapter.endLine);
-        ambiguous.push({ chapter: chapter?.heading ?? 'Outside a chapter', line, text: raw, mention,
+        const suggestion = candidates.length === 1 && !collisions.has(mention.toLowerCase()) && !explicit.has(mention)
+          ? { change, selected: false } : {};
+        ambiguous.push({ ...suggestion, chapter: chapter?.heading ?? 'Outside a chapter', line, text: raw, mention,
           candidates: candidates.map(candidate => candidates.filter(c => c.name === candidate.name).length > 1 ? `${candidate.name} (${candidate.id})` : candidate.name), reason });
       } else {
-        const target = candidates[0].target;
-        edits.push({ from, to, insert: target === mention ? `[[${target}]]` : `[[${target}|${mention}]]` });
+        edits.push(change);
       }
     }
   });

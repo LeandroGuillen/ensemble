@@ -40,13 +40,41 @@ describe('scanPlanCharacterLinks', () => {
     expect(scan.changes.length).toBe(3);
   });
 
-  it('leaves common words and location/House collisions for review', () => {
+  it('omits common words and leaves location/House collisions for review', () => {
     const characters = [ben, { id: 'w', name: 'Will', target: 'Will' }, { id: 'h', name: 'Rose', target: 'Rose' }];
     const scan = scanPlanCharacterLinks('Ben Will Rose', characters, ['Ben', 'Rose']);
     expect(scan.count).toBe(0);
-    expect(scan.ambiguous.length).toBe(3);
+    expect(scan.ambiguous.length).toBe(1);
     expect(scan.ambiguous[0].reason).toContain('Location or House');
-    expect(scan.ambiguous[1].reason).toContain('Common word');
+
+  });
+
+  it('never offers articles, stop words or common words as names, even explicit names or aliases', () => {
+    for (const first of ['The', 'A', 'An', 'El', 'La', 'Los', 'Las', 'Un', 'Una', 'De', 'Will', 'Rose']) {
+      const name = `${first} Keeper`;
+      const scan = scanPlanCharacterLinks(`${first} waits. ${name} arrives.`, [
+        { id: 'k', name, aliases: [first], target: name },
+        { id: 'word', name: first, target: first },
+      ]);
+      expect(scan.text).toBe(`${first} waits. [[${name}]] arrives.`);
+      expect(scan.ambiguous).toEqual([]);
+    }
+  });
+
+  it('leaves sentence-initial The alone while linking The Grey Pilot in full', () => {
+    const scan = scanPlanCharacterLinks('The tide turns. The Grey Pilot arrives.', [
+      { id: 'p', name: 'The Grey Pilot', target: 'The Grey Pilot' },
+    ]);
+    expect(scan.text).toBe('The tide turns. [[The Grey Pilot]] arrives.');
+    expect(scan.ambiguous).toEqual([]);
+  });
+
+  it('offers a first name only as an unchecked suggestion with its alias link', () => {
+    const scan = scanPlanCharacterLinks('Mara meets Mara Vell.', [mara]);
+    expect(scan.count).toBe(1);
+    expect(scan.text).toBe('Mara meets [[Mara Vell]].');
+    expect(scan.ambiguous).toEqual([jasmine.objectContaining({ mention: 'Mara', selected: false,
+      reason: 'Shortened name; confirm the character', change: { from: 0, to: 4, insert: '[[Mara Vell|Mara]]' } })]);
   });
 
   it('uses canonical targets, chooses the longest name, and is idempotent', () => {
