@@ -15,7 +15,7 @@ export class HouseCommandService {
   deactivate(): void { this.active = false; this.publish(); }
   private publish(): void {
     this.palette.replaceGroup('houses', this.active ? [
-      { id: 'new-house', label: 'New House', icon: 'plus', keywords: ['create', 'dynasty', 'family'], group: 'houses', action: () => { void this.router.navigate(['/house']); } },
+      { id: 'new-house', mutatesProject: true, label: 'New House', icon: 'plus', keywords: ['create', 'dynasty', 'family'], group: 'houses', action: () => { void this.router.navigate(['/house']); } },
       { id: 'view-houses', label: 'Houses', icon: 'shield', keywords: ['dynasties', 'families'], group: 'houses', action: () => { void this.router.navigate(['/houses']); } },
       ...this.houses.getSnapshot().map(house => ({ id: `house-${house.id}`, label: house.name, icon: 'shield', keywords: ['house', house.motto], group: 'houses', action: () => { void this.router.navigate(['/house', house.id]); } })),
     ] : []);

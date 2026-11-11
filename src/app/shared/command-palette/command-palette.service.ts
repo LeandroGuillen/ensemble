@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { ProjectWriteProtectionService } from '../../core/services/project-write-protection.service';
 import { BehaviorSubject, Subscription } from 'rxjs';
 
 export interface Command {
@@ -7,6 +8,8 @@ export interface Command {
   /** Symbol id from assets/ui-icons.svg. */
   icon?: string;
   action: () => void;
+  /** Hide project editing actions when browsing a read-only project. */
+  mutatesProject?: boolean;
   keywords?: string[];
   /** Alternative names; shown as "a.k.a." when a search hits them instead of the label. */
   aliases?: string[];
@@ -55,7 +58,7 @@ export class CommandPaletteService {
   private promptResolver: ((value: string | null) => void) | null = null;
   private modeCloseSub: Subscription | null = null;
 
-  constructor() { }
+  constructor(private readonly protection: ProjectWriteProtectionService) { }
 
   open(): void {
     // Normal open must always show the durable registry, never a leftover pick/prompt list.
@@ -194,7 +197,16 @@ export class CommandPaletteService {
   }
 
   private publishDurable(): void {
-    this.commandsSubject.next(this.sortCommands(this.durableCommands));
+    const commands = this.durableCommands
+      .filter(command => !command.mutatesProject || !this.protection.readOnlyPath)
+      .map(command => command.mutatesProject ? {
+        ...command,
+        // A selection captured before a project switch must also respect protection.
+        action: () => {
+          if (!this.protection.readOnlyPath) command.action();
+        },
+      } : command);
+    this.commandsSubject.next(this.sortCommands(commands));
   }
 
   private sortCommands(commands: Command[]): Command[] {

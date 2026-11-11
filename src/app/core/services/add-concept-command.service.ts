@@ -23,6 +23,7 @@ export class AddConceptCommandService {
     this.commandPaletteService.replaceGroup('Concepts', [
       {
         id: 'add-concept',
+        mutatesProject: true,
         label: 'New Concept',
         icon: 'plus',
         keywords: ['concept', 'concepts', 'new', 'create', 'idea', 'brainstorm', 'add'],

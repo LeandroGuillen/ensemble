@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ProjectWriteProtectionService, READ_ONLY_PROJECT_MESSAGE } from '../../core/services/project-write-protection.service';
 import { BackupSettingsComponent } from './backup-settings.component';
 import { BackupDestinationReadOnlyError, BackupService } from '../../core/services/backup.service';
 import { ElectronService } from '../../core/services/electron.service';
@@ -51,6 +52,35 @@ describe('BackupSettingsComponent', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
+  });
+
+  it('disables automatic snapshot settings with a hint while preserving manual backups in read-only projects', async () => {
+    TestBed.inject(ProjectWriteProtectionService).readOnlyPath = '/w';
+    fixture.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    const fields: HTMLInputElement[] = Array.from(fixture.nativeElement.querySelectorAll('input'));
+    expect(fields.length).toBe(2);
+    for (const field of fields) {
+      expect(field.disabled).toBeTrue();
+      expect(field.title).toBe(READ_ONLY_PROJECT_MESSAGE);
+    }
+    fields[0].click();
+    expect(backupService.updateSettings).not.toHaveBeenCalled();
+    const create: HTMLButtonElement = fixture.nativeElement.querySelector('.form-section button');
+    const change: HTMLButtonElement = fixture.nativeElement.querySelector('.backup-folder-row button');
+    expect(create.disabled).toBeFalse();
+    expect(change.disabled).toBeFalse();
+    create.click();
+    await fixture.whenStable();
+    expect(backupService.createSnapshot).toHaveBeenCalled();
+
+    TestBed.inject(ProjectWriteProtectionService).readOnlyPath = null;
+    fixture.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    for (const field of fields) expect(field.disabled).toBeFalse();
+    fields[0].click();
+    await fixture.whenStable();
+    expect(backupService.updateSettings).toHaveBeenCalledWith({ autoBeforeMigration: false });
   });
 
   it('separates older snapshots, labels their project, and offers only restore', async () => {

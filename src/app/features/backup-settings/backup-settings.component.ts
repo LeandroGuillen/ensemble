@@ -1,4 +1,5 @@
 import { Component, Input, OnInit } from '@angular/core';
+import { ProjectReadOnlyDirective } from '../../shared/project-read-only.directive';
 import { FormsModule } from '@angular/forms';
 import { BackupDestinationReadOnlyError, BackupService } from '../../core/services/backup.service';
 import { ElectronService } from '../../core/services/electron.service';
@@ -13,7 +14,7 @@ const DEFAULT_KEEP = 5;
 
 @Component({
   selector: 'app-backup-settings',
-  imports: [FormsModule, SettingsSearchableDirective],
+  imports: [FormsModule, SettingsSearchableDirective, ProjectReadOnlyDirective],
   templateUrl: './backup-settings.component.html',
   styleUrls: ['./backup-settings.component.scss'],
 })

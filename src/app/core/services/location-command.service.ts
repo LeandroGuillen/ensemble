@@ -44,6 +44,7 @@ export class LocationCommandService {
     this.commandPaletteService.replaceGroup('locations', [
       {
         id: 'new-location',
+        mutatesProject: true,
         label: 'New Location',
         icon: 'plus',
         keywords: ['create', 'add', 'location', 'new', 'place', 'setting'],

@@ -48,6 +48,7 @@ export class CharacterCommandService {
     this.commandPaletteService.replaceGroup('characters', [
       {
         id: 'new-character',
+        mutatesProject: true,
         label: 'New Character',
         icon: 'plus',
         keywords: ['create', 'add', 'character', 'new'],
@@ -56,6 +57,7 @@ export class CharacterCommandService {
       },
       {
         id: 'duplicate-character',
+        mutatesProject: true,
         label: 'Duplicate character…',
         icon: 'copy',
         keywords: ['duplicate', 'copy', 'clone', 'character', 'variant'],

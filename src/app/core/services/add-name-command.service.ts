@@ -24,6 +24,7 @@ export class AddNameCommandService {
     this.commandPaletteService.replaceGroup('Names', [
       {
         id: 'add-name',
+        mutatesProject: true,
         label: 'New Name',
         icon: 'plus',
         keywords: ['name', 'names', 'new', 'create', 'list', 'add'],

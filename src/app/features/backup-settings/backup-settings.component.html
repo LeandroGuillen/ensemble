@@ -58,7 +58,7 @@
 
         <div class="form-group">
           <label class="checkbox-label">
-            <input type="checkbox" [(ngModel)]="autoBeforeMigration" (ngModelChange)="onAutoChange()" />
+            <input appProjectReadOnly type="checkbox" [(ngModel)]="autoBeforeMigration" (ngModelChange)="onAutoChange()" />
             <span>Back up automatically before updates and migrations</span>
           </label>
           <p class="field-hint">
@@ -70,6 +70,7 @@
         <div class="form-group">
           <label class="form-label">Keep last automatic snapshots</label>
           <input
+            appProjectReadOnly
             type="number"
             class="form-control"
             min="1"
