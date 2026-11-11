@@ -5,6 +5,11 @@
   }
 
   <main class="app-main" id="main-content" tabindex="-1" #mainContent>
+    @if (readOnlyProject && !isWelcomeScreen) {
+      <div class="read-only-banner" role="status" data-testid="project-read-only-banner">
+        <strong>Read-only project.</strong> You can browse every page. Open a writable copy to make changes.
+      </div>
+    }
     <router-outlet></router-outlet>
   </main>
 

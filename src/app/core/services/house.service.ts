@@ -129,7 +129,14 @@ export class HouseService {
     if (projectPath !== this.projects.getCurrentProject()?.path) return;
     if (this.loaded && !force && this.projectPath === projectPath) return;
     const root = pathJoin(projectPath, 'houses');
-    assertIpcSuccess(await this.electron.createDirectory(root), 'Create houses folder');
+    const readOnly = !!this.projects.getCurrentProject()?.readOnly;
+    if (!readOnly) assertIpcSuccess(await this.electron.createDirectory(root), 'Create houses folder');
+    if (readOnly && !(await this.electron.fileExists(root))) {
+      this.projectPath = projectPath;
+      this.loaded = true;
+      this.publish([]);
+      return;
+    }
     const scan = await this.electron.readDirectoryRecursive(root, '*.md');
     if (!scan.success || !scan.files) throw new Error(scan.error || 'Unable to scan houses');
     const houses: House[] = [];
@@ -154,7 +161,7 @@ export class HouseService {
       const storedLeadership = Array.isArray(fm['leadership']) ? fm['leadership'] : [];
       const leadershipIdsChanged = data.leadership.some((entry, index) => storedLeadership[index]?.id !== entry.id);
       // Persist stable IDs only after ensuring this is still the active project.
-      if ((assignId || leadershipIdsChanged) && projectPath === this.projects.getCurrentProject()?.path) await this.write(house, read.content);
+      if (!readOnly && (assignId || leadershipIdsChanged) && projectPath === this.projects.getCurrentProject()?.path) await this.write(house, read.content);
       houses.push(house);
     }
     if (projectPath !== this.projects.getCurrentProject()?.path) return;

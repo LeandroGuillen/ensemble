@@ -1,4 +1,4 @@
-import { Injectable, Injector } from '@angular/core';
+import { Injectable, Injector, inject } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import {
   Book,
@@ -43,10 +43,13 @@ import { RecentProjectsService } from './recent-projects.service';
 import { PendingEditsService } from './pending-edits.service';
 import { NotificationService } from './notification.service';
 
+import { ProjectWriteProtectionService, READ_ONLY_PROJECT_MESSAGE } from './project-write-protection.service';
+
 @Injectable({
   providedIn: 'root',
 })
 export class ProjectService {
+  private readonly writeProtection = inject(ProjectWriteProtectionService);
   private currentProjectSubject = new BehaviorSubject<Project | null>(null);
   public currentProject$ = this.currentProjectSubject.asObservable();
   constructor(
@@ -196,6 +199,7 @@ export class ProjectService {
       }
       const projectPath = resolved.path;
       await this.electronService.setWorkFolder(projectPath);
+      this.writeProtection.readOnlyPath = null;
 
       // Check if directory exists
       const isDir = await this.electronService.isDirectory(projectPath);
@@ -208,6 +212,8 @@ export class ProjectService {
       const metadataPath = pathJoin(projectPath, LEGACY_METADATA_JSON_FILE);
       const ensembleExists = await this.electronService.fileExists(ensemblePath);
       const metadataExists = await this.electronService.fileExists(metadataPath);
+
+      const readOnly = !(await this.electronService.isWritable(ensemblePath));
 
       let metadata: ProjectMetadata;
       if (ensembleExists) {
@@ -242,8 +248,10 @@ export class ProjectService {
           }
 
           // Save as ensemble.json and delete old metadata file
-          await this.saveMetadata(projectPath, metadata);
-          await this.electronService.deleteFile(metadataPath);
+          if (!readOnly) {
+            await this.saveMetadata(projectPath, metadata);
+            await this.electronService.deleteFile(metadataPath);
+          }
         } catch (parseError) {
           throw new Error(`Invalid JSON in metadata file: ${parseError}`);
         }
@@ -251,13 +259,13 @@ export class ProjectService {
         // Create default metadata if it doesn't exist
         const projectName = pathBasename(projectPath);
         metadata = this.createDefaultMetadata(projectName);
-        await this.saveMetadata(projectPath, metadata);
+        if (!readOnly) await this.saveMetadata(projectPath, metadata);
       }
 
       // Ensure required directories exist
       const charactersFolder = metadata.settings?.charactersFolder?.trim() || DEFAULT_CHARACTERS_FOLDER;
       const locationsFolder = metadata.settings?.locationsFolder?.trim() || DEFAULT_LOCATIONS_FOLDER;
-      await this.ensureProjectStructure(projectPath, charactersFolder, locationsFolder);
+      if (!readOnly) await this.ensureProjectStructure(projectPath, charactersFolder, locationsFolder);
 
       this.migrateLastSessionFromLegacy(metadata);
 
@@ -269,9 +277,11 @@ export class ProjectService {
 
       // Save metadata if initialization modified it in place
       if (
-        (metadata.pinboards && metadata.pinboards.length > 0) ||
-        stylesSeeded ||
-        legacySettingsStripped
+        !readOnly && (
+          (metadata.pinboards && metadata.pinboards.length > 0) ||
+          stylesSeeded ||
+          legacySettingsStripped
+        )
       ) {
         await this.saveMetadata(projectPath, metadata);
       }
@@ -279,8 +289,10 @@ export class ProjectService {
       const project: Project = {
         path: projectPath,
         metadata,
+        readOnly,
       };
 
+      this.writeProtection.readOnlyPath = readOnly ? projectPath : null;
       this.currentProjectSubject.next(project);
       this.recentProjects.add(projectPath);
       if (resolved.demoCopy) {
@@ -315,6 +327,7 @@ export class ProjectService {
         return this.currentProjectSubject.value;
       }
       await this.electronService.setWorkFolder(projectPath);
+      this.writeProtection.readOnlyPath = null;
 
       // Check if directory already exists
       const exists = await this.electronService.fileExists(projectPath);
@@ -535,6 +548,7 @@ export class ProjectService {
    * Saves metadata to the project's ensemble.json file
    */
   private async saveMetadata(projectPath: string, metadata: ProjectMetadata): Promise<void> {
+    if (this.writeProtection.blocks(projectPath)) throw new Error(READ_ONLY_PROJECT_MESSAGE);
     const ensemblePath = pathJoin(projectPath, ENSEMBLE_JSON_FILE);
     const content = JSON.stringify(metadata, null, 2);
     assertIpcSuccess(
@@ -545,6 +559,7 @@ export class ProjectService {
 
   private async mutateMetadata(mutator: (metadata: ProjectMetadata) => void): Promise<Project> {
     const project = requireProject(this.currentProjectSubject.value);
+    if (project.readOnly) throw new Error(READ_ONLY_PROJECT_MESSAGE);
     const metadata = { ...project.metadata };
     mutator(metadata);
     const updatedProject = { ...project, metadata };
@@ -698,6 +713,7 @@ export class ProjectService {
    */
   async savePinboardViewState(state: PinboardViewState, pinboardId?: string): Promise<void> {
     const project = requireProject(this.currentProjectSubject.value);
+    if (project.readOnly) return;
     await this.pinboardStore.saveViewState(project, state, pinboardId);
     this.currentProjectSubject.next({ ...project });
   }
@@ -735,7 +751,7 @@ export class ProjectService {
     }
 
     ls.lastRoute = route;
-    await this.saveMetadata(project.path, project.metadata);
+    if (!project.readOnly) await this.saveMetadata(project.path, project.metadata);
     // Don't emit a new project update to avoid triggering unnecessary re-renders
   }
 
@@ -767,7 +783,7 @@ export class ProjectService {
     }
 
     ls.lastCharacterListFilterExpanded = expanded;
-    await this.saveMetadata(project.path, project.metadata);
+    if (!project.readOnly) await this.saveMetadata(project.path, project.metadata);
     // Don't emit a new project update to avoid triggering unnecessary re-renders
   }
 
@@ -808,7 +824,7 @@ export class ProjectService {
       return;
     }
     ls.lastCharacterListStyle = styleId;
-    await this.saveMetadata(project.path, project.metadata);
+    if (!project.readOnly) await this.saveMetadata(project.path, project.metadata);
   }
 
   getLastCharacterListStyle(): string | null {
@@ -845,7 +861,7 @@ export class ProjectService {
     const ls = this.ensureLastSession(project.metadata);
     if (ls.lastPlotBoardZoom === zoom) return;
     ls.lastPlotBoardZoom = zoom;
-    await this.saveMetadata(project.path, project.metadata);
+    if (!project.readOnly) await this.saveMetadata(project.path, project.metadata);
   }
 
   getPlotBoardZoom(): number | null {
@@ -860,7 +876,7 @@ export class ProjectService {
     const ls = this.ensureLastSession(project.metadata);
     if (ls.lastPlotboardPath === next) return;
     ls.lastPlotboardPath = next;
-    await this.saveMetadata(project.path, project.metadata);
+    if (!project.readOnly) await this.saveMetadata(project.path, project.metadata);
   }
 
   getLastPlotboardPath(): string | null {

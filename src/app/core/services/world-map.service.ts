@@ -32,6 +32,7 @@ export class WorldMapService {
   readonly state$ = this.stateSubject.asObservable();
 
   private projectPath: string | null = null;
+  private projectReadOnly = false;
   private loadPromise: Promise<void> | null = null;
   private undoStack: WorldMap[] = [];
   private redoStack: WorldMap[] = [];
@@ -48,6 +49,7 @@ export class WorldMapService {
   ) {
     this.projectService.currentProject$.pipe(takeUntilDestroyed()).subscribe((project) => {
       const path = project?.path ?? null;
+      this.projectReadOnly = !!project?.readOnly;
       if (path !== this.projectPath) {
         this.projectPath = path;
         this.reset();
@@ -165,7 +167,7 @@ export class WorldMapService {
     if (projectPath !== this.projectPath) return; // project switched meanwhile
     this.undoStack = [];
     this.redoStack = [];
-    this.emit(map, !writable, error);
+    this.emit(map, this.projectReadOnly || !writable, error);
   }
 
   private emitCurrent(): void {

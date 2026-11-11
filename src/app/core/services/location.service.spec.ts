@@ -148,6 +148,14 @@ describe('LocationService', () => {
     referenceCleanup = TestBed.inject(ReferenceCleanupService) as jasmine.SpyObj<ReferenceCleanupService>;
   });
 
+  it('browses a read-only project without a locations folder', async () => {
+    projectService.getCurrentProject.and.returnValue({ ...createValidProject(), readOnly: true });
+    electronService.fileExists.and.resolveTo(false);
+    electronService.createDirectory.and.resolveTo({ success: false, error: 'EACCES' });
+    await service.loadLocations('/test/project');
+    expect(electronService.createDirectory).not.toHaveBeenCalled();
+  });
+
   it('reads fresh health locations without persisting IDs or creating folders', async () => {
     electronService.fileExists.and.resolveTo(true);
     electronService.readDirectoryRecursive.and.resolveTo({ success: true, files: [

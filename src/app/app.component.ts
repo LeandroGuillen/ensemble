@@ -32,6 +32,7 @@ export class AppComponent implements OnInit {
   title = "Ensemble";
   @ViewChild('mainContent') private mainContent?: ElementRef<HTMLElement>;
   hasProject = false;
+  readOnlyProject = false;
   isWelcomeScreen = false;
   private projectLoadedAndReady = false;
   private watchedProjectKey: string | null = null;
@@ -134,6 +135,7 @@ export class AppComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((project: any) => {
         this.hasProject = !!project;
+        this.readOnlyProject = !!project?.readOnly;
         const folders = project ? [
           // Search includes plot boards and configured names files anywhere in the project.
           '.',

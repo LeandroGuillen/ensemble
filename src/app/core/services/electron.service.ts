@@ -1,8 +1,10 @@
 import { Subject } from 'rxjs';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { IpcChannels } from '../ipc/ipc-channels';
 import { LoggingService } from './logging.service';
 import { BackupSnapshot } from '../interfaces/backup.interface';
+
+import { ProjectWriteProtectionService, READ_ONLY_PROJECT_MESSAGE } from './project-write-protection.service';
 
 declare global {
   interface Window {
@@ -22,6 +24,7 @@ export interface IpcResult<T = void> {
 })
 export class ElectronService {
   private ipcRenderer: any;
+  private readonly writeProtection = inject(ProjectWriteProtectionService);
   /** Successful renderer writes, including book pages without a collection emission. */
   readonly filesWritten$ = new Subject<void>();
 
@@ -37,6 +40,7 @@ export class ElectronService {
 
   // File system operations
   async createDirectory(dirPath: string): Promise<{ success: boolean; error?: string }> {
+    if (this.writeProtection.blocks(dirPath)) return { success: false, error: READ_ONLY_PROJECT_MESSAGE };
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
@@ -73,6 +77,7 @@ export class ElectronService {
   }
 
   async writeFile(filePath: string, content: string): Promise<{ success: boolean; error?: string }> {
+    if (this.writeProtection.blocks(filePath)) return { success: false, error: READ_ONLY_PROJECT_MESSAGE };
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
@@ -82,6 +87,7 @@ export class ElectronService {
   }
 
   async rewriteWikiLinks(changes: { path: string; expected: string; content: string }[]): Promise<{ success: boolean; error?: string }> {
+    if (this.writeProtection.blocks(...changes.map(change => change.path))) return { success: false, error: READ_ONLY_PROJECT_MESSAGE };
     if (!this.isElectron()) return { success: false, error: 'File access requires Electron.' };
     const result = await this.ipcRenderer.invoke(IpcChannels.rewriteWikiLinks, changes);
     if (result.success) this.filesWritten$.next();
@@ -89,6 +95,7 @@ export class ElectronService {
   }
 
   async writeFileAtomic(filePath: string, content: string): Promise<{ success: boolean; error?: string }> {
+    if (this.writeProtection.blocks(filePath)) return { success: false, error: READ_ONLY_PROJECT_MESSAGE };
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
@@ -164,6 +171,7 @@ export class ElectronService {
 
   // Additional file operations needed for character management
   async deleteFile(filePath: string): Promise<{ success: boolean; error?: string }> {
+    if (this.writeProtection.blocks(filePath)) return { success: false, error: READ_ONLY_PROJECT_MESSAGE };
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
@@ -178,6 +186,7 @@ export class ElectronService {
   }
 
   async copyFile(sourcePath: string, destPath: string): Promise<{ success: boolean; error?: string }> {
+    if (this.writeProtection.blocks(destPath)) return { success: false, error: READ_ONLY_PROJECT_MESSAGE };
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
@@ -185,6 +194,7 @@ export class ElectronService {
   }
 
   async moveFile(sourcePath: string, destPath: string): Promise<{ success: boolean; error?: string }> {
+    if (this.writeProtection.blocks(sourcePath, destPath)) return { success: false, error: READ_ONLY_PROJECT_MESSAGE };
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
@@ -223,6 +233,7 @@ export class ElectronService {
     destinationPath: string,
     options: { headers?: Record<string, string>; timeout?: number } = {}
   ): Promise<{ success: boolean; path?: string; error?: string }> {
+    if (this.writeProtection.blocks(destinationPath)) return { success: false, error: READ_ONLY_PROJECT_MESSAGE };
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
@@ -233,6 +244,7 @@ export class ElectronService {
     base64Data: string,
     destinationPath: string
   ): Promise<{ success: boolean; path?: string; error?: string }> {
+    if (this.writeProtection.blocks(destinationPath)) return { success: false, error: READ_ONLY_PROJECT_MESSAGE };
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
@@ -240,6 +252,7 @@ export class ElectronService {
   }
 
   async moveDirectory(sourcePath: string, destPath: string): Promise<{ success: boolean; error?: string }> {
+    if (this.writeProtection.blocks(sourcePath, destPath)) return { success: false, error: READ_ONLY_PROJECT_MESSAGE };
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
@@ -247,6 +260,7 @@ export class ElectronService {
   }
 
   async deleteDirectoryRecursive(dirPath: string): Promise<{ success: boolean; error?: string }> {
+    if (this.writeProtection.blocks(dirPath)) return { success: false, error: READ_ONLY_PROJECT_MESSAGE };
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
@@ -262,6 +276,7 @@ export class ElectronService {
     targetPath: string,
     meta: { kind: string; recordId: string; name: string }
   ): Promise<{ success: boolean; token?: string; stagedPath?: string; expiresAt?: number; error?: string }> {
+    if (this.writeProtection.blocks(targetPath)) return { success: false, error: READ_ONLY_PROJECT_MESSAGE };
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }
@@ -343,6 +358,7 @@ export class ElectronService {
   }
 
   async copyDirectoryRecursive(sourcePath: string, destPath: string): Promise<{ success: boolean; error?: string }> {
+    if (this.writeProtection.blocks(destPath)) return { success: false, error: READ_ONLY_PROJECT_MESSAGE };
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }

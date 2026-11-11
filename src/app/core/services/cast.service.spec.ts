@@ -100,6 +100,18 @@ describe('Cast canvases', () => {
     );
   });
 
+  it('browses missing cast folders and legacy pinboards in a read-only project without migrations', async () => {
+    project.readOnly = true;
+    project.metadata.pinboards = [board('legacy')];
+    const mkdir = spyOn(electron, 'createDirectory').and.resolveTo({ success: false, error: 'EACCES' });
+    await service.loadCasts('/project');
+    expect(mkdir).not.toHaveBeenCalled();
+    directories.add('/project/characters/casts');
+    await service.forceReloadCasts();
+    expect(mkdir).not.toHaveBeenCalled();
+    expect(files.size).toBe(0);
+  });
+
   it('reads and repairs health references without creating folders or reconciling canvases', async () => {
     directories.add('/project/casts');
     const path = '/project/casts/casts.json';

@@ -71,6 +71,28 @@ describe('HouseService', () => {
     service = TestBed.inject(HouseService);
   });
 
+  it('browses read-only Houses without creating folders or persisting generated IDs', async () => {
+    project$.next({ ...project$.value, readOnly: true });
+    folders.add('/project/houses');
+    const path = '/project/houses/stark/stark.md';
+    disk.set(path, generateMarkdown({ ...data(), type: 'house' }, 'House history'));
+    electron.createDirectory.and.resolveTo({ success: false, error: 'EACCES' });
+    electron.writeFileAtomic.and.resolveTo({ success: false, error: 'EACCES' });
+
+    await service.loadHouses();
+
+    expect(electron.readFile).toHaveBeenCalledWith(path);
+    expect(electron.createDirectory).not.toHaveBeenCalled();
+    expect(electron.writeFileAtomic).not.toHaveBeenCalled();
+  });
+
+  it('browses an empty read-only Houses page when the folder is missing', async () => {
+    project$.next({ ...project$.value, readOnly: true });
+    await service.loadHouses();
+    expect(electron.createDirectory).not.toHaveBeenCalled();
+    expect(electron.readDirectoryRecursive).not.toHaveBeenCalled();
+  });
+
   it('reads inconsistent Houses for health checks without migrations and repairs only the orphaned ID', async () => {
     folders.add('/project/houses');
     const path = '/project/houses/stark/stark.md';

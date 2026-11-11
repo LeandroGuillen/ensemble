@@ -3,6 +3,7 @@ import { ProjectService } from './project.service';
 import { ElectronService } from './electron.service';
 import { LoggingService } from './logging.service';
 import { NotificationService } from './notification.service';
+import { ProjectWriteProtectionService } from './project-write-protection.service';
 import { PendingEditsService } from './pending-edits.service';
 import { Project, ProjectMetadata } from '../interfaces/project.interface';
 
@@ -32,6 +33,7 @@ describe('ProjectService', () => {
     const electronSpy = jasmine.createSpyObj('ElectronService', [
       'isElectron',
       'isDirectory',
+      'isWritable',
       'fileExists',
       'readFile',
       'writeFile',
@@ -64,6 +66,7 @@ describe('ProjectService', () => {
     notificationService = TestBed.inject(NotificationService) as jasmine.SpyObj<NotificationService>;
 
     electronService.isElectron.and.returnValue(true);
+    electronService.isWritable.and.resolveTo(true);
     electronService.setWorkFolder.and.returnValue(Promise.resolve({ success: true }));
     electronService.resolveProjectFolder.and.callFake(async (folderPath: string) => ({ success: true, path: folderPath, demoCopy: false }));
     electronService.getRecentProjects.and.returnValue(Promise.resolve([]));
@@ -109,6 +112,48 @@ describe('ProjectService', () => {
   });
 
   describe('loadProject', () => {
+    for (const source of ['ensemble.json', 'metadata.json', null]) {
+      it(`opens a read-only folder with ${source ?? 'no metadata'} without writing or migrating files`, async () => {
+        electronService.isDirectory.and.resolveTo(true);
+        electronService.isWritable.and.resolveTo(false);
+        electronService.fileExists.and.callFake(async p => source !== null && p.endsWith('/' + source));
+        electronService.readFile.and.resolveTo({ success: true, content: JSON.stringify(createValidMetadata()) });
+        electronService.writeFileAtomic.and.resolveTo({ success: false, error: 'EACCES: permission denied' });
+        electronService.createDirectory.and.resolveTo({ success: false, error: 'EACCES: permission denied' });
+
+        const project = await service.loadProject('/archive');
+
+        expect(project?.path).toBe('/archive');
+        expect(project?.readOnly).toBeTrue();
+        expect(project?.metadata.settings.characterStyles?.length).toBeGreaterThan(0);
+        await service.saveLastRoute('/world-map');
+        await service.saveFilterExpandedState(true);
+        await service.saveLastCharacterListStyle('default');
+        await service.savePlotBoardZoom(2);
+        await service.saveLastPlotboardPath('story.pinboard.md');
+        await expectAsync(service.updateMetadata({ projectName: 'Changed' })).toBeRejectedWithError(/read-only/i);
+        expect(service.getCurrentProject()?.metadata.projectName).not.toBe('Changed');
+        expect(electronService.writeFileAtomic).not.toHaveBeenCalled();
+        expect(electronService.createDirectory).not.toHaveBeenCalled();
+        expect(electronService.deleteFile).not.toHaveBeenCalled();
+      });
+    }
+
+    it('clears read-only protection when opening a writable project', async () => {
+      TestBed.inject(ProjectWriteProtectionService).readOnlyPath = '/test/project';
+      electronService.isDirectory.and.resolveTo(true);
+      electronService.fileExists.and.resolveTo(true);
+      electronService.readFile.and.resolveTo({ success: true, content: JSON.stringify(createValidMetadata()) });
+      electronService.writeFileAtomic.and.resolveTo({ success: true });
+      electronService.createDirectory.and.resolveTo({ success: true });
+
+      const project = await service.loadProject('/test/project');
+      expect(project?.readOnly).toBeFalse();
+      await service.updateMetadata({ projectName: 'Writable' });
+      expect(service.getCurrentProject()?.metadata.projectName).toBe('Writable');
+      expect(TestBed.inject(ProjectWriteProtectionService).readOnlyPath).toBeNull();
+    });
+
     it('saves pending debounced edits (Settings) before switching the work folder', async () => {
       const calls: string[] = [];
       TestBed.inject(PendingEditsService).register(async () => {

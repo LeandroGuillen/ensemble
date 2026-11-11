@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { ElectronService } from './electron.service';
 import { LoggingService } from './logging.service';
+import { ProjectWriteProtectionService } from './project-write-protection.service';
 import { IpcChannels } from '../ipc/ipc-channels';
 
 describe('ElectronService trash wrappers', () => {
@@ -37,6 +38,38 @@ describe('ElectronService trash wrappers', () => {
 
   afterEach(() => {
     delete (window as any).require;
+  });
+
+  it('blocks edits throughout a read-only project, allows browsing and copying out, and protects sibling paths correctly', async () => {
+    const protection = TestBed.inject(ProjectWriteProtectionService);
+    protection.readOnlyPath = '/archive';
+    const attempts = [
+      service.writeFile('/archive/notes.md', 'changed'),
+      service.writeFileAtomic('/archive/ensemble.json', '{}'),
+      service.createDirectory('/archive/new'),
+      service.deleteFile('/archive/notes.md'),
+      service.moveFile('/archive/notes.md', '/elsewhere/notes.md'),
+      service.moveDirectory('/archive/characters', '/elsewhere/characters'),
+      service.copyFile('/elsewhere/image.jpg', '/archive/image.jpg'),
+      service.copyDirectoryRecursive('/elsewhere', '/archive/new'),
+      service.stageForTrash('/archive', '/archive/characters/ada', { kind: 'character', recordId: 'ada', name: 'Ada' }),
+      service.downloadImage('https://example.com/image.jpg', '/archive/image.jpg'),
+      service.saveBase64Image('data', '/archive/image.jpg'),
+      service.rewriteWikiLinks([{ path: '/archive/notes.md', expected: '', content: 'new' }]),
+      service.deleteDirectoryRecursive('/archive/new'),
+    ];
+    for (const result of await Promise.all(attempts)) {
+      expect(result.success).toBeFalse();
+      expect(result.error).toContain('read-only');
+    }
+    expect(ipcRenderer.invoke).not.toHaveBeenCalled();
+    await service.readFile('/archive/notes.md');
+    await service.copyDirectoryRecursive('/archive', '/writable-copy');
+    await service.writeFileAtomic('/archive-copy/notes.md', 'allowed');
+    expect(ipcRenderer.invoke).toHaveBeenCalledTimes(3);
+    protection.readOnlyPath = null;
+    await service.writeFileAtomic('/archive/notes.md', 'allowed again');
+    expect(ipcRenderer.invoke).toHaveBeenCalledTimes(4);
   });
 
   it('notifies the text index only after successful file writes', async () => {

@@ -90,6 +90,16 @@ describe('WorldMapService', () => {
     expect(service.snapshot?.canRedo).toBeFalse();
   });
 
+  it('keeps the map read-only when project metadata is protected even if the map file is writable', async () => {
+    project$.next({ path: PROJECT, metadata: {}, readOnly: true });
+    disk = '---\npins: []\nroads: []\n---\nMap notes';
+    await service.load();
+    expect(service.snapshot?.readOnly).toBeTrue();
+    expect(service.snapshot?.map.notes).toContain('Map notes');
+    expect(await service.apply(setPinPosition(service.snapshot!.map, 'a1', 1, 1))).toBeFalse();
+    expect(electron.writeFileAtomic).not.toHaveBeenCalled();
+  });
+
   it('marks a read-only project and refuses edits', async () => {
     writable = false;
     await service.load();

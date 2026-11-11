@@ -398,6 +398,10 @@ export class CharacterService {
       // Check if characters directory exists
       const dirExists = await this.electronService.fileExists(charactersPath);
       if (!dirExists) {
+        if (this.projectService.getCurrentProject()?.readOnly) {
+          this.hasLoadedForCurrentProject = true;
+          return;
+        }
         // Create characters directory if it doesn't exist
         assertIpcSuccess(
           await this.electronService.createDirectory(charactersPath),

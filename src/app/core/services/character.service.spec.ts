@@ -172,6 +172,14 @@ describe('CharacterService', () => {
     projectService.getCharactersFolderPath.and.returnValue('/test/project/characters');
   });
 
+  it('browses a read-only project without a characters folder', async () => {
+    projectService.getCurrentProject.and.returnValue({ ...createValidProject(), readOnly: true });
+    electronService.fileExists.and.resolveTo(false);
+    electronService.createDirectory.and.resolveTo({ success: false, error: 'EACCES' });
+    await service.loadCharacters('/test/project');
+    expect(electronService.createDirectory).not.toHaveBeenCalled();
+  });
+
   it('reads fresh health records without persisting generated IDs or publishing records', async () => {
     electronService.fileExists.and.resolveTo(true);
     electronService.readDirectoryRecursive.and.resolveTo({ success: true, files: [

@@ -228,6 +228,8 @@ export interface PinboardViewState {
 }
 
 export interface Project {
+  /** Session-only: the metadata file or its parent folder cannot be written. */
+  readOnly?: boolean;
   path: string;
   metadata: ProjectMetadata;
 }

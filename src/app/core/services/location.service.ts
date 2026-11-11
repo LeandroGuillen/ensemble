@@ -155,6 +155,10 @@ export class LocationService {
 
       const dirExists = await this.electronService.fileExists(locationsPath);
       if (!dirExists) {
+        if (this.projectService.getCurrentProject()?.readOnly) {
+          this.hasLoadedForCurrentProject = true;
+          return;
+        }
         assertIpcSuccess(
           await this.electronService.createDirectory(locationsPath),
           'Create locations directory'

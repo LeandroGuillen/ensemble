@@ -250,6 +250,10 @@ export class CastService {
       // Check if casts directory exists
       const dirExists = await this.electronService.fileExists(castsPath);
       if (!dirExists) {
+        if (this.projectService.getCurrentProject()?.readOnly) {
+          this.hasLoadedForCurrentProject = true;
+          return;
+        }
         // Create casts directory if it doesn't exist
         const createResult = await this.electronService.createDirectory(castsPath);
         if (!createResult.success) {
@@ -289,7 +293,7 @@ export class CastService {
       // Sort casts by name and update the list
       mergedCasts.sort((a, b) => a.name.localeCompare(b.name));
       this.castsSubject.next(mergedCasts);
-      await this.migratePinboards();
+      if (!this.projectService.getCurrentProject()?.readOnly) await this.migratePinboards();
       this.hasLoadedForCurrentProject = true;
     } catch (error) {
       this.logger.error('Failed to load casts:', error);
