@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BackupSettingsComponent } from './backup-settings.component';
-import { BackupService } from '../../core/services/backup.service';
+import { BackupDestinationReadOnlyError, BackupService } from '../../core/services/backup.service';
 import { ElectronService } from '../../core/services/electron.service';
 import { ProjectService } from '../../core/services/project.service';
 import { NotificationService } from '../../core/services/notification.service';
@@ -10,6 +10,7 @@ describe('BackupSettingsComponent', () => {
   let backupService: jasmine.SpyObj<BackupService>;
   let notifications: jasmine.SpyObj<NotificationService>;
   let projectService: jasmine.SpyObj<ProjectService>;
+  let electron: jasmine.SpyObj<ElectronService>;
 
   const snapshot = {
     path: '/b/ensemble-backup-1.zip',
@@ -31,6 +32,7 @@ describe('BackupSettingsComponent', () => {
     backupService.createSnapshot.and.resolveTo(snapshot);
     backupService.restoreSnapshot.and.resolveTo({ folderPath: '/w/restored', entryCount: 5, name: 'restored' });
 
+    electron = jasmine.createSpyObj('ElectronService', ['selectFolder']);
     notifications = jasmine.createSpyObj('NotificationService', ['showSuccess', 'showError']);
     projectService = jasmine.createSpyObj('ProjectService', ['loadProject']);
     projectService.loadProject.and.resolveTo(null as any);
@@ -39,7 +41,7 @@ describe('BackupSettingsComponent', () => {
       imports: [BackupSettingsComponent],
       providers: [
         { provide: BackupService, useValue: backupService },
-        { provide: ElectronService, useValue: jasmine.createSpyObj('ElectronService', ['selectFolder']) },
+        { provide: ElectronService, useValue: electron },
         { provide: ProjectService, useValue: projectService },
         { provide: NotificationService, useValue: notifications },
       ],
@@ -110,6 +112,64 @@ describe('BackupSettingsComponent', () => {
       expect(notifications.showSuccess).not.toHaveBeenCalled();
     });
   }
+
+  const readOnlyMessage = "This project folder is read-only, so snapshots can't be saved inside it. Choose a backup folder in Settings → Backup.";
+
+  async function failDefaultSnapshot(): Promise<void> {
+    backupService.createSnapshot.and.rejectWith(new BackupDestinationReadOnlyError(readOnlyMessage));
+    fixture.nativeElement.querySelector('.form-section button').click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  it('shows the read-only explanation with a picker and retries in the selected folder without writing project settings', async () => {
+    await failDefaultSnapshot();
+    const alert = fixture.nativeElement.querySelector('.snapshot-destination-error');
+    expect(alert?.textContent).toContain(readOnlyMessage);
+    expect(fixture.nativeElement.textContent).not.toMatch(/EACCES|EPERM|EROFS/);
+    expect(notifications.showError).not.toHaveBeenCalled();
+
+    electron.selectFolder.and.resolveTo('/w/writable-backups');
+    backupService.createSnapshot.and.resolveTo({ ...snapshot, path: '/w/writable-backups/a.zip' });
+    backupService.updateSettings.and.rejectWith(new Error('EACCES: cannot save ensemble.json'));
+    alert.querySelector('button').click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(electron.selectFolder).toHaveBeenCalledTimes(1);
+    expect(backupService.createSnapshot).toHaveBeenCalledWith('/w/writable-backups');
+    expect(backupService.updateSettings).not.toHaveBeenCalled();
+    expect(backupService.listSnapshots).toHaveBeenCalledWith('/w/writable-backups');
+    expect(fixture.nativeElement.querySelector('.snapshot-destination-error')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.snapshot-result').textContent).toContain('/w/writable-backups/a.zip');
+    expect(fixture.nativeElement.textContent).toContain('Project settings have not been changed.');
+    expect(notifications.showSuccess).toHaveBeenCalledTimes(1);
+
+    fixture.nativeElement.querySelector('.form-section button').click();
+    await fixture.whenStable();
+    expect(backupService.createSnapshot.calls.mostRecent().args).toEqual(['/w/writable-backups']);
+  });
+
+  it('keeps the explanation and does not retry when the picker is cancelled', async () => {
+    await failDefaultSnapshot();
+    electron.selectFolder.and.resolveTo(null);
+    fixture.nativeElement.querySelector('.snapshot-destination-error button').click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(backupService.createSnapshot).toHaveBeenCalledTimes(1);
+    expect(backupService.updateSettings).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('.snapshot-destination-error').textContent).toContain(readOnlyMessage);
+  });
+
+  it('keeps ordinary snapshot failures in the existing error notification', async () => {
+    backupService.createSnapshot.and.rejectWith(new Error('Disk full'));
+    fixture.nativeElement.querySelector('.form-section button').click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(notifications.showError).toHaveBeenCalledOnceWith("Couldn't create the snapshot: Disk full");
+    expect(fixture.nativeElement.querySelector('.snapshot-destination-error')).toBeNull();
+    expect(fixture.componentInstance.creating).toBeFalse();
+  });
 
   it('restore opens a copy through ProjectService', async () => {
     const restoreButton: HTMLButtonElement = fixture.nativeElement.querySelector('.snapshot-row button');

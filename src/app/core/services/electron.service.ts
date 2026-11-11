@@ -286,7 +286,7 @@ export class ElectronService {
   async createBackupSnapshot(
     projectPath: string,
     destDir?: string
-  ): Promise<{ success: boolean; snapshot?: BackupSnapshot; error?: string }> {
+  ): Promise<{ success: boolean; snapshot?: BackupSnapshot; error?: string; errorCode?: string }> {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };
     }

@@ -1,6 +1,6 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { BackupService } from '../../core/services/backup.service';
+import { BackupDestinationReadOnlyError, BackupService } from '../../core/services/backup.service';
 import { ElectronService } from '../../core/services/electron.service';
 import { ProjectService } from '../../core/services/project.service';
 import { NotificationService } from '../../core/services/notification.service';
@@ -25,6 +25,8 @@ export class BackupSettingsComponent implements OnInit {
   legacySnapshots: BackupSnapshot[] = [];
   lastResult: BackupSnapshot | null = null;
   creating = false;
+  destinationError = '';
+  sessionBackupFolder = '';
   restoring = false;
   loading = false;
 
@@ -44,9 +46,9 @@ export class BackupSettingsComponent implements OnInit {
     void this.refresh();
   }
 
-  /** The folder snapshots go to (chosen or the default sibling). */
+  /** The folder snapshots go to (chosen or project-local default). */
   get effectiveBackupDir(): string {
-    return this.backupService.backupDir ?? '';
+    return this.sessionBackupFolder || this.backupService.backupDir || '';
   }
 
   private loadSettings(): void {
@@ -59,7 +61,7 @@ export class BackupSettingsComponent implements OnInit {
   async refresh(): Promise<void> {
     this.loading = true;
     try {
-      const snapshots = await this.backupService.listSnapshots();
+      const snapshots = await this.backupService.listSnapshots(this.sessionBackupFolder || undefined);
       this.snapshots = snapshots.filter(snapshot => !snapshot.legacy);
       this.legacySnapshots = snapshots.filter(snapshot => snapshot.legacy);
     } catch {
@@ -72,8 +74,9 @@ export class BackupSettingsComponent implements OnInit {
 
   async createSnapshot(): Promise<void> {
     this.creating = true;
+    this.destinationError = '';
     try {
-      const snapshot = await this.backupService.createSnapshot();
+      const snapshot = await this.backupService.createSnapshot(this.sessionBackupFolder || undefined);
       this.lastResult = snapshot;
       if (snapshot.skipped?.length) {
         const count = snapshot.skipped.length;
@@ -87,7 +90,12 @@ export class BackupSettingsComponent implements OnInit {
       }
       await this.refresh();
     } catch (error) {
-      this.notifications.showError(`Couldn't create the snapshot: ${(error as Error).message}`);
+      if (error instanceof BackupDestinationReadOnlyError) {
+        this.destinationError = error.message;
+        this.lastResult = null;
+      } else {
+        this.notifications.showError(`Couldn't create the snapshot: ${(error as Error).message}`);
+      }
     } finally {
       this.creating = false;
     }
@@ -106,7 +114,21 @@ export class BackupSettingsComponent implements OnInit {
     }
   }
 
+  async chooseSnapshotFolder(): Promise<void> {
+    const folder = await this.electronService.selectFolder();
+    if (!folder) return;
+    // The project may not allow ensemble.json writes. Keep this choice in the
+    // open panel and retry directly, without making the backup depend on a save.
+    this.sessionBackupFolder = folder;
+    this.backupFolder = folder;
+    await this.createSnapshot();
+  }
+
   async chooseBackupFolder(): Promise<void> {
+    if (this.sessionBackupFolder || this.destinationError) {
+      await this.chooseSnapshotFolder();
+      return;
+    }
     const folder = await this.electronService.selectFolder();
     if (!folder) {
       return;

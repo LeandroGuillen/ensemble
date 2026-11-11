@@ -8,6 +8,8 @@ import {
   BackupSettings,
 } from '../interfaces/backup.interface';
 
+export class BackupDestinationReadOnlyError extends Error {}
+
 /** Assert a value is present, throwing a helpful message when it is not. */
 function required<T>(value: T | null | undefined, message: string): T {
   if (value == null) {
@@ -71,7 +73,11 @@ export class BackupService {
     const target = destDir ?? required(this.backupDir, 'No backup folder');
     const result = await this.electronService.createBackupSnapshot(projectPath, target);
     if (!result.success || !result.snapshot) {
-      throw new Error(result.error || 'Could not create the snapshot');
+      const message = result.error || 'Could not create the snapshot';
+      if (result.errorCode === 'BACKUP_DESTINATION_READ_ONLY') {
+        throw new BackupDestinationReadOnlyError(message);
+      }
+      throw new Error(message);
     }
     return result.snapshot;
   }

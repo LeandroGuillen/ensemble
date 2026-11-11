@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { BackupService } from './backup.service';
+import { BackupDestinationReadOnlyError, BackupService } from './backup.service';
 import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
 
@@ -64,6 +64,23 @@ describe('BackupService', () => {
   it('createSnapshot throws a helpful error when IPC fails', async () => {
     electron.createBackupSnapshot.and.resolveTo({ success: false, error: 'boom' });
     await expectAsync(service.createSnapshot()).toBeRejectedWithError(/boom/);
+  });
+
+  it('preserves the structured read-only destination failure for the recovery UI', async () => {
+    const message = "This project folder is read-only, so snapshots can't be saved inside it. Choose a backup folder in Settings → Backup.";
+    electron.createBackupSnapshot.and.resolveTo({
+      success: false, error: message, errorCode: 'BACKUP_DESTINATION_READ_ONLY',
+    });
+    await expectAsync(service.createSnapshot()).toBeRejectedWithError(BackupDestinationReadOnlyError, message);
+  });
+
+  it('can retry into a writable folder without updating project metadata', async () => {
+    electron.createBackupSnapshot.and.resolveTo({
+      success: true, snapshot: { path: '/b/a.zip', name: 'a.zip', size: 10, fileCount: 2, createdAt: 'x', automatic: false },
+    });
+    await service.createSnapshot('/b');
+    expect(electron.createBackupSnapshot).toHaveBeenCalledWith('/w/lantern-coast', '/b');
+    expect(projectService.updateMetadata).not.toHaveBeenCalled();
   });
 
   it('restoreSnapshot returns the new folder so the caller can open it', async () => {

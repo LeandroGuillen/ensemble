@@ -11,6 +11,14 @@
           <button type="button" class="btn btn-secondary" (click)="createSnapshot()" [disabled]="creating">
             {{ creating ? 'Creating…' : 'Create snapshot' }}
           </button>
+          @if (destinationError) {
+            <div class="test-result snapshot-destination-error" role="alert">
+              <p>{{ destinationError }}</p>
+              <button type="button" class="btn btn-secondary" (click)="chooseSnapshotFolder()" [disabled]="creating">
+                Choose backup folder…
+              </button>
+            </div>
+          }
           @if (lastResult) {
             <div class="test-result snapshot-result" [class.success]="!lastResult.skipped?.length">
               <div>
@@ -39,9 +47,13 @@
             <span class="backup-folder-path">{{ backupFolder || effectiveBackupDir }}</span>
             <button type="button" class="btn btn-secondary" (click)="chooseBackupFolder()">Change…</button>
           </div>
-          <p class="field-hint">
-            Snapshots are saved here. Automatic snapshots are kept for {{ keepAutomatic }}.
-          </p>
+          @if (sessionBackupFolder) {
+            <p class="field-hint">Manual snapshots use this folder while this Backup panel is open. Project settings have not been changed.</p>
+          } @else {
+            <p class="field-hint">
+              Snapshots are saved here. Automatic snapshots are kept for {{ keepAutomatic }}.
+            </p>
+          }
         </div>
 
         <div class="form-group">
