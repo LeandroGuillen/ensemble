@@ -155,8 +155,8 @@ test('Lantern Coast demo has complete, resolvable canonical project data', async
   for (const m of markdown) for (const match of m.body.matchAll(/(?<!!)\[\[([^\]\n|]+)(?:\|[^\]\n]*)?\]\]/g)) {
     assert.equal(resolveWikiLinkTarget(match[1], collections).state, 'resolved', `${path.relative(root, m.file)}: broken, ambiguous or alias-only link [[${match[1]}]]`);
   }
-  // Explicitly prove the resolver never treats aliases as identities.
-  for (const alias of ['Gull', 'The Lamplighter']) assert.equal(resolveWikiLinkTarget(alias, collections).state, 'missing');
+  // Unique aliases also resolve to their canonical records.
+  for (const alias of ['Gull', 'The Lamplighter']) assert.equal(resolveWikiLinkTarget(alias, collections).state, 'resolved');
   assert.equal(all.filter(f => f.endsWith('.webp')).length, 19, 'Eleven portraits, six locations and two crests');
   const bytes = all.reduce((n, f) => n + fs.statSync(f).size, 0); assert.ok(bytes < 2.5 * 1024 * 1024, `Demo too large: ${bytes}`);
   assert.ok(!all.some(f => f.includes('.ensemble-trash')));

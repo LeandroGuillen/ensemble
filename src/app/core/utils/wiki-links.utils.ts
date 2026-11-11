@@ -2,11 +2,13 @@ import { unified } from 'unified';
 import remarkParse from 'remark-parse';
 import type { Root, RootContent } from 'mdast';
 import { escapeHtml, markdownToHtml } from './markdown.utils';
+import { normalizeAliases } from './character-alias.utils';
 
 export interface WikiLinkTarget {
   id: string;
   name: string;
   relativePath: string;
+  aliases?: string[];
 }
 
 export interface WikiLinkOptions {
@@ -73,11 +75,21 @@ function matchingRecords<T extends WikiLinkTarget>(
   return matches;
 }
 
+/** Alias matching is a fallback only; it never competes with existing name/path links. */
+function matchingAliases<T extends WikiLinkTarget>(record: string, targets: T[]): T[] {
+  const normalized = normalizePath(record);
+  if (!normalized) return [];
+  return targets.filter(entry => normalizeAliases(entry.aliases).some(alias => alias.toLowerCase() === normalized));
+}
+
 /** Matches for the longest reading of the target that matches anything. */
 function matchingTargets<T extends WikiLinkTarget>(target: string, targets: T[], folderName: string): T[] {
-  for (const { record } of recordReadings(target)) {
-    const matches = matchingRecords(record, targets, folderName);
-    if (matches.length) return matches;
+  const readings = recordReadings(target);
+  for (const match of [matchingRecords, matchingAliases]) {
+    for (const { record } of readings) {
+      const matches = match(record, targets, folderName);
+      if (matches.length) return matches;
+    }
   }
   return [];
 }
@@ -130,13 +142,17 @@ interface WikiLinkReading {
 function readWikiLinkTarget(target: string, collections: WikiLinkCollection[]): WikiLinkReading {
   const readings = recordReadings(target);
   const reading = readings[readings.length - 1];
-  for (const candidate of readings) {
-    const explicit = explicitCollectionsFor(candidate.record, collections);
-    const candidates = explicit.length ? explicit : collections;
-    const found = preferPrimary(candidates.flatMap(collection =>
-      matchingRecords(candidate.record, collection.targets, collection.folder).map(entry => ({ entry, collection }))
-    ));
-    if (found.length) return { reading: candidate, explicitCollections: explicit, matches: found };
+  // Try every canonical reading first, preserving the existing collection and draft rules.
+  // Only when none matches may aliases resolve the link (using those same rules).
+  for (const match of [matchingRecords, matchingAliases]) {
+    for (const candidate of readings) {
+      const explicit = explicitCollectionsFor(candidate.record, collections);
+      const candidates = explicit.length ? explicit : collections;
+      const found = preferPrimary(candidates.flatMap(collection =>
+        match(candidate.record, collection.targets, collection.folder).map(entry => ({ entry, collection }))
+      ));
+      if (found.length) return { reading: candidate, explicitCollections: explicit, matches: found };
+    }
   }
   return { reading, explicitCollections: explicitCollectionsFor(reading.record, collections), matches: [] };
 }
@@ -229,7 +245,7 @@ export function buildWikiLinkTargets(collections: WikiLinkCollection[]): WikiLin
         ? `${collection.folder.replace(/\/$/, '')}/${entry.relativePath.replace(/\.md$/i, '')}`
         : name;
       suggestions.push({ label: name, target, detail: collection.singular, type: collection.route });
-      for (const alias of (entry as { aliases?: string[] }).aliases || []) {
+      for (const alias of normalizeAliases(entry.aliases)) {
         if (alias.trim()) suggestions.push({ label: alias.trim(), target, detail: `→ ${name}`, type: collection.route, boost: -1 });
       }
     }

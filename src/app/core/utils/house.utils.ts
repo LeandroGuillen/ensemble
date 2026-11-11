@@ -26,6 +26,7 @@ export function normalizeHouseData(raw: Record<string, unknown>, content: string
     return { id, characterIds: strings(entry['characterIds']), period: text(entry['period']), ...(from ? { from } : {}), ...(to ? { to } : {}), books: strings(entry['books']), notes: text(entry['notes']) };
   });
   const data: HouseFormData = {
+    aliases: strings(raw['aliases']),
     name: text(raw['name']), motto: text(raw['motto']), colors: strings(raw['colors'], false),
     thumbnail: text(raw['thumbnail']) || undefined, seatId: text(raw['seatId']) || undefined,
     characterIds: strings(raw['characterIds']), leadership,

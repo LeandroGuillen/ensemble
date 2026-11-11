@@ -19,6 +19,8 @@ export class ConfirmationDialogComponent {
   @Input() secondaryText = '';
   @Input() confirmButtonClass = 'btn-primary';
   @Input() danger = false;
+  @Input() checkbox?: { label: string; checked: boolean };
+  setChecked(event: Event): void { if (this.checkbox) this.checkbox.checked = (event.target as HTMLInputElement).checked; }
 
   readonly messageId = `confirmation-message-${++nextConfirmationId}`;
 

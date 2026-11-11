@@ -26,6 +26,7 @@
   "isWritable": "is-writable",
   "readFile": "read-file",
   "writeFile": "write-file",
+  "rewriteWikiLinks": "rewrite-wiki-links",
   "writeFileAtomic": "write-file-atomic",
 
   "deleteFile": "delete-file",

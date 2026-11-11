@@ -112,6 +112,16 @@ describe('HouseService', () => {
     expect(service.getSnapshot().length).toBe(2);
   });
 
+  it('retains old-name aliases through membership edits and reloads', async () => {
+    const house = await service.createHouse(data());
+    await service.updateHouse(house.id, { ...house, aliases: ['Winter'] }, house.raw);
+    await service.loadHouses(true);
+    expect(service.getById(house.id)!.aliases).toEqual(['Winter']);
+    await service.setMembership(house.id, 'arya', true);
+    await service.loadHouses(true);
+    expect(service.getById(house.id)!.aliases).toEqual(['Winter']);
+  });
+
   it('keeps stable identity and references when renaming a House', async () => {
     const one = await service.createHouse(data());
     const renamed = await service.updateHouse(one.id, { ...data(), name: 'House Winter' }, one.raw);

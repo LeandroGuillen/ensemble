@@ -30,6 +30,7 @@ export interface Location {
   /** Stable identity stored in frontmatter; survives rename/move. */
   id: string;
   name: string;
+  aliases?: string[];
   type?: LocationType;
   books: string[];
   /** Opaque wiki-link / path string for a single thumbnail. */
@@ -44,6 +45,7 @@ export interface Location {
 
 export interface LocationFormData {
   name: string;
+  aliases?: string[];
   type?: LocationType;
   books: string[];
   thumbnail?: string;
@@ -54,6 +56,7 @@ export interface LocationFrontmatter {
   /** Stable location identity; assigned on first load when missing. */
   id?: string;
   name: string;
+  aliases?: string[];
   type?: LocationType;
   books: string[];
   thumbnail?: string;

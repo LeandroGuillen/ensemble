@@ -5,6 +5,9 @@
     (closed)="onClose()"
   >
     <p class="confirmation-message" [id]="messageId">{{ message }}</p>
+    @if (checkbox) {
+      <label><input type="checkbox" [checked]="checkbox.checked" (change)="setChecked($event)"> {{ checkbox.label }}</label>
+    }
     <div class="modal-actions">
       <button
         type="button"

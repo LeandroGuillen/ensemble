@@ -76,6 +76,11 @@ export class ElectronService {
     return await this.ipcRenderer.invoke(IpcChannels.writeFile, filePath, content);
   }
 
+  async rewriteWikiLinks(changes: { path: string; expected: string; content: string }[]): Promise<{ success: boolean; error?: string }> {
+    if (!this.isElectron()) return { success: false, error: 'File access requires Electron.' };
+    return this.ipcRenderer.invoke(IpcChannels.rewriteWikiLinks, changes);
+  }
+
   async writeFileAtomic(filePath: string, content: string): Promise<{ success: boolean; error?: string }> {
     if (!this.isElectron()) {
       return { success: false, error: 'Not running in Electron' };

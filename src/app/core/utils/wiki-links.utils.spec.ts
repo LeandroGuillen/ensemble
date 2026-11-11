@@ -1,4 +1,4 @@
-import { buildWikiLinkTargets, extractWikiLinks, renderWikiLinkMarkdown, resolveWikiLink, WikiLinkCollection } from './wiki-links.utils';
+import { buildWikiLinkTargets, extractWikiLinks, renderWikiLinkMarkdown, resolveWikiLink, resolveWikiLinkTarget, WikiLinkCollection } from './wiki-links.utils';
 
 describe('buildWikiLinkTargets', () => {
   const characters = (targets: any[]): WikiLinkCollection =>
@@ -139,5 +139,54 @@ describe('names containing #', () => {
   it('reads [[Unit #7]] as a heading link to Unit when no Unit #7 exists', () => {
     const { resolve } = buildWikiLinkTargets([characters([unit])]);
     expect(resolve('Unit #7')).toEqual(jasmine.objectContaining({ state: 'resolved', id: 'unit', fragment: '7' }));
+  });
+});
+
+describe('old names retained as wiki-link aliases', () => {
+  it('resolves unique aliases for characters, locations and Houses', () => {
+    for (const route of ['character', 'location', 'house']) {
+      const collections = [{ folder: route + 's', route, singular: route, targets: [
+        { id: 'one', name: 'New name', relativePath: 'new.md', aliases: ['Old name'] },
+      ] }];
+      expect(resolveWikiLinkTarget('Old name#History', collections)).toEqual(jasmine.objectContaining({ state: 'resolved', id: 'one', fragment: 'History' }));
+      collections[0].targets.push({ id: 'two', name: 'Another', relativePath: 'another.md', aliases: ['Old name'] });
+      expect(resolveWikiLinkTarget('Old name', collections).state).toBe('ambiguous');
+    }
+  });
+});
+
+describe('wiki-link alias fallback precedence', () => {
+  const ilse = { id: 'ilse', name: 'Ilse', relativePath: 'ilse/ilse.md' };
+  const other = { id: 'other', name: 'Other', relativePath: 'other/other.md', aliases: ['Ilse', 'ilse/ilse', 'Ilse#History'] };
+  const characters = (targets: any[], secondary = false): WikiLinkCollection => ({ folder: 'characters', route: secondary ? 'character-draft' : 'character', singular: 'Character', targets, secondary });
+
+  it('preserves canonical names, paths and heading links when another record has matching aliases', () => {
+    const entries = [ilse, other];
+    const links = buildWikiLinkTargets([characters(entries)]);
+    for (const target of ['Ilse', 'ilse/ilse', 'characters/ilse/ilse.md', 'Ilse#History']) {
+      expect(links.resolve(target)).toEqual(jasmine.objectContaining({ state: 'resolved', id: 'ilse' }));
+      expect(resolveWikiLink(target, entries, 'characters')).toBe(ilse);
+    }
+    expect(links.resolve('Ilse#History').fragment).toBe('History');
+    expect(links.suggestions.find(entry => entry.label === 'Ilse' && entry.detail === 'Character')?.target).toBe('Ilse');
+  });
+
+  it('preserves House and location names regardless of collection order or character aliases', () => {
+    for (const route of ['house', 'location']) {
+      const named: WikiLinkCollection = { folder: route + 's', route, singular: route, targets: [{ id: 'named', name: 'Ilse', relativePath: 'named.md' }] };
+      for (const collections of [[characters([other]), named], [named, characters([other])]]) {
+        const links = buildWikiLinkTargets(collections);
+        expect(links.resolve('Ilse')).toEqual(jasmine.objectContaining({ state: 'resolved', id: 'named', route }));
+        expect(links.suggestions.find(entry => entry.label === 'Ilse' && entry.type === route)?.target).toBe('Ilse');
+      }
+    }
+  });
+
+  it('preserves primary and secondary rules before falling back to aliases', () => {
+    const draft = { ...ilse, id: 'draft', relativePath: '@drafts/ilse/ilse.md' };
+    const aliasesOnly = characters([other]);
+    expect(buildWikiLinkTargets([aliasesOnly, characters([draft], true)]).resolve('Ilse').id).toBe('draft');
+    expect(buildWikiLinkTargets([characters([ilse, other]), characters([draft], true)]).resolve('Ilse').id).toBe('ilse');
+    expect(buildWikiLinkTargets([aliasesOnly, characters([{ ...draft, name: 'Draft', relativePath: '@drafts/draft/draft.md', aliases: ['Ilse'] }], true)]).resolve('Ilse').id).toBe('other');
   });
 });

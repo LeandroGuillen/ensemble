@@ -354,6 +354,20 @@ A foggy port.`,
   });
 
   describe('updateLocation', () => {
+    it('retains old-name aliases through saves and reloads', async () => {
+      projectService.getCurrentProject.and.returnValue(createValidProject());
+      const created = await service.createLocation(createFormData());
+      const updated = await service.updateLocation(created.id, { aliases: ['Grey Harbor'] });
+      expect(updated?.aliases).toEqual(['Grey Harbor']);
+      const raw = electronService.writeFileAtomic.calls.mostRecent().args[1];
+      expect(raw).toContain('aliases:');
+      electronService.readDirectoryRecursive.and.resolveTo({ success: true, files: [{ relativePath: created.relativePath, absolutePath: created.filePath }] });
+      electronService.readFile.and.resolveTo({ success: true, content: raw });
+      existingFiles.add('/test/project/locations');
+      await service.forceReloadLocations();
+      expect(service.getLocationsSnapshot()[0].aliases).toEqual(['Grey Harbor']);
+    });
+
     it('renames the file when the name changes', async () => {
       const project = createValidProject();
       projectService.getCurrentProject.and.returnValue(project);

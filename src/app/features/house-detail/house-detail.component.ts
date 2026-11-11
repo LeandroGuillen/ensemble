@@ -1,3 +1,4 @@
+import { WikiLinkRenameService } from '../../core/services/wiki-link-rename.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { ChangeDetectorRef, Component, DestroyRef, HostListener, inject, OnDestroy, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -22,6 +23,7 @@ import { ResolvedWikiLink, WikiLinkSuggestion } from '../../core/utils/wiki-link
 
 @Component({ selector: 'app-house-detail', imports: [FormsModule, RouterLink, DragDropModule, PageHeaderComponent, ImagePickerDialogComponent, ConfirmButtonDirective, MarkdownEditorComponent, MentionedInComponent], templateUrl: './house-detail.component.html', styleUrls: ['./house-detail.component.scss'] })
 export class HouseDetailComponent implements OnInit, OnDestroy {
+  private readonly linkRename = inject(WikiLinkRenameService);
   private readonly toasts = inject(NotificationService);
   readonly houses = inject(HouseService);
   readonly charactersService = inject(CharacterService);
@@ -202,7 +204,7 @@ export class HouseDetailComponent implements OnInit, OnDestroy {
     if (this.saving || this.pickingMember || this.conflict || this.deleted || this.loading) return;
     this.saving = true;
     try {
-      const saved = this.house ? await this.houses.updateHouse(this.house.id, this.model, this.house.raw) : await this.houses.createHouse(this.model);
+      const saved = this.house ? await this.linkRename.run(this.house, this.model.name, 'house', () => this.houses.updateHouse(this.house!.id, this.model, this.house!.raw)) : await this.houses.createHouse(this.model);
       this.accept(saved);
       this.saving = false;
       await this.router.navigate(['/house', saved.id], { replaceUrl: true });

@@ -157,6 +157,14 @@ and `Ctrl`/`Cmd` + click to open the target. A link to a name that doesn't exist
 yet offers to create the record. The **Mentioned in** panel on each record lists
 every place that links to it.
 
+When you save a renamed character, location or House, Ensemble offers to update
+inbound wiki links, showing the link count, affected files and a preview. Accepting
+keeps custom labels and heading links. Choose **Keep links unchanged** to save the
+new name without editing inbound links. **Add old name as alias** keeps the old
+name available as a link target; aliases resolve only when no name or path matches
+and they identify one record.
+Link rewriting leaves code examples, image embeds and frontmatter references untouched.
+
 If a draft has the same name as a published character, `[[Name]]` links to the
 published character. Link the draft by its path instead, e.g.
 `[[characters/@drafts/mara-vell/mara-vell]]` (the `[[` suggestion does this for you).

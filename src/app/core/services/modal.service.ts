@@ -11,6 +11,7 @@ export interface ConfirmationRequest {
   cancelText?: string;
   /** Optional middle action (e.g. "Reload from disk"). When set, Cancel / Secondary / Confirm are shown. */
   secondaryText?: string;
+  checkbox?: { label: string; checked: boolean };
   danger?: boolean;
   resolve: (value: boolean | 'secondary') => void;
 }
@@ -78,6 +79,12 @@ export class ModalService {
       cancelText: options.cancelText,
       danger: options.danger ?? false,
     });
+  }
+
+  async confirmLinkRename(message: string): Promise<{ update: boolean; alias: boolean }> {
+    const checkbox = { label: 'Add old name as alias', checked: false };
+    const result = await this.open({ message, title: 'Update wiki links?', confirmText: 'Update links', cancelText: 'Keep links unchanged', checkbox });
+    return { update: result === 'primary', alias: result === 'primary' && checkbox.checked };
   }
 
   private open(request: Omit<ConfirmationRequest, 'id' | 'resolve'>): Promise<ChoiceResult> {

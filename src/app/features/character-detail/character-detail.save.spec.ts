@@ -9,6 +9,7 @@ describe('Character detail save', () => {
 
   beforeEach(() => {
     component = Object.create(CharacterDetailComponent.prototype);
+    (component as any).linkRename = { run: async (_old: unknown, _name: string, _route: string, save: () => Promise<unknown>) => save() };
     characterService = jasmine.createSpyObj('CharacterService', ['updateCharacter', 'saveBookPage', 'promoteDraft', 'createDraft', 'moveToDraft']);
     notification = jasmine.createSpyObj('NotificationService', ['showSuccess', 'showError']);
     router = jasmine.createSpyObj('Router', ['navigate']);

@@ -9,6 +9,14 @@ Folder names are derived from an ASCII-only transliteration of the character nam
 appends part of the stable character ID. The former `_name.md` layout is still
 readable for compatibility, but newly created characters use this structure.
 
+## Wiki-link aliases
+
+Characters, locations and Houses support an optional `aliases` list in YAML
+frontmatter (for example `aliases: [Dess, The Grey Witch]`). Saving a rename can
+add the previous name to this list. Names and paths take precedence over aliases.
+Aliases are tried only when no name or path matches, and must identify one record
+under the usual draft priority rules. Explicit file paths can disambiguate shared names.
+
 ## Houses
 
 Houses are stored under `houses/`, one folder per House. The main Markdown file

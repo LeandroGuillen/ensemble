@@ -1,3 +1,4 @@
+import { WikiLinkRenameService } from '../../core/services/wiki-link-rename.service';
 import {
   DestroyRef,
   inject,
@@ -65,6 +66,7 @@ import { buildDeleteReferencesMessage } from '../../shared/utils/reference-messa
   styleUrls: ['./location-detail.component.scss'],
 })
 export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy {
+  private readonly linkRename = inject(WikiLinkRenameService);
   private readonly toasts = inject(NotificationService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -372,7 +374,7 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
         this.locationForm.markAsPristine();
         await this.navigateBackAfterSave();
       } else if (this.locationId) {
-        const updated = await this.locationService.updateLocation(this.locationId, payload);
+        const updated = await this.linkRename.run(this.location!, payload.name, 'location', () => this.locationService.updateLocation(this.locationId!, payload));
         if (!updated) {
           throw new Error('Location not found');
         }

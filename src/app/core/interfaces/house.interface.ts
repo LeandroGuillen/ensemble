@@ -13,6 +13,7 @@ export interface HouseLeadership {
 
 export interface HouseFormData {
   name: string;
+  aliases?: string[];
   motto: string;
   colors: string[];
   thumbnail?: string;

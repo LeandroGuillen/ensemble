@@ -1,3 +1,4 @@
+import { WikiLinkRenameService } from '../../core/services/wiki-link-rename.service';
 import { DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -108,6 +109,7 @@ type CharacterCollection = 'characters' | 'lore' | 'draft';
 export class CharacterDetailComponent
   implements OnInit, OnDestroy, AfterViewInit
 {
+  private readonly linkRename = inject(WikiLinkRenameService);
   @ViewChild("nameInput") nameInput?: ElementRef<HTMLInputElement>;
   @ViewChild("addBookMenu") addBookMenu?: ElementRef<HTMLDetailsElement>;
   @ViewChild("portraitMenu") portraitMenu?: ElementRef<HTMLDetailsElement>;
@@ -882,19 +884,23 @@ export class CharacterDetailComponent
       const collectionChanged = !!this.character && !!this.character.lore !== !!formData.lore;
 
       if (this.isEditing && this.character) {
-        const updatedCharacter = await this.characterService.updateCharacter(
-          this.character.id,
-          formData
-        );
-        if (!updatedCharacter) {
-          throw new Error("Character not found");
-        }
+        const updatedCharacter = await this.linkRename.run(this.character, formData.name, this.isDraftMode ? 'character-draft' : 'character', async () => {
+          const updatedCharacter = await this.characterService.updateCharacter(
+            this.character!.id,
+            formData
+          );
+          if (!updatedCharacter) {
+            throw new Error("Character not found");
+          }
+
+          for (const bookId of dirtyBookIds) {
+            const content = this.bookPageData[bookId].content;
+            await this.characterService.saveBookPage(updatedCharacter.id, bookId, content);
+            this.bookPageOriginalContent[bookId] = content;
+          }
+          return updatedCharacter;
+        });
         this.character = updatedCharacter;
-        for (const bookId of dirtyBookIds) {
-          const content = this.bookPageData[bookId].content;
-          await this.characterService.saveBookPage(updatedCharacter.id, bookId, content);
-          this.bookPageOriginalContent[bookId] = content;
-        }
       } else {
         if (this.isDraftMode) {
           await this.characterService.createDraft(formData);
@@ -1823,14 +1829,17 @@ export class CharacterDetailComponent
       const data = { ...this.buildFormData(), lore: false };
       let draft: Character;
       if (this.isEditing && this.character) {
-        const updated = await this.characterService.updateCharacter(this.character.id, data);
-        if (!updated) throw new Error('Character not found');
+        const updated = await this.linkRename.run(this.character, data.name, 'character', async () => {
+          const updated = await this.characterService.updateCharacter(this.character!.id, data);
+          if (!updated) throw new Error('Character not found');
+          for (const bookId of dirtyBookIds) {
+            const content = this.bookPageData[bookId].content;
+            await this.characterService.saveBookPage(updated.id, bookId, content);
+            this.bookPageOriginalContent[bookId] = content;
+          }
+          return updated;
+        });
         this.character = updated;
-        for (const bookId of dirtyBookIds) {
-          const content = this.bookPageData[bookId].content;
-          await this.characterService.saveBookPage(updated.id, bookId, content);
-          this.bookPageOriginalContent[bookId] = content;
-        }
         draft = await this.characterService.moveToDraft(updated.id);
       } else {
         draft = await this.characterService.createDraft(data);

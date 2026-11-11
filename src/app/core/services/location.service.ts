@@ -1,3 +1,4 @@
+import { normalizeAliases } from '../utils/character-alias.utils';
 import { Injectable } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BehaviorSubject, Observable } from 'rxjs';
@@ -234,6 +235,7 @@ export class LocationService {
       const location: Location = {
         id,
         name: data.name,
+        aliases: normalizeAliases(data.aliases),
         type: isLocationType(data.type) ? data.type : undefined,
         books,
         thumbnail: data.thumbnail?.trim() || undefined,
@@ -310,6 +312,7 @@ export class LocationService {
       const updatedLocation: Location = {
         ...existing,
         name: data.name ?? existing.name,
+        aliases: 'aliases' in data ? normalizeAliases(data.aliases) : existing.aliases,
         type: 'type' in data ? (isLocationType(data.type) ? data.type : undefined) : existing.type,
         books: data.books ?? existing.books,
         thumbnail: nextThumbnail,
@@ -555,6 +558,7 @@ export class LocationService {
       const location: Location = {
         id: storedId || generateId(),
         name: frontmatter.name,
+        aliases: normalizeAliases(frontmatter.aliases),
         type: isLocationType(frontmatter.type) ? frontmatter.type : undefined,
         books: frontmatter.books || [],
         thumbnail: thumbnail || undefined,
@@ -624,6 +628,7 @@ export class LocationService {
   private async saveLocationToFile(location: Location): Promise<void> {
     try {
       const frontmatter: LocationFrontmatter = {
+        aliases: location.aliases?.length ? location.aliases : undefined,
         id: location.id,
         name: location.name,
         ...(location.type ? { type: location.type } : {}),

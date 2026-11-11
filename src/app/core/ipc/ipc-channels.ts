@@ -40,6 +40,7 @@ export interface IpcChannels {
   readonly isWritable: string;
   readonly readFile: string;
   readonly writeFile: string;
+  readonly rewriteWikiLinks: string;
   readonly writeFileAtomic: string;
 
   readonly deleteFile: string;
