@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Character } from '../interfaces/character.interface';
+import { normalizeAliases } from '../utils/character-alias.utils';
 import { nextCopyName } from '../utils/copy-name.utils';
 import { CharacterService } from './character.service';
 import { HouseService } from './house.service';
@@ -56,7 +57,7 @@ export class CharacterDuplicateService {
     }
   }
 
-  /** Names and wikilink stems of every link target, so the copy's name never makes a link ambiguous. */
+  /** Names, aliases and wikilink stems of every link target, so the copy's name never makes a link ambiguous. */
   private async takenNames(): Promise<string[]> {
     const projectPath = this.projects.getCurrentProject()?.path;
     if (projectPath) {
@@ -69,8 +70,8 @@ export class CharacterDuplicateService {
       (relativePath || '').replace(/\\/g, '/').split('/').pop()!.replace(/\.md$/i, '');
     return [
       ...this.characters.getRecordNames(),
-      ...this.locations.getLocationsSnapshot().flatMap((location) => [location.name, stem(location.relativePath)]),
-      ...this.houses.getSnapshot().flatMap((house) => [house.name, stem(house.relativePath)]),
+      ...this.locations.getLocationsSnapshot().flatMap((location) => [location.name, ...normalizeAliases(location.aliases), stem(location.relativePath)]),
+      ...this.houses.getSnapshot().flatMap((house) => [house.name, ...normalizeAliases(house.aliases), stem(house.relativePath)]),
     ];
   }
 }

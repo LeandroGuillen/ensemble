@@ -1,5 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
+import { asciiSlugify } from '../utils/slug.utils';
+import { buildWikiLinkTargets } from '../utils/wiki-links.utils';
 import { Character } from '../interfaces/character.interface';
 import { CharacterDuplicateService } from './character-duplicate.service';
 import { CharacterService } from './character.service';
@@ -57,6 +59,32 @@ describe('CharacterDuplicateService', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/character', 'new-id'], { state: { duplicatedFrom: 'Mara' } });
     expect(notifications.showSuccess).toHaveBeenCalledWith('Created “Mara (copy 3)”.');
   });
+
+  for (const kind of ['location', 'house'] as const) {
+    it(`preserves ${kind} alias links when choosing the copy name and stem`, async () => {
+      const owner = { id: 'owner', name: 'Other record', relativePath: 'other.md',
+        aliases: ['mArA (CoPy)', 'mara-copy-2'] };
+      characters.getRecordNames.and.returnValue(['Mara']);
+      const locations = TestBed.inject(LocationService) as jasmine.SpyObj<LocationService>;
+      const houses = TestBed.inject(HouseService) as jasmine.SpyObj<HouseService>;
+      locations.getLocationsSnapshot.and.returnValue(kind === 'location' ? [owner as any] : []);
+      houses.getSnapshot.and.returnValue(kind === 'house' ? [owner as any] : []);
+      const collection = { targets: [owner], folder: kind === 'location' ? 'locations' : 'houses',
+        route: kind, singular: kind };
+      const before = buildWikiLinkTargets([collection]);
+      owner.aliases.forEach(alias => expect(before.resolve(alias).id).toBe(owner.id));
+      characters.duplicateCharacter.and.callFake(async (_id, name) => ({
+        ...mara, id: 'copy', name, relativePath: `${asciiSlugify(name)}/${asciiSlugify(name)}.md`,
+      }));
+
+      const copy = await service.duplicate(mara);
+
+      expect(copy?.name).toBe('Mara (copy 3)');
+      const after = buildWikiLinkTargets([collection,
+        { targets: [mara, copy!], folder: 'characters', route: 'character', singular: 'Character' }]);
+      owner.aliases.forEach(alias => expect(after.resolve(alias)).toEqual(before.resolve(alias)));
+    });
+  }
 
   it('opens a draft copy on the draft page', async () => {
     characters.duplicateCharacter.and.resolveTo({ ...mara, id: 'd2', draft: true } as Character);

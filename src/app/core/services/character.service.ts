@@ -1036,7 +1036,7 @@ export class CharacterService {
   /**
    * Duplicates a character, Lore figure or draft (as last saved) under `name`.
    * The copy gets a new id, its own folder (in `@drafts/` for a draft), copies of
-   * its per-book pages renamed to the new slug, and its own copy of every
+   * its per-book pages renamed to the new slug, no aliases, and its own copy of every
    * referenced portrait in `<folder>/img/`. Only files inside the new folder are
    * written: the original and House, cast, pinboard, plot-board and project
    * files are untouched, so the copy belongs to none of them. On failure the new
@@ -1065,7 +1065,8 @@ export class CharacterService {
         ...source,
         id: newId,
         name,
-        aliases: source.aliases ? [...source.aliases] : undefined,
+        // Aliases identify the original; copying them would make existing links ambiguous.
+        aliases: [],
         tags: [...source.tags],
         books: [...source.books],
         bookCategories: source.bookCategories ? { ...source.bookCategories } : undefined,
@@ -1110,10 +1111,11 @@ export class CharacterService {
     }
   }
 
-  /** All names and wikilink stems used by characters, Lore and drafts. */
+  /** All names, aliases and wikilink stems used by characters, Lore and drafts. */
   getRecordNames(): string[] {
     return [...this.getReferenceCharactersSnapshot(), ...this.draftsSubject.value].flatMap((record) => [
       record.name,
+      ...normalizeAliases(record.aliases),
       pathBasename(record.relativePath.replace(/\\/g, '/'), '.md'),
     ]);
   }

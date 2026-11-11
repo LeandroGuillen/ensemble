@@ -39,9 +39,11 @@ survive a rename or a move.
 Duplicate button on a character's page, the copy icon on a card in the grid or
 list view, or *Duplicate character…* in the command palette. The copy is named
 *Name (copy)*, then *(copy 2)*…, gets its own id, and opens with the name ready
-to edit. It keeps the description, category, tags, aliases, books (with their
+to edit. It keeps the description, category, tags, books (with their
 per-book pages and overrides) and gets its own copies of every portrait.
-House membership, casts, pinboards, plot threads and book PoV are not copied.
+Aliases are left on the original so existing alias links keep resolving to it;
+the copy name also avoids aliases already used by characters, Lore, drafts, locations
+and Houses. House membership, casts, pinboards, plot threads and book PoV are not copied.
 A draft is copied into the Drawer and a Lore figure stays Lore.
 
 **Aliases** (a.k.a. names) attach alternate names to a character so search and

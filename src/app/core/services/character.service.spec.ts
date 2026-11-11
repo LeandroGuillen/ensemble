@@ -1,5 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { BehaviorSubject } from 'rxjs';
+import { asciiSlugify } from '../utils/slug.utils';
+import { buildWikiLinkTargets } from '../utils/wiki-links.utils';
+import { nextCopyName } from '../utils/copy-name.utils';
 import { CharacterService } from './character.service';
 import { ElectronService } from './electron.service';
 import { ProjectService } from './project.service';
@@ -1440,7 +1443,7 @@ describe('CharacterService', () => {
       expect(copy.relativePath).toBe('mara-vell-copy/mara-vell-copy.md');
       expect(copy.created.getTime()).toBeGreaterThan(new Date('2024-01-02T00:00:00Z').getTime());
       const source = sourceCharacter();
-      for (const key of ['aliases', 'category', 'tags', 'books', 'bookCategories', 'bookTags', 'prompts', 'content'] as const) {
+      for (const key of ['category', 'tags', 'books', 'bookCategories', 'bookTags', 'prompts', 'content'] as const) {
         expect(copy[key]).withContext(key).toEqual(source[key] as any);
       }
       expect(copy.thumbnails).toEqual({
@@ -1471,6 +1474,46 @@ describe('CharacterService', () => {
       expect(service.getCharactersSnapshot().map((c) => c.id)).toEqual(jasmine.arrayContaining(['src-id', copy.id]));
       expect(electronService.stageForTrash).not.toHaveBeenCalled();
     });
+
+    for (const kind of ['character', 'lore', 'draft'] as const) {
+      it(`keeps ${kind} alias links pointing to the original after duplication`, async () => {
+        const source = { ...sourceCharacter(), aliases: ['Gull', 'The Grey Witch'],
+          ...(kind === 'lore' ? { lore: true } : {}),
+          ...(kind === 'draft' ? { draft: true } : {}) };
+        const subject = kind === 'draft' ? 'draftsSubject' : kind === 'lore' ? 'loreSubject' : 'charactersSubject';
+        (service as any)[subject].next([source]);
+        const targets = () => buildWikiLinkTargets([{
+          targets: kind === 'draft' ? service.getDraftsSnapshot() : service.getReferenceCharactersSnapshot(),
+          folder: 'characters', route: kind === 'draft' ? 'character-draft' : 'character', singular: 'Character',
+          secondary: kind === 'draft',
+        }]);
+        const before = source.aliases.map(alias => targets().resolve(alias));
+        before.forEach(link => expect(link.id).toBe(source.id));
+
+        const copy = await service.duplicateCharacter(source.id, 'Mara Vell (copy)');
+
+        expect(copy.aliases || []).toEqual([]);
+        expect(files.get(copy.filePath)).not.toContain('aliases:');
+        expect(source.aliases.map(alias => targets().resolve(alias))).toEqual(before);
+        expect(source.aliases).toEqual(['Gull', 'The Grey Witch']);
+      });
+
+      it(`avoids ${kind} aliases in copy names and file stems`, () => {
+        const owner = { ...sourceCharacter(), aliases: ['mArA vElL (CoPy)', 'mara-vell-copy-2'] };
+        const subject = kind === 'draft' ? 'draftsSubject' : kind === 'lore' ? 'loreSubject' : 'charactersSubject';
+        (service as any)[subject].next([owner]);
+        const collections = [{ targets: [owner], folder: 'characters', route: 'character', singular: 'Character' }];
+        const before = buildWikiLinkTargets(collections);
+        owner.aliases.forEach(alias => expect(before.resolve(alias).id).toBe(owner.id));
+
+        const name = nextCopyName(owner.name, service.getRecordNames());
+        const copy = { ...owner, id: 'copy', name, aliases: [], relativePath: `${asciiSlugify(name)}/${asciiSlugify(name)}.md` };
+        const after = buildWikiLinkTargets([{ ...collections[0], targets: [owner, copy] }]);
+
+        expect(name).toBe('Mara Vell (copy 3)');
+        owner.aliases.forEach(alias => expect(after.resolve(alias)).toEqual(before.resolve(alias)));
+      });
+    }
 
     it('never overwrites an existing folder', async () => {
       (service as any).charactersSubject.next([sourceCharacter()]);
