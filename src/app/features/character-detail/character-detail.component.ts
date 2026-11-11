@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../../shared/project-read-only.directive';
 import { WikiLinkRenameService } from '../../core/services/wiki-link-rename.service';
 import { DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -89,6 +90,7 @@ type CharacterCollection = 'characters' | 'lore' | 'draft';
 @Component({
     selector: "app-character-detail",
     imports: [
+    ProjectReadOnlyDirective,
     FormsModule,
     ReactiveFormsModule,
     RouterLink,
@@ -1958,20 +1960,13 @@ export class CharacterDetailComponent
    * window unable to take keyboard focus (editors stop accepting input until reload).
    * A prompt already on screen is reused so repeated navigations don't stack dialogs.
    */
-  canLeave(): boolean | Promise<boolean> {
-    if (this.isSaving || !this.imagePickerService.handleNavigationAway()) return false;
+  canLeave(discardAndClose = false): boolean | Promise<boolean> {
+    if (!discardAndClose && (this.isSaving || !this.imagePickerService.handleNavigationAway())) return false;
     if (!this.characterForm.dirty && !this.hasAnyBookPageDirty()) return true;
     this.leavePrompt ??= this.modalService.confirm(
-      'You have unsaved changes. Are you sure you want to leave?', 'Discard Changes',
-      { confirmText: 'Discard', cancelText: 'Keep Editing', danger: false }
+      discardAndClose ? 'This project is read-only. Discard your unsaved changes and close?' : 'You have unsaved changes. Are you sure you want to leave?', 'Discard Changes',
+      { confirmText: discardAndClose ? 'Discard and close' : 'Discard', cancelText: 'Keep Editing', danger: false }
     ).finally(() => { this.leavePrompt = null; });
     return this.leavePrompt;
-  }
-
-  @HostListener('window:beforeunload', ['$event'])
-  beforeUnload(event: BeforeUnloadEvent): void {
-    if (this.characterForm.dirty || this.hasAnyBookPageDirty()) {
-      event.preventDefault();
-    }
   }
 }

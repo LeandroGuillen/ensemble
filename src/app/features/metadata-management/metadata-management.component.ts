@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../../shared/project-read-only.directive';
 import { NotificationService } from '../../core/services/notification.service';
 import { Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges, DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -60,7 +61,7 @@ interface PendingDelete {
 
 @Component({
     selector: 'app-metadata-management',
-    imports: [FormsModule, ReactiveFormsModule, SettingsSearchableDirective, DragDropModule],
+    imports: [ProjectReadOnlyDirective, FormsModule, ReactiveFormsModule, SettingsSearchableDirective, DragDropModule],
     templateUrl: './metadata-management.component.html',
     styleUrls: ['./metadata-management.component.scss']
 })

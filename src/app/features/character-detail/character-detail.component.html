@@ -18,7 +18,7 @@
       <kbd class="shortcut-hint">ESC</kbd>
     </button>
     @if (activeContentTab === 'main') {
-      <button
+      <button appProjectReadOnly
         type="button"
         class="btn btn-primary"
         [disabled]="isSaving"
@@ -35,7 +35,7 @@
       </button>
     }
     @if (activeContentTab !== 'main') {
-      <button
+      <button appProjectReadOnly
         type="button"
         class="btn btn-primary"
         [disabled]="isSaving || savingBookPageId || (!bookPageData[activeContentTab]?.exists && !characterForm.dirty && !hasAnyBookPageDirty())"
@@ -109,7 +109,7 @@
                           <span class="content-tab-badge" title="No page yet">+</span>
                         }
                       </button>
-                      <button
+                      <button appProjectReadOnly
                         type="button"
                         class="content-tab-remove"
                         (click)="removeBook(tab.id)"
@@ -126,7 +126,7 @@
                 <div class="add-book-popover">
                   <div class="add-book-popover-title">Add character to a book</div>
                   @for (book of availableBooks; track book.id) {
-                    <button
+                    <button appProjectReadOnly
                       type="button"
                       class="add-book-option"
                       (click)="addBook(book.id); addBookMenu.open = false"
@@ -162,7 +162,7 @@
               <div class="hero-field">
                 <div class="name-line">
                   <div class="name-input-group">
-                    <input
+                    <input appProjectReadOnly
                       #nameInput
                       type="text"
                       id="name"
@@ -176,7 +176,7 @@
                       [attr.aria-label]="'Name' + (isDraftMode ? '' : ' (required)')"
                     />
                     @if (isDraftMode) {
-                      <button
+                      <button appProjectReadOnly
                         type="button"
                         class="generate-name-btn"
                         (click)="generateName()"
@@ -202,7 +202,7 @@
                   @for (alias of aliases; track $index) {
                     <span class="alias-chip">
                       {{ alias }}
-                      <button
+                      <button appProjectReadOnly
                         type="button"
                         class="alias-chip-remove"
                         (click)="removeAlias($index)"
@@ -211,7 +211,7 @@
                       ><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg></button>
                     </span>
                   }
-                  <input
+                  <input appProjectReadOnly
                     type="text"
                     class="alias-input"
                     [value]="aliasDraft"
@@ -228,7 +228,7 @@
 
             <aside class="infobox" aria-label="Character portrait and details">
               <div class="hero-thumb-column">
-                <div
+                <div appProjectReadOnly
                   class="hero-thumb"
                   role="button"
                   tabindex="0"
@@ -246,7 +246,7 @@
                     <img [src]="thumbnailPreviewUrl" [alt]="selectedStyleName + ' thumbnail'" />
                     <div class="hero-thumb-overlay"><span>Click to change</span></div>
                     @if (!activeBookId && hasOwnThumbnailForStyle(selectedStyleId || defaultCharacterStyle)) {
-                      <button
+                      <button appProjectReadOnly
                         type="button"
                         class="hero-thumb-remove-btn"
                         [title]="activeBookId ? 'Use main image' : 'Remove thumbnail'"
@@ -267,7 +267,7 @@
                   }
                 </div>
                 <div class="portrait-actions">
-                  <button type="button" class="btn btn-secondary portrait-change-btn"
+                  <button appProjectReadOnly type="button" class="btn btn-secondary portrait-change-btn"
                     (click)="openImagePicker()">
                     {{ activeBookId && !hasOwnThumbnailForStyle(selectedStyleId || defaultCharacterStyle)
                       ? 'Set book picture' : thumbnailPreviewUrl ? 'Change picture' : 'Add picture' }}
@@ -337,7 +337,7 @@
                     }
                   </span>
                   @if (activeBookId && hasOwnThumbnailForStyle(selectedStyleId || defaultCharacterStyle)) {
-                    <button type="button" class="portrait-scope-reset" (click)="removeThumbnail()">Use main picture</button>
+                    <button appProjectReadOnly type="button" class="portrait-scope-reset" (click)="removeThumbnail()">Use main picture</button>
                   }
                 </div>
               </div>
@@ -346,7 +346,7 @@
                 @if (categories.length > 0) {
                   <div class="hero-field form-group-category" [class.field-highlight]="characterForm.get('category')?.invalid && characterForm.get('category')?.touched">
                     <label class="form-label">Category{{ collection === 'characters' ? ' *' : '' }}</label>
-                    <app-category-toggle
+                    <app-category-toggle appProjectReadOnly
                       [options]="categoryToggleOptions"
                       [selectedValue]="getSelectedCategoryForActiveTab()"
                       [emptyLabel]="'None'"
@@ -366,7 +366,7 @@
                 @if (tags.length > 0) {
                   <div class="hero-field form-group-book-tags">
                     <label class="form-label">Tags</label>
-                    <app-multi-select-buttons
+                    <app-multi-select-buttons appProjectReadOnly
                       class="tags-select"
                       [compact]="true"
                       [items]="getTagsAsSelectableItems()"
@@ -393,14 +393,14 @@
                   <div class="life-dates">
                     <div class="hero-field">
                       <label class="form-label" for="character-born">Born</label>
-                      <input id="character-born" class="form-control life-input" formControlName="born" placeholder="312" autocomplete="off" spellcheck="false" />
+                      <input appProjectReadOnly id="character-born" class="form-control life-input" formControlName="born" placeholder="312" autocomplete="off" spellcheck="false" />
                       @if (lifeDateHint(characterForm.value.born); as hint) {
                         @if (hint.text) { <span class="hero-field-hint" [class.life-hint-bad]="hint.bad">{{ hint.text }}</span> }
                       }
                     </div>
                     <div class="hero-field">
                       <label class="form-label" for="character-died">Died</label>
-                      <input id="character-died" class="form-control life-input" formControlName="died" placeholder="—" autocomplete="off" spellcheck="false" />
+                      <input appProjectReadOnly id="character-died" class="form-control life-input" formControlName="died" placeholder="—" autocomplete="off" spellcheck="false" />
                       @if (lifeDateHint(characterForm.value.died); as hint) {
                         @if (hint.text) { <span class="hero-field-hint" [class.life-hint-bad]="hint.bad">{{ hint.text }}</span> }
                       }
@@ -410,18 +410,18 @@
                     <span class="form-label" id="residence-label">Lived at</span>
                     @for (row of residence; track $index; let i = $index) {
                       <div class="residence-row" role="group" [attr.aria-label]="'Residence ' + (i + 1)">
-                        <input class="form-control life-input residence-from" [(ngModel)]="row.from" [ngModelOptions]="{ standalone: true }" (ngModelChange)="onResidenceChange()" placeholder="From" aria-label="From (world date)" autocomplete="off" />
-                        <select class="form-control residence-place" [(ngModel)]="row.place" [ngModelOptions]="{ standalone: true }" (ngModelChange)="onResidenceChange()" aria-label="Location">
+                        <input appProjectReadOnly class="form-control life-input residence-from" [(ngModel)]="row.from" [ngModelOptions]="{ standalone: true }" (ngModelChange)="onResidenceChange()" placeholder="From" aria-label="From (world date)" autocomplete="off" />
+                        <select appProjectReadOnly class="form-control residence-place" [(ngModel)]="row.place" [ngModelOptions]="{ standalone: true }" (ngModelChange)="onResidenceChange()" aria-label="Location">
                           <option value="">Location…</option>
                           @for (location of residenceLocations; track location.id) { <option [value]="location.id">{{ location.name }}</option> }
                         </select>
-                        <button type="button" class="residence-remove" (click)="removeResidence(i)" [attr.aria-label]="'Remove residence ' + (i + 1)" title="Remove">
+                        <button appProjectReadOnly type="button" class="residence-remove" (click)="removeResidence(i)" [attr.aria-label]="'Remove residence ' + (i + 1)" title="Remove">
                           <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg>
                         </button>
-                        <input class="form-control residence-note" [(ngModel)]="row.note" [ngModelOptions]="{ standalone: true }" (ngModelChange)="onResidenceChange()" placeholder="Note (e.g. lost at sea: shown dashed)" aria-label="Note" autocomplete="off" />
+                        <input appProjectReadOnly class="form-control residence-note" [(ngModel)]="row.note" [ngModelOptions]="{ standalone: true }" (ngModelChange)="onResidenceChange()" placeholder="Note (e.g. lost at sea: shown dashed)" aria-label="Note" autocomplete="off" />
                       </div>
                     }
-                    <button type="button" class="btn btn-ghost btn-sm residence-add" (click)="addResidence()" [disabled]="!residenceLocations.length" [title]="residenceLocations.length ? 'Add where they lived from a date on' : 'Create locations first'">+ Add a place</button>
+                    <button appProjectReadOnly type="button" class="btn btn-ghost btn-sm residence-add" (click)="addResidence()" [disabled]="!residenceLocations.length" [title]="residenceLocations.length ? 'Add where they lived from a date on' : 'Create locations first'">+ Add a place</button>
                     <span class="hero-field-hint">Dates use the project calendar. Shown on the Timeline’s Lifelines.</span>
                   </div>
                 </div>
@@ -484,7 +484,7 @@
 
               @if (isEditing) {
                 <div class="infobox-danger">
-                  <button
+                  <button appProjectReadOnly
                     type="button"
                     class="danger-link secondary-link"
                     (click)="duplicateCharacter()"
@@ -492,7 +492,7 @@
                     [attr.aria-busy]="isDuplicating"
                     title="Copy into a new {{ isDraftMode ? 'draft' : isLoreMode ? 'Lore figure' : 'character' }} (last saved version, with its own portraits and book pages)"
                   >{{ isDuplicating ? 'Duplicating…' : duplicateLabel }}</button>
-                  <button
+                  <button appProjectReadOnly
                     type="button"
                     class="danger-link"
                     (click)="deleteCharacter()"
@@ -518,7 +518,7 @@
                       </div>
                     </div>
                   </header>
-                  <app-markdown-editor
+                  <app-markdown-editor appProjectReadOnly
                     id="content"
                     class="content-editor"
                     formControlName="content"
@@ -600,7 +600,7 @@
                       </div>
                     </div>
                     </header>
-                    <app-markdown-editor
+                    <app-markdown-editor appProjectReadOnly
                       [id]="'book-content-' + activeContentTab"
                       class="content-editor"
                       placeholder="Book notes…  Type [[ to link a character, location or House."

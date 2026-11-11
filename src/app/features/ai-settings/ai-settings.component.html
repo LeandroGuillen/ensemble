@@ -6,7 +6,7 @@
                     <div class="form-section" [settingsSearchable]="['Enable AI Features', 'language model', 'ollama', 'lm studio']">
                         <div class="form-group">
                             <label class="checkbox-label">
-                                <input type="checkbox" formControlName="enabled" />
+                                <input appProjectReadOnly type="checkbox" formControlName="enabled" />
                                 <span>Enable AI Features</span>
                             </label>
                             <p class="field-hint">
@@ -20,7 +20,7 @@
                         <div class="form-section" [settingsSearchable]="['AI Provider', 'ollama', 'lm studio', 'openai', 'anthropic', aiForm.get('provider')?.value]">
                             <div class="form-group">
                                 <label class="form-label">AI Provider</label>
-                                <select
+                                <select appProjectReadOnly
                                     formControlName="provider"
                                     class="form-control"
                                     (change)="onProviderChange()"
@@ -46,7 +46,7 @@
                                 <label class="form-label" for="localServerUrl"
                                     >Server URL</label
                                 >
-                                <input
+                                <input appProjectReadOnly
                                     type="text"
                                     id="localServerUrl"
                                     class="form-control"
@@ -64,7 +64,7 @@
                                 <label class="form-label" for="modelName"
                                     >Model Name</label
                                 >
-                                <input
+                                <input appProjectReadOnly
                                     type="text"
                                     id="modelName"
                                     class="form-control"
@@ -93,7 +93,7 @@
                                 <label class="form-label" for="apiKey"
                                     >API Key</label
                                 >
-                                <input
+                                <input appProjectReadOnly
                                     type="password"
                                     id="apiKey"
                                     class="form-control"
@@ -115,7 +115,7 @@
                                 <label class="form-label" for="modelName"
                                     >Model Name</label
                                 >
-                                <input
+                                <input appProjectReadOnly
                                     type="text"
                                     id="modelName"
                                     class="form-control"
@@ -140,7 +140,7 @@
                                     Temperature:
                                     {{ aiForm.get("temperature")?.value }}
                                 </label>
-                                <input
+                                <input appProjectReadOnly
                                     type="range"
                                     id="temperature"
                                     class="form-range"
@@ -158,7 +158,7 @@
                                 <label class="form-label" for="maxTokens"
                                     >Max Tokens</label
                                 >
-                                <input
+                                <input appProjectReadOnly
                                     type="number"
                                     id="maxTokens"
                                     class="form-control"
@@ -271,7 +271,7 @@
                     <div class="form-section" [settingsSearchable]="['Enable character image generation', 'InvokeAI', 'ComfyUI', 'OpenAI', 'ChatGPT', 'Gemini', 'portrait', 'workflow', 'API Key', imageForm.get('baseUrl')?.value, imageForm.get('comfyBaseUrl')?.value, imageForm.get('defaultWorkflowId')?.value, imageForm.get('comfyDefaultWorkflowId')?.value]">
                         <div class="form-group">
                             <label class="checkbox-label">
-                                <input type="checkbox" formControlName="enabled" />
+                                <input appProjectReadOnly type="checkbox" formControlName="enabled" />
                                 <span>Enable character image generation</span>
                             </label>
                             <p class="field-hint">
@@ -283,7 +283,7 @@
                         @if (imageForm.get("enabled")?.value) {
                             <div class="form-group">
                                 <label class="form-label" for="imageProvider">Image Provider</label>
-                                <select
+                                <select appProjectReadOnly
                                     id="imageProvider"
                                     class="form-control"
                                     formControlName="provider"
@@ -301,7 +301,7 @@
                         @if (imageForm.get("enabled")?.value && imageProvider === 'invokeai') {
                             <div class="form-group">
                                 <label class="form-label" for="invokeAiBaseUrl">InvokeAI Server URL</label>
-                                <input
+                                <input appProjectReadOnly
                                     id="invokeAiBaseUrl"
                                     type="text"
                                     class="form-control"
@@ -332,7 +332,7 @@
 
                             <div class="form-group">
                                 <label class="form-label" for="defaultImageWorkflow">Default Workflow</label>
-                                <select
+                                <select appProjectReadOnly
                                     id="defaultImageWorkflow"
                                     class="form-control"
                                     formControlName="defaultWorkflowId"
@@ -352,7 +352,7 @@
                         @if (imageForm.get("enabled")?.value && imageProvider === 'comfyui') {
                             <div class="form-group">
                                 <label class="form-label" for="comfyUiBaseUrl">ComfyUI Server URL</label>
-                                <input
+                                <input appProjectReadOnly
                                     id="comfyUiBaseUrl"
                                     type="text"
                                     class="form-control"
@@ -386,7 +386,7 @@
 
                             <div class="form-group">
                                 <label class="form-label" for="defaultComfyWorkflow">Project Workflows</label>
-                                <select
+                                <select appProjectReadOnly
                                     id="defaultComfyWorkflow"
                                     class="form-control"
                                     formControlName="comfyDefaultWorkflowId"
@@ -433,7 +433,7 @@
                         @if (imageForm.get("enabled")?.value && imageProvider === 'openai') {
                             <div class="form-group">
                                 <label class="form-label" for="openaiApiKey">OpenAI API Key</label>
-                                <input
+                                <input appProjectReadOnly
                                     id="openaiApiKey"
                                     type="password"
                                     class="form-control"
@@ -447,7 +447,7 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label" for="openaiModel">Model</label>
-                                <input
+                                <input appProjectReadOnly
                                     id="openaiModel"
                                     type="text"
                                     class="form-control"
@@ -461,7 +461,7 @@
                         @if (imageForm.get("enabled")?.value && imageProvider === 'gemini') {
                             <div class="form-group">
                                 <label class="form-label" for="geminiApiKey">Gemini API Key</label>
-                                <input
+                                <input appProjectReadOnly
                                     id="geminiApiKey"
                                     type="password"
                                     class="form-control"
@@ -475,7 +475,7 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label" for="geminiModel">Model</label>
-                                <input
+                                <input appProjectReadOnly
                                     id="geminiModel"
                                     type="text"
                                     class="form-control"

@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../../../shared/project-read-only.directive';
 import { Component, DestroyRef, ElementRef, HostListener, OnInit, ViewChild, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -75,7 +76,7 @@ const QUICK_DATE_RE = /^\s*((?:c\.\s*|~\s*)?-?\d{1,6}(?:-\d{1,3}){0,2}(?:\s*(?:â
  */
 @Component({
   selector: 'app-chronicle-view',
-  imports: [FormsModule, RouterLink, PovChipComponent],
+  imports: [ProjectReadOnlyDirective, FormsModule, RouterLink, PovChipComponent],
   templateUrl: './chronicle-view.component.html',
   styleUrl: './chronicle-view.component.scss',
 })

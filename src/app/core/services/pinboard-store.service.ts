@@ -37,7 +37,7 @@ export class PinboardStoreService {
     } else {
       project.metadata.settings.pinboardView = state;
     }
-    await this.persist(project);
+    if (!project.readOnly) await this.persist(project);
   }
 
   async setCurrent(project: Project, id: string): Promise<void> {
@@ -45,7 +45,7 @@ export class PinboardStoreService {
       throw new Error(`Pinboard with id ${id} not found`);
     }
     this.ensureLastSession(project.metadata).lastPinboardId = id;
-    await this.persist(project);
+    if (!project.readOnly) await this.persist(project);
   }
 
   async create(project: Project, name: string, duplicateFromId?: string): Promise<Pinboard> {

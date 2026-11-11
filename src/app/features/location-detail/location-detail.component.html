@@ -17,7 +17,7 @@
       Cancel
       <kbd class="shortcut-hint">ESC</kbd>
     </button>
-    <button
+    <button appProjectReadOnly
       type="button"
       class="btn btn-primary"
       (click)="saveLocation()"
@@ -54,7 +54,7 @@
             <div class="hero-layout">
               <div class="thumbnail-panel">
                 <label class="form-label">Thumbnail</label>
-                <div
+                <div appProjectReadOnly
                   class="thumbnail-clickable-area"
                   (click)="openImagePicker()"
                   [class.has-thumbnail]="!!thumbnailPreviewUrl"
@@ -63,7 +63,7 @@
                     <div class="thumbnail-preview">
                       <img [src]="thumbnailPreviewUrl" alt="Location thumbnail" />
                       <div class="thumbnail-overlay"><span>Click to change</span></div>
-                      <button
+                      <button appProjectReadOnly
                         type="button"
                         class="thumbnail-remove-btn"
                         title="Remove thumbnail"
@@ -85,7 +85,7 @@
               <div class="hero-fields">
                 <div class="form-group">
                   <label for="locationName" class="form-label">Name *</label>
-                  <input
+                  <input appProjectReadOnly
                     #nameInput
                     id="locationName"
                     type="text"
@@ -101,7 +101,7 @@
 
                 <div class="form-group">
                   <label for="locationType" class="form-label">Type</label>
-                  <app-location-type-select formControlName="type"></app-location-type-select>
+                  <app-location-type-select appProjectReadOnly formControlName="type"></app-location-type-select>
                   <p class="field-hint" id="locationTypeHint">
                     @if (selectedTypeInfo; as type) {
                       {{ type.description }} Examples: {{ type.examples }}
@@ -123,7 +123,7 @@
                 <div class="form-group">
                   <label class="form-label">Books</label>
                   @if (bookSelectItems.length > 0) {
-                    <app-multi-select-buttons
+                    <app-multi-select-buttons appProjectReadOnly
                       [items]="bookSelectItems"
                       [selectedIds]="locationForm.get('books')?.value || []"
                       (selectionChange)="onBooksChange($event)"
@@ -142,7 +142,7 @@
             </div>
             <div class="form-group">
               <p class="field-hint" id="locationLinkHint">Type [[ to link a location, character, or House ([[Name]] or [[Name|display text]]); file paths such as [[locations/_grey-harbor.md]] also work. Ctrl+click a link to open it. Shortcuts: Ctrl+B bold, Ctrl+I italic, Ctrl+K link, Ctrl+F find.</p>
-              <app-markdown-editor
+              <app-markdown-editor appProjectReadOnly
                 id="locationContent"
                 class="description-editor"
                 formControlName="content"
@@ -166,7 +166,7 @@
 
           @if (!isNewLocation) {
             <div class="danger-zone">
-              <button
+              <button appProjectReadOnly
                 type="button"
                 class="danger-link"
                 (click)="deleteLocation()"

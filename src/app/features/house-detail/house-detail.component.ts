@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../../shared/project-read-only.directive';
 import { WikiLinkRenameService } from '../../core/services/wiki-link-rename.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { ChangeDetectorRef, Component, DestroyRef, HostListener, inject, OnDestroy, OnInit } from '@angular/core';
@@ -21,7 +22,7 @@ import { WikiLinkTargetsService } from '../../core/services/wiki-link-targets.se
 import { ModalService } from '../../core/services/modal.service';
 import { ResolvedWikiLink, WikiLinkSuggestion } from '../../core/utils/wiki-links.utils';
 
-@Component({ selector: 'app-house-detail', imports: [FormsModule, RouterLink, DragDropModule, PageHeaderComponent, ImagePickerDialogComponent, ConfirmButtonDirective, MarkdownEditorComponent, MentionedInComponent], templateUrl: './house-detail.component.html', styleUrls: ['./house-detail.component.scss'] })
+@Component({ selector: 'app-house-detail', imports: [ProjectReadOnlyDirective, FormsModule, RouterLink, DragDropModule, PageHeaderComponent, ImagePickerDialogComponent, ConfirmButtonDirective, MarkdownEditorComponent, MentionedInComponent], templateUrl: './house-detail.component.html', styleUrls: ['./house-detail.component.scss'] })
 export class HouseDetailComponent implements OnInit, OnDestroy {
   private readonly linkRename = inject(WikiLinkRenameService);
   private readonly toasts = inject(NotificationService);
@@ -262,16 +263,15 @@ export class HouseDetailComponent implements OnInit, OnDestroy {
    * Route leave guard. Uses the in-app modal: a native window.confirm() leaves the Electron
    * window unable to take keyboard focus. A prompt already on screen is reused.
    */
-  canLeave(): boolean | Promise<boolean> {
-    if (this.saving || !this.picker.handleNavigationAway()) return false;
+  canLeave(discardAndClose = false): boolean | Promise<boolean> {
+    if (!discardAndClose && (this.saving || !this.picker.handleNavigationAway())) return false;
     if (!this.dirty) return true;
     this.leavePrompt ??= this.modal.confirm(
-      'You have unsaved changes. Are you sure you want to leave?', 'Discard Changes',
-      { confirmText: 'Discard', cancelText: 'Keep Editing', danger: false }
+      discardAndClose ? 'This project is read-only. Discard your unsaved changes and close?' : 'You have unsaved changes. Are you sure you want to leave?', 'Discard Changes',
+      { confirmText: discardAndClose ? 'Discard and close' : 'Discard', cancelText: 'Keep Editing', danger: false }
     ).finally(() => { this.leavePrompt = null; });
     return this.leavePrompt;
   }
-  @HostListener('window:beforeunload', ['$event']) beforeUnload(event: BeforeUnloadEvent): void { if (this.dirty) event.preventDefault(); }
   @HostListener('document:keydown', ['$event']) onKey(event: KeyboardEvent): void {
     if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && !this.showPicker && !this.pickingMember) { event.preventDefault(); void this.save(); return; }
     // Same as the character and location editors: Escape leaves (the description

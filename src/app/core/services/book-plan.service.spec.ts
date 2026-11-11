@@ -72,6 +72,24 @@ describe('BookPlanService', () => {
     service = TestBed.inject(BookPlanService);
   });
 
+  it('can cancel or discard an unsaveable pending plan without writing', async () => {
+    await service.open('n26');
+    service.update('# Pending edit');
+    project$.next({ ...project$.value, readOnly: true });
+    await service.flush();
+    expect(electron.writeFileAtomic).not.toHaveBeenCalled();
+    modal.confirm.and.resolveTo(false);
+    expect(await service.prepareToLeave(true)).toBeFalse();
+    expect(service.snapshot?.dirty).toBeTrue();
+    modal.confirm.and.resolveTo(true);
+    expect(await service.prepareToLeave(true)).toBeTrue();
+    expect(modal.confirm).toHaveBeenCalledWith(jasmine.stringContaining('read-only'), 'Discard Changes',
+      jasmine.objectContaining({ confirmText: 'Discard and close' }));
+    expect(service.snapshot?.dirty).toBeFalse();
+    expect(service.snapshot?.text).toBe(ORIGINAL);
+    expect(electron.writeFileAtomic).not.toHaveBeenCalled();
+  });
+
   it('lists only books with a plan file', () => {
     expect(service.booksWithPlans().map((b) => b.id)).toEqual(['n26']);
   });

@@ -33,7 +33,7 @@
         <div class="form-row">
           <div class="form-group code-group">
             <label for="bookCode">Code</label>
-            <input
+            <input appProjectReadOnly
               id="bookCode"
               type="text"
               formControlName="code"
@@ -50,7 +50,7 @@
 
           <div class="form-group title-group">
             <label for="bookName">Title</label>
-            <input
+            <input appProjectReadOnly
               id="bookName"
               type="text"
               formControlName="name"
@@ -68,13 +68,13 @@
           <div class="form-group color-group">
             <label for="bookColor">Color *</label>
             <div class="color-input-wrapper">
-              <input
+              <input appProjectReadOnly
                 id="bookColor"
                 type="color"
                 formControlName="color"
                 class="color-picker"
                 />
-              <input
+              <input appProjectReadOnly
                 type="text"
                 formControlName="color"
                 placeholder="#3498db"
@@ -120,7 +120,7 @@
             <!-- Description -->
             <div class="form-group">
               <label for="bookDescription">Description</label>
-              <textarea
+              <textarea appProjectReadOnly
                 id="bookDescription"
                 formControlName="description"
                 placeholder="Enter a description or synopsis..."
@@ -184,7 +184,7 @@
             <div class="form-row">
               <div class="form-group">
                 <label for="bookSeries">Series</label>
-                <select
+                <select appProjectReadOnly
                   id="bookSeries"
                   formControlName="seriesId"
                   class="form-control"
@@ -198,7 +198,7 @@
 
               <div class="form-group">
                 <label for="bookSaga">Saga</label>
-                <select
+                <select appProjectReadOnly
                   id="bookSaga"
                   formControlName="sagaId"
                   class="form-control"
@@ -215,7 +215,7 @@
             <div class="form-row">
               <div class="form-group">
                 <label for="bookStatus">Status</label>
-                <select
+                <select appProjectReadOnly
                   id="bookStatus"
                   formControlName="status"
                   class="form-control"
@@ -233,7 +233,7 @@
 
               <div class="form-group">
                 <label for="bookPublicationDate">Publication Date</label>
-                <input
+                <input appProjectReadOnly
                   id="bookPublicationDate"
                   type="date"
                   formControlName="publicationDate"
@@ -245,7 +245,7 @@
             <!-- ISBN -->
             <div class="form-group">
               <label for="bookIsbn">ISBN</label>
-              <input
+              <input appProjectReadOnly
                 id="bookIsbn"
                 type="text"
                 formControlName="isbn"
@@ -264,7 +264,7 @@
             <div class="form-group">
               <label for="bookPlanPath">Plan file</label>
               <div class="path-input">
-                <input
+                <input appProjectReadOnly
                   id="bookPlanPath"
                   type="text"
                   formControlName="planPath"
@@ -278,7 +278,7 @@
             <div class="form-group">
               <label for="bookManuscriptDir">Manuscript chapters folder</label>
               <div class="path-input">
-                <input
+                <input appProjectReadOnly
                   id="bookManuscriptDir"
                   type="text"
                   formControlName="manuscriptDir"

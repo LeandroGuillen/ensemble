@@ -7,7 +7,7 @@
   tabindex="0"
 >
   <div class="concept-header">
-    <input
+    <input appProjectReadOnly
       type="text"
       class="concept-title"
       [value]="concept.title || ''"
@@ -35,7 +35,7 @@
     </div>
   </div>
 
-  <textarea
+  <textarea appProjectReadOnly
     class="concept-notes"
     [value]="concept.notes"
     (blur)="onNotesChange($any($event.target).value)"

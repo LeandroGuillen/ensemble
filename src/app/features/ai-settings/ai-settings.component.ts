@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../../shared/project-read-only.directive';
 import { Component, Input, OnInit, DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -16,7 +17,7 @@ import { SettingsSearchableDirective } from '../settings/settings-searchable.dir
 
 @Component({
     selector: 'app-ai-settings',
-    imports: [FormsModule, ReactiveFormsModule, SettingsSearchableDirective],
+    imports: [ProjectReadOnlyDirective, FormsModule, ReactiveFormsModule, SettingsSearchableDirective],
     templateUrl: './ai-settings.component.html',
     styleUrls: ['./ai-settings.component.scss']
 })

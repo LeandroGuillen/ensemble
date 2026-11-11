@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../../shared/project-read-only.directive';
 import { DestroyRef, inject, Component, OnInit, OnDestroy, ViewChild, NgZone, ChangeDetectorRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, NavigationEnd } from "@angular/router";
@@ -33,6 +34,7 @@ import { isTrashStagingError } from '../../core/trash/trash-record-id';
 @Component({
     selector: "app-cast-detail",
     imports: [
+    ProjectReadOnlyDirective,
     FormsModule,
     ReactiveFormsModule,
     PageHeaderComponent,

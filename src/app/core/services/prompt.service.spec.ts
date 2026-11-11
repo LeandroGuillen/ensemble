@@ -46,6 +46,16 @@ describe('PromptService', () => {
     ...over,
   });
 
+  it('does not migrate legacy prompts while browsing a read-only project', async () => {
+    TestBed.inject(ProjectService).getCurrentProject()!.readOnly = true;
+    await (service as any).migrateLegacyCharacterPrompts([
+      character({ prompts: [{ positive: 'portrait', negative: '' }] as any }),
+    ]);
+    expect(electron.createDirectory).not.toHaveBeenCalled();
+    expect(electron.writeFileAtomic).not.toHaveBeenCalled();
+    expect(characterService.clearLegacyPrompts).not.toHaveBeenCalled();
+  });
+
   beforeEach(() => {
     files = new Map();
     electron = jasmine.createSpyObj<ElectronService>('ElectronService', [

@@ -112,6 +112,24 @@ describe('Cast canvases', () => {
     expect(files.size).toBe(0);
   });
 
+  for (const legacy of [true, false]) {
+    it(`browses existing cast folders without writing an index or ids (legacy=${legacy})`, async () => {
+      project.readOnly = true;
+      directories.add('/project/casts');
+      directories.add('/project/casts/court');
+      files.set('/project/casts/court/description.md', 'Court description');
+      if (legacy) project.metadata.casts = [{ id: 'old-id', name: 'court', characterIds: ['a'] }];
+      const before = new Map(files);
+      const write = spyOn(electron, 'writeFileAtomic').and.resolveTo({ success: false, error: 'EACCES' });
+      await service.loadCasts(project.path);
+      expect(service.getCastsSnapshot().length).toBe(1);
+      expect(service.getCastsSnapshot()[0].description).toBe('Court description');
+      expect(write).not.toHaveBeenCalled();
+      expect(files).toEqual(before);
+      expect(showError).not.toHaveBeenCalled();
+    });
+  }
+
   it('reads and repairs health references without creating folders or reconciling canvases', async () => {
     directories.add('/project/casts');
     const path = '/project/casts/casts.json';

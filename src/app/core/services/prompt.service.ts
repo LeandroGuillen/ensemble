@@ -527,7 +527,7 @@ export class PromptService {
    * so an interrupted migration does not create duplicates.
    */
   private async migrateLegacyCharacterPrompts(characters: Character[]): Promise<void> {
-    if (this.migrating || !this.projectService.getCurrentProject()) return;
+    if (this.migrating || !this.projectService.getCurrentProject() || this.projectService.getCurrentProject()?.readOnly) return;
     this.migrating = true;
     let migrated = 0;
     try {

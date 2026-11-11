@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../../../../shared/project-read-only.directive';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Character } from '../../../../core/interfaces';
@@ -7,7 +8,7 @@ import { ConnectionFormData } from '../../pinboard-connection-form';
 
 @Component({
   selector: 'app-connection-edit-dialog',
-  imports: [FormsModule, ColorSelectorComponent, ModalFrameComponent],
+  imports: [ProjectReadOnlyDirective, FormsModule, ColorSelectorComponent, ModalFrameComponent],
   templateUrl: './connection-edit-dialog.component.html',
   styleUrls: ['./connection-edit-dialog.component.scss'],
 })

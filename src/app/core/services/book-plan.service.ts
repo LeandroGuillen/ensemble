@@ -56,6 +56,7 @@ export class BookPlanService {
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private saving: Promise<void> = Promise.resolve();
   private viewStates = new Map<string, BookPlanViewState>();
+  private projectReadOnly = false;
   /** Reused while a leave/conflict prompt is open (route leave or project switch). */
   private leavePrompt: Promise<boolean> | null = null;
 
@@ -67,6 +68,7 @@ export class BookPlanService {
     private modalService: ModalService
   ) {
     this.projectService.currentProject$.pipe(takeUntilDestroyed()).subscribe((project) => {
+      this.projectReadOnly = !!project?.readOnly;
       const path = project?.path ?? null;
       if (path !== this.projectPath) {
         // Pending edits are persisted by prepareToLeave() before ProjectService switches.
@@ -92,10 +94,24 @@ export class BookPlanService {
    * Dirty (no conflict): await a write. Conflict: Keep mine / Reload from disk / Cancel.
    * Clean: no prompt. Returns false if the user cancelled.
    */
-  prepareToLeave(): boolean | Promise<boolean> {
+  prepareToLeave(discardAndClose = false): boolean | Promise<boolean> {
     const state = this.stateSubject.value;
     if (!state) {
       return true;
+    }
+    if (this.projectReadOnly && this.hasPendingWork()) {
+      this.leavePrompt ??= this.modalService.confirm(
+        discardAndClose ? 'This project is read-only. Discard your unsaved plan changes and close?' : 'This project is read-only. Discard your unsaved plan changes?',
+        'Discard Changes', { confirmText: discardAndClose ? 'Discard and close' : 'Discard', cancelText: 'Keep Editing' }
+      ).then(allowed => {
+        if (allowed) {
+          this.clearSaveTimer();
+          const text = state.conflict ?? this.diskText ?? '';
+          this.patch({ text, parsed: parseBookPlan(text), dirty: false, conflict: null, error: null });
+        }
+        return allowed;
+      }).finally(() => { this.leavePrompt = null; });
+      return this.leavePrompt;
     }
     if (state.conflict !== null) {
       this.leavePrompt ??= this.promptConflictResolution().finally(() => {
@@ -261,7 +277,7 @@ export class BookPlanService {
 
   private async writeCurrent(): Promise<void> {
     const state = this.stateSubject.value;
-    if (!state?.dirty || state.conflict !== null) {
+    if (this.projectReadOnly || !state?.dirty || state.conflict !== null) {
       return;
     }
     const absolutePath = this.absolutePath(state.relativePath);

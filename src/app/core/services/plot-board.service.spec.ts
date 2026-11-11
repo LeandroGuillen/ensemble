@@ -78,6 +78,14 @@ describe('PlotBoardService', () => {
     projectService.getCurrentProject.and.returnValue(project);
   });
 
+  it('skips automatic board saves in a read-only project', async () => {
+    projectService.getCurrentProject()!.readOnly = true;
+    service.setCurrentRelativePath('story.pinboard.md');
+    await service.savePlotBoard(createTestBoard([]));
+    expect(electronService.writeFileAtomic).not.toHaveBeenCalled();
+    expect(loggingService.error).not.toHaveBeenCalled();
+  });
+
   describe('countCharacterReferences', () => {
     it('should return only boards containing the character', async () => {
       // Two board files: one with char-1, one without

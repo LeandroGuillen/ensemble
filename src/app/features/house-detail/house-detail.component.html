@@ -6,7 +6,7 @@
     </a>
     @if (dirty) { <span class="dirty-pill" title="You have unsaved changes">● Unsaved</span> }
     <button type="button" class="btn btn-ghost" (click)="cancel()" [disabled]="saving" title="Cancel (ESC)">Cancel <kbd class="shortcut-hint">ESC</kbd></button>
-    <button type="button" class="btn btn-primary" (click)="save()" [disabled]="saving || pickingMember || loading || conflict || deleted || !model.name.trim()" title="Save (Ctrl+Enter)">{{ saving ? 'Saving…' : house ? 'Save Changes' : 'Create House' }} <kbd class="shortcut-hint">⌃↵</kbd></button>
+    <button appProjectReadOnly type="button" class="btn btn-primary" (click)="save()" [disabled]="saving || pickingMember || loading || conflict || deleted || !model.name.trim()" title="Save (Ctrl+Enter)">{{ saving ? 'Saving…' : house ? 'Save Changes' : 'Create House' }} <kbd class="shortcut-hint">⌃↵</kbd></button>
   </app-page-header>
   <main>
     @if (loading) { <p class="empty">Loading House…</p> }
@@ -24,12 +24,12 @@
         <section class="panel identity">
           <div class="crest-panel">
             <div class="crest-image">
-              <button type="button" class="crest" (click)="openPicker()" aria-label="Choose House crest">
+              <button appProjectReadOnly type="button" class="crest" (click)="openPicker()" aria-label="Choose House crest">
                 @if (crest) { <img [src]="crest" [alt]="model.name + ' crest'" /> }
                 @else { <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#shield" /></svg><span>Add crest</span> }
               </button>
               @if (model.thumbnail) {
-                <button type="button" class="crest-remove" (click)="removeCrest()" title="Remove image" aria-label="Remove image">
+                <button appProjectReadOnly type="button" class="crest-remove" (click)="removeCrest()" title="Remove image" aria-label="Remove image">
                   <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg>
                 </button>
               }
@@ -41,12 +41,12 @@
           </div>
           <div class="identity-fields">
             <label for="house-name">House name *</label>
-            <input id="house-name" class="form-control name" [(ngModel)]="model.name" (ngModelChange)="changed()" placeholder="House Vell" required />
+            <input appProjectReadOnly id="house-name" class="form-control name" [(ngModel)]="model.name" (ngModelChange)="changed()" placeholder="House Vell" required />
             <label for="house-motto">Motto</label>
-            <input id="house-motto" class="form-control" [(ngModel)]="model.motto" (ngModelChange)="changed()" placeholder="Winter is coming" />
+            <input appProjectReadOnly id="house-motto" class="form-control" [(ngModel)]="model.motto" (ngModelChange)="changed()" placeholder="Winter is coming" />
             <label for="house-seat">Seat</label>
             <div class="seat-row">
-              <select id="house-seat" class="form-control" [(ngModel)]="model.seatId" (ngModelChange)="changed()">
+              <select appProjectReadOnly id="house-seat" class="form-control" [(ngModel)]="model.seatId" (ngModelChange)="changed()">
                 <option [ngValue]="undefined">No seat selected</option>
                 @if (model.seatId && !seatExists) { <option [value]="model.seatId">Missing location ({{ model.seatId }})</option> }
                 @for (location of locations; track location.id) { <option [value]="location.id">{{ location.name }}</option> }
@@ -57,13 +57,13 @@
             <div class="colors" role="group" aria-labelledby="house-colors-label">
               @for (color of model.colors; track $index) {
                 <div class="color-swatch">
-                  <input #colorPicker type="color" class="color" [value]="color" (input)="changeColor($index, colorPicker.value)" [attr.aria-label]="'Change House color ' + ($index + 1)" [title]="'Change ' + color" />
-                  <button type="button" class="color-remove" (click)="removeColor($index)" [attr.aria-label]="'Remove House color ' + ($index + 1)" [title]="'Remove ' + color">
+                  <input appProjectReadOnly #colorPicker type="color" class="color" [value]="color" (input)="changeColor($index, colorPicker.value)" [attr.aria-label]="'Change House color ' + ($index + 1)" [title]="'Change ' + color" />
+                  <button appProjectReadOnly type="button" class="color-remove" (click)="removeColor($index)" [attr.aria-label]="'Remove House color ' + ($index + 1)" [title]="'Remove ' + color">
                     <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg>
                   </button>
                 </div>
               }
-              <button type="button" class="color-add" (click)="addColor()" aria-label="Add House color" title="Add color">
+              <button appProjectReadOnly type="button" class="color-add" (click)="addColor()" aria-label="Add House color" title="Add color">
                 <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
               </button>
             </div>
@@ -72,7 +72,7 @@
         <section class="panel">
           <h2>History &amp; description</h2>
           <p class="hint" id="house-content-hint">Origins, traditions, branches, and the story of this House. Type [[ to link a House, character, or location; Ctrl+click a link to open it.</p>
-          <app-markdown-editor
+          <app-markdown-editor appProjectReadOnly
             id="house-content"
             class="history"
             [(ngModel)]="model.content"
@@ -95,7 +95,7 @@
         <section class="panel members-panel">
           <div class="section-heading">
             <h2>Members <span class="count">{{ model.characterIds.length }}</span></h2>
-            <button type="button" class="text-action" (click)="addMember()" [disabled]="pickingMember">
+            <button appProjectReadOnly type="button" class="text-action" (click)="addMember()" [disabled]="pickingMember">
               <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
               <span>{{ pickingMember ? 'Choosing character…' : 'Add member' }}</span>
             </button>
@@ -125,7 +125,7 @@
             <h2 id="leadership-history-heading">Leadership history</h2>
             <div class="leadership-actions">
               @if (leadershipEditing) {
-                <button type="button" class="text-action" (click)="addReign()">
+                <button appProjectReadOnly type="button" class="text-action" (click)="addReign()">
                   <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
                   <span>Add reign</span>
                 </button>
@@ -161,7 +161,7 @@
           <div class="history-toolbar">
             <div class="current-head">
               <label for="current-reign">Current leadership</label>
-              <select id="current-reign" class="form-control" [(ngModel)]="model.currentLeadershipId" (ngModelChange)="changed()">
+              <select appProjectReadOnly id="current-reign" class="form-control" [(ngModel)]="model.currentLeadershipId" (ngModelChange)="changed()">
                 <option [ngValue]="undefined">Unspecified / no current head</option>
                 @for (entry of model.leadership; track entry.id; let index = $index) {
                   <option [value]="entry.id">{{ index + 1 }}. {{ entry.characterIds.length ? characterName(entry.characterIds[0]) : 'Choose heads' }}{{ entry.characterIds.length > 1 ? ' and co-heads' : '' }}{{ entry.period ? ' — ' + entry.period : '' }}</option>
@@ -194,7 +194,7 @@
                 <div class="reign-fields">
                   <div>
                     <label [for]="'heads-' + entry.id">Heads * <span class="hint">Select multiple for joint leadership</span></label>
-                    <select multiple class="form-control heads" [id]="'heads-' + entry.id" [(ngModel)]="entry.characterIds" (ngModelChange)="changed()">
+                    <select appProjectReadOnly multiple class="form-control heads" [id]="'heads-' + entry.id" [(ngModel)]="entry.characterIds" (ngModelChange)="changed()">
                       @for (id of headOptions(entry); track id) {
                         <option [value]="id">{{ characterName(id) }}{{ !model.characterIds.includes(id) ? ' (previously assigned)' : '' }}</option>
                       }
@@ -207,19 +207,19 @@
                   </div>
                   <div>
                     <label [for]="'period-' + entry.id">Reign / period</label>
-                    <input class="form-control" [id]="'period-' + entry.id" [(ngModel)]="entry.period" (ngModelChange)="changed()" placeholder="Years 120–148, or During the Northern War" />
+                    <input appProjectReadOnly class="form-control" [id]="'period-' + entry.id" [(ngModel)]="entry.period" (ngModelChange)="changed()" placeholder="Years 120–148, or During the Northern War" />
                     <div class="reign-dates">
                       <div>
                         <label [for]="'from-' + entry.id">From <span class="hint">for the Timeline</span></label>
-                        <input class="form-control mono" [id]="'from-' + entry.id" [(ngModel)]="entry.from" (ngModelChange)="changed()" placeholder="120" autocomplete="off" spellcheck="false" />
+                        <input appProjectReadOnly class="form-control mono" [id]="'from-' + entry.id" [(ngModel)]="entry.from" (ngModelChange)="changed()" placeholder="120" autocomplete="off" spellcheck="false" />
                       </div>
                       <div>
                         <label [for]="'to-' + entry.id">To</label>
-                        <input class="form-control mono" [id]="'to-' + entry.id" [(ngModel)]="entry.to" (ngModelChange)="changed()" placeholder="148" autocomplete="off" spellcheck="false" />
+                        <input appProjectReadOnly class="form-control mono" [id]="'to-' + entry.id" [(ngModel)]="entry.to" (ngModelChange)="changed()" placeholder="148" autocomplete="off" spellcheck="false" />
                       </div>
                     </div>
                     <label [for]="'notes-' + entry.id">Notes</label>
-                    <textarea class="form-control" [id]="'notes-' + entry.id" [(ngModel)]="entry.notes" (ngModelChange)="changed()" placeholder="Accession, succession, or historical context" rows="3"></textarea>
+                    <textarea appProjectReadOnly class="form-control" [id]="'notes-' + entry.id" [(ngModel)]="entry.notes" (ngModelChange)="changed()" placeholder="Accession, succession, or historical context" rows="3"></textarea>
                   </div>
                 </div>
                 <div class="book-tags" role="group" [attr.aria-label]="'Book references for reign ' + (model.leadership.indexOf(entry) + 1)">

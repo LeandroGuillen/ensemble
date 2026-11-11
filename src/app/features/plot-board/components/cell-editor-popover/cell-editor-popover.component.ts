@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../../../../shared/project-read-only.directive';
 import {
   AfterViewInit,
   Component,
@@ -17,7 +18,7 @@ import { EmojiPickerComponent } from '../../../../shared/emoji-picker/emoji-pick
 
 @Component({
   selector: 'app-cell-editor-popover',
-  imports: [FormsModule, EmojiPickerComponent, ColorSwatchPickerComponent, ConfirmButtonDirective],
+  imports: [ProjectReadOnlyDirective, FormsModule, EmojiPickerComponent, ColorSwatchPickerComponent, ConfirmButtonDirective],
   templateUrl: './cell-editor-popover.component.html',
   styleUrls: ['./cell-editor-popover.component.scss'],
 })

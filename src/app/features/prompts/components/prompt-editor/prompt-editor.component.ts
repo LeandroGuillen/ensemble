@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../../../../shared/project-read-only.directive';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -54,7 +55,7 @@ interface LightboxState {
  */
 @Component({
   selector: 'app-prompt-editor',
-  imports: [FormsModule, NgTemplateOutlet, ImagePickerDialogComponent, PromptImageComponent],
+  imports: [ProjectReadOnlyDirective, FormsModule, NgTemplateOutlet, ImagePickerDialogComponent, PromptImageComponent],
   templateUrl: './prompt-editor.component.html',
   styleUrls: ['./prompt-editor.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -30,6 +30,7 @@ import { PendingEditsService } from "./core/services/pending-edits.service";
 })
 export class AppComponent implements OnInit {
   title = "Ensemble";
+  @ViewChild(RouterOutlet) private outlet?: RouterOutlet;
   @ViewChild('mainContent') private mainContent?: ElementRef<HTMLElement>;
   hasProject = false;
   readOnlyProject = false;
@@ -88,7 +89,7 @@ export class AppComponent implements OnInit {
   }
 
   async ngOnInit() {
-    // Main process close/quit/reload asks us to flush book-plan leave first.
+    // Main process close/quit/reload runs the renderer leave guards through IPC.
     this.electronService.onPrepareToLeaveRequest(this.prepareToLeaveHandler);
     this.destroyRef.onDestroy(() => {
       this.electronService.removePrepareToLeaveRequestListener(this.prepareToLeaveHandler);
@@ -331,11 +332,19 @@ export class AppComponent implements OnInit {
   private async handlePrepareToLeaveRequest(): Promise<void> {
     this.electronService.replyPrepareToLeaveAck();
     try {
+      // Use the same editor guard as route navigation before main closes/reloads.
+      const editor = this.outlet?.isActivated
+        ? this.outlet.component as { canLeave?: (discardAndClose?: boolean) => boolean | Promise<boolean> }
+        : null;
+      if (editor?.canLeave && !(await editor.canLeave(this.readOnlyProject))) {
+        this.electronService.replyPrepareToLeaveResult(false);
+        return;
+      }
       // Debounced autosaves (Settings) first, so quit/reload does not drop them.
       await this.injector.get(PendingEditsService).flushAll();
       const { BookPlanService } = await import('./core/services/book-plan.service');
       const bookPlan = this.injector.get(BookPlanService);
-      const allowed = await Promise.resolve(bookPlan.prepareToLeave());
+      const allowed = await Promise.resolve(bookPlan.prepareToLeave(this.readOnlyProject));
       this.electronService.replyPrepareToLeaveResult(allowed);
     } catch (error) {
       this.logger.error('prepareToLeave for window lifecycle failed', error);

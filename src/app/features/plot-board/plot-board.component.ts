@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../../shared/project-read-only.directive';
 import { ModalService } from '../../core/services/modal.service';
 import { isInteractiveKeyboardTarget } from '../../core/utils/list-keyboard.utils';
 import {
@@ -42,7 +43,7 @@ export type ZoomLevel = 1 | 2 | 3;
 
 @Component({
   selector: 'app-plot-board',
-  imports: [
+  imports: [ProjectReadOnlyDirective,
     FormsModule,
     PageHeaderComponent,
     EmojiPickerComponent,

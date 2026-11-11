@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../../../../shared/project-read-only.directive';
 import { Component, Input, Output, EventEmitter, HostListener } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
@@ -7,7 +8,7 @@ import { ModalService } from "../../../../core/services/modal.service";
 @Component({
   selector: "app-name-list-card",
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [ProjectReadOnlyDirective, CommonModule, FormsModule],
   templateUrl: "./name-list-card.component.html",
   styleUrls: ["./name-list-card.component.scss"],
 })

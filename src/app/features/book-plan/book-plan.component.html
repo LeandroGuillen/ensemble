@@ -190,7 +190,7 @@
         }
 
         <div class="plan-editor-scroll" #scroller (wheel)="onWheel($event)" (scroll)="onScroll($event)">
-          <app-markdown-editor
+          <app-markdown-editor appProjectReadOnly
             class="plan-editor"
             [ngModel]="editorText"
             (ngModelChange)="onTextChange($event)"
@@ -254,7 +254,7 @@
         @for (mention of preview.ambiguous; track $index) {
           <div class="link-mention">
             @if (mention.change) {
-              <label><input type="checkbox" [(ngModel)]="mention.selected"> Link <strong>{{ mention.mention }}</strong></label>
+              <label><input appProjectReadOnly type="checkbox" [(ngModel)]="mention.selected"> Link <strong>{{ mention.mention }}</strong></label>
             } @else {
               <strong>{{ mention.mention }}</strong>
             }

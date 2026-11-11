@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../../shared/project-read-only.directive';
 import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -11,7 +12,7 @@ import { SettingsSearchableDirective } from '../settings/settings-searchable.dir
 /** Settings › Timeline: the project calendar (months) and the chronicle file path. */
 @Component({
   selector: 'app-timeline-settings',
-  imports: [FormsModule, SettingsSearchableDirective],
+  imports: [ProjectReadOnlyDirective, FormsModule, SettingsSearchableDirective],
   templateUrl: './timeline-settings.component.html',
   styleUrl: './timeline-settings.component.scss',
 })

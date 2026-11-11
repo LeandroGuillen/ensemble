@@ -95,26 +95,20 @@ describe('CharacterDetailComponent unsaved changes guards', () => {
     expect(component.canLeave()).toBeTrue();
   });
 
-  it('prevents window close when main form is dirty', () => {
+  it('leaves window close to the IPC guard instead of silently cancelling beforeunload', () => {
+    expect((component as any).beforeUnload).toBeUndefined();
+  });
+
+  it('offers Discard and close for unsaveable edits', async () => {
     component.characterForm.markAsDirty();
-    component.hasAnyBookPageDirty = jasmine.createSpy().and.returnValue(false);
-    const event = { preventDefault: jasmine.createSpy('preventDefault') } as any;
-    component.beforeUnload(event);
-    expect(event.preventDefault).toHaveBeenCalled();
-  });
-
-  it('prevents window close when any book page is dirty', () => {
-    component.hasAnyBookPageDirty = jasmine.createSpy().and.returnValue(true);
-    const event = { preventDefault: jasmine.createSpy('preventDefault') } as any;
-    component.beforeUnload(event);
-    expect(event.preventDefault).toHaveBeenCalled();
-  });
-
-  it('allows window close when form is clean and no book pages are dirty', () => {
-    component.hasAnyBookPageDirty = jasmine.createSpy().and.returnValue(false);
-    const event = { preventDefault: jasmine.createSpy('preventDefault') } as any;
-    component.beforeUnload(event);
-    expect(event.preventDefault).not.toHaveBeenCalled();
+    component.hasAnyBookPageDirty = () => false;
+    confirmSpy.and.resolveTo(false);
+    expect(await component.canLeave(true)).toBeFalse();
+    expect(confirmSpy).toHaveBeenCalledWith(
+      jasmine.stringContaining('read-only'), 'Discard Changes',
+      jasmine.objectContaining({ confirmText: 'Discard and close' }));
+    confirmSpy.and.resolveTo(true);
+    expect(await component.canLeave(true)).toBeTrue();
   });
 
   it('never uses the native confirm (it breaks keyboard focus in Electron)', async () => {

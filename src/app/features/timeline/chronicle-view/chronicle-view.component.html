@@ -41,7 +41,7 @@
   @if (composerOpen) {
     <div class="composer">
       <div class="composer-row">
-        <input
+        <input appProjectReadOnly
           #quickInput
           class="form-control quick-input"
           placeholder="322-03 The blackout @Vellhaven +Mara +Saffi"
@@ -155,7 +155,7 @@
                 <div class="card" (dblclick)="editEntry(item, true)" role="button" tabindex="0" (click)="select(item)" (keydown.enter)="select(item)" (keydown.space)="$event.preventDefault(); select(item)" [attr.aria-pressed]="item.key === selectedKey">
                   <span class="card-title">
                     @if (form && form.line !== null && item.key === selectedKey) {
-                      <input class="form-control inline-title" aria-label="Event title" [(ngModel)]="form.title" (click)="$event.stopPropagation()" (dblclick)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" (keydown.enter)="saveForm()" (keydown.escape)="cancelEdit()" />
+                      <input appProjectReadOnly class="form-control inline-title" aria-label="Event title" [(ngModel)]="form.title" (click)="$event.stopPropagation()" (dblclick)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" (keydown.enter)="saveForm()" (keydown.escape)="cancelEdit()" />
                     } @else {
                       <span class="title">{{ item.title }}</span>
                     }
@@ -188,7 +188,7 @@
             @for (item of undated; track item.key) {
               <div class="undated-row" (dblclick)="editEntry(item, true)" role="button" tabindex="0" [class.selected]="item.key === selectedKey" (click)="select(item)" (keydown.enter)="select(item)" (keydown.space)="$event.preventDefault(); select(item)">
                 @if (form && form.line !== null && item.key === selectedKey) {
-                  <input class="form-control inline-title" aria-label="Event title" [(ngModel)]="form.title" (click)="$event.stopPropagation()" (dblclick)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" (keydown.enter)="saveForm()" (keydown.escape)="cancelEdit()" />
+                  <input appProjectReadOnly class="form-control inline-title" aria-label="Event title" [(ngModel)]="form.title" (click)="$event.stopPropagation()" (dblclick)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" (keydown.enter)="saveForm()" (keydown.escape)="cancelEdit()" />
                 } @else {
                   <span>{{ item.title }}</span>
                 }
@@ -205,18 +205,18 @@
         <form class="entry-form" (ngSubmit)="saveForm()">
           <div class="label">{{ form.line === null ? 'New entry' : 'Edit entry' }}</div>
           <label for="entry-date">When</label>
-          <input id="entry-date" class="form-control mono" [class.invalid]="formDateInvalid" name="date" [(ngModel)]="form.date" placeholder="322-03-09, c. 1, 330 → 331" autocomplete="off" />
+          <input appProjectReadOnly id="entry-date" class="form-control mono" [class.invalid]="formDateInvalid" name="date" [(ngModel)]="form.date" placeholder="322-03-09, c. 1, 330 → 331" autocomplete="off" />
           <small class="field-hint" [class.warn]="formDateInvalid">{{ formDateStatus }}</small>
           <label for="entry-title">Title</label>
-          <input id="entry-title" class="form-control" name="title" [(ngModel)]="form.title" required autocomplete="off" />
+          <input appProjectReadOnly id="entry-title" class="form-control" name="title" [(ngModel)]="form.title" required autocomplete="off" />
           <span id="entry-kind-label" class="label-inline">Kind</span>
           <div class="kind-switch" role="group" aria-labelledby="entry-kind-label">
             <label class="kind-option">
-              <input type="radio" name="kind" value="event" [(ngModel)]="form.kind" />
+              <input appProjectReadOnly type="radio" name="kind" value="event" [(ngModel)]="form.kind" />
               <span>Event</span>
             </label>
             <label class="kind-option" title="Uncertain or mythical">
-              <input type="radio" name="kind" value="legend" [(ngModel)]="form.kind" />
+              <input appProjectReadOnly type="radio" name="kind" value="legend" [(ngModel)]="form.kind" />
               <span>Legend</span>
             </label>
           </div>
@@ -227,7 +227,7 @@
               <span class="link-chip">⌖ {{ name }}<button type="button" (click)="removeLink('where', name)" [attr.aria-label]="'Remove ' + name">×</button></span>
             }
           </div>
-          <select id="entry-where" class="form-control" #wherePick (change)="addLink('where', wherePick.value); wherePick.value = ''">
+          <select appProjectReadOnly id="entry-where" class="form-control" #wherePick (change)="addLink('where', wherePick.value); wherePick.value = ''">
             <option value="">Add a location…</option>
             @for (location of ctx?.locations ?? []; track location.id) { <option [value]="location.name">{{ location.name }}</option> }
           </select>
@@ -238,7 +238,7 @@
               <span class="link-chip">{{ name }}<button type="button" (click)="removeLink('with', name)" [attr.aria-label]="'Remove ' + name">×</button></span>
             }
           </div>
-          <select id="entry-with" class="form-control" #withPick (change)="addLink('with', withPick.value); withPick.value = ''">
+          <select appProjectReadOnly id="entry-with" class="form-control" #withPick (change)="addLink('with', withPick.value); withPick.value = ''">
             <option value="">Add a character…</option>
             @for (person of people; track person.id) { <option [value]="person.name">{{ person.name }}{{ person.lore ? ' (Lore)' : '' }}</option> }
           </select>
@@ -255,7 +255,7 @@
           }
 
           <label for="entry-body">Notes</label>
-          <textarea id="entry-body" class="form-control" name="body" rows="6" [(ngModel)]="form.body" placeholder="What happened. [[Wikilinks]] work."></textarea>
+          <textarea appProjectReadOnly id="entry-body" class="form-control" name="body" rows="6" [(ngModel)]="form.body" placeholder="What happened. [[Wikilinks]] work."></textarea>
 
           @if (formError) { <p class="form-error" role="alert">{{ formError }}</p> }
           <div class="actions">

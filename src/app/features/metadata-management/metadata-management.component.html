@@ -32,7 +32,7 @@
                   <form [formGroup]="categoryForm" (ngSubmit)="saveCategory()">
                     <div class="form-group">
                       <label for="categoryName">Name</label>
-                      <input
+                      <input appProjectReadOnly
                         id="categoryName"
                         type="text"
                         formControlName="name"
@@ -48,7 +48,7 @@
                     </div>
                     <div class="form-group">
                       <label for="categoryDescription">Description (optional)</label>
-                      <textarea
+                      <textarea appProjectReadOnly
                         id="categoryDescription"
                         formControlName="description"
                         placeholder="Enter a brief description for this category..."
@@ -66,13 +66,13 @@
                     <div class="form-group">
                       <label for="categoryColor">Color</label>
                       <div class="color-input-group">
-                        <input
+                        <input appProjectReadOnly
                           id="categoryColor"
                           type="color"
                           formControlName="color"
                           class="color-input"
                           >
-                        <input
+                        <input appProjectReadOnly
                           type="text"
                           formControlName="color"
                           placeholder="#3498db"
@@ -171,14 +171,14 @@
                         <form [formGroup]="categoryForm" (ngSubmit)="saveCategory()">
                           <div class="inline-form-row">
                             <div class="inline-color-input">
-                              <input
+                              <input appProjectReadOnly
                                 type="color"
                                 formControlName="color"
                                 class="color-input-small"
                                 >
                             </div>
                             <div class="inline-name-input">
-                              <input
+                              <input appProjectReadOnly
                                 type="text"
                                 formControlName="name"
                                 placeholder="Category name"
@@ -188,7 +188,7 @@
                             </div>
                           </div>
                           <div class="inline-description-row">
-                            <textarea
+                            <textarea appProjectReadOnly
                               formControlName="description"
                               placeholder="Description (optional)..."
                               class="form-control-inline description-textarea"
@@ -246,7 +246,7 @@
                 <form [formGroup]="settingsForm">
                 <div class="form-group" [settingsSearchable]="['Default Category', 'pre-selected', defaultCategorySearchLabel]">
                   <label for="defaultCategory">Default Category</label>
-                  <select
+                  <select appProjectReadOnly
                     id="defaultCategory"
                     formControlName="defaultCategory"
                     class="form-control"
@@ -289,7 +289,7 @@
                   <form [formGroup]="tagForm" (ngSubmit)="saveTag()">
                     <div class="form-group">
                       <label for="tagName">Name</label>
-                      <input
+                      <input appProjectReadOnly
                         id="tagName"
                         type="text"
                         formControlName="name"
@@ -306,13 +306,13 @@
                     <div class="form-group">
                       <label for="tagColor">Color</label>
                       <div class="color-input-group">
-                        <input
+                        <input appProjectReadOnly
                           id="tagColor"
                           type="color"
                           formControlName="color"
                           class="color-input"
                           >
-                        <input
+                        <input appProjectReadOnly
                           type="text"
                           formControlName="color"
                           placeholder="#e74c3c"
@@ -403,14 +403,14 @@
                         <form [formGroup]="tagForm" (ngSubmit)="saveTag()">
                           <div class="inline-form-row">
                             <div class="inline-color-input">
-                              <input
+                              <input appProjectReadOnly
                                 type="color"
                                 formControlName="color"
                                 class="color-input-small"
                                 >
                             </div>
                             <div class="inline-name-input">
-                              <input
+                              <input appProjectReadOnly
                                 type="text"
                                 formControlName="name"
                                 placeholder="Tag name"
@@ -480,7 +480,7 @@
                   <form (ngSubmit)="addCharacterStyle()">
                     <div class="form-group">
                       <label for="characterStyleName">Name</label>
-                      <input
+                      <input appProjectReadOnly
                         id="characterStyleName"
                         type="text"
                         class="form-control"
@@ -526,7 +526,7 @@
                     <div class="item-content">
                       <div class="item-info">
                         <div class="item-name-row">
-                          <input
+                          <input appProjectReadOnly
                             type="text"
                             class="character-style-name-input"
                             [ngModel]="getCharacterStyleDisplayName(style)"
@@ -566,7 +566,7 @@
               <form [formGroup]="settingsForm">
                 <div class="form-group" [settingsSearchable]="['Theme', 'appearance', 'color scheme', themeSearchLabel]">
                   <label for="theme">Theme</label>
-                  <select
+                  <select appProjectReadOnly
                     id="theme"
                     formControlName="theme"
                     class="form-control"
@@ -581,7 +581,7 @@
                 </div>
                 <div class="form-group" [settingsSearchable]="['Skin', 'appearance', 'pixel', 'look', skinSearchLabel]">
                   <label for="skin">Skin</label>
-                  <select
+                  <select appProjectReadOnly
                     id="skin"
                     formControlName="skin"
                     class="form-control"
@@ -597,7 +597,7 @@
               </form>
               <div class="form-group" [settingsSearchable]="['Plan outline side', 'outline', 'sidebar', 'book plan', 'left', 'right']">
                 <label for="planOutlineSide">Plan outline side</label>
-                <select
+                <select appProjectReadOnly
                   id="planOutlineSide"
                   class="form-control"
                   [value]="planOutlineSide"
@@ -655,13 +655,13 @@
                             }
                             @if (editingBaseColorIndex === i) {
                               <div class="color-edit">
-                                <input
+                                <input appProjectReadOnly
                                   type="color"
                                   [value]="color"
                                   (change)="saveBaseColor(i, $any($event.target).value)"
                                   class="color-input-inline"
                                   >
-                                <input
+                                <input appProjectReadOnly
                                   type="text"
                                   [value]="color"
                                   (change)="saveBaseColor(i, $any($event.target).value)"
@@ -723,13 +723,13 @@
                     <h3>Extra Colors</h3>
                     <p class="form-help">Add additional colors beyond the base 10. These can be removed.</p>
                     <div class="add-color-form">
-                      <input
+                      <input appProjectReadOnly
                         type="color"
                         [(ngModel)]="newExtraColor"
                         class="color-input-inline"
                         placeholder="#000000"
                         >
-                      <input
+                      <input appProjectReadOnly
                         type="text"
                         [(ngModel)]="newExtraColor"
                         class="form-control color-text-inline"
@@ -778,7 +778,7 @@
             <section class="section settings-fields">
                 <div class="form-group" [settingsSearchable]="['Project Name', 'project', 'rename', projectNameControl.value]">
                   <label for="projectName">Project Name</label>
-                  <input
+                  <input appProjectReadOnly
                     type="text"
                     id="projectName"
                     [formControl]="projectNameControl"
@@ -820,7 +820,7 @@
                 <form [formGroup]="settingsForm">
                 <div class="form-group" [settingsSearchable]="['Characters Folder', 'path', settings?.charactersFolder || 'characters']">
                   <label for="charactersFolder">Characters Folder</label>
-                  <input
+                  <input appProjectReadOnly
                     type="text"
                     id="charactersFolder"
                     formControlName="charactersFolder"
@@ -837,7 +837,7 @@
                 </div>
                 <div class="form-group" [settingsSearchable]="['Locations Folder', 'places', 'path', settings?.locationsFolder || 'locations']">
                   <label for="locationsFolder">Locations Folder</label>
-                  <input
+                  <input appProjectReadOnly
                     type="text"
                     id="locationsFolder"
                     formControlName="locationsFolder"
@@ -854,7 +854,7 @@
                 </div>
                 <div class="form-group" [settingsSearchable]="['Prompts Folder', 'image prompts', 'path', settings?.promptsFolder || 'prompts']">
                   <label for="promptsFolder">Prompts Folder</label>
-                  <input
+                  <input appProjectReadOnly
                     type="text"
                     id="promptsFolder"
                     formControlName="promptsFolder"
@@ -871,7 +871,7 @@
                 </div>
                 <div class="form-group" [settingsSearchable]="['Casts Folder', 'path', settings?.castsFolder || 'characters/casts']">
                   <label for="castsFolder">Casts Folder</label>
-                  <input
+                  <input appProjectReadOnly
                     type="text"
                     id="castsFolder"
                     formControlName="castsFolder"
@@ -888,7 +888,7 @@
                 </div>
                 <div class="form-group" [settingsSearchable]="['Names File', 'backstage', 'names.md', settings?.namesFile || 'characters/names.md']">
                   <label for="namesFile">Names File</label>
-                  <input
+                  <input appProjectReadOnly
                     type="text"
                     id="namesFile"
                     formControlName="namesFile"
@@ -905,7 +905,7 @@
                 </div>
                 <div class="form-group" [settingsSearchable]="['Images Folder', 'portraits', 'img', settings?.imagesFolder || 'img']">
                   <label for="imagesFolder">Images Folder</label>
-                  <input
+                  <input appProjectReadOnly
                     type="text"
                     id="imagesFolder"
                     formControlName="imagesFolder"

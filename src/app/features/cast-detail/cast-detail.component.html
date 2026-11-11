@@ -2,7 +2,7 @@
   <app-page-header [title]="isNewCast ? 'New Cast' : (cast?.name || 'Cast')">
     <div class="cast-editor-actions">
       <button type="button" class="btn btn-secondary" (click)="cancel()" [disabled]="isSaving">Cancel</button>
-      <button type="button" class="btn btn-primary" (click)="saveCast()" [disabled]="isSaving || castForm.invalid">
+      <button appProjectReadOnly type="button" class="btn btn-primary" (click)="saveCast()" [disabled]="isSaving || castForm.invalid">
         {{ isSaving ? 'Saving…' : (isNewCast ? 'Create Cast' : 'Save Changes') }}
       </button>
     </div>
@@ -25,7 +25,7 @@
 
           <div class="form-group">
             <label for="castName" class="form-label">Cast Name *</label>
-            <input
+            <input appProjectReadOnly
               id="castName"
               type="text"
               formControlName="name"
@@ -43,7 +43,7 @@
           <!-- Delete Cast Link -->
           @if (!isNewCast) {
             <div class="delete-cast-container">
-              <button
+              <button appProjectReadOnly
                 type="button"
                 class="delete-cast-link"
                 (click)="deleteCast()"
@@ -93,7 +93,7 @@
                 </div>
                 @if (castThumbnail) {
                   <div class="thumbnail-actions">
-                    <button
+                    <button appProjectReadOnly
                       type="button"
                       class="btn btn-secondary btn-small"
                       (click)="removeThumbnail(); $event.stopPropagation()"
@@ -111,7 +111,7 @@
             <!-- Description -->
             <div class="form-group">
               <label for="castDescription" class="form-label">Description</label>
-              <textarea
+              <textarea appProjectReadOnly
                 id="castDescription"
                 formControlName="description"
                 placeholder="Add notes about this cast/scene... (supports Markdown)"

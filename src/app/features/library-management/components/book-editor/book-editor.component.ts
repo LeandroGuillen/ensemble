@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../../../../shared/project-read-only.directive';
 import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, HostListener } from '@angular/core';
 
 import { AbstractControl, FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
@@ -26,7 +27,7 @@ function codeOrTitleRequired(): ValidatorFn {
 
 @Component({
     selector: 'app-book-editor',
-    imports: [FormsModule, ReactiveFormsModule],
+    imports: [ProjectReadOnlyDirective, FormsModule, ReactiveFormsModule],
     templateUrl: './book-editor.component.html',
     styleUrls: ['./book-editor.component.scss']
 })

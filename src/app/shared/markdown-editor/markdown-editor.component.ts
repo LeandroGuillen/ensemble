@@ -272,6 +272,7 @@ export class MarkdownEditorComponent implements ControlValueAccessor, OnInit, On
   }
 
   setDisabledState(disabled: boolean): void {
+    if (disabled === this.disabled) return;
     this.disabled = disabled;
     this.view?.dispatch({ effects: this.editable.reconfigure(EditorView.editable.of(!disabled)) });
   }

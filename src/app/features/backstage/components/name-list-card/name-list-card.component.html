@@ -18,7 +18,7 @@
         <use [attr.href]="isCollapsed ? 'assets/ui-icons.svg#chevron-right' : 'assets/ui-icons.svg#chevron-down'" />
       </svg>
     </button>
-    <input
+    <input appProjectReadOnly
       type="text"
       class="name-list-title"
       [value]="nameList.title"
@@ -42,7 +42,7 @@
         *ngFor="let nameItem of nameList.names; let i = index"
       >
         <div class="name-main">
-          <input
+          <input appProjectReadOnly
             type="text"
             class="name-input"
             [value]="nameItem.name"
@@ -83,7 +83,7 @@
           </div>
         </div>
         <div class="name-notes" *ngIf="isNotesExpanded(i)">
-          <textarea
+          <textarea appProjectReadOnly
             class="notes-textarea"
             [value]="nameItem.notes || ''"
             (blur)="onNotesChange(i, $any($event.target).value)"
@@ -100,7 +100,7 @@
 
     <div class="add-name-form">
       <div *ngIf="!bulkAddMode" class="single-add-mode">
-        <input
+        <input appProjectReadOnly
           type="text"
           class="form-control"
           data-new-name-input
@@ -124,7 +124,7 @@
         </button>
       </div>
       <div *ngIf="bulkAddMode" class="bulk-add-mode">
-        <textarea
+        <textarea appProjectReadOnly
           class="form-control bulk-input"
           [(ngModel)]="bulkInputText"
           placeholder="Paste multiple names (one per line, or comma/semicolon separated)..."

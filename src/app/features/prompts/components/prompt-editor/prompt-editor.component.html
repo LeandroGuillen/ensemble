@@ -63,7 +63,7 @@
         @for (tag of draft.tags; track tag) {
           <span class="chip chip-tag">{{ tag }}<button type="button" class="chip-remove" (click)="removeTag(tag)" [attr.aria-label]="'Remove tag ' + tag">×</button></span>
         }
-        <input
+        <input appProjectReadOnly
           class="tag-input"
           type="text"
           [(ngModel)]="tagDraft"
@@ -77,7 +77,7 @@
   </section>
 
   <ng-template #sectionBody let-section let-index="index">
-    <textarea
+    <textarea appProjectReadOnly
       class="notes-input"
       rows="2"
       [(ngModel)]="section.notes"
@@ -95,7 +95,7 @@
             <button type="button" class="icon-btn" (click)="removeBlock(section, 'prompt')" title="Remove prompt block" aria-label="Remove prompt block">×</button>
           </span>
         </div>
-        <textarea
+        <textarea appProjectReadOnly
           class="block-input"
           rows="5"
           [(ngModel)]="section.prompt"
@@ -115,7 +115,7 @@
             <button type="button" class="icon-btn" (click)="removeBlock(section, 'negative')" title="Remove negative block" aria-label="Remove negative block">×</button>
           </span>
         </div>
-        <textarea
+        <textarea appProjectReadOnly
           class="block-input"
           rows="3"
           [(ngModel)]="section.negative"
@@ -157,7 +157,7 @@
   @for (section of variantSections; track $index; let i = $index; let last = $last) {
     <section class="section-card">
       <div class="variant-head">
-        <input
+        <input appProjectReadOnly
           class="variant-name"
           type="text"
           [(ngModel)]="section.name"

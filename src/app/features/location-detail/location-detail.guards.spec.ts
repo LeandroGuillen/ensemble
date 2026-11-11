@@ -54,17 +54,19 @@ describe('LocationDetailComponent unsaved changes guards', () => {
     expect(component.canLeave()).toBeTrue();
   });
 
-  it('prevents window close when form is dirty', () => {
-    component.locationForm.markAsDirty();
-    const event = { preventDefault: jasmine.createSpy('preventDefault') } as any;
-    component.beforeUnload(event);
-    expect(event.preventDefault).toHaveBeenCalled();
+  it('leaves window close to the IPC guard instead of silently cancelling beforeunload', () => {
+    expect((component as any).beforeUnload).toBeUndefined();
   });
 
-  it('allows window close when form is clean', () => {
-    const event = { preventDefault: jasmine.createSpy('preventDefault') } as any;
-    component.beforeUnload(event);
-    expect(event.preventDefault).not.toHaveBeenCalled();
+  it('offers Discard and close for unsaveable edits', async () => {
+    component.locationForm.markAsDirty();
+    confirmSpy.and.resolveTo(false);
+    expect(await component.canLeave(true)).toBeFalse();
+    expect(confirmSpy).toHaveBeenCalledWith(
+      jasmine.stringContaining('read-only'), 'Discard Changes',
+      jasmine.objectContaining({ confirmText: 'Discard and close' }));
+    confirmSpy.and.resolveTo(true);
+    expect(await component.canLeave(true)).toBeTrue();
   });
 
   it('never uses the native confirm (it breaks keyboard focus in Electron)', async () => {

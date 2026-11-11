@@ -164,6 +164,8 @@ export class PlotBoardService {
   }
 
   async savePlotBoard(board: PlotBoard): Promise<void> {
+    // The board view flushes on navigation/destroy, including during browsing.
+    if (this.projectService.getCurrentProject()?.readOnly) return;
     const relativePath = this.getCurrentRelativePath();
     if (!relativePath) {
       throw new Error('No plot board file is open');

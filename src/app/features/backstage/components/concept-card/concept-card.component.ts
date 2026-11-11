@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../../../../shared/project-read-only.directive';
 import { Component, Input, Output, EventEmitter } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
@@ -6,7 +7,7 @@ import { CharacterConcept } from "../../../../core/interfaces/backstage.interfac
 @Component({
   selector: "app-concept-card",
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [ProjectReadOnlyDirective, CommonModule, FormsModule],
   templateUrl: "./concept-card.component.html",
   styleUrls: ["./concept-card.component.scss"],
 })

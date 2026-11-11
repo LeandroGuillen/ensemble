@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../../shared/project-read-only.directive';
 import { CdkTrapFocus } from '@angular/cdk/a11y';
 import { Component, DestroyRef, ElementRef, HostListener, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -60,6 +61,7 @@ const SLIDE_IN_MS = 340;
 @Component({
   selector: 'app-book-plan',
   imports: [
+    ProjectReadOnlyDirective,
     FormsModule,
     CdkTrapFocus,
     RouterLink,
@@ -282,8 +284,8 @@ export class BookPlanComponent implements OnInit, OnDestroy {
    * (IPC prepareToLeave). Do not preventDefault on beforeunload: in Electron that
    * silently cancels close with no dialog.
    */
-  canLeave(): boolean | Promise<boolean> {
-    return this.bookPlan.prepareToLeave();
+  canLeave(discardAndClose = false): boolean | Promise<boolean> {
+    return discardAndClose ? this.bookPlan.prepareToLeave(true) : this.bookPlan.prepareToLeave();
   }
 
   get bookTitle(): string {

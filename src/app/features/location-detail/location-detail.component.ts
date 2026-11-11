@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../../shared/project-read-only.directive';
 import { WikiLinkRenameService } from '../../core/services/wiki-link-rename.service';
 import {
   DestroyRef,
@@ -52,6 +53,7 @@ import { buildDeleteReferencesMessage } from '../../shared/utils/reference-messa
 @Component({
   selector: 'app-location-detail',
   imports: [
+    ProjectReadOnlyDirective,
     FormsModule,
     ReactiveFormsModule,
     RouterLink,
@@ -452,20 +454,13 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
    * Route leave guard. Uses the in-app modal: a native window.confirm() leaves the Electron
    * window unable to take keyboard focus. A prompt already on screen is reused.
    */
-  canLeave(): boolean | Promise<boolean> {
-    if (this.isSaving || !this.imagePickerService.handleNavigationAway()) return false;
+  canLeave(discardAndClose = false): boolean | Promise<boolean> {
+    if (!discardAndClose && (this.isSaving || !this.imagePickerService.handleNavigationAway())) return false;
     if (!this.locationForm.dirty) return true;
     this.leavePrompt ??= this.modalService.confirm(
-      'You have unsaved changes. Are you sure you want to leave?', 'Discard Changes',
-      { confirmText: 'Discard', cancelText: 'Keep Editing', danger: false }
+      discardAndClose ? 'This project is read-only. Discard your unsaved changes and close?' : 'You have unsaved changes. Are you sure you want to leave?', 'Discard Changes',
+      { confirmText: discardAndClose ? 'Discard and close' : 'Discard', cancelText: 'Keep Editing', danger: false }
     ).finally(() => { this.leavePrompt = null; });
     return this.leavePrompt;
-  }
-
-  @HostListener('window:beforeunload', ['$event'])
-  beforeUnload(event: BeforeUnloadEvent): void {
-    if (this.locationForm.dirty) {
-      event.preventDefault();
-    }
   }
 }

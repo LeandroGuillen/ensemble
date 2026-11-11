@@ -154,6 +154,23 @@ describe('AppComponent prepare-to-leave zone', () => {
     await fixture.whenStable();
   });
 
+  it('asks the active detail guard before closing and respects Cancel', async () => {
+    component.readOnlyProject = true;
+    const canLeave = jasmine.createSpy('canLeave').and.resolveTo(false);
+    (component as any).outlet = { isActivated: true, component: { canLeave } };
+    await (component as any).handlePrepareToLeaveRequest();
+    expect(canLeave).toHaveBeenCalledWith(component.readOnlyProject);
+    expect(electron.replyPrepareToLeaveResult).toHaveBeenCalledWith(false);
+  });
+
+  it('closes after the active editor discards pending changes', async () => {
+    const canLeave = jasmine.createSpy('canLeave').and.resolveTo(true);
+    (component as any).outlet = { isActivated: true, component: { canLeave } };
+    await (component as any).handlePrepareToLeaveRequest();
+    expect(canLeave).toHaveBeenCalledWith(component.readOnlyProject);
+    expect(electron.replyPrepareToLeaveResult).toHaveBeenCalledWith(true);
+  });
+
   it('routes the IPC prepare-to-leave callback through NgZone.run', () => {
     const runSpy = spyOn(ngZone, 'run').and.callThrough();
     ngZone.runOutsideAngular(() => {

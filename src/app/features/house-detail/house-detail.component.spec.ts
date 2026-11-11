@@ -1,3 +1,4 @@
+import { ProjectWriteProtectionService } from '../../core/services/project-write-protection.service';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BehaviorSubject, of } from 'rxjs';
 import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
@@ -57,6 +58,34 @@ describe('House editor', () => {
     await new Promise(resolve => setTimeout(resolve, 0));
     await fixture.whenStable();
     fixture.detectChanges();
+  });
+
+  it('disables House edits while keeping book history browsing available', async () => {
+    TestBed.inject(ProjectWriteProtectionService).readOnlyPath = '/project';
+    component.leadershipEditing = true;
+    fixture.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const root: HTMLElement = fixture.nativeElement;
+    expect(root.querySelector<HTMLInputElement>('#house-name')!.disabled).toBeTrue();
+    expect(root.querySelector<HTMLInputElement>('#house-motto')!.disabled).toBeTrue();
+    expect(root.querySelector<HTMLSelectElement>('#house-seat')!.disabled).toBeTrue();
+    expect(root.querySelector('.cm-content')?.getAttribute('contenteditable')).toBe('false');
+    expect(root.querySelector<HTMLSelectElement>('#history-book')!.disabled).toBeFalse();
+    expect(component.dirty).toBeFalse();
+    expect(service.updateHouse).not.toHaveBeenCalled();
+  });
+
+  it('offers a discard prompt for pending read-only changes and allows close after confirmation', async () => {
+    component.dirty = true;
+    const confirm = spyOn(TestBed.inject(ModalService), 'confirm').and.resolveTo(false);
+    expect(await component.canLeave(true)).toBeFalse();
+    expect(confirm).toHaveBeenCalledWith(jasmine.stringContaining('read-only'), 'Discard Changes',
+      jasmine.objectContaining({ confirmText: 'Discard and close' }));
+    confirm.and.resolveTo(true);
+    expect(await component.canLeave(true)).toBeTrue();
+    expect((component as any).beforeUnload).toBeUndefined();
   });
 
   it('prefills the name when opening a missing House link', async () => {

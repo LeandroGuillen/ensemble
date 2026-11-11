@@ -183,7 +183,7 @@
                           </span>
                         }
                         @if (editingThreadName === thread.id) {
-                          <input
+                          <input appProjectReadOnly
                             #threadNameInput
                             class="thread-name-input"
                             [(ngModel)]="editingNameValue"
@@ -286,7 +286,7 @@
                     </span>
                   }
                   @if (editingRowName === rowIdx) {
-                    <input
+                    <input appProjectReadOnly
                       #rowNameInput
                       class="row-name-input"
                       [(ngModel)]="editingNameValue"

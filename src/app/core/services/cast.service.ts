@@ -309,6 +309,7 @@ export class CastService {
    */
   private async mergeCastsWithMetadata(folderCasts: Cast[], _projectPath: string): Promise<Cast[]> {
     try {
+      const readOnly = !!this.projectService.getCurrentProject()?.readOnly;
       let castsFile = await this.readCastsFile();
       const legacyCasts = this.projectService.getCurrentProject()?.metadata.casts || [];
       let pendingMigrationNameMap: Map<string, string> | null = null;
@@ -329,7 +330,7 @@ export class CastService {
           legacyCasts.map((cast) => [cast.name, cast.id])
         );
         try {
-          await this.writeCastsFile(castsFile.casts);
+          if (!readOnly) await this.writeCastsFile(castsFile.casts);
         } catch (error) {
           this.logger.warn('Failed to bootstrap casts.json from ensemble.json:', error);
         }
@@ -356,7 +357,7 @@ export class CastService {
           // (matched by name) so existing references keep working.
           const legacyId = pendingMigrationNameMap?.get(folderCast.name);
           if (legacyId && indexMap.has(legacyId)) {
-            if (folderCast.folderPath) {
+            if (folderCast.folderPath && !readOnly) {
               try {
                 await this.electronService.writeFileAtomic(pathJoin(folderCast.folderPath, '.castid'), legacyId);
               } catch (error) {
@@ -378,7 +379,7 @@ export class CastService {
               characterIds: [],
             });
             try {
-              await this.upsertCastsFileEntry({
+              if (!readOnly) await this.upsertCastsFileEntry({
                 id: folderCast.id,
                 name: folderCast.name,
                 characterIds: [],
