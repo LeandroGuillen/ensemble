@@ -8,7 +8,7 @@
       @else if (loading) { Updating search… }
       @else if (!query.trim()) { Type to search across this project. }
       @else if (count === 0) { No matches. }
-      @else { {{ count }} results }
+      @else { {{ count }} {{ count === 1 ? 'result' : 'results' }} }
     </p>
     <div class="text-results">
       @for (group of groups; track group.type) {

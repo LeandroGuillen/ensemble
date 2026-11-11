@@ -51,6 +51,23 @@ describe('TextSearchComponent', () => {
     expect(fixture.componentInstance.isOpen).toBeFalse();
   });
 
+  for (const { query, status } of [
+    { query: 'alert', status: '1 result' },
+    { query: 'jose', status: '2 results' },
+    { query: 'missing', status: 'No matches.' },
+  ]) {
+    it(`shows "${status}" in the search panel status`, () => {
+      fixture.componentInstance.open();
+      fixture.componentInstance.query = query;
+      fixture.componentInstance.search();
+      fixture.changeDetectorRef.markForCheck();
+      fixture.detectChanges();
+
+      const element: HTMLElement = fixture.nativeElement;
+      expect(element.querySelector('[role="status"]')?.textContent?.trim()).toBe(status);
+    });
+  }
+
   it('updates visible results when the index changes and opens a matching book page', async () => {
     fixture.componentInstance.open();
     fixture.componentInstance.query = 'jose';
