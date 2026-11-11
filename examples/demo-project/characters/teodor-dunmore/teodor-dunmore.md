@@ -9,7 +9,6 @@ books:
   - lc2
 thumbnails:
   default: img/teodor-dunmore.webp
-prompts: []
 born: 268
 residence:
   - from: 268

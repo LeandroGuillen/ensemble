@@ -9,7 +9,6 @@ books:
   - lc2
 thumbnails:
   default: img/nessa-quill.webp
-prompts: []
 born: 299
 residence:
   - from: 299

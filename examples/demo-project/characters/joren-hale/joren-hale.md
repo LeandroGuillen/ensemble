@@ -9,7 +9,6 @@ books:
   - lc2
 thumbnails:
   default: img/joren-hale.webp
-prompts: []
 born: 295
 residence:
   - from: 295

@@ -15,6 +15,7 @@ const esm = file => import('data:text/javascript;base64,' + Buffer.from(buildSyn
 // The app's own discovery and serialization rules, so the demo is checked the way the app reads it.
 const characterPaths = esm('src/app/core/utils/character-path.utils.ts');
 const castPinboard = esm('src/app/core/utils/cast-pinboard.utils.ts');
+const promptFiles = esm('src/app/core/utils/prompt-file.utils.ts');
 // PlotBoardService with Angular and its injected services stubbed (parseFile/generateFile are pure).
 const plotBoardService = build({
   entryPoints: [path.join(repo, 'src/app/core/services/plot-board.service.ts')], bundle: true, platform: 'node', format: 'cjs', write: false, logLevel: 'error',
@@ -95,7 +96,7 @@ test('Lantern Coast demo has complete, resolvable canonical project data', async
     for (const [book, map] of Object.entries(m.fm.bookThumbnails || {})) { references([book], bookIds, m.file); for (const ref of Object.values(map)) { image(ref, m.file); assert.notEqual(ref, m.fm.thumbnails.default); } }
   }
   assert.ok(active.some(m => Array.isArray(m.fm.aliases))); assert.ok(active.some(m => typeof m.fm.aliases === 'string'));
-  for (const field of ['bookCategories', 'bookTags', 'bookThumbnails', 'prompts']) assert.ok(active.some(m => Object.keys(m.fm[field] || {}).length), `Missing example: ${field}`);
+  for (const field of ['bookCategories', 'bookTags', 'bookThumbnails']) assert.ok(active.some(m => Object.keys(m.fm[field] || {}).length), `Missing example: ${field}`);
   const withBookPages = active.filter(m => project.books.every(b => fs.existsSync(m.file.replace(/\.md$/, `.${b.code}.md`))));
   assert.ok(withBookPages.length >= 3);
   for (const m of locations) { assert.ok(m.fm.thumbnail); image(m.fm.thumbnail, m.file); }
@@ -160,6 +161,35 @@ test('Lantern Coast demo has complete, resolvable canonical project data', async
   assert.equal(all.filter(f => f.endsWith('.webp')).length, 19, 'Eleven portraits, six locations and two crests');
   const bytes = all.reduce((n, f) => n + fs.statSync(f).size, 0); assert.ok(bytes < 2.5 * 1024 * 1024, `Demo too large: ${bytes}`);
   assert.ok(!all.some(f => f.includes('.ensemble-trash')));
+});
+
+test('demo prompts use linked files without triggering character-frontmatter migration', async () => {
+  const { parseCharacterMainFileLocation } = await characterPaths;
+  const { parsePromptFile, serializePromptFile, promptVariants } = await promptFiles;
+  // Include Lore and Drawer drafts: PromptService migrates all three collections on load.
+  const chars = scan('characters', '*.md')
+    .filter(f => parseCharacterMainFileLocation(path.relative(path.join(root, 'characters'), f).replaceAll(path.sep, '/')))
+    .map(parse);
+  for (const character of chars) {
+    assert.ok(!Object.hasOwn(character.fm, 'prompts'), `${character.file}: legacy prompts would be migrated on opening`);
+  }
+  const project = JSON.parse(read(path.join(root, 'ensemble.json')));
+  const prompts = scan(project.settings.promptsFolder || 'prompts', '*.md').map(file => {
+    const raw = read(file), data = parsePromptFile(raw);
+    assert.equal(serializePromptFile(data), raw, `${file}: prompt is not in the format the app writes`);
+    references(data.characters, new Set(chars.map(c => c.fm.id)), file);
+    references(data.locations, new Set(scan('locations', '_*.md').map(f => parse(f).fm.id)), file);
+    return { file, data };
+  });
+  const mara = chars.find(c => c.fm.name === 'Mara Vell');
+  const linked = prompts.filter(p => p.data.characters.includes(mara.fm.id));
+  assert.equal(linked.length, 1, 'Mara retains one linked portrait prompt file');
+  assert.equal(path.relative(root, linked[0].file).replaceAll(path.sep, '/'), 'prompts/characters/Mara Vell.md');
+  assert.deepEqual(promptVariants(linked[0].data).map(({ name, prompt, negative }) => ({ name, prompt, negative })), [{
+    name: 'Keeper portrait',
+    prompt: 'Illustrated maritime fantasy keeper, blue coat, gold lantern, sea mist',
+    negative: 'Text, logos, modern objects',
+  }]);
 });
 
 test('electron-builder file filters exclude every demo file', () => {

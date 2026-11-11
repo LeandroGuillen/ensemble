@@ -9,7 +9,6 @@ books:
   - lc2
 thumbnails:
   default: img/oren-vell.webp
-prompts: []
 born: 297
 residence:
   - from: 297

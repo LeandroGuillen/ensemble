@@ -3,7 +3,6 @@ id: bell-diver
 category: minor
 tags: []
 books: []
-prompts: []
 created: '2026-10-31T12:00:00.000Z'
 modified: '2026-10-31T12:00:00.000Z'
 ---

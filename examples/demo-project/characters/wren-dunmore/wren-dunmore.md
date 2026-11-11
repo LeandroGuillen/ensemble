@@ -8,7 +8,6 @@ books:
   - lc2
 thumbnails:
   default: img/wren-dunmore.webp
-prompts: []
 born: 312
 residence:
   - from: 312

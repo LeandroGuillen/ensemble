@@ -9,7 +9,6 @@ books:
   - lc2
 thumbnails:
   default: img/saffi-reed.webp
-prompts: []
 born: 306
 residence:
   - from: 306

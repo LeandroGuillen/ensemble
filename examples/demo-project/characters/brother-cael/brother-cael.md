@@ -9,7 +9,6 @@ books:
   - lc2
 thumbnails:
   default: img/brother-cael.webp
-prompts: []
 born: 280
 residence:
   - from: 280

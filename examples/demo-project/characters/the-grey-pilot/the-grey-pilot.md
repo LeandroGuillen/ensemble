@@ -9,7 +9,6 @@ books:
   - lc2
 thumbnails:
   default: img/the-grey-pilot.webp
-prompts: []
 created: '2026-10-31T12:00:00.000Z'
 modified: '2026-10-31T12:00:00.000Z'
 ---

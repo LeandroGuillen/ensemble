@@ -9,7 +9,6 @@ books:
   - lc2
 thumbnails:
   default: img/ilse-dunmore.webp
-prompts: []
 born: 304
 residence:
   - from: 304

@@ -18,10 +18,6 @@ born: 301
 residence:
   - from: 301
     place: vellhaven-lighthouse
-prompts:
-  - name: Keeper portrait
-    positive: Illustrated maritime fantasy keeper, blue coat, gold lantern, sea mist
-    negative: Text, logos, modern objects
 created: '2026-10-31T12:00:00.000Z'
 modified: '2026-10-31T12:00:00.000Z'
 ---

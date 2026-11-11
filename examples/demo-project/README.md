@@ -19,6 +19,7 @@ The project starts with the dark Blue Gold theme and Classic skin. There are two
 - House Vell includes joint leadership and an interrupted reign. Ilse belongs to both houses during her stewardship. House Dunmore deliberately has no designated current leadership entry.
 - Six locations cover region, settlement, district, building, natural feature and plane. All have pictures.
 - `lantern-coast.pinboard.md` holds three plot threads and six rows. `books/lc2/lc2.plan.md` has six chapters, scenes, viewpoint IDs and TODO markers.
+- Mara’s **Keeper portrait** prompt lives in `prompts/characters/Mara Vell.md`, linked by her character ID. Open Prompts or her character page to find it.
 - Backstage contains a harbor name list and two concepts.
 
 ## Original content and license
@@ -31,4 +32,4 @@ Images live in `img/`: ten character portraits, Mara’s distinct `mara-vell-lc2
 
 ## Automated verification
 
-From the repository root, run `npm run test:main`, or `node --test test/demo-project.test.js` for just the demo. The test reads this folder without opening or modifying it. It uses the app’s actual wiki-link resolver and checks entity IDs, cross-references, images, required examples and a maintained list of forbidden brand names.
+From the repository root, run `npm run test:main`, or `node --test test/demo-project.test.js` for just the demo. The test reads this folder without opening or modifying it. It uses the app’s actual wiki-link resolver and checks entity IDs, cross-references, images, current linked prompt storage (with no inline prompts to migrate), required examples and a maintained list of forbidden brand names.
