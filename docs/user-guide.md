@@ -64,6 +64,15 @@ a character **per book**:
 - per-book **category**, **tags** and **portrait** overrides change how they
   look in that book without altering their main profile.
 
+On a book's plan screen, **Link characters** previews links for exact-case,
+whole-word character names and aliases in that plan. Confirm to add them as one
+undoable edit; Ctrl/Cmd+Z in the editor restores the original text. Shared names,
+shortened names, common English/Spanish words, and names shared with locations or
+Houses stay unchanged in a separate review report. Each report entry shows its
+chapter, line, text and candidate characters; click its line to jump there.
+Headings, PoV/date lines, code, existing links and hidden/marker content are
+preserved. The report clears when the plan changes; scan again to refresh it.
+
 ## Houses
 
 **Houses** are families and dynasties: a crest, motto, colors, a seat (a

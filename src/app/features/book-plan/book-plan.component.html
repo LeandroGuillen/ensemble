@@ -9,6 +9,7 @@
     }
     <div class="header-actions">
       @if (state && view === 'plan') {
+        <button type="button" class="btn btn-ghost btn-sm" [disabled]="!!state.error || state.conflict !== null" (click)="previewCharacterLinks()">Link characters</button>
         <span class="save-status" [class.warn]="state.conflict !== null || state.error">{{ saveStatus }}</span>
         <button type="button" class="btn btn-ghost btn-sm" (click)="openSearch()" title="Search plan (Ctrl+J)">
           Search <kbd>Ctrl J</kbd>
@@ -66,6 +67,22 @@
   } @else if (view === 'timeline') {
     <app-story-time [bookId]="bookId" (openLine)="openFromTimeline($event)"></app-story-time>
   } @else {
+    @if (linkReport; as report) {
+      <aside class="character-link-report" aria-label="Character linking report">
+        <div class="link-report-header">
+          <strong>{{ report.count }} links added · {{ report.ambiguous.length }} mentions need review</strong>
+          <button type="button" class="btn btn-ghost btn-sm" (click)="linkReport = null">Dismiss report</button>
+        </div>
+        <p>Undo in the editor (Ctrl/Cmd+Z) restores the plan. Review mentions below were left unchanged.</p>
+        @for (mention of report.ambiguous; track $index) {
+          <div class="link-mention">
+            <button type="button" class="btn btn-ghost btn-sm" (click)="jumpToLinkMention(mention.line)">{{ mention.chapter }} · Line {{ mention.line + 1 }}</button>
+            <strong>{{ mention.mention }}</strong> — {{ mention.reason }}: {{ mention.candidates.join(', ') }}
+            <p>{{ mention.text }}</p>
+          </div>
+        }
+      </aside>
+    }
     <div class="plan-layout" [class.outline-right]="outlineSide === 'right'">
       <nav class="plan-outline" aria-label="Plan outline">
         @for (section of state.parsed.outline; track section.line) {
@@ -226,6 +243,27 @@
       (pick)="onSearchPick($event)"
       (dismiss)="onSearchDismiss()"
     ></app-plan-search>
+  }
+
+  @if (linkPreview; as preview) {
+    <div class="link-preview-backdrop" (click)="linkPreview = null">
+      <section class="link-preview" cdkTrapFocus [cdkTrapFocusAutoCapture]="true" role="dialog" aria-modal="true" aria-labelledby="link-preview-title" tabindex="-1" (click)="$event.stopPropagation()" (keydown.escape)="linkPreview = null">
+        <h2 id="link-preview-title">Link characters in {{ bookTitle }}</h2>
+        <p>{{ preview.count }} links will be added. {{ preview.ambiguous.length }} ambiguous mentions will stay unchanged.</p>
+        <p>Names and aliases match exact case and whole words. Common English/Spanish words and shortened names need review.</p>
+        @for (mention of preview.ambiguous; track $index) {
+          <div class="link-mention">
+            <strong>{{ mention.mention }}</strong> — {{ mention.chapter }} · Line {{ mention.line + 1 }}
+            <p>{{ mention.text }}</p>
+            <p>{{ mention.reason }}: {{ mention.candidates.join(', ') }}</p>
+          </div>
+        }
+        <div class="link-preview-actions">
+          <button type="button" class="btn btn-secondary" (click)="linkPreview = null">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="confirmCharacterLinks()">Confirm {{ preview.count }} links</button>
+        </div>
+      </section>
+    </div>
   }
 
   <app-book-editor

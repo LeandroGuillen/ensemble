@@ -2,6 +2,8 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { CompletionContext, CompletionResult } from '@codemirror/autocomplete';
+import { undo } from '@codemirror/commands';
+import { By } from '@angular/platform-browser';
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { toggleInlineMarker, wrapWikiLink } from './formatting-commands';
@@ -48,6 +50,21 @@ describe('MarkdownEditorComponent', () => {
     host.control.setValue('Replaced');
     expect(view.state.doc.toString()).toBe('Replaced');
     expect(host.control.dirty).toBeTrue();
+  });
+
+  it('applies reviewed character links in one Undo step without merging earlier typing', () => {
+    const { view, host, fixture } = setup();
+    const original = view.state.doc.toString();
+    view.dispatch({ changes: { from: view.state.doc.length, insert: ' Ben and Ben' }, userEvent: 'input' });
+    const beforeScan = view.state.doc.toString();
+    const editor = fixture.debugElement.query(By.directive(MarkdownEditorComponent)).componentInstance as MarkdownEditorComponent;
+    editor.applyUndoableChanges([{ from: original.length + 1, to: original.length + 4, insert: '[[Ben]]' },
+      { from: original.length + 9, to: original.length + 12, insert: '[[Ben]]' }]);
+    expect(host.control.value).toContain(' [[Ben]] and [[Ben]]');
+    expect(undo(view)).toBeTrue();
+    expect(host.control.value).toBe(beforeScan);
+    expect(undo(view)).toBeTrue();
+    expect(host.control.value).toBe(original);
   });
 
   it('opens links on Ctrl+click only', () => {

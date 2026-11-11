@@ -15,7 +15,7 @@ import {
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap } from '@codemirror/autocomplete';
-import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
+import { defaultKeymap, history, historyKeymap, indentWithTab, isolateHistory } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/search';
@@ -211,6 +211,12 @@ export class MarkdownEditorComponent implements ControlValueAccessor, OnInit, On
     const view = this.view;
     if (!view) return null;
     return view.lineBlockAtHeight(clientY - view.documentTop).from;
+  }
+
+  /** Apply a reviewed bulk edit as one isolated Undo step, preserving earlier typing. */
+  applyUndoableChanges(changes: { from: number; to: number; insert: string }[]): void {
+    if (!this.view || !changes.length) return;
+    this.view.dispatch({ changes, annotations: isolateHistory.of('full'), userEvent: 'input' });
   }
 
   /** Replace a range of the document as a user edit (undoable, emits a change). */

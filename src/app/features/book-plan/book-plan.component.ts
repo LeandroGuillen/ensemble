@@ -1,3 +1,4 @@
+import { CdkTrapFocus } from '@angular/cdk/a11y';
 import { Component, DestroyRef, ElementRef, HostListener, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -26,6 +27,7 @@ import {
   headingTrail,
   planFocusTargets,
 } from '../../core/utils/book-plan.utils';
+import { PlanCharacterLinkScan, scanPlanCharacterLinks } from '../../core/utils/plan-character-links.utils';
 import { PlanSearchCharacter } from '../../core/utils/plan-search.utils';
 import { pathJoin } from '../../core/utils/path.utils';
 import { ResolvedWikiLink } from '../../core/utils/wiki-links.utils';
@@ -59,6 +61,7 @@ const SLIDE_IN_MS = 340;
   selector: 'app-book-plan',
   imports: [
     FormsModule,
+    CdkTrapFocus,
     RouterLink,
     PageHeaderComponent,
     MarkdownEditorComponent,
@@ -130,6 +133,43 @@ export class BookPlanComponent implements OnInit, OnDestroy {
   focusRange: FocusRange | null = null;
   /** `PoV:` lines of the focused chapter, hidden in focus mode (shown in the breadcrumb instead). */
   hiddenLines: FocusRange[] = [];
+
+  linkPreview: (PlanCharacterLinkScan & { source: string; bookId: string; path: string; revision: number; suggestions: WikiLinkSuggestion[] }) | null = null;
+  linkReport: PlanCharacterLinkScan | null = null;
+
+  previewCharacterLinks(): void {
+    const state = this.state;
+    if (!state || state.bookId !== this.bookId || state.error || state.conflict !== null) return;
+    const characters = this.characters.flatMap(character => {
+      const suggestion = this.linkSuggestions.find(s => s.type === 'character' && s.label === character.name && this.linkResolver(s.target)?.id === character.id);
+      return suggestion ? [{ ...character, target: suggestion.target }] : [];
+    });
+    const otherNames = this.linkSuggestions.filter(s => s.type === 'location' || s.type === 'house').map(s => s.label);
+    this.linkPreview = { ...scanPlanCharacterLinks(state.text, characters, otherNames), source: state.text,
+      bookId: state.bookId, path: state.relativePath, revision: state.revision, suggestions: this.linkSuggestions };
+  }
+
+  confirmCharacterLinks(): void {
+    const preview = this.linkPreview;
+    const state = this.state;
+    if (!preview || !state || !this.editor) return;
+    if (state.bookId !== preview.bookId || state.relativePath !== preview.path || state.revision !== preview.revision ||
+        state.text !== preview.source || state.error || state.conflict !== null || preview.suggestions !== this.linkSuggestions) {
+      this.linkPreview = null;
+      this.notifications.showWarning('The plan or characters changed. Run Link characters again to review a fresh preview.');
+      return;
+    }
+    this.linkPreview = null;
+    if (preview.count) this.editor.applyUndoableChanges(preview.changes);
+    this.linkReport = preview;
+    // Let the preview focus trap restore focus first.
+    setTimeout(() => this.editor?.focus());
+  }
+
+  jumpToLinkMention(line: number): void {
+    this.jumpToLine(line);
+    this.editor?.focus();
+  }
 
   searchOpen = false;
   searchQuery = '';
@@ -265,6 +305,8 @@ export class BookPlanComponent implements OnInit, OnDestroy {
         this.pendingTopPos = view.topPos;
       }
     }
+    this.linkPreview = null;
+    this.linkReport = null;
     this.loading = true;
     this.book = this.projectService.getBooks().find((b) => b.id === this.bookId) ?? null;
     this.back = [];
@@ -290,6 +332,7 @@ export class BookPlanComponent implements OnInit, OnDestroy {
       return;
     }
     if (state.revision !== this.editorRevision) {
+      this.linkReport = null;
       this.editorRevision = state.revision;
       this.editorText = state.text;
       if (this.pendingLine === null) this.pendingLine = this.cursorLine;
@@ -321,6 +364,7 @@ export class BookPlanComponent implements OnInit, OnDestroy {
   }
 
   onTextChange(text: string): void {
+    this.linkReport = null;
     this.bookPlan.update(text);
   }
 

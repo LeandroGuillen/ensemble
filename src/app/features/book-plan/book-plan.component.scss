@@ -453,3 +453,44 @@ app-story-time {
     border-radius: var(--radius-xs);
   }
 }
+
+.character-link-report {
+  flex-shrink: 0;
+  max-height: 28vh;
+  overflow: auto;
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-secondary);
+  font-size: 0.875rem;
+}
+.link-report-header, .link-preview-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+}
+.link-mention {
+  padding: var(--spacing-sm) 0;
+  border-top: 1px solid var(--color-border);
+  overflow-wrap: anywhere;
+  p { margin: 4px 0; white-space: pre-wrap; }
+}
+.link-preview-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: var(--spacing-lg);
+  background: rgba(0, 0, 0, 0.55);
+}
+.link-preview {
+  width: min(760px, 100%);
+  max-height: 85vh;
+  overflow: auto;
+  padding: var(--spacing-lg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+}
