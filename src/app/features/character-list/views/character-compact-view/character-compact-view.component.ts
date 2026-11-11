@@ -1,3 +1,4 @@
+import { IncrementalCharactersDirective } from '../incremental-characters.directive';
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 
 import { DragDropModule } from '@angular/cdk/drag-drop';
@@ -10,7 +11,7 @@ import { FadeOverflowDirective } from '../../../../shared/fade-overflow.directiv
 
 @Component({
     selector: 'app-character-compact-view',
-    imports: [DragDropModule, CompactOverflowTagsDirective, FadeOverflowDirective],
+    imports: [IncrementalCharactersDirective, DragDropModule, CompactOverflowTagsDirective, FadeOverflowDirective],
     templateUrl: './character-compact-view.component.html',
     styleUrls: ['./character-compact-view.component.scss']
 })

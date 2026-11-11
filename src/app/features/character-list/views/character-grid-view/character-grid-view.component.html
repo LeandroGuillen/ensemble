@@ -1,5 +1,5 @@
 <div class="character-grid">
-  @for (character of characters; track character; let i = $index) {
+  <ng-container *appIncrementalCharacters="let character of characters; let i = index">
     <div
       class="character-card card character-item"
       cdkDrag
@@ -100,5 +100,5 @@
         </button>
       </div>
     </div>
-  }
+  </ng-container>
 </div>

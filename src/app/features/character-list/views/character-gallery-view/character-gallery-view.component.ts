@@ -1,3 +1,4 @@
+import { IncrementalCharactersDirective } from '../incremental-characters.directive';
 import { Component, Input, Output, EventEmitter } from "@angular/core";
 
 import { DragDropModule } from '@angular/cdk/drag-drop';
@@ -6,7 +7,7 @@ import { getCharacterDisplayName } from "../../../../core/utils/character-displa
 
 @Component({
     selector: "app-character-gallery-view",
-    imports: [DragDropModule],
+    imports: [IncrementalCharactersDirective, DragDropModule],
     templateUrl: "./character-gallery-view.component.html",
     styleUrls: ["./character-gallery-view.component.scss"]
 })

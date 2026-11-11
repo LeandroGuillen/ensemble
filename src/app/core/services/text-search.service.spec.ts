@@ -1,3 +1,10 @@
+import { CharacterGridViewComponent } from '../../features/character-list/views/character-grid-view/character-grid-view.component';
+import { CharacterListViewComponent } from '../../features/character-list/views/character-list-view/character-list-view.component';
+import { CharacterRenderScheduler } from '../../features/character-list/views/character-render-scheduler.service';
+import { MetadataHelperService } from './metadata-helper.service';
+import { PromptService } from './prompt.service';
+import { provideRouter } from '@angular/router';
+import { of } from 'rxjs';
 import { ChangeDetectorRef } from '@angular/core';
 import { ExcerptPipe, WikiTextPipe } from '../../shared/pipes/excerpt.pipe';
 import { TestBed } from '@angular/core/testing';
@@ -39,7 +46,10 @@ describe('TextSearchService', () => {
     ]);
     readFile = jasmine.createSpy('readFile').and.callFake(async (path: string) =>
       ({ success: files.has(path), content: files.get(path) }));
-    TestBed.configureTestingModule({ providers: [
+    TestBed.configureTestingModule({ imports: [CharacterGridViewComponent, CharacterListViewComponent], providers: [
+      provideRouter([]),
+      { provide: MetadataHelperService, useValue: { getCategoryName: () => 'Main', getCategoryColor: () => '#123456' } },
+      { provide: PromptService, useValue: { prompts$: of([]) } },
       TextSearchService,
       { provide: ChangeDetectorRef, useValue: { markForCheck: () => {} } },
       { provide: ProjectService, useValue: { currentProject$: project$, getCurrentProject: () => project$.value,
@@ -191,7 +201,7 @@ describe('TextSearchService', () => {
     const prose = 'Jose\u0301 travelled through the northern mountains. '.repeat(60)
       + ' [[Person 1999#Heading]] [[Alias#1999]] [[Person 1|Display name]]'.repeat(4);
     const records = Array.from({ length: 2000 }, (_, i) => ({
-      ...record(`Person ${i}`, `${i} ${prose}`), aliases: [`Alias#${i}`], books: ['b', 'c'],
+      ...record(`Person ${i}`, `${i} ${prose}`), tags: [], category: 'main', aliases: [`Alias#${i}`], books: ['b', 'c'],
     }));
     for (const person of records) for (const book of person.books) {
       files.set(`/p/${person.id}.${book}.md`, `${person.id} ${book} ${prose}`);
@@ -216,8 +226,13 @@ describe('TextSearchService', () => {
     const observer = new PerformanceObserver(list => tasks.push(...list.getEntries()));
     observer.observe({ entryTypes: ['longtask'] });
     const measurements: { edit: string; latency: number; previewTask: number; longestTask: number }[] = [];
+    const scheduler = TestBed.inject(CharacterRenderScheduler);
+    let fixture: ReturnType<typeof TestBed.createComponent<CharacterGridViewComponent>> | undefined;
     try {
       for (const edit of ['save', 'description', 'outside edit']) {
+        fixture?.destroy();
+        // A fresh route on opening/returning after Save, with real templates and CDK drags.
+        fixture = TestBed.createComponent((edit === 'description' ? CharacterListViewComponent : CharacterGridViewComponent) as typeof CharacterGridViewComponent);
         readFile.calls.reset();
         changed = firstValueFrom(service.changed$);
         const start = performance.now();
@@ -232,6 +247,9 @@ describe('TextSearchService', () => {
         }
         // Book saves and watcher reloads also publish a fresh character array in the app.
         if (edit !== 'description') characters$.next(records.map(person => ({ ...person })));
+        fixture.componentRef.setInput('characters', records);
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelectorAll('.character-item').length).toBeLessThanOrEqual(24);
         render();
         const previewTask = performance.now() - start;
         expect(previewTask).withContext(`${edit} synchronous preview task`).toBeLessThan(100);
@@ -241,9 +259,18 @@ describe('TextSearchService', () => {
         const finish = performance.now();
         expect(finish - start).withContext(`${edit} searchable latency`).toBeLessThan(500);
         expect(readFile.calls.count()).toBe(edit === 'description' ? 0 : 1);
+        // Include every render slice, not only the first few frames.
+        await new Promise<void>(resolve => {
+          const subscription = scheduler.rendered$.subscribe(() => {
+            if (fixture!.nativeElement.querySelectorAll('.character-item').length === records.length) {
+              subscription.unsubscribe();
+              resolve();
+            }
+          });
+        });
         await new Promise(resolve => setTimeout(resolve, 30));
         tasks.push(...observer.takeRecords());
-        const longestTask = Math.max(0, ...tasks.filter(task => task.startTime >= start && task.startTime < finish)
+        const longestTask = Math.max(0, ...tasks.filter(task => task.startTime >= start && task.startTime < performance.now())
           .map(task => task.duration));
         expect(longestTask).withContext(`${edit} indexing task duration`).toBeLessThan(100);
         measurements.push({ edit, latency: finish - start, previewTask, longestTask });
@@ -252,6 +279,7 @@ describe('TextSearchService', () => {
     } finally {
       for (const pipe of pipes) { pipe.excerpt.ngOnDestroy(); pipe.wiki.ngOnDestroy(); }
       observer.disconnect();
+      fixture?.destroy();
     }
   }, 30000);
 

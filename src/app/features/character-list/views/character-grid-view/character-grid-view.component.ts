@@ -1,3 +1,4 @@
+import { IncrementalCharactersDirective } from '../incremental-characters.directive';
 import { ProjectReadOnlyDirective } from '../../../../shared/project-read-only.directive';
 import { Component, Input, Output, EventEmitter } from "@angular/core";
 
@@ -10,7 +11,7 @@ import { ExcerptPipe } from "../../../../shared/pipes/excerpt.pipe";
 
 @Component({
     selector: "app-character-grid-view",
-    imports: [ProjectReadOnlyDirective, DragDropModule, ExcerptPipe],
+    imports: [IncrementalCharactersDirective, ProjectReadOnlyDirective, DragDropModule, ExcerptPipe],
     templateUrl: "./character-grid-view.component.html",
     styleUrls: ["./character-grid-view.component.scss"]
 })

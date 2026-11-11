@@ -1,5 +1,5 @@
 <div class="character-gallery-view" [class.size-medium]="thumbnailSize === 'medium'" [class.size-small]="thumbnailSize === 'small'">
-  @for (character of characters; track character; let i = $index) {
+  <ng-container *appIncrementalCharacters="let character of characters; let i = index">
     <div
       class="gallery-item character-item"
       cdkDrag
@@ -50,5 +50,5 @@
         }
       </div>
     </div>
-  }
+  </ng-container>
 </div>

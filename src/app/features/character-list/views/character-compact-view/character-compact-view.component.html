@@ -1,5 +1,5 @@
 <div class="character-compact-view" [class.single-column]="columns === 1" [class.two-columns]="columns === 2">
-  @for (character of characters; track character; let i = $index) {
+  <ng-container *appIncrementalCharacters="let character of characters; let i = index">
     <div
       class="character-compact-item character-item"
       cdkDrag
@@ -67,5 +67,5 @@
         }
       </div>
     </div>
-  }
+  </ng-container>
 </div>

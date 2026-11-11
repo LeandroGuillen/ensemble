@@ -1,3 +1,5 @@
+import { CharacterRenderScheduler } from './views/character-render-scheduler.service';
+import { CharacterListScrollService } from './views/character-list-scroll.service';
 import { ProjectReadOnlyDirective } from '../../shared/project-read-only.directive';
 
 import { animate, state, style, transition, trigger } from '@angular/animations';
@@ -68,6 +70,33 @@ import {
     ]
 })
 export class CharacterListComponent implements OnInit {
+  private readonly renderScheduler = inject(CharacterRenderScheduler);
+  private readonly scrollState = inject(CharacterListScrollService);
+  private restoringScroll: number | null = null;
+  private pendingNavScroll = -1;
+
+  private scrollStateKey(): string {
+    return JSON.stringify([this.currentProject?.path, this.collection, this.viewMode,
+      this.groupBy, this.sortBy, this.sortDirection, this.searchTerm, this.disabledCategoryIds,
+      this.selectedTags, this.selectedCast, this.selectedHouse, this.selectedBook,
+      this.selectedPictureFilter, this.selectedPromptFilter, this.povOnly,
+      this.columns, this.selectedCharacterStyle, this.galleryThumbnailSize]);
+  }
+
+  cancelScrollRestore(): void { this.restoringScroll = null; }
+
+  private restoreScroll(): void {
+    const el = this.scrollableContentRef?.nativeElement;
+    if (!el || this.restoringScroll === null) return;
+    el.scrollTop = this.restoringScroll;
+    if (el.scrollTop >= this.restoringScroll) this.restoringScroll = null;
+  }
+
+  ngAfterViewInit(): void {
+    this.restoringScroll = this.scrollState.positions.get(this.scrollStateKey()) ?? null;
+    this.restoreScroll();
+  }
+
   private readonly toasts = inject(NotificationService);
   /** The last load failed: hide the (empty) list; the toast offers Retry. */
   loadFailed = false;
@@ -166,6 +195,15 @@ export class CharacterListComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.renderScheduler.rendered$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.restoreScroll();
+      this.scrollPendingSelection();
+    });
+    this.destroyRef.onDestroy(() => {
+      this.renderScheduler.resume();
+      const el = this.scrollableContentRef?.nativeElement;
+      if (el) this.scrollState.positions.set(this.scrollStateKey(), this.restoringScroll ?? el.scrollTop);
+    });
     this.houseService.houses$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(houses => {
       this.houses = houses;
       if (this.selectedHouse && !houses.some(house => house.id === this.selectedHouse)) this.selectedHouse = "";
@@ -572,20 +610,20 @@ export class CharacterListComponent implements OnInit {
   private scrollToSelectedCharacter(): void {
     if (this.selectedCharacterIndex < 0) return;
 
-    // Use setTimeout to ensure DOM is updated; target the occurrence, not first id match.
-    const navIndex = this.selectedCharacterIndex;
-    setTimeout(() => {
-      const selectedElement = document.querySelector(
-        `.character-item[data-nav-index="${navIndex}"]`
-      ) as HTMLElement | null;
+    this.cancelScrollRestore();
+    this.pendingNavScroll = this.selectedCharacterIndex;
+    // Inputs such as the selected occurrence update in the next change detection.
+    setTimeout(() => this.scrollPendingSelection(), 0);
+  }
 
-      if (selectedElement) {
-        selectedElement.scrollIntoView({
-          behavior: 'smooth',
-          block: 'nearest',
-        });
-      }
-    }, 0);
+  private scrollPendingSelection(): void {
+    if (this.pendingNavScroll < 0) return;
+    const element = this.scrollableContentRef?.nativeElement.querySelector<HTMLElement>(
+      `.character-item[data-nav-index="${this.pendingNavScroll}"]`
+    );
+    if (!element) return; // The scheduler will retry as the list grows.
+    this.pendingNavScroll = -1;
+    element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
   getCharacterClass(index: number): string {
@@ -1713,12 +1751,14 @@ getFilterSummary(): string {
   }
 
   onAnyCharacterDragStarted(): void {
+    this.renderScheduler.pause();
     this.isDraggingCharacter = true;
   }
 
   onAnyCharacterDragEnded(): void {
     setTimeout(() => {
       this.isDraggingCharacter = false;
+      this.renderScheduler.resume();
       this.drawerDropHighlighted = false;
       this.activeDropCategoryId = null;
       this.cdr.markForCheck();

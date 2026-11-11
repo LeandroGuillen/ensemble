@@ -391,13 +391,15 @@
           <div
             class="scrollable-content"
             #scrollableContent
+            (wheel)="cancelScrollRestore()"
+            (pointerdown)="cancelScrollRestore()"
             >
             <!-- Grouped View by Category -->
             @if (filteredCharacters.length > 0 && groupBy === 'category') {
               <div
                 class="grouped-view"
                 >
-                @for (group of getGroupedCharacters(); track group; let gi = $index) {
+                @for (group of getGroupedCharacters(); track group.categoryId; let gi = $index) {
                   <div
                     class="category-group"
                     >
@@ -519,7 +521,7 @@
               <div
                 class="grouped-view"
                 >
-                @for (group of getGroupedByTag(); track group; let gi = $index) {
+                @for (group of getGroupedByTag(); track group.tagId; let gi = $index) {
                   <div class="category-group">
                     <h2 class="category-tab">
                       <span class="category-dot" aria-hidden="true" [style.background-color]="metadataHelper.getTagColor(group.tagId)"></span>
