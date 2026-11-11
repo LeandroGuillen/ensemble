@@ -1,4 +1,6 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
+import { MentionedInComponent } from '../../shared/mentioned-in/mentioned-in.component';
 import { Subject, of } from 'rxjs';
 import { BacklinkService } from './backlink.service';
 import { CharacterService } from './character.service';
@@ -24,7 +26,9 @@ describe('BacklinkService', () => {
   function makeService(overrides: { characters?: Record<string, unknown> } = {}): BacklinkService {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
+      imports: [MentionedInComponent],
       providers: [
+        provideRouter([{ path: 'character-draft/:id', component: MentionedInComponent }]),
         {
           provide: CharacterService,
           useValue: {
@@ -107,6 +111,59 @@ describe('BacklinkService', () => {
     const fromDraft = service.backlinksFor('l-port')[0];
     expect(fromDraft.sourceType).toBe('draft');
     expect(fromDraft.href).toBe('#/character-draft/d-heir');
+  });
+
+  // CharacterService normalizes a missing frontmatter name to an empty string.
+  for (const { name, relativePath, expected } of [
+    { name: '', relativePath: '@drafts/secret-heir/secret-heir.md', expected: 'secret-heir.md' },
+    { name: '  ', relativePath: '@drafts\\secret-heir\\secret-heir.md', expected: 'secret-heir.md' },
+    { name: '', relativePath: '', expected: 'Untitled draft' },
+    { name: 'Secret Heir', relativePath: '@drafts/secret-heir/secret-heir.md', expected: 'Secret Heir' },
+  ]) {
+    it(`labels draft descriptions and book pages as "${expected}" for name ${JSON.stringify(name)}`, async () => {
+      const draft = {
+        id: 'd-heir', name, draft: true, relativePath,
+        content: 'Heir of [[Port Saltmere]].', books: ['lc1'],
+      };
+      service = makeService({
+        characters: {
+          getReferenceCharactersSnapshot: () => [],
+          getDraftsSnapshot: () => [draft],
+        },
+      });
+      await service.rebuild();
+
+      const mentions = service.backlinksFor('l-port');
+      expect(mentions.map((b) => b.sourceName)).toEqual([expected, expected]);
+      expect(mentions.map((b) => b.sourceType)).toEqual(['draft', 'book']);
+      expect(mentions.map((b) => b.href)).toEqual([
+        '#/character-draft/d-heir', '#/character-draft/d-heir',
+      ]);
+      expect(draft.name).toBe(name);
+    });
+  }
+
+  it('renders an unnamed draft filename in Mentioned in and opens that draft when clicked', async () => {
+    service = makeService({
+      characters: {
+        getReferenceCharactersSnapshot: () => [],
+        getDraftsSnapshot: () => [{
+          id: 'd-heir', name: '', draft: true,
+          relativePath: '@drafts/secret-heir/secret-heir.md',
+          content: 'Heir of [[Port Saltmere]].', books: [],
+        }],
+      },
+    });
+    await service.rebuild();
+    const fixture = TestBed.createComponent(MentionedInComponent);
+    fixture.componentInstance.targetId = 'l-port';
+    fixture.detectChanges();
+
+    const link = fixture.nativeElement.querySelector('.mention-link') as HTMLAnchorElement;
+    expect(link.querySelector('.mention-source')?.textContent).toBe('secret-heir.md');
+    link.click();
+    await fixture.whenStable();
+    expect(TestBed.inject(Router).url).toBe('/character-draft/d-heir');
   });
 
   it('marks a draft\'s book page as a draft source, and leaves a character\'s book page unmarked', async () => {

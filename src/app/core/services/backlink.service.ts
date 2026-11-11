@@ -16,7 +16,7 @@ import { ProjectService } from './project.service';
 import { FileWatcherService } from './file-watcher.service';
 import { ElectronService } from './electron.service';
 import { LoggingService } from './logging.service';
-import { pathJoin } from '../utils/path.utils';
+import { pathBasename, pathJoin } from '../utils/path.utils';
 import { Character } from '../interfaces/character.interface';
 
 const EMPTY_INDEX: BacklinkIndex = { byTargetId: {}, excluded: [] };
@@ -160,7 +160,7 @@ export class BacklinkService {
       docs.push({
         sourceType: character.draft ? 'draft' : character.lore ? 'lore' : 'character',
         sourceId: character.id,
-        sourceName: character.name,
+        sourceName: this.characterSourceName(character),
         href: `#/${character.draft ? 'character-draft' : 'character'}/${encodeURIComponent(character.id)}`,
         content: character.content || '',
       });
@@ -194,7 +194,7 @@ export class BacklinkService {
             docs.push({
               sourceType: 'book',
               sourceId: character.id,
-              sourceName: character.name,
+              sourceName: this.characterSourceName(character),
               sourcePart: `Book page: ${bookLabel}`,
               ...(character.draft ? { sourceDraft: true } : {}),
               href: `#/${character.draft ? 'character-draft' : 'character'}/${encodeURIComponent(character.id)}`,
@@ -231,6 +231,12 @@ export class BacklinkService {
     }
 
     return docs;
+  }
+
+  private characterSourceName(character: Character): string {
+    if (!character.draft || character.name?.trim()) return character.name;
+    const filename = pathBasename((character.relativePath || '').replace(/\\/g, '/'));
+    return filename || 'Untitled draft';
   }
 
   private bookLabel(books: { id: string; name: string; code?: string }[], bookId: string): string {
