@@ -8,6 +8,8 @@ import { MetadataService } from './metadata.service';
 import { PlotBoardService } from './plot-board.service';
 import { ElectronService } from './electron.service';
 import { ModalService } from './modal.service';
+import { NotificationService } from './notification.service';
+import { UNDO_WINDOW_MS } from '../trash/trash-constants';
 import { HealthDocument, HealthFinding, HealthSnapshot, checkProjectHealth } from '../utils/project-health.utils';
 import { pathDirname, pathJoin } from '../utils/path.utils';
 import { parseThumbnailReference, resolveThumbnailForStyle, resolveThumbnailPath } from '../utils/thumbnail.utils';
@@ -24,6 +26,7 @@ export class ProjectHealthService {
   private readonly boards = inject(PlotBoardService);
   private readonly electron = inject(ElectronService);
   private readonly modal = inject(ModalService);
+  private readonly notifications = inject(NotificationService);
 
   /** Scan loaded records and ancillary files without invoking any save or cleanup operation. */
   async scan(styleId?: string): Promise<HealthFinding[]> {
@@ -102,7 +105,21 @@ export class ProjectHealthService {
     const fix = finding.fix;
     const project = this.projects.getCurrentProject();
     if (!fix || !project) return false;
-    if (!(await this.modal.confirm(`Remove orphaned ID “${fix.missing}” from ${finding.name}?${fix.kind === 'pinboard' && fix.field === 'Nodes' ? ' Connections to this node will also be removed.' : ''}`,
+    // Capture the exact source before confirmation: names and every matching line
+    // are user-authored content, and must not change underneath the preview.
+    let planSource: string | undefined;
+    let planPreview = '';
+    if (fix.kind === 'plan') {
+      const read = await this.electron.readFile(pathJoin(project.path, fix.field));
+      this.assertProject(project.path);
+      if (!read.success || read.content === undefined) throw new Error('Could not read the source file.');
+      planSource = read.content;
+      const povs = parseBookPlan(planSource).chapters.flatMap(chapter => chapter.pov).filter(pov => pov.characterId === fix.missing);
+      if (!povs.length) return false;
+      planPreview = '\n\nThe following entire plan lines will be removed:\n' +
+        povs.map(pov => `“${planSource!.slice(pov.from, pov.to).replace(/\r$/, '')}”`).join('\n');
+    }
+    if (!(await this.modal.confirm(`Remove orphaned ID “${fix.missing}” from ${finding.name}?${fix.kind === 'pinboard' && fix.field === 'Nodes' ? ' Connections to this node will also be removed.' : ''}${planPreview}`,
       'Remove orphaned ID', { confirmText: 'Remove ID', danger: true }))) return false;
     this.assertProject(project.path);
     // Re-run after the dialog: an external edit may have restored the target or changed the source.
@@ -147,6 +164,7 @@ export class ProjectHealthService {
           board.threads = board.threads.map(thread => thread.id === fix.field ? { ...thread, characters: thread.characters.filter(keep) } : thread);
           content = this.boards.generateFile(board);
         } else {
+          if (read.content !== planSource) throw new Error('The file changed. Run the health check again.');
           content = read.content;
           const povs = parseBookPlan(content).chapters.flatMap(chapter => chapter.pov).filter(pov => pov.characterId === fix.missing);
           for (const pov of povs.sort((a, b) => b.from - a.from)) content = content.slice(0, pov.from) + content.slice(pov.to).replace(/^\r?\n/, '');
@@ -156,6 +174,24 @@ export class ProjectHealthService {
         if (!latest.success || latest.content !== read.content) throw new Error('The file changed. Run the health check again.');
         const result = await this.electron.writeFileAtomic(path, content);
         if (!result.success) throw new Error(result.error || 'Could not save the repair.');
+        if (fix.kind === 'plan') {
+          const original = read.content;
+          let restored = false;
+          this.notifications.showUndo(`Removed orphaned PoV lines from ${finding.name}.`, async () => {
+            if (restored) return;
+            try {
+              this.assertProject(project.path);
+              const latest = await this.electron.readFile(path);
+              this.assertProject(project.path);
+              if (!latest.success || latest.content !== content) throw new Error('The plan changed since the repair.');
+              const result = await this.electron.writeFileAtomic(path, original);
+              if (!result.success) throw new Error(result.error || 'Could not restore the plan.');
+              restored = true;
+            } catch (error) {
+              this.notifications.showError(`Could not undo PoV removal: ${error instanceof Error ? error.message : error}`);
+            }
+          }, UNDO_WINDOW_MS);
+        }
         break;
       }
     }
