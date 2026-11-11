@@ -265,6 +265,7 @@ export class WorldMapComponent implements OnInit {
 
   selectRoad(road: RoadView, event?: Event): void {
     event?.stopPropagation();
+    void this.saveRoadLabel();
     this.selectedRoadKey = road.key;
     this.roadLabelDraft = road.label ?? '';
   }
@@ -275,9 +276,18 @@ export class WorldMapComponent implements OnInit {
     await this.applyEdit((map) => setRoadLabel(map, road.from.location.id, road.to.location.id, this.roadLabelDraft));
   }
 
+  /** Escape saves the draft before dismissing the panel, even from its input. */
+  dismissRoadPanel(): void {
+    void this.saveRoadLabel();
+    this.roadMode = false;
+    this.roadFrom = null;
+    this.selectedRoadKey = null;
+  }
+
   async deleteSelectedRoad(): Promise<void> {
     const road = this.selectedRoad;
     if (!road || this.readOnly) return;
+    await this.saveRoadLabel();
     this.selectedRoadKey = null;
     await this.applyEdit((map) => toggleRoad(map, road.from.location.id, road.to.location.id));
   }
@@ -365,6 +375,8 @@ export class WorldMapComponent implements OnInit {
 
   onCanvasPointerDown(event: PointerEvent): void {
     if (event.button !== 0 && event.button !== 1) return;
+    // Pointerdown precedes input blur; save while the edited road is still selected.
+    void this.saveRoadLabel();
     this.selectedRoadKey = null;
     this.canvasRef?.nativeElement.setPointerCapture?.(event.pointerId);
     this.drag = {
@@ -522,9 +534,7 @@ export class WorldMapComponent implements OnInit {
       void this.redo();
     } else if (event.key === 'Escape' && (this.roadMode || this.selectedRoadKey)) {
       event.preventDefault();
-      this.roadMode = false;
-      this.roadFrom = null;
-      this.selectedRoadKey = null;
+      this.dismissRoadPanel();
     } else if ((event.key === 'Delete' || event.key === 'Backspace') && this.selectedRoadKey && !mod) {
       event.preventDefault();
       void this.deleteSelectedRoad();

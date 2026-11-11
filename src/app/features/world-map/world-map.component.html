@@ -167,6 +167,7 @@
                 [(ngModel)]="roadLabelDraft"
                 (blur)="saveRoadLabel()"
                 (keydown.enter)="saveRoadLabel()"
+                (keydown.escape)="$event.preventDefault(); $event.stopPropagation(); dismissRoadPanel()"
                 [disabled]="readOnly"
                 placeholder="e.g. Coast road, 3 days"
               />

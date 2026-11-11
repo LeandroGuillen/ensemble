@@ -87,8 +87,11 @@ unplaced** for a rough layout to rearrange. Drag pins to move them, drag the
 background to pan, and scroll to zoom. Clicking a pin opens the location.
 **Draw roads** connects pins: click one, then another; clicking a connected
 pair again removes the road. Click a road to give it a label such as "Coast
-road, 3 days". Every change is saved to `world-map.md` right away, and Ctrl+Z
-and Ctrl+Shift+Z undo and redo. Focused pins move with the arrow keys (Shift for
+road, 3 days". Enter, Tab, clicking the background (including starting a pan),
+or selecting another road saves the label. Escape also saves the label and closes
+the Road panel, even while typing. Removing a road saves its label first, so
+Undo restores the road with that label. Every change is saved to `world-map.md`
+right away, and Ctrl+Z and Ctrl+Shift+Z undo and redo. Focused pins move with the arrow keys (Shift for
 bigger steps); Delete takes them off the map. In a read-only project you can look
 around and open places, but not change the map.
 
