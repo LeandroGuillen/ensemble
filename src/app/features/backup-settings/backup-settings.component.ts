@@ -80,7 +80,7 @@ export class BackupSettingsComponent implements OnInit {
       this.lastResult = snapshot;
       if (snapshot.skipped?.length) {
         const count = snapshot.skipped.length;
-        this.notifications.showError(
+        this.notifications.showWarning(
           `Snapshot created, but ${count} ${count === 1 ? 'item was' : 'items were'} skipped; see Settings → Backup for the list.`
         );
       } else {

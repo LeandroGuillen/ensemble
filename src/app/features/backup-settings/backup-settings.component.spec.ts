@@ -33,7 +33,7 @@ describe('BackupSettingsComponent', () => {
     backupService.restoreSnapshot.and.resolveTo({ folderPath: '/w/restored', entryCount: 5, name: 'restored' });
 
     electron = jasmine.createSpyObj('ElectronService', ['selectFolder']);
-    notifications = jasmine.createSpyObj('NotificationService', ['showSuccess', 'showError']);
+    notifications = jasmine.createSpyObj('NotificationService', ['showSuccess', 'showError', 'showWarning']);
     projectService = jasmine.createSpyObj('ProjectService', ['loadProject']);
     projectService.loadProject.and.resolveTo(null as any);
 
@@ -90,7 +90,7 @@ describe('BackupSettingsComponent', () => {
   });
 
   for (const count of [1, 3]) {
-    it(`shows ${count} skipped item(s) with reasons in the panel and a short toast`, async () => {
+    it(`shows ${count} skipped item(s) with reasons in the panel and a warning toast`, async () => {
       const skipped = [
         { path: 'characters/ilse', reason: 'Broken link' },
         { path: 'references/loop', reason: 'Link loop' },
@@ -106,9 +106,10 @@ describe('BackupSettingsComponent', () => {
       expect(Array.from(panel.querySelectorAll('li'), (item: any) => item.textContent.trim()))
         .toEqual(skipped.map(item => `${item.path}: ${item.reason}`));
       expect(panel.classList.contains('success')).toBeFalse();
-      expect(notifications.showError).toHaveBeenCalledOnceWith(
+      expect(notifications.showWarning).toHaveBeenCalledOnceWith(
         `Snapshot created, but ${count} ${count === 1 ? 'item was' : 'items were'} skipped; see Settings → Backup for the list.`
       );
+      expect(notifications.showError).not.toHaveBeenCalled();
       expect(notifications.showSuccess).not.toHaveBeenCalled();
     });
   }
