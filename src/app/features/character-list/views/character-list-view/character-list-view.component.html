@@ -79,7 +79,7 @@
             } @empty {
               <span class="prompt-none">No prompts</span>
             }
-            <button type="button" class="prompt-chip prompt-chip-add" [disabled]="creatingPromptFor === character.id" (click)="newPrompt(character, $event)" title="New prompt for this character">+ Prompt</button>
+            <button appProjectReadOnly type="button" class="prompt-chip prompt-chip-add" [disabled]="creatingPromptFor === character.id" (click)="newPrompt(character, $event)" title="New prompt for this character">+ Prompt</button>
           </div>
         } @else if (character.content) {
           <p class="list-item-description">{{ character.content | excerpt:180 }}</p>
@@ -87,7 +87,7 @@
       </div>
       @if (!showPrompts) {
         <div class="list-item-actions" role="group" [attr.aria-label]="getCharacterDisplayName(character) + ' actions'">
-          <button
+          <button appProjectReadOnly
             type="button"
             class="icon-btn duplicate-btn"
             (click)="onCharacterDuplicate(character, $event)"

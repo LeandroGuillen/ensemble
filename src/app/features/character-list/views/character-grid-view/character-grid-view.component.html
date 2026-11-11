@@ -80,7 +80,7 @@
           >
           <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#edit" /></svg>
         </button>
-        <button
+        <button appProjectReadOnly
           type="button"
           class="icon-btn duplicate-btn"
           (click)="onCharacterDuplicate(character, $event)"
@@ -89,7 +89,7 @@
           >
           <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#copy" /></svg>
         </button>
-        <button
+        <button appProjectReadOnly
           type="button"
           class="icon-btn delete-btn"
           (click)="onCharacterDelete(character, $event)"

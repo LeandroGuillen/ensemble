@@ -1,3 +1,5 @@
+import { ProjectReadOnlyDirective } from '../../shared/project-read-only.directive';
+import { ProjectWriteProtectionService } from '../../core/services/project-write-protection.service';
 import {
   AfterViewInit,
   ChangeDetectorRef,
@@ -37,7 +39,7 @@ import { ConnectionEditDialogComponent } from './components/connection-edit-dial
 
 @Component({
   selector: 'app-pinboard-view',
-  imports: [
+  imports: [ProjectReadOnlyDirective,
     PinboardToolbarComponent,
     PinAddDialogComponent,
     ConnectionEditDialogComponent,
@@ -48,6 +50,8 @@ import { ConnectionEditDialogComponent } from './components/connection-edit-dial
 
 })
 export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
+  private readonly writeProtection = inject(ProjectWriteProtectionService);
+  get readOnly(): boolean { return !!this.writeProtection.readOnlyPath; }
   @ViewChild('pinboardContainer', { static: true }) pinboardContainer!: ElementRef;
 
   pinboardData$ = this.pinboardService.getPinboardData();
@@ -218,6 +222,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   onPlusIconClick(event: MouseEvent): void {
+    if (this.readOnly) return;
     this.interactionService.onPlusIconClick(event);
     this.cdr.detectChanges();
   }
@@ -228,6 +233,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   openAddPinDialog(): void {
+    if (this.readOnly) return;
     this.showAddPinDialog = true;
   }
 
@@ -241,6 +247,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   async onCharacterSelected(character: Character): Promise<void> {
+    if (this.readOnly) return;
     try {
       await this.pinboardService.addPin(character, this.networkService.gridSize);
       this.closeDialogs();
@@ -251,6 +258,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   onConnectionSave(form: ConnectionFormData): void {
+    if (this.readOnly) return;
     this.connectionForm = form;
     void this.saveConnection();
   }
@@ -283,6 +291,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   async deleteConnection(): Promise<void> {
+    if (this.readOnly) return;
     if (!this.editingConnection) return;
 
     const confirmed = await this.modalService.confirm(
@@ -306,6 +315,7 @@ export class PinboardViewComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   async removePinFromPinboard(nodeId: string): Promise<void> {
+    if (this.readOnly) return;
     const character = this.characters.find(c => c.id === nodeId);
     const characterName = character?.name || 'Character';
 

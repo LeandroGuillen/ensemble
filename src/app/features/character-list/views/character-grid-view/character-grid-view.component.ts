@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../../../../shared/project-read-only.directive';
 import { Component, Input, Output, EventEmitter } from "@angular/core";
 
 import { DragDropModule } from '@angular/cdk/drag-drop';
@@ -9,7 +10,7 @@ import { ExcerptPipe } from "../../../../shared/pipes/excerpt.pipe";
 
 @Component({
     selector: "app-character-grid-view",
-    imports: [DragDropModule, ExcerptPipe],
+    imports: [ProjectReadOnlyDirective, DragDropModule, ExcerptPipe],
     templateUrl: "./character-grid-view.component.html",
     styleUrls: ["./character-grid-view.component.scss"]
 })

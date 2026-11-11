@@ -20,7 +20,7 @@
         <div class="form-actions">
           <div class="action-group">
             <button type="button" class="btn btn-secondary" (click)="onCancel()">Cancel</button>
-            <button type="submit" class="btn btn-primary" [disabled]="saving || bookForm.invalid">
+            <button appProjectReadOnly type="submit" class="btn btn-primary" [disabled]="saving || bookForm.invalid">
               @if (saving) { <span class="spinner"></span> }
               {{ saving ? 'Saving…' : (isEditMode ? 'Update Book' : 'Create Book') }}
             </button>
@@ -101,7 +101,7 @@
           <span class="preset-label">Quick colors</span>
           <div class="color-preset-swatches">
             @for (color of colorPresets; track color) {
-              <button
+              <button appProjectReadOnly
                 type="button"
                 class="color-preset"
                 [style.background-color]="color"
@@ -139,7 +139,7 @@
             <div class="form-group pov-section">
               <div class="pov-header">
                 <label>PoV Characters</label>
-                <button
+                <button appProjectReadOnly
                   type="button"
                   class="btn btn-secondary btn-sm"
                   (click)="onAddPovCharacter()"
@@ -163,7 +163,7 @@
                         }
                       </div>
                       <span class="pov-name" [title]="character.id">{{ character.name }}</span>
-                      <button
+                      <button appProjectReadOnly
                         type="button"
                         class="pov-remove"
                         (click)="onRemovePovCharacter(character.id)"
@@ -271,7 +271,7 @@
                   placeholder="e.g. books/b2/b2.plan.md"
                   class="form-control"
                   />
-                <button type="button" class="btn btn-secondary" (click)="browsePlanPath('planPath')">Browse…</button>
+                <button appProjectReadOnly type="button" class="btn btn-secondary" (click)="browsePlanPath('planPath')">Browse…</button>
               </div>
               <div class="field-hint">Markdown outline that opens when you click the book.</div>
             </div>
@@ -285,7 +285,7 @@
                   placeholder="e.g. books/b2/content"
                   class="form-control"
                   />
-                <button type="button" class="btn btn-secondary" (click)="browsePlanPath('manuscriptDir')">Browse…</button>
+                <button appProjectReadOnly type="button" class="btn btn-secondary" (click)="browsePlanPath('manuscriptDir')">Browse…</button>
               </div>
               <div class="field-hint">Files named like <code>2180-title.*</code> mark chapter 2180 as drafted.</div>
             </div>
@@ -297,7 +297,7 @@
         </div>
         @if (isEditMode) {
           <div class="secondary-actions">
-            <button type="button" class="danger-link" (click)="onDelete()" [disabled]="saving">Delete Book</button>
+            <button appProjectReadOnly type="button" class="danger-link" (click)="onDelete()" [disabled]="saving">Delete Book</button>
           </div>
         }
       </div>

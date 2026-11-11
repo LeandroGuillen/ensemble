@@ -2,7 +2,7 @@
   <div class="sidebar-header">
     <h3>Pinboards</h3>
     <div class="sidebar-actions">
-      <button class="create-btn" (click)="onCreatePinboard()" title="Create new pinboard" aria-label="Create new pinboard">
+      <button appProjectReadOnly class="create-btn" (click)="onCreatePinboard()" title="Create new pinboard" aria-label="Create new pinboard">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
         </svg>
@@ -35,7 +35,7 @@
     @if (pinboards.length === 0) {
       <div class="empty-state">
         <p>No pinboards yet</p>
-        <button class="create-link" (click)="onCreatePinboard()">Create one</button>
+        <button appProjectReadOnly class="create-link" (click)="onCreatePinboard()">Create one</button>
       </div>
     }
   </div>
@@ -48,7 +48,7 @@
       [style.top.px]="contextMenuPosition.y"
       (click)="$event.stopPropagation()"
       >
-      <button
+      <button appProjectReadOnly
         class="context-menu-item"
         (click)="onRenamePinboard(contextMenuPinboardId)"
         >
@@ -57,7 +57,7 @@
         </svg>
         Rename
       </button>
-      <button
+      <button appProjectReadOnly
         class="context-menu-item danger"
         (click)="onDeletePinboard(contextMenuPinboardId)"
         >

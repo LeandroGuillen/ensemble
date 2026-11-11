@@ -23,7 +23,7 @@
           <div class="empty-icon"><svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="assets/ui-icons.svg#pin" /></svg></div>
           <h3>Empty Cast</h3>
           <p>Add members to this cast to visualize their relationships. Every member appears on the pinboard.</p>
-          <button class="btn btn-primary" (click)="openAddPinDialog()">
+          <button appProjectReadOnly class="btn btn-primary" (click)="openAddPinDialog()">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
               <circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="2" fill="none" />
               <path d="M8 5V11M5 8H11" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
@@ -45,6 +45,7 @@
         !showAddPinDialog
       ) {
         <div
+          appProjectReadOnly
           class="connection-plus-icon"
           [style.left.px]="interactionService.plusIconPosition!.x"
           [style.top.px]="interactionService.plusIconPosition!.y"
@@ -68,6 +69,7 @@
 
       @if (interactionService.hoveredNodeId && interactionService.getHoveredNodePosition()) {
         <div
+          appProjectReadOnly
           class="node-delete-icon"
           [style.left.px]="interactionService.getHoveredNodePosition()?.x"
           [style.top.px]="interactionService.getHoveredNodePosition()?.y"

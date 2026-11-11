@@ -20,14 +20,14 @@
         </button>
       </div>
 
-      <button
+      <button appProjectReadOnly
         class="btn btn-secondary"
         (click)="showAddSeriesForm()"
         [disabled]="saving"
       >
         New Series
       </button>
-      <button
+      <button appProjectReadOnly
         class="btn btn-secondary"
         (click)="showAddSagaForm()"
         [disabled]="saving || seriesList.length === 0"
@@ -35,7 +35,7 @@
       >
         New Saga
       </button>
-      <button
+      <button appProjectReadOnly
         class="btn btn-primary add-book-btn"
         (click)="showAddBookForm()"
         [disabled]="saving"
@@ -100,7 +100,7 @@
                       >
                     </div>
                     <div class="series-actions">
-                      <button
+                      <button appProjectReadOnly
                         type="button"
                         class="btn-text"
                         draggable="false"
@@ -110,7 +110,7 @@
                       >
                         New saga
                       </button>
-                      <button
+                      <button appProjectReadOnly
                         type="button"
                         class="btn-text"
                         draggable="false"
@@ -120,7 +120,7 @@
                       >
                         Edit
                       </button>
-                      <button
+                      <button appProjectReadOnly
                         type="button"
                         class="btn-text danger"
                         draggable="false"
@@ -165,7 +165,7 @@
                                   {{ shelf.saga!.name }}
                                 </h3>
                                 <div class="saga-actions">
-                                  <button
+                                  <button appProjectReadOnly
                                     type="button"
                                     class="btn-text"
                                     draggable="false"
@@ -174,7 +174,7 @@
                                   >
                                     Edit
                                   </button>
-                                  <button
+                                  <button appProjectReadOnly
                                     type="button"
                                     class="btn-text danger"
                                     draggable="false"
@@ -259,7 +259,7 @@
                           >
                           <h3 class="saga-name">{{ shelf.saga!.name }}</h3>
                           <div class="saga-actions">
-                            <button
+                            <button appProjectReadOnly
                               type="button"
                               class="btn-text"
                               draggable="false"
@@ -268,7 +268,7 @@
                             >
                               Edit
                             </button>
-                            <button
+                            <button appProjectReadOnly
                               type="button"
                               class="btn-text danger"
                               draggable="false"
@@ -533,7 +533,7 @@
               />
               <div class="color-preset-swatches">
                 @for (color of colorPresets; track color) {
-                  <button
+                  <button appProjectReadOnly
                     type="button"
                     class="color-preset"
                     [style.background-color]="color"
@@ -556,7 +556,7 @@
           </div>
           <div class="simple-actions">
             @if (editingSeries) {
-              <button
+              <button appProjectReadOnly
                 type="button"
                 class="btn btn-danger"
                 (click)="deleteSeries(editingSeries)"
@@ -573,7 +573,7 @@
             >
               Cancel
             </button>
-            <button
+            <button appProjectReadOnly
               type="submit"
               class="btn btn-primary"
               [disabled]="saving || seriesForm.invalid"
@@ -626,7 +626,7 @@
           </div>
           <div class="simple-actions">
             @if (editingSaga) {
-              <button
+              <button appProjectReadOnly
                 type="button"
                 class="btn btn-danger"
                 (click)="deleteSaga(editingSaga)"
@@ -643,7 +643,7 @@
             >
               Cancel
             </button>
-            <button
+            <button appProjectReadOnly
               type="submit"
               class="btn btn-primary"
               [disabled]="saving || sagaForm.invalid"

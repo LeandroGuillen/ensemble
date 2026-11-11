@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../../../../shared/project-read-only.directive';
 import { Component, EventEmitter, Input, OnInit, Output, inject } from '@angular/core';
 import { NotificationService } from '../../../../core/services/notification.service';
 
@@ -10,7 +11,7 @@ import { pathBasename } from '../../../../core/utils/path.utils';
 
 @Component({
   selector: 'app-plot-board-sidebar',
-  imports: [FormsModule, RouterLink],
+  imports: [ProjectReadOnlyDirective, FormsModule, RouterLink],
   templateUrl: './plot-board-sidebar.component.html',
   styleUrls: ['./plot-board-sidebar.component.scss'],
 })

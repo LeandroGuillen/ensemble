@@ -111,14 +111,14 @@
                   </div>
                   <div class="member-info"><strong>{{ character.name }}</strong><span>View character ↗</span></div>
                 </a>
-                <button class="member-remove" (click)="toggleMember(character.id)" [attr.aria-label]="'Remove ' + character.name + ' from House'" title="Remove member">
+                <button appProjectReadOnly class="member-remove" (click)="toggleMember(character.id)" [attr.aria-label]="'Remove ' + character.name + ' from House'" title="Remove member">
                   <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg>
                 </button>
               </article>
             }
           </div>
           @if (!model.characterIds.length) { <p class="empty">No members yet. Add characters to this House.</p> }
-          @for (id of missingMembers; track id) { <p class="missing">{{ characterName(id) }} <button class="btn btn-ghost" (click)="toggleMember(id)">Remove reference</button></p> }
+          @for (id of missingMembers; track id) { <p class="missing">{{ characterName(id) }} <button appProjectReadOnly class="btn btn-ghost" (click)="toggleMember(id)">Remove reference</button></p> }
         </section>
         <section #leadershipSection class="panel succession" tabindex="-1" aria-labelledby="leadership-history-heading">
           <div class="section-heading">
@@ -177,18 +177,18 @@
             </div>
           </div>
           @if (selectedBook) { <p class="hint">Showing book references in their saved succession order. Select All history to reorder.</p> }
-          <div class="reigns" cdkDropList [cdkDropListData]="model.leadership" [cdkDropListDisabled]="!!selectedBook || saving" (cdkDropListDropped)="drop($event)">
+          <div class="reigns" cdkDropList [cdkDropListData]="model.leadership" [cdkDropListDisabled]="readOnly || !!selectedBook || saving" (cdkDropListDropped)="drop($event)">
             @for (entry of visibleLeadership; track entry.id) {
-              <article class="reign" cdkDrag [cdkDragDisabled]="!!selectedBook || saving" [class.current]="model.currentLeadershipId === entry.id">
+              <article class="reign" cdkDrag [cdkDragDisabled]="readOnly || !!selectedBook || saving" [class.current]="model.currentLeadershipId === entry.id">
                 <div class="reign-heading">
-                  <button class="drag-handle" cdkDragHandle aria-label="Drag reign to reorder" [disabled]="!!selectedBook" title="Drag to reorder">⠿</button>
+                  <button appProjectReadOnly class="drag-handle" cdkDragHandle aria-label="Drag reign to reorder" [disabled]="!!selectedBook" title="Drag to reorder">⠿</button>
                   <span class="order">{{ model.leadership.indexOf(entry) + 1 }}</span>
                   <h3>{{ entry.characterIds.length ? characterName(entry.characterIds[0]) : 'New reign' }}</h3>
                   @if (model.currentLeadershipId === entry.id) { <span class="current-label">Current</span> }
                   <div class="reorder">
-                    <button class="btn btn-ghost" (click)="moveReign(model.leadership.indexOf(entry), -1)" [disabled]="!!selectedBook || model.leadership.indexOf(entry) === 0" aria-label="Move reign earlier">↑</button>
-                    <button class="btn btn-ghost" (click)="moveReign(model.leadership.indexOf(entry), 1)" [disabled]="!!selectedBook || model.leadership.indexOf(entry) === model.leadership.length - 1" aria-label="Move reign later">↓</button>
-                    <button class="btn btn-ghost" appConfirmButton confirmLabel="Confirm removal" (confirmed)="removeReign(entry.id)">Remove</button>
+                    <button appProjectReadOnly class="btn btn-ghost" (click)="moveReign(model.leadership.indexOf(entry), -1)" [disabled]="!!selectedBook || model.leadership.indexOf(entry) === 0" aria-label="Move reign earlier">↑</button>
+                    <button appProjectReadOnly class="btn btn-ghost" (click)="moveReign(model.leadership.indexOf(entry), 1)" [disabled]="!!selectedBook || model.leadership.indexOf(entry) === model.leadership.length - 1" aria-label="Move reign later">↓</button>
+                    <button appProjectReadOnly class="btn btn-ghost" appConfirmButton confirmLabel="Confirm removal" (confirmed)="removeReign(entry.id)">Remove</button>
                   </div>
                 </div>
                 <div class="reign-fields">
@@ -224,8 +224,8 @@
                 </div>
                 <div class="book-tags" role="group" [attr.aria-label]="'Book references for reign ' + (model.leadership.indexOf(entry) + 1)">
                   <span class="hint">Book references</span>
-                  @for (book of books; track book.id) { <button type="button" class="book-tag" [class.selected]="entry.books.includes(book.id)" [attr.aria-pressed]="entry.books.includes(book.id)" (click)="toggleBook(entry, book.id)"><span class="tag-dot" aria-hidden="true" [style.background-color]="book.color"></span>{{ bookName(book) }}@if (entry.books.includes(book.id)) {<svg class="book-tag-check" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>}</button> }
-                  @for (id of missingBooks(entry); track id) { <button type="button" class="book-tag missing selected" (click)="toggleBook(entry, id)" [attr.aria-label]="'Remove missing book reference ' + id">Missing book ({{ id }}) ×</button> }
+                  @for (book of books; track book.id) { <button appProjectReadOnly type="button" class="book-tag" [class.selected]="entry.books.includes(book.id)" [attr.aria-pressed]="entry.books.includes(book.id)" (click)="toggleBook(entry, book.id)"><span class="tag-dot" aria-hidden="true" [style.background-color]="book.color"></span>{{ bookName(book) }}@if (entry.books.includes(book.id)) {<svg class="book-tag-check" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>}</button> }
+                  @for (id of missingBooks(entry); track id) { <button appProjectReadOnly type="button" class="book-tag missing selected" (click)="toggleBook(entry, id)" [attr.aria-label]="'Remove missing book reference ' + id">Missing book ({{ id }}) ×</button> }
                   @if (!entry.books.length) { <span class="hint">Books unspecified</span> }
                 </div>
               </article>
@@ -233,7 +233,7 @@
           </div>
           }
         </section>
-        @if (house) { <div class="delete-house"><button type="button" class="btn btn-ghost" (click)="confirmDelete()" [disabled]="conflict">Delete House</button><span class="hint">Characters and crest files are kept.</span></div> }
+        @if (house) { <div class="delete-house"><button appProjectReadOnly type="button" class="btn btn-ghost" (click)="confirmDelete()" [disabled]="conflict">Delete House</button><span class="hint">Characters and crest files are kept.</span></div> }
       </fieldset>
     }
   </main>

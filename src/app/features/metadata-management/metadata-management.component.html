@@ -17,7 +17,7 @@
             <!-- Categories Section -->
             <section class="section categories-section" [settingsSearchable]="['Categories', categoryNamesSearch]">
               <div class="section-header">
-                <button class="btn btn-primary" (click)="showAddCategoryForm()" [disabled]="saving">
+                <button appProjectReadOnly class="btn btn-primary" (click)="showAddCategoryForm()" [disabled]="saving">
                   <svg class="ui-icon icon" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
                   Add Category
                 </button>
@@ -89,7 +89,7 @@
                       <div class="color-presets">
                         <span class="preset-label">Quick colors:</span>
                         @for (color of colorPresets; track color) {
-                          <button
+                          <button appProjectReadOnly
                             type="button"
                             class="color-preset"
                             [style.background-color]="color"
@@ -103,7 +103,7 @@
                       <button type="button" class="btn btn-secondary" (click)="cancelCategoryForm()">
                         Cancel
                       </button>
-                      <button type="submit" class="btn btn-primary" [disabled]="saving || categoryForm.invalid">
+                      <button appProjectReadOnly type="submit" class="btn btn-primary" [disabled]="saving || categoryForm.invalid">
                         @if (saving) {
                           <span class="spinner-small"></span>
                         }
@@ -152,7 +152,7 @@
                     }
                     @if (!editingCategory || editingCategory.id !== category.id) {
                       <div class="item-actions">
-                        <button
+                        <button appProjectReadOnly
                           type="button"
                           class="delete-action"
                           [class.confirming]="isDeletePending('category', category.id)"
@@ -199,7 +199,7 @@
                           <!-- Inline Color Presets -->
                           <div class="inline-color-presets">
                             @for (color of colorPresets; track color) {
-                              <button
+                              <button appProjectReadOnly
                                 type="button"
                                 class="color-preset-small"
                                 [style.background-color]="color"
@@ -221,7 +221,7 @@
                           }
                           <!-- Save and Cancel Links -->
                           <div class="inline-form-actions">
-                            <button type="submit" class="btn-link btn-save" [disabled]="saving || categoryForm.invalid">
+                            <button appProjectReadOnly type="submit" class="btn-link btn-save" [disabled]="saving || categoryForm.invalid">
                               @if (saving) {
                                 <span class="spinner-small"></span>
                               }
@@ -274,7 +274,7 @@
             <!-- Tags Section -->
             <section class="section tags-section" [settingsSearchable]="['Tags', tagNamesSearch]">
               <div class="section-header">
-                <button class="btn btn-primary" (click)="showAddTagForm()" [disabled]="saving">
+                <button appProjectReadOnly class="btn btn-primary" (click)="showAddTagForm()" [disabled]="saving">
                   <svg class="ui-icon icon" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
                   Add Tag
                 </button>
@@ -329,7 +329,7 @@
                       <div class="color-presets">
                         <span class="preset-label">Quick colors:</span>
                         @for (color of colorPresets; track color) {
-                          <button
+                          <button appProjectReadOnly
                             type="button"
                             class="color-preset"
                             [style.background-color]="color"
@@ -343,7 +343,7 @@
                       <button type="button" class="btn btn-secondary" (click)="cancelTagForm()">
                         Cancel
                       </button>
-                      <button type="submit" class="btn btn-primary" [disabled]="saving || tagForm.invalid">
+                      <button appProjectReadOnly type="submit" class="btn btn-primary" [disabled]="saving || tagForm.invalid">
                         @if (saving) {
                           <span class="spinner-small"></span>
                         }
@@ -384,7 +384,7 @@
                     }
                     @if (!editingTag || editingTag.id !== tag.id) {
                       <div class="item-actions">
-                        <button
+                        <button appProjectReadOnly
                           type="button"
                           class="delete-action"
                           [class.confirming]="isDeletePending('tag', tag.id)"
@@ -422,7 +422,7 @@
                           <!-- Inline Color Presets -->
                           <div class="inline-color-presets">
                             @for (color of colorPresets; track color) {
-                              <button
+                              <button appProjectReadOnly
                                 type="button"
                                 class="color-preset-small"
                                 [style.background-color]="color"
@@ -439,7 +439,7 @@
                           }
                           <!-- Save and Cancel Links -->
                           <div class="inline-form-actions">
-                            <button type="submit" class="btn-link btn-save" [disabled]="saving || tagForm.invalid">
+                            <button appProjectReadOnly type="submit" class="btn-link btn-save" [disabled]="saving || tagForm.invalid">
                               @if (saving) {
                                 <span class="spinner-small"></span>
                               }
@@ -465,7 +465,7 @@
             <div class="categories-tags-container single-column">
             <section class="section" id="character-styles" [settingsSearchable]="['Character Styles', 'portrait', 'anime', 'default style', characterStylesLabel]">
               <div class="section-header">
-                <button class="btn btn-primary" (click)="showAddCharacterStyleForm()" [disabled]="saving">
+                <button appProjectReadOnly class="btn btn-primary" (click)="showAddCharacterStyleForm()" [disabled]="saving">
                   <svg class="ui-icon icon" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
                   Add Style
                 </button>
@@ -496,7 +496,7 @@
                       <button type="button" class="btn btn-secondary" (click)="cancelCharacterStyleForm()" [disabled]="saving">
                         Cancel
                       </button>
-                      <button
+                      <button appProjectReadOnly
                         type="submit"
                         class="btn btn-primary"
                         [disabled]="!newCharacterStyleName.trim() || saving"
@@ -514,7 +514,7 @@
               <div class="items-list character-styles-list">
                 @for (style of characterStyles; track style.id) {
                   <div class="item-row character-style-row">
-                    <button
+                    <button appProjectReadOnly
                       type="button"
                       class="style-star"
                       [class.starred]="isDefaultCharacterStyle(style.id)"
@@ -541,7 +541,7 @@
                       </div>
                     </div>
                     <div class="item-actions">
-                      <button
+                      <button appProjectReadOnly
                         type="button"
                         class="delete-action"
                         [class.confirming]="isDeletePending('character-style', style.id)"
@@ -626,7 +626,7 @@
             <section class="section" [settingsSearchable]="['Color Palette', 'base colors', 'extra colors', 'theme override']">
               <div class="section-header">
                 <h2>Color Palette</h2>
-                <button
+                <button appProjectReadOnly
                   class="btn btn-secondary"
                   (click)="resetBaseColors()"
                   [disabled]="saving"
@@ -673,7 +673,7 @@
                             }
                           </div>
                           @if (editingBaseColorIndex !== i) {
-                            <button
+                            <button appProjectReadOnly
                               class="btn-icon"
                               (click)="startEditingBaseColor(i)"
                               title="Edit color"
@@ -697,7 +697,7 @@
                         }
                       </p>
                       <div class="form-actions-inline">
-                        <button
+                        <button appProjectReadOnly
                           class="btn btn-secondary"
                           (click)="setThemeOverrides()"
                           [disabled]="saving"
@@ -706,7 +706,7 @@
                           Save as Theme Override
                         </button>
                         @if (hasThemeOverrides()) {
-                          <button
+                          <button appProjectReadOnly
                             class="btn btn-secondary"
                             (click)="removeThemeOverrides()"
                             [disabled]="saving"
@@ -736,7 +736,7 @@
                         placeholder="#3498db"
                         pattern="^#[0-9A-Fa-f]{6}$"
                         >
-                      <button
+                      <button appProjectReadOnly
                         class="btn btn-primary"
                         (click)="addExtraColor()"
                         [disabled]="saving || !newExtraColor"
@@ -754,7 +754,7 @@
                             <div class="color-info">
                               <div class="color-value">{{ color }}</div>
                             </div>
-                            <button
+                            <button appProjectReadOnly
                               class="btn-icon btn-danger"
                               (click)="removeExtraColor(color)"
                               title="Remove color"
@@ -802,11 +802,11 @@
                       height="48"
                       />
                     <div class="project-icon-actions">
-                      <button type="button" class="btn btn-secondary" (click)="chooseProjectIcon()" [disabled]="changingProjectIcon">
+                      <button appProjectReadOnly type="button" class="btn btn-secondary" (click)="chooseProjectIcon()" [disabled]="changingProjectIcon">
                         {{ projectIconPath ? 'Change icon…' : 'Choose icon…' }}
                       </button>
                       @if (projectIconPath) {
-                        <button type="button" class="btn btn-secondary" (click)="resetProjectIcon()">Use Ensemble logo</button>
+                        <button appProjectReadOnly type="button" class="btn btn-secondary" (click)="resetProjectIcon()">Use Ensemble logo</button>
                       }
                     </div>
                   </div>

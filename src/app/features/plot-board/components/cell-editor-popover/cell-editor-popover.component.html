@@ -1,6 +1,6 @@
 <div class="cell-edit-popover" (keydown.escape)="onEscape($event)">
   <div class="popover-toolbar">
-    <button
+    <button appProjectReadOnly
       type="button"
       class="toolbar-btn"
       [class.active]="icon"
@@ -14,7 +14,7 @@
       }
     </button>
     @if (icon) {
-      <button type="button" class="toolbar-btn btn-clear" (click)="clearIcon($event)" title="Remove icon">
+      <button appProjectReadOnly type="button" class="toolbar-btn btn-clear" (click)="clearIcon($event)" title="Remove icon">
         &times;
       </button>
     }
@@ -45,7 +45,7 @@
   <div class="popover-footer">
     <div class="popover-footer-left">
       @if (canDelete) {
-        <button
+        <button appProjectReadOnly
           type="button"
           class="btn-delete-cell"
           appConfirmButton
@@ -57,7 +57,7 @@
         </button>
       }
     </div>
-    <button type="button" class="btn-save-cell" (click)="onSave($event)" [attr.title]="saveTitle">
+    <button appProjectReadOnly type="button" class="btn-save-cell" (click)="onSave($event)" [attr.title]="saveTitle">
       Save
       <span class="cell-save-kbd-hint" aria-hidden="true">
         <kbd class="shortcut-hint">{{ saveShortcutModifierLabel }}</kbd>

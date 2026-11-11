@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { ProjectWriteProtectionService } from './project-write-protection.service';
+import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
 
 /**
@@ -10,6 +11,8 @@ import { Router } from '@angular/router';
   providedIn: 'root',
 })
 export class CharacterEditDialogService {
+  private readonly protection = inject(ProjectWriteProtectionService);
+
   constructor(private router: Router) {}
 
   openEdit(characterId: string): void {
@@ -17,11 +20,13 @@ export class CharacterEditDialogService {
   }
 
   openCreate(initialName?: string): void {
+    if (this.protection.readOnlyPath) return;
     const extras = initialName ? { queryParams: { name: initialName } } : undefined;
     this.router.navigate(['/character'], extras);
   }
 
   openCreateLore(): void {
+    if (this.protection.readOnlyPath) return;
     this.router.navigate(['/character'], { queryParams: { lore: 'true' } });
   }
 
@@ -30,6 +35,7 @@ export class CharacterEditDialogService {
   }
 
   openCreateDraft(initialName?: string, initialContent?: string): void {
+    if (this.protection.readOnlyPath) return;
     const queryParams = initialName ? { name: initialName } : undefined;
     this.router.navigate(['/character-draft'], {
       ...(queryParams ? { queryParams } : {}),

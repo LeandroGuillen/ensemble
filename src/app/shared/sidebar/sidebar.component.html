@@ -55,7 +55,7 @@
         <kbd class="search-shortcut">Ctrl+P</kbd>
       }
     </button>
-    <button
+    <button appProjectReadOnly
       class="sidebar-new-character"
       (click)="openNewDraft()"
       title="New draft in the Drawer"
@@ -188,7 +188,7 @@
     (click)="$event.stopPropagation()"
   >
     @for (theme of themes; track theme.id) {
-      <button
+      <button appProjectReadOnly
         class="theme-menu-item"
         role="menuitemradio"
         [class.selected]="theme.id === currentThemeId"
@@ -210,7 +210,7 @@
     <div class="theme-menu-divider" role="separator"></div>
     <div class="theme-menu-heading">Skin</div>
     @for (skin of skins; track skin.id) {
-      <button
+      <button appProjectReadOnly
         class="theme-menu-item"
         role="menuitemradio"
         [class.selected]="skin.id === currentSkinId"

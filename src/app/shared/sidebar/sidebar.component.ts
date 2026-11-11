@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../project-read-only.directive';
 import { Component, DestroyRef, ElementRef, HostListener, OnInit, ViewChild, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, NavigationEnd } from '@angular/router';
@@ -31,7 +32,7 @@ interface NavSection {
 
 @Component({
     selector: 'app-sidebar',
-    imports: [],
+    imports: [ProjectReadOnlyDirective, ],
     templateUrl: './sidebar.component.html',
     styleUrls: ['./sidebar.component.scss']
 })

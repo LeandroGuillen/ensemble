@@ -281,7 +281,7 @@
                       <svg class="ui-icon portrait-more-chevron" aria-hidden="true"><use href="assets/ui-icons.svg#chevron-down" /></svg>
                     </summary>
                     <div class="portrait-more-popover" role="menu">
-                      <button
+                      <button appProjectReadOnly
                         type="button"
                         class="portrait-more-option"
                         role="menuitem"
@@ -440,7 +440,7 @@
                     <label class="form-label" id="collection-label">Collection</label>
                     <div class="collection-toggle" role="radiogroup" aria-labelledby="collection-label">
                       @for (option of collectionOptions; track option.id) {
-                        <button
+                        <button appProjectReadOnly
                           type="button"
                           class="collection-option"
                           role="radio"
@@ -577,7 +577,7 @@
                     <svg class="ui-icon book-page-cta-icon" aria-hidden="true"><use href="assets/ui-icons.svg#book-open" /></svg>
                     <h3 class="book-page-cta-title">No page for {{ getBookName(activeContentTab) }} yet</h3>
                     <p class="book-page-cta-text">Book pages let you track per-book plot beats and developments without cluttering the main story.</p>
-                    <button
+                    <button appProjectReadOnly
                       type="button"
                       class="btn btn-primary"
                       [disabled]="savingBookPageId"

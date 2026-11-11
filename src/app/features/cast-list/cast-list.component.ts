@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../../shared/project-read-only.directive';
 import { NotificationService } from '../../core/services/notification.service';
 import { DestroyRef, inject, Component, OnInit, NgZone, ChangeDetectorRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -23,7 +24,7 @@ import { isTrashStagingError } from '../../core/trash/trash-record-id';
 
 @Component({
     selector: "app-cast-list",
-    imports: [FormsModule, PageHeaderComponent],
+    imports: [ProjectReadOnlyDirective, FormsModule, PageHeaderComponent],
     templateUrl: "./cast-list.component.html",
     styleUrls: ["./cast-list.component.scss"]
 })

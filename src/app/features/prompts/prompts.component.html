@@ -2,7 +2,7 @@
   <app-page-header [title]="'Prompts'">
     <button class="icon-btn" (click)="refresh()" title="Rescan the prompts folder" aria-label="Refresh prompts"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#refresh" /></svg></button>
     <button class="icon-btn" (click)="openPromptsFolder()" [title]="'Open ' + promptsFolderLabel + '/ in your file manager'" aria-label="Open prompts folder"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#folder" /></svg></button>
-    <button class="btn btn-primary" (click)="openNewDialog()" title="New prompt">
+    <button appProjectReadOnly class="btn btn-primary" (click)="openNewDialog()" title="New prompt">
       <svg class="ui-icon plus-glyph" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
       New Prompt
     </button>
@@ -72,7 +72,7 @@
               Prompts are Markdown files in <code>{{ promptsFolderLabel }}/</code>. Organize them in any folders,
               link them to characters or locations, and attach the images they produced.
             </p>
-            <button class="btn btn-primary" (click)="openNewDialog()">New Prompt</button>
+            <button appProjectReadOnly class="btn btn-primary" (click)="openNewDialog()">New Prompt</button>
           </div>
         } @else {
           @if (!searching && selectedFolder) {

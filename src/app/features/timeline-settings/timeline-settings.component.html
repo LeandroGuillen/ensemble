@@ -25,15 +25,15 @@
             <input appProjectReadOnly class="form-control" [(ngModel)]="month.name" [attr.aria-label]="'Month ' + (i + 1) + ' name'" />
             <input appProjectReadOnly class="form-control days" type="number" min="1" max="400" [(ngModel)]="month.days" [attr.aria-label]="'Month ' + (i + 1) + ' days'" />
             <span class="days-label">days</span>
-            <button type="button" class="icon-btn" (click)="moveMonth(i, -1)" [disabled]="first" [attr.aria-label]="'Move month ' + (i + 1) + ' up'" title="Move up">↑</button>
-            <button type="button" class="icon-btn" (click)="moveMonth(i, 1)" [disabled]="last" [attr.aria-label]="'Move month ' + (i + 1) + ' down'" title="Move down">↓</button>
-            <button type="button" class="icon-btn" (click)="removeMonth(i)" [disabled]="months.length === 1" [attr.aria-label]="'Remove month ' + (i + 1)" title="Remove">×</button>
+            <button appProjectReadOnly type="button" class="icon-btn" (click)="moveMonth(i, -1)" [disabled]="first" [attr.aria-label]="'Move month ' + (i + 1) + ' up'" title="Move up">↑</button>
+            <button appProjectReadOnly type="button" class="icon-btn" (click)="moveMonth(i, 1)" [disabled]="last" [attr.aria-label]="'Move month ' + (i + 1) + ' down'" title="Move down">↓</button>
+            <button appProjectReadOnly type="button" class="icon-btn" (click)="removeMonth(i)" [disabled]="months.length === 1" [attr.aria-label]="'Remove month ' + (i + 1)" title="Remove">×</button>
           </li>
         }
       </ol>
       <div class="month-actions">
-        <button type="button" class="btn btn-ghost btn-sm" (click)="addMonth()">+ Add month</button>
-        <button type="button" class="btn btn-ghost btn-sm" (click)="useDefaultMonths()">Use January–December</button>
+        <button appProjectReadOnly type="button" class="btn btn-ghost btn-sm" (click)="addMonth()">+ Add month</button>
+        <button appProjectReadOnly type="button" class="btn btn-ghost btn-sm" (click)="useDefaultMonths()">Use January–December</button>
       </div>
       <p class="field-hint">Renaming months is safe; changing their number or lengths moves dates written with months and days.</p>
     </div>
@@ -52,7 +52,7 @@
   </div>
 
   <div class="save-row">
-    <button type="button" class="btn btn-primary" (click)="save()" [disabled]="!dirty || saving || !monthsValid">{{ saving ? 'Saving…' : 'Save' }}</button>
+    <button appProjectReadOnly type="button" class="btn btn-primary" (click)="save()" [disabled]="!dirty || saving || !monthsValid">{{ saving ? 'Saving…' : 'Save' }}</button>
     @if (dirty) { <button type="button" class="btn btn-ghost" (click)="revert()">Revert</button> }
   </div>
 </div>

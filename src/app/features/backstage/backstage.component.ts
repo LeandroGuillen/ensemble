@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../../shared/project-read-only.directive';
 import { isInteractiveKeyboardTarget } from '../../core/utils/list-keyboard.utils';
 import { NotificationService } from '../../core/services/notification.service';
 import { DestroyRef, inject, Component, OnInit, HostListener, SecurityContext } from '@angular/core';
@@ -23,7 +24,7 @@ type BackstageMode = "concepts" | "nameLists";
 
 @Component({
     selector: "app-backstage",
-    imports: [
+    imports: [ProjectReadOnlyDirective,
     FormsModule,
     PageHeaderComponent
 ],

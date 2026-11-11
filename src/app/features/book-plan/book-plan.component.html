@@ -9,7 +9,7 @@
     }
     <div class="header-actions">
       @if (state && view === 'plan') {
-        <button type="button" class="btn btn-ghost btn-sm" [disabled]="!!state.error || state.conflict !== null" (click)="previewCharacterLinks()">Link characters</button>
+        <button appProjectReadOnly type="button" class="btn btn-ghost btn-sm" [disabled]="!!state.error || state.conflict !== null" (click)="previewCharacterLinks()">Link characters</button>
         <span class="save-status" [class.warn]="state.conflict !== null || state.error">{{ saveStatus }}</span>
         <button type="button" class="btn btn-ghost btn-sm" (click)="openSearch()" title="Search plan (Ctrl+J)">
           Search <kbd>Ctrl J</kbd>
@@ -25,7 +25,7 @@
         </button>
       }
       @if (book) {
-        <button type="button" class="edit-book-link" (click)="openBookEditor()">Edit book…</button>
+        <button appProjectReadOnly type="button" class="edit-book-link" (click)="openBookEditor()">Edit book…</button>
       }
       @if (state) {
         <div class="view-toggle" role="tablist" aria-label="Book view">
@@ -58,10 +58,10 @@
         </p>
       </details>
       <div class="plan-empty-actions">
-        <button type="button" class="btn btn-primary" (click)="createPlanFile()">
+        <button appProjectReadOnly type="button" class="btn btn-primary" (click)="createPlanFile()">
           Create {{ book.code || book.id }}.plan.md
         </button>
-        <button type="button" class="btn btn-secondary" (click)="openBookEditor()">Choose an existing file…</button>
+        <button appProjectReadOnly type="button" class="btn btn-secondary" (click)="openBookEditor()">Choose an existing file…</button>
       </div>
     </div>
   } @else if (view === 'timeline') {
@@ -151,7 +151,7 @@
           <div class="plan-banner warn">
             <span>{{ state.relativePath }} changed on disk while you had unsaved edits.</span>
             <button type="button" class="btn btn-secondary btn-sm" (click)="resolveConflict('disk')">Reload from disk</button>
-            <button type="button" class="btn btn-primary btn-sm" (click)="resolveConflict('mine')">Keep mine</button>
+            <button appProjectReadOnly type="button" class="btn btn-primary btn-sm" (click)="resolveConflict('mine')">Keep mine</button>
           </div>
         }
 
@@ -166,7 +166,7 @@
           @if (current?.heading?.kind === 'chapter') {
             <span class="crumb-pov">
               @for (pov of current!.heading.pov; track pov.line) {
-                <button type="button" class="pov-button" (click)="changePov(pov)" title="Change point of view">
+                <button appProjectReadOnly type="button" class="pov-button" (click)="changePov(pov)" title="Change point of view">
                   <app-pov-chip
                     class="crumb-pov-chip"
                     [characterId]="pov.characterId"
@@ -176,7 +176,7 @@
                   {{ povName(pov.characterId, pov.name) }}
                 </button>
               } @empty {
-                <button type="button" class="pov-button pov-unset" (click)="changePov()">Set PoV…</button>
+                <button appProjectReadOnly type="button" class="pov-button pov-unset" (click)="changePov()">Set PoV…</button>
               }
             </span>
           }
@@ -265,7 +265,7 @@
         }
         <div class="link-preview-actions">
           <button type="button" class="btn btn-secondary" (click)="linkPreview = null">Cancel</button>
-          <button type="button" class="btn btn-primary" (click)="confirmCharacterLinks()">Confirm {{ characterLinkCount }} links</button>
+          <button appProjectReadOnly type="button" class="btn btn-primary" (click)="confirmCharacterLinks()">Confirm {{ characterLinkCount }} links</button>
         </div>
       </section>
     </div>

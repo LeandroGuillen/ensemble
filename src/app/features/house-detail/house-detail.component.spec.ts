@@ -77,6 +77,41 @@ describe('House editor', () => {
     expect(service.updateHouse).not.toHaveBeenCalled();
   });
 
+  it('blocks member removal in a read-only House without unsaved changes', () => {
+    TestBed.inject(ProjectWriteProtectionService).readOnlyPath = '/project';
+    fixture.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    const button: HTMLButtonElement = fixture.nativeElement.querySelector('.member-remove');
+    expect(button.disabled).toBeTrue();
+    expect(button.title).toContain('read-only');
+    button.click();
+    expect(component.model.characterIds).toEqual(['ned']);
+    expect(component.dirty).toBeFalse();
+    // Also protect callers outside the button (including missing-member removal).
+    component.toggleMember('ned');
+    expect(component.model.characterIds).toEqual(['ned']);
+    expect(component.dirty).toBeFalse();
+    expect(component.canLeave()).toBeTrue();
+  });
+
+  it('blocks leadership mutations and drag reordering in read-only projects', () => {
+    TestBed.inject(ProjectWriteProtectionService).readOnlyPath = '/project';
+    const before = structuredClone(component.model);
+    component.addReign();
+    component.removeReign('ned-reign');
+    component.moveReign(1, -1);
+    component.drop({ previousIndex: 1, currentIndex: 0 } as any);
+    component.toggleBook(component.model.leadership[0], 'book');
+    expect(component.model).toEqual(before);
+    expect(component.dirty).toBeFalse();
+  });
+
+  it('removes members and marks a writable House dirty', () => {
+    fixture.nativeElement.querySelector('.member-remove').click();
+    expect(component.model.characterIds).toEqual([]);
+    expect(component.dirty).toBeTrue();
+  });
+
   it('offers a discard prompt for pending read-only changes and allows close after confirmation', async () => {
     component.dirty = true;
     const confirm = spyOn(TestBed.inject(ModalService), 'confirm').and.resolveTo(false);

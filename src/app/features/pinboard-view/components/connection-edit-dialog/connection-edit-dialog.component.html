@@ -93,10 +93,10 @@
       </div>
       <div class="modal-actions">
         @if (mode === 'edit') {
-          <button type="button" class="btn btn-danger" (click)="onDelete()">Delete</button>
+          <button appProjectReadOnly type="button" class="btn btn-danger" (click)="onDelete()">Delete</button>
         }
         <button type="button" class="btn btn-secondary" (click)="onClose()">Cancel</button>
-        <button type="submit" class="btn btn-primary">
+        <button appProjectReadOnly type="submit" class="btn btn-primary">
           {{ mode === 'edit' ? 'Save Changes' : 'Create Connection' }}
         </button>
       </div>

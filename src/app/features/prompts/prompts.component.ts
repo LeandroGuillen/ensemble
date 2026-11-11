@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../../shared/project-read-only.directive';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NgTemplateOutlet } from '@angular/common';
@@ -66,7 +67,7 @@ export function matchesPromptSearch(file: PromptFile, query: string): boolean {
 
 @Component({
   selector: 'app-prompts',
-  imports: [FormsModule, NgTemplateOutlet, PageHeaderComponent, PromptImageComponent, PromptEditorComponent, PromptPathDialogComponent],
+  imports: [ProjectReadOnlyDirective, FormsModule, NgTemplateOutlet, PageHeaderComponent, PromptImageComponent, PromptEditorComponent, PromptPathDialogComponent],
   templateUrl: './prompts.component.html',
   styleUrls: ['./prompts.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

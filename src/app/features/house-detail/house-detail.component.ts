@@ -1,3 +1,4 @@
+import { ProjectWriteProtectionService } from '../../core/services/project-write-protection.service';
 import { ProjectReadOnlyDirective } from '../../shared/project-read-only.directive';
 import { WikiLinkRenameService } from '../../core/services/wiki-link-rename.service';
 import { NotificationService } from '../../core/services/notification.service';
@@ -38,6 +39,8 @@ export class HouseDetailComponent implements OnInit, OnDestroy {
   private readonly destroyRef = inject(DestroyRef);
   private readonly wikiLinkTargets = inject(WikiLinkTargetsService);
   private readonly modal = inject(ModalService);
+  private readonly protection = inject(ProjectWriteProtectionService);
+  get readOnly(): boolean { return !!this.protection.readOnlyPath; }
   private leavePrompt: Promise<boolean> | null = null;
   /** Resolves [[wikilinks]] in the history editor. */
   linkResolver: (target: string) => ResolvedWikiLink | null = () => null;
@@ -142,12 +145,13 @@ export class HouseDetailComponent implements OnInit, OnDestroy {
     }).catch(() => undefined);
   }
   async addMember(): Promise<void> {
+    if (this.readOnly) return;
     if (this.pickingMember || this.saving || this.loading || this.deleted) return;
     const request = this.request;
     this.pickingMember = true;
     try {
       const character = await this.characterPicker.pick();
-      if (!character || this.destroyRef.destroyed || request !== this.request || this.model.characterIds.includes(character.id)) return;
+      if (this.readOnly || !character || this.destroyRef.destroyed || request !== this.request || this.model.characterIds.includes(character.id)) return;
       this.model.characterIds = [...this.model.characterIds, character.id];
       this.changed();
       this.loadMemberThumbnails();
@@ -158,26 +162,31 @@ export class HouseDetailComponent implements OnInit, OnDestroy {
   get visibleLeadership(): HouseLeadership[] { return this.model.leadership.filter(entry => !this.selectedBook || entry.books.includes(this.selectedBook)); }
   get seatExists(): boolean { return this.locations.some(location => location.id === this.model.seatId); }
   toggleMember(id: string): void {
+    if (this.readOnly) return;
     this.model.characterIds = this.model.characterIds.includes(id) ? this.model.characterIds.filter(value => value !== id) : [...this.model.characterIds, id];
     this.changed();
   }
-  addReign(): void { this.selectedBook = ''; this.model.leadership.push({ id: generateId(), characterIds: [], period: '', books: [], notes: '' }); this.changed(); }
+  addReign(): void { if (this.readOnly) return; this.selectedBook = ''; this.model.leadership.push({ id: generateId(), characterIds: [], period: '', books: [], notes: '' }); this.changed(); }
   removeReign(id: string): void {
+    if (this.readOnly) return;
     this.model.leadership = this.model.leadership.filter(entry => entry.id !== id);
     if (this.model.currentLeadershipId === id) this.model.currentLeadershipId = undefined;
     this.changed();
   }
   moveReign(index: number, direction: number): void {
+    if (this.readOnly) return;
     if (this.selectedBook) return;
     moveItemInArray(this.model.leadership, index, index + direction);
     this.changed();
   }
   drop(event: CdkDragDrop<HouseLeadership[]>): void {
+    if (this.readOnly) return;
     if (this.selectedBook) return;
     moveItemInArray(this.model.leadership, event.previousIndex, event.currentIndex);
     this.changed();
   }
   toggleBook(entry: HouseLeadership, bookId: string): void {
+    if (this.readOnly) return;
     entry.books = entry.books.includes(bookId) ? entry.books.filter(id => id !== bookId) : [...entry.books, bookId];
     this.changed();
   }
@@ -186,13 +195,14 @@ export class HouseDetailComponent implements OnInit, OnDestroy {
   }
   missingHeads(entry: HouseLeadership): string[] { return entry.characterIds.filter(id => !this.characters.some(character => character.id === id)); }
   missingBooks(entry: HouseLeadership): string[] { return entry.books.filter(id => !this.books.some(book => book.id === id)); }
-  addColor(): void { this.model.colors.push('#848484'); this.changed(); }
+  addColor(): void { if (this.readOnly) return; this.model.colors.push('#848484'); this.changed(); }
   changeColor(index: number, color: string): void {
+    if (this.readOnly) return;
     if (this.model.colors[index] !== color) { this.model.colors[index] = color; this.changed(); }
   }
-  removeColor(index: number): void { this.model.colors.splice(index, 1); this.changed(); }
-  async openPicker(): Promise<void> { this.showPicker = true; await this.picker.open({ thumbnailHint: this.model.thumbnail }); }
-  onImage(image: ProjectImage): void { this.model.thumbnail = formatThumbnailWikiLink(image.relativePath); this.changed(); void this.previewCrest(); }
+  removeColor(index: number): void { if (this.readOnly) return; this.model.colors.splice(index, 1); this.changed(); }
+  async openPicker(): Promise<void> { if (this.readOnly) return; this.showPicker = true; await this.picker.open({ thumbnailHint: this.model.thumbnail }); }
+  onImage(image: ProjectImage): void { if (this.readOnly) return; this.model.thumbnail = formatThumbnailWikiLink(image.relativePath); this.changed(); void this.previewCrest(); }
   async previewCrest(): Promise<void> {
     const reference = this.model.thumbnail;
     try {
@@ -200,8 +210,9 @@ export class HouseDetailComponent implements OnInit, OnDestroy {
       if (!this.destroyRef.destroyed && reference === this.model.thumbnail) { this.crest = crest; this.cdr.markForCheck(); }
     } catch { this.crest = null; }
   }
-  removeCrest(): void { this.model.thumbnail = undefined; this.crest = null; this.changed(); }
+  removeCrest(): void { if (this.readOnly) return; this.model.thumbnail = undefined; this.crest = null; this.changed(); }
   async save(): Promise<void> {
+    if (this.readOnly) return;
     if (this.saving || this.pickingMember || this.conflict || this.deleted || this.loading) return;
     this.saving = true;
     try {
@@ -223,6 +234,7 @@ export class HouseDetailComponent implements OnInit, OnDestroy {
   }
   /** Explicit dialog, same pattern as every other delete (title + "Delete" verb + Undo toast). */
   async confirmDelete(): Promise<void> {
+    if (this.readOnly) return;
     if (!this.house || this.saving || this.pickingMember || this.conflict) return;
     const ok = await this.modal.confirm(
       `Delete "${this.house.name}"?\n\nThe House file moves to the system Trash. Its characters and crest image are kept. You can undo for 15 seconds.`,
@@ -238,6 +250,7 @@ export class HouseDetailComponent implements OnInit, OnDestroy {
   }
 
   async delete(): Promise<void> {
+    if (this.readOnly) return;
     if (!this.house || this.saving || this.pickingMember || this.conflict) return;
     this.saving = true;
     try {

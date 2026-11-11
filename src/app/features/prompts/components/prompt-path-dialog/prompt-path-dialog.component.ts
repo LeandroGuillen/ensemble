@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../../../../shared/project-read-only.directive';
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ModalFrameComponent } from '../../../../shared/modal-frame/modal-frame.component';
@@ -9,7 +10,7 @@ import { sanitizePromptPath } from '../../../../core/services/prompt.service';
  */
 @Component({
   selector: 'app-prompt-path-dialog',
-  imports: [FormsModule, ModalFrameComponent],
+  imports: [ProjectReadOnlyDirective, FormsModule, ModalFrameComponent],
   templateUrl: './prompt-path-dialog.component.html',
   styleUrls: ['./prompt-path-dialog.component.scss'],
 })

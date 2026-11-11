@@ -13,7 +13,7 @@
           <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
         </svg>
       </button>
-      <button type="button" class="icon-btn" (click)="openNewPlotBoardDialog()" title="New plot board" aria-label="New plot board">
+      <button appProjectReadOnly type="button" class="icon-btn" (click)="openNewPlotBoardDialog()" title="New plot board" aria-label="New plot board">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
         </svg>
@@ -45,7 +45,7 @@
           <span class="plot-board-list-path" [title]="rel">{{ rel }}</span>
         </a>
         <div class="plot-board-list-side-actions">
-          <button
+          <button appProjectReadOnly
             type="button"
             class="plot-board-list-action"
             (click)="duplicatePlotBoardForPath(rel); $event.preventDefault(); $event.stopPropagation()"
@@ -53,14 +53,14 @@
           >
             Duplicate
           </button>
-          <button
+          <button appProjectReadOnly
             type="button"
             class="plot-board-list-action"
             (click)="openRenameDialogForPath(rel); $event.preventDefault(); $event.stopPropagation()"
           >
             Rename
           </button>
-          <button
+          <button appProjectReadOnly
             type="button"
             class="plot-board-list-action plot-board-list-action-danger"
             (click)="openDeletePlotBoardDialogForPath(rel); $event.preventDefault(); $event.stopPropagation()"
@@ -84,7 +84,7 @@
       }
       <div class="rename-actions">
         <button type="button" class="btn-action" (click)="cancelRename()">Cancel</button>
-        <button type="button" class="btn-primary" (click)="applyRename()">Rename</button>
+        <button appProjectReadOnly type="button" class="btn-primary" (click)="applyRename()">Rename</button>
       </div>
     </div>
   </div>
@@ -108,7 +108,7 @@
       }
       <div class="rename-actions">
         <button type="button" class="btn-action" (click)="cancelNewPlotBoard()">Cancel</button>
-        <button type="button" class="btn-primary" (click)="applyNewPlotBoard()">Create</button>
+        <button appProjectReadOnly type="button" class="btn-primary" (click)="applyNewPlotBoard()">Create</button>
       </div>
     </div>
   </div>
@@ -125,7 +125,7 @@
       }
       <div class="rename-actions">
         <button type="button" class="btn-action" (click)="cancelDeletePlotBoard()">Cancel</button>
-        <button type="button" class="btn-danger-outline" (click)="confirmDeletePlotBoard()">Delete</button>
+        <button appProjectReadOnly type="button" class="btn-danger-outline" (click)="confirmDeletePlotBoard()">Delete</button>
       </div>
     </div>
   </div>

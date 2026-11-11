@@ -20,7 +20,7 @@
               <span class="linked-prompt-folder">{{ item.file.folder }}/</span>
             }
           </button>
-          <button
+          <button appProjectReadOnly
             type="button"
             class="icon-btn linked-prompt-unlink"
             [disabled]="busy"
@@ -39,7 +39,7 @@
                 @if (variant.section.negative) {
                   <button type="button" class="btn btn-ghost btn-sm" (click)="copy(variant.section.negative)" title="Copy negative prompt">Copy negative</button>
                 }
-                <button
+                <button appProjectReadOnly
                   type="button"
                   class="btn btn-secondary btn-sm"
                   [disabled]="!imageGenerationEnabled || generatingKey !== null || !variant.section.prompt?.trim()"
@@ -76,8 +76,8 @@
     }
 
     <div class="prompts-actions">
-      <button type="button" class="btn btn-secondary" [disabled]="busy" (click)="createPrompt()">+ New prompt</button>
-      <button type="button" class="btn btn-ghost" [disabled]="busy" (click)="linkExisting()">Link existing prompt…</button>
+      <button appProjectReadOnly type="button" class="btn btn-secondary" [disabled]="busy" (click)="createPrompt()">+ New prompt</button>
+      <button appProjectReadOnly type="button" class="btn btn-ghost" [disabled]="busy" (click)="linkExisting()">Link existing prompt…</button>
     </div>
   </div>
 </details>

@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../project-read-only.directive';
 import { Component, OnInit, Output, EventEmitter, DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
@@ -7,7 +8,7 @@ import { PinboardService } from '../../core/services/pinboard.service';
 
 @Component({
     selector: 'app-pinboard-sidebar',
-    imports: [],
+    imports: [ProjectReadOnlyDirective, ],
     templateUrl: './pinboard-sidebar.component.html',
     styleUrls: ['./pinboard-sidebar.component.scss']
 })

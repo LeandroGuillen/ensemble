@@ -2,7 +2,7 @@
   <app-page-header title="Houses">
     <div class="actions">
       <button type="button" class="icon-btn" (click)="refresh()" [disabled]="loading" title="Refresh houses" aria-label="Refresh houses"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#refresh" /></svg></button>
-      <button type="button" class="btn btn-primary" (click)="createNewHouse()" title="New House (N)">
+      <button appProjectReadOnly type="button" class="btn btn-primary" (click)="createNewHouse()" title="New House (N)">
         <svg class="ui-icon plus-glyph" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
         New House
         <kbd class="shortcut-hint">N</kbd>
@@ -22,7 +22,7 @@
         <svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="assets/ui-icons.svg#shield" /></svg>
         <h2>{{ search ? 'No houses found' : 'Your world’s dynasties start here' }}</h2>
         <p>{{ search ? 'Try another name or motto.' : 'Record their identity, members, and generations of leadership.' }}</p>
-        @if (!search) { <button type="button" class="btn btn-primary" (click)="createNewHouse()">Create First House</button> }
+        @if (!search) { <button appProjectReadOnly type="button" class="btn btn-primary" (click)="createNewHouse()">Create First House</button> }
       </div>
     } @else {
       <div class="house-grid">

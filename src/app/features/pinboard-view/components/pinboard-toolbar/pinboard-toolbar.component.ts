@@ -1,6 +1,8 @@
+import { ProjectReadOnlyDirective } from '../../../../shared/project-read-only.directive';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 
 @Component({
+  imports: [ProjectReadOnlyDirective],
   selector: 'app-pinboard-toolbar',
   templateUrl: './pinboard-toolbar.component.html',
   styleUrls: ['./pinboard-toolbar.component.scss'],

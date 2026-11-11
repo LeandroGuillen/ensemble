@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../../shared/project-read-only.directive';
 import { NotificationService } from '../../core/services/notification.service';
 import { DestroyRef, inject, Component, OnInit, NgZone, ChangeDetectorRef, HostListener } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -25,7 +26,7 @@ import {
 
 @Component({
   selector: 'app-location-list',
-  imports: [FormsModule, PageHeaderComponent],
+  imports: [ProjectReadOnlyDirective, FormsModule, PageHeaderComponent],
   templateUrl: './location-list.component.html',
   styleUrls: ['./location-list.component.scss'],
 })

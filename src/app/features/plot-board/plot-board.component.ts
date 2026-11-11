@@ -1,3 +1,4 @@
+import { ProjectWriteProtectionService } from '../../core/services/project-write-protection.service';
 import { ProjectReadOnlyDirective } from '../../shared/project-read-only.directive';
 import { ModalService } from '../../core/services/modal.service';
 import { isInteractiveKeyboardTarget } from '../../core/utils/list-keyboard.utils';
@@ -72,6 +73,8 @@ export type ZoomLevel = 1 | 2 | 3;
   ],
 })
 export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
+  private readonly writeProtection = inject(ProjectWriteProtectionService);
+  get readOnly(): boolean { return !!this.writeProtection.readOnlyPath; }
   private readonly destroyRef = inject(DestroyRef);
   private readonly modal = inject(ModalService);
   private saveRequest$ = new Subject<void>();
@@ -228,6 +231,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   /** Explicit dialog, as for every other delete in the app. */
   async askDeleteThread(threadId: string): Promise<void> {
+    if (this.readOnly) return;
     const thread = this.board.threads.find(t => t.id === threadId);
     if (!thread) return;
     const ok = await this.modal.confirm(
@@ -245,6 +249,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   async askDeleteRow(rowIndex: number): Promise<void> {
+    if (this.readOnly) return;
     const row = this.board.rows[rowIndex];
     if (!row) return;
     const ok = await this.modal.confirm(
@@ -493,6 +498,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   addThread(): void {
+    if (this.readOnly) return;
     const name = this.plotBoardService.uniqueThreadName('New Thread', this.board.threads);
     const id = this.plotBoardService.generateThreadId(name, this.board.threads);
     this.board.threads = [...this.board.threads, { id, name, characters: [] }];
@@ -500,10 +506,12 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   requestDeleteThread(threadId: string): void {
+    if (this.readOnly) return;
     this.confirmDeleteThreadId = threadId || null;
   }
 
   confirmDeleteThread(threadId: string): void {
+    if (this.readOnly) return;
     this.confirmDeleteThreadId = null;
     this.board.threads = this.board.threads.filter((t) => t.id !== threadId);
     for (const rowKey of Object.keys(this.board.cells)) {
@@ -516,6 +524,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   startEditThreadName(threadId: string): void {
+    if (this.readOnly) return;
     const thread = this.board.threads.find((t) => t.id === threadId);
     if (!thread) return;
     this.editingThreadName = threadId;
@@ -524,6 +533,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   finishEditThreadName(): void {
+    if (this.readOnly) return;
     if (this.editingThreadName === null) return;
     const thread = this.board.threads.find((t) => t.id === this.editingThreadName);
     if (thread) {
@@ -541,10 +551,12 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   toggleThreadIconPicker(threadId: string): void {
+    if (this.readOnly) return;
     this.showThreadIconPicker = this.showThreadIconPicker === threadId ? null : threadId;
   }
 
   selectThreadIcon(threadId: string, emoji: string): void {
+    if (this.readOnly) return;
     const thread = this.board.threads.find((t) => t.id === threadId);
     if (!thread) return;
     thread.icon = thread.icon === emoji ? undefined : emoji;
@@ -553,6 +565,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   clearThreadIcon(threadId: string): void {
+    if (this.readOnly) return;
     const thread = this.board.threads.find((t) => t.id === threadId);
     if (!thread) return;
     thread.icon = undefined;
@@ -561,6 +574,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   onToggleThreadColorPicker(threadId: string): void {
+    if (this.readOnly) return;
     if (this.showThreadColorPicker === threadId) {
       this.showThreadColorPicker = null;
       return;
@@ -570,6 +584,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   onSelectThreadColor(event: { threadId: string; color: string }): void {
+    if (this.readOnly) return;
     const thread = this.board.threads.find((t) => t.id === event.threadId);
     if (!thread) return;
     thread.color = event.color ? (thread.color === event.color ? undefined : event.color) : undefined;
@@ -578,6 +593,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   onClearThreadColor(threadId: string): void {
+    if (this.readOnly) return;
     const thread = this.board.threads.find((t) => t.id === threadId);
     if (!thread) return;
     thread.color = undefined;
@@ -613,6 +629,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   addRow(): void {
+    if (this.readOnly) return;
     const nextNum = this.board.rows.length + 1;
     const name =
       this.board.rows.length === 0
@@ -624,6 +641,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   requestDeleteRow(rowIndex: number): void {
+    if (this.readOnly) return;
     this.confirmDeleteRowIndex = rowIndex;
   }
 
@@ -632,6 +650,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   confirmDeleteRow(rowIndex: number): void {
+    if (this.readOnly) return;
     this.confirmDeleteRowIndex = null;
     this.board.rows = this.board.rows.filter((_, i) => i !== rowIndex);
     const newCells: Record<string, Record<string, string>> = {};
@@ -649,6 +668,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   startEditRowName(rowIndex: number): void {
+    if (this.readOnly) return;
     this.editingRowName = rowIndex;
     this.editingNameValue = this.board.rows[rowIndex].name;
     this.focusNameInputAfterRender('row');
@@ -673,6 +693,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   finishEditRowName(): void {
+    if (this.readOnly) return;
     if (this.editingRowName === null) return;
     this.board.rows[this.editingRowName].name =
       this.editingNameValue.trim() || this.board.rows[this.editingRowName].name;
@@ -681,10 +702,12 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   toggleRowIconPicker(rowIndex: number): void {
+    if (this.readOnly) return;
     this.showRowIconPicker = this.showRowIconPicker === rowIndex ? null : rowIndex;
   }
 
   selectRowIcon(rowIndex: number, emoji: string): void {
+    if (this.readOnly) return;
     const row = this.board.rows[rowIndex];
     if (!row) return;
     row.icon = row.icon === emoji ? undefined : emoji;
@@ -693,6 +716,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   clearRowIcon(rowIndex: number): void {
+    if (this.readOnly) return;
     const row = this.board.rows[rowIndex];
     if (!row) return;
     row.icon = undefined;
@@ -737,6 +761,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   startEditCell(rowIndex: number, threadId: string): void {
+    if (this.readOnly) return;
     if (this.editingCell) {
       this.finishEditCell();
     }
@@ -751,6 +776,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   finishEditCell(): void {
+    if (this.readOnly) return;
     if (!this.editingCell) return;
     const { row, threadId } = this.editingCell;
     const rowKey = String(row);
@@ -796,10 +822,12 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   requestDeleteCell(): void {
+    if (this.readOnly) return;
     this.confirmDeleteCell = true;
   }
 
   confirmDeleteCellAction(): void {
+    if (this.readOnly) return;
     if (!this.editingCell) return;
     const { row, threadId } = this.editingCell;
     const rowKey = String(row);
@@ -970,6 +998,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   onThreadHeaderDrop(event: DragEvent, targetIndex: number): void {
+    if (this.readOnly) return;
     const result = this.reorder.onThreadHeaderDrop(event, targetIndex);
     if (!result) return;
     this.board = this.reorder.moveThread(this.board, result.from, result.to);
@@ -977,6 +1006,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   onRowLabelDrop(event: DragEvent, targetIndex: number): void {
+    if (this.readOnly) return;
     const result = this.reorder.onRowLabelDrop(event, targetIndex);
     if (!result) return;
     const moved = this.reorder.moveRow(this.board, result.from, result.to, {
@@ -999,6 +1029,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   onCellDrop(event: DragEvent, targetRow: number, targetThreadId: string): void {
+    if (this.readOnly) return;
     const swap = this.reorder.onCellDrop(event, targetRow, targetThreadId);
     if (!swap) return;
     this.board = this.reorder.applyCellSwap(
@@ -1018,6 +1049,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   async addCharacterToThread(threadId: string): Promise<void> {
+    if (this.readOnly) return;
     const thread = this.board.threads.find((t) => t.id === threadId);
     if (!thread) return;
 
@@ -1032,6 +1064,7 @@ export class PlotBoardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   onCharacterThumbClick(threadId: string, characterId: string): void {
+    if (this.readOnly) return;
     if (
       this.confirmRemoveCharacter?.threadId === threadId &&
       this.confirmRemoveCharacter?.characterId === characterId

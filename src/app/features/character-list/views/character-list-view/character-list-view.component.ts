@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../../../../shared/project-read-only.directive';
 import { ExcerptPipe } from "../../../../shared/pipes/excerpt.pipe";
 import { Component, DestroyRef, Input, Output, EventEmitter, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -20,7 +21,7 @@ const PROMPT_IMAGES_PER_ROW = 4;
 
 @Component({
     selector: 'app-character-list-view',
-    imports: [DragDropModule, FadeOverflowDirective, ExcerptPipe, PromptImageComponent],
+    imports: [ProjectReadOnlyDirective, DragDropModule, FadeOverflowDirective, ExcerptPipe, PromptImageComponent],
     templateUrl: './character-list-view.component.html',
     styleUrls: ['./character-list-view.component.scss']
 })

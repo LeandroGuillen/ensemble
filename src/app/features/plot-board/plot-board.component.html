@@ -27,11 +27,11 @@
           Full
         </button>
       </div>
-      <button class="btn-action" type="button" (click)="addThread()" title="Add thread (T)">
+      <button appProjectReadOnly class="btn-action" type="button" (click)="addThread()" title="Add thread (T)">
         + Thread
         <kbd class="shortcut-hint" aria-hidden="true">T</kbd>
       </button>
-      <button class="btn-action" type="button" (click)="addRow()" title="Add row (R)">
+      <button appProjectReadOnly class="btn-action" type="button" (click)="addRow()" title="Add row (R)">
         + Row
         <kbd class="shortcut-hint" aria-hidden="true">R</kbd>
       </button>
@@ -87,7 +87,7 @@
               Plot boards are Markdown files named <code>*.plotboard.md</code> anywhere in the project. Create one here or add files on disk and press refresh.
             </p>
             <div class="empty-actions">
-              <button class="btn-primary" (click)="sidebar?.openNewPlotBoardDialog()">New plot board</button>
+              <button appProjectReadOnly class="btn-primary" (click)="sidebar?.openNewPlotBoardDialog()">New plot board</button>
               <button class="btn-action" (click)="sidebar?.refreshList()">Refresh list</button>
             </div>
           </div>
@@ -98,7 +98,7 @@
             <p class="empty-title">No plot threads yet</p>
             <p class="empty-subtitle">Add a thread (column) and a row to start building your plot board.</p>
             <div class="empty-actions">
-              <button class="btn-primary" (click)="addThread()">Add First Thread</button>
+              <button appProjectReadOnly class="btn-primary" (click)="addThread()">Add First Thread</button>
             </div>
           </div>
         }
@@ -134,7 +134,7 @@
                           [class.thread-icon-picker-anchor--empty]="!thread.icon"
                           (keydown.escape)="closeIconPicker($event, threadIconBtn)"
                         >
-                          <button
+                          <button appProjectReadOnly
                             #threadIconBtn
                             type="button"
                             class="thread-icon-btn thread-icon-picker-area"
@@ -165,7 +165,7 @@
                         @if (editingThreadName !== thread.id) {
                           <span
                             class="thread-name thread-name--draggable"
-                            draggable="true"
+                            [draggable]="!readOnly"
                             (dragstart)="reorder.onThreadNameDragStart($event, ti, editingThreadName)"
                             (dragend)="reorder.onThreadNameDragEnd($event)"
                             (dblclick)="startEditThreadName(thread.id); $event.preventDefault()"
@@ -198,7 +198,7 @@
                   @if (getThreadCharacters(thread.id).length > 0) {
                     <div class="linked-characters">
                       @for (char of getThreadCharacters(thread.id); track char) {
-                        <button
+                        <button appProjectReadOnly
                           type="button"
                           class="character-thumb"
                           [class.pending-removal]="isCharacterPendingRemoval(thread.id, char.id)"
@@ -239,7 +239,7 @@
               >
                 <div class="row-label-content">
                   <div class="row-icon-picker-anchor" (keydown.escape)="closeIconPicker($event, rowIconBtn)">
-                    <button
+                    <button appProjectReadOnly
                       #rowIconBtn
                       type="button"
                       class="row-icon-btn row-icon-picker-area"
@@ -270,7 +270,7 @@
                   @if (editingRowName !== rowIdx) {
                     <span
                       class="row-name row-name--draggable"
-                      draggable="true"
+                      [draggable]="!readOnly"
                       (dragstart)="reorder.onRowNameDragStart($event, rowIdx, editingRowName)"
                       (dragend)="reorder.onRowNameDragEnd($event)"
                       (dblclick)="startEditRowName(rowIdx); $event.preventDefault()"
@@ -295,7 +295,7 @@
                       (keydown.escape)="editingRowName = null"
                     />
                   }
-                  <button
+                  <button appProjectReadOnly
                     type="button"
                     class="btn-icon-sm btn-danger row-remove"
                     (click)="askDeleteRow(rowIdx); $event.stopPropagation()"
@@ -323,7 +323,7 @@
                   @if (hasCellContent(rowIdx, thread.id) && !isEditingCell(rowIdx, thread.id)) {
                     <div
                       class="event-box"
-                      draggable="true"
+                      [draggable]="!readOnly"
                       (dragstart)="reorder.onBoxDragStart($event, rowIdx, thread.id)"
                       (dragend)="reorder.onBoxDragEnd($event)"
                       [style.borderColor]="getBoxBorderColor(rowIdx, thread.id)"

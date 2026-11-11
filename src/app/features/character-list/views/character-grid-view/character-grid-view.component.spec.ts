@@ -1,3 +1,4 @@
+import { ProjectWriteProtectionService } from '../../../../core/services/project-write-protection.service';
 import { TestBed } from '@angular/core/testing';
 import { CharacterGridViewComponent } from './character-grid-view.component';
 import { MetadataHelperService } from '../../../../core/services/metadata-helper.service';
@@ -22,6 +23,26 @@ describe('CharacterGridViewComponent card actions', () => {
     const root: HTMLElement = fixture.nativeElement;
     return { fixture, root, component: fixture.componentInstance };
   };
+
+  it('blocks duplicate and delete in read-only projects while keeping character navigation', async () => {
+    const { fixture, root, component } = await setup();
+    TestBed.inject(ProjectWriteProtectionService).readOnlyPath = '/project';
+    fixture.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    const duplicate = spyOn(component.characterDuplicate, 'emit');
+    const remove = spyOn(component.characterDelete, 'emit');
+    const open = spyOn(component.characterClick, 'emit');
+    for (const selector of ['.duplicate-btn', '.delete-btn']) {
+      const button = root.querySelector<HTMLButtonElement>(selector)!;
+      expect(button.disabled).toBeTrue();
+      expect(button.title).toContain('read-only');
+      button.click();
+    }
+    expect(duplicate).not.toHaveBeenCalled();
+    expect(remove).not.toHaveBeenCalled();
+    root.querySelector<HTMLButtonElement>('.edit-btn')!.click();
+    expect(open).toHaveBeenCalledTimes(1);
+  });
 
   it('has no interactive wrapper around its buttons (no nested interactive content)', async () => {
     const { root } = await setup();

@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../../../../shared/project-read-only.directive';
 import {
   Component,
   EventEmitter,
@@ -14,7 +15,7 @@ import { ImageGenerationService } from '../../../../core/services/image-generati
 
 @Component({
   selector: 'app-generate-portrait-dialog',
-  imports: [FormsModule],
+  imports: [ProjectReadOnlyDirective, FormsModule],
   templateUrl: './generate-portrait-dialog.component.html',
   styleUrls: ['./generate-portrait-dialog.component.scss'],
 })

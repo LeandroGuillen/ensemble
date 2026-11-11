@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../../shared/project-read-only.directive';
 
 import { animate, state, style, transition, trigger } from '@angular/animations';
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
@@ -43,7 +44,7 @@ import {
 } from './views';
 @Component({
     selector: 'app-character-list',
-    imports: [
+    imports: [ProjectReadOnlyDirective,
     DragDropModule,
     FormsModule,
     PageHeaderComponent,

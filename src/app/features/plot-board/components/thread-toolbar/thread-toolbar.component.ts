@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../../../../shared/project-read-only.directive';
 import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 
 import { PlotThread } from '../../../../core/interfaces/plot-board.interface';
@@ -6,7 +7,7 @@ import { ThreadToolbarService } from './thread-toolbar.service';
 
 @Component({
   selector: 'app-thread-toolbar',
-  imports: [ColorSwatchPickerComponent],
+  imports: [ProjectReadOnlyDirective, ColorSwatchPickerComponent],
   templateUrl: './thread-toolbar.component.html',
   styleUrls: ['./thread-toolbar.component.scss'],
 })

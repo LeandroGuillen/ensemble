@@ -1,3 +1,4 @@
+import { ProjectWriteProtectionService } from '../../../core/services/project-write-protection.service';
 import { ProjectReadOnlyDirective } from '../../../shared/project-read-only.directive';
 import { Component, DestroyRef, ElementRef, HostListener, OnInit, ViewChild, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -81,6 +82,8 @@ const QUICK_DATE_RE = /^\s*((?:c\.\s*|~\s*)?-?\d{1,6}(?:-\d{1,3}){0,2}(?:\s*(?:â
   styleUrl: './chronicle-view.component.scss',
 })
 export class ChronicleViewComponent implements OnInit {
+  private readonly writeProtection = inject(ProjectWriteProtectionService);
+  get readOnly(): boolean { return !!this.writeProtection.readOnlyPath; }
   private readonly destroyRef = inject(DestroyRef);
   private readonly timeline = inject(TimelineService);
   private readonly characterService = inject(CharacterService);
@@ -417,6 +420,7 @@ export class ChronicleViewComponent implements OnInit {
   // ------------------------------------------------------------ editing
 
   async newEntry(): Promise<void> {
+    if (this.readOnly) return;
     if (!(await this.confirmDiscard())) return;
     this.inlineEditing = false;
     this.form = { line: null, date: '', title: '', kind: 'event', where: [], with: [], books: [], body: '' };
@@ -425,6 +429,7 @@ export class ChronicleViewComponent implements OnInit {
   }
 
   async editEntry(item: TimelineItem, focusTitle = false): Promise<void> {
+    if (this.readOnly) return;
     if (item.entryLine === undefined) return;
     if (this.form?.line === item.entryLine && this.selectedKey === item.key) return;
     if (!(await this.confirmDiscard())) return;
@@ -560,6 +565,7 @@ export class ChronicleViewComponent implements OnInit {
   // ------------------------------------------------------------ quick add
 
   toggleComposer(): void {
+    if (this.readOnly) return;
     this.composerOpen = !this.composerOpen;
     if (this.composerOpen) setTimeout(() => this.quickInput?.nativeElement.focus());
   }

@@ -247,7 +247,7 @@
         </button>
       }
 
-      <button
+      <button appProjectReadOnly
         class="btn btn-primary new-character-btn"
         (click)="createNewCharacter()"
         [disabled]="!currentProject"
@@ -343,7 +343,7 @@
               }}
               selected</span
               >
-            <button
+            <button appProjectReadOnly
               class="btn btn-secondary btn-sm"
               (click)="showCastNameFormDialog()"
               >
@@ -373,7 +373,7 @@
               />
             <div class="modal-actions">
               <button type="button" class="btn btn-secondary" (click)="cancelCastForm()">Cancel</button>
-              <button
+              <button appProjectReadOnly
                 type="button"
                 class="btn btn-primary"
                 (click)="saveSelectionAsCast()"
@@ -911,7 +911,7 @@
                     (!povOnly || drawerMode) &&
                     !selectedPictureFilter
                   ) {
-                    <button class="btn btn-primary" (click)="createNewCharacter()">
+                    <button appProjectReadOnly class="btn btn-primary" (click)="createNewCharacter()">
                       {{ drawerMode ? 'Create a Draft' : loreMode ? 'Create Your First Lore Figure' : 'Create Your First Character' }}
                     </button>
                   }

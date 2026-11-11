@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../../shared/project-read-only.directive';
 import { NotificationService } from '../../core/services/notification.service';
 import { ChangeDetectorRef, Component, DestroyRef, HostListener, inject, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -16,7 +17,7 @@ import { PageHeaderComponent } from '../../shared/page-header/page-header.compon
 
 @Component({
   selector: 'app-house-list',
-  imports: [FormsModule, RouterLink, PageHeaderComponent],
+  imports: [ProjectReadOnlyDirective, FormsModule, RouterLink, PageHeaderComponent],
   templateUrl: './house-list.component.html',
   styleUrls: ['./house-list.component.scss'],
 })

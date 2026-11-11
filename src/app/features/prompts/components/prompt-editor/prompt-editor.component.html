@@ -16,10 +16,10 @@
           Saved
         }
       </span>
-      <button type="button" class="btn btn-ghost btn-sm" (click)="requestRename()" title="Rename or move to another folder">Rename / Move</button>
+      <button appProjectReadOnly type="button" class="btn btn-ghost btn-sm" (click)="requestRename()" title="Rename or move to another folder">Rename / Move</button>
       <button type="button" class="btn btn-ghost btn-sm" (click)="openInExternalEditor()" title="Open the file in your default editor">Open file</button>
       <button type="button" class="btn btn-ghost btn-sm" (click)="showInFolder()" title="Show the file in your file manager">Show in folder</button>
-      <button type="button" class="icon-btn danger" (click)="requestDelete()" title="Delete prompt" aria-label="Delete prompt">
+      <button appProjectReadOnly type="button" class="icon-btn danger" (click)="requestDelete()" title="Delete prompt" aria-label="Delete prompt">
         <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#trash" /></svg>
       </button>
     </div>
@@ -35,22 +35,22 @@
               <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#user" /></svg>
               {{ characterName(id) }}
             </button>
-            <button type="button" class="chip-remove" (click)="removeCharacter(id)" aria-label="Unlink character">×</button>
+            <button appProjectReadOnly type="button" class="chip-remove" (click)="removeCharacter(id)" aria-label="Unlink character">×</button>
           </span>
         }
         @for (id of draft.locations; track id) {
           <span class="chip chip-location">
             <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#map-pin" /></svg>
             {{ locationName(id) }}
-            <button type="button" class="chip-remove" (click)="removeLocation(id)" aria-label="Unlink location">×</button>
+            <button appProjectReadOnly type="button" class="chip-remove" (click)="removeLocation(id)" aria-label="Unlink location">×</button>
           </span>
         }
-        <button type="button" class="chip-add" (click)="linkCharacter()" title="Link a character">
+        <button appProjectReadOnly type="button" class="chip-add" (click)="linkCharacter()" title="Link a character">
           <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
           Character
         </button>
         @if (locations.length) {
-          <button type="button" class="chip-add" (click)="linkLocation()" title="Link a location">
+          <button appProjectReadOnly type="button" class="chip-add" (click)="linkLocation()" title="Link a location">
             <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
             Location
           </button>
@@ -61,7 +61,7 @@
       <span class="meta-label">Tags</span>
       <div class="chips">
         @for (tag of draft.tags; track tag) {
-          <span class="chip chip-tag">{{ tag }}<button type="button" class="chip-remove" (click)="removeTag(tag)" [attr.aria-label]="'Remove tag ' + tag">×</button></span>
+          <span class="chip chip-tag">{{ tag }}<button appProjectReadOnly type="button" class="chip-remove" (click)="removeTag(tag)" [attr.aria-label]="'Remove tag ' + tag">×</button></span>
         }
         <input appProjectReadOnly
           class="tag-input"
@@ -92,7 +92,7 @@
           <span class="block-label">Prompt</span>
           <span class="block-actions">
             <button type="button" class="btn btn-ghost btn-sm" (click)="copy(section.prompt)" [disabled]="!section.prompt">Copy</button>
-            <button type="button" class="icon-btn" (click)="removeBlock(section, 'prompt')" title="Remove prompt block" aria-label="Remove prompt block">×</button>
+            <button appProjectReadOnly type="button" class="icon-btn" (click)="removeBlock(section, 'prompt')" title="Remove prompt block" aria-label="Remove prompt block">×</button>
           </span>
         </div>
         <textarea appProjectReadOnly
@@ -112,7 +112,7 @@
           <span class="block-label">Negative</span>
           <span class="block-actions">
             <button type="button" class="btn btn-ghost btn-sm" (click)="copy(section.negative, 'Negative prompt')" [disabled]="!section.negative">Copy</button>
-            <button type="button" class="icon-btn" (click)="removeBlock(section, 'negative')" title="Remove negative block" aria-label="Remove negative block">×</button>
+            <button appProjectReadOnly type="button" class="icon-btn" (click)="removeBlock(section, 'negative')" title="Remove negative block" aria-label="Remove negative block">×</button>
           </span>
         </div>
         <textarea appProjectReadOnly
@@ -133,20 +133,20 @@
           <button type="button" class="image-open" (click)="openLightbox(section.images, i)" [title]="image">
             <app-prompt-image [path]="image"></app-prompt-image>
           </button>
-          <button type="button" class="image-remove" (click)="removeImage(section, i)" aria-label="Detach image" title="Detach image (the file stays)">×</button>
+          <button appProjectReadOnly type="button" class="image-remove" (click)="removeImage(section, i)" aria-label="Detach image" title="Detach image (the file stays)">×</button>
         </div>
       }
     </div>
 
     <div class="section-add">
       @if (section.prompt === null) {
-        <button type="button" class="btn btn-ghost btn-sm" (click)="addBlock(section, 'prompt')">+ Prompt</button>
+        <button appProjectReadOnly type="button" class="btn btn-ghost btn-sm" (click)="addBlock(section, 'prompt')">+ Prompt</button>
       }
       @if (section.negative === null) {
-        <button type="button" class="btn btn-ghost btn-sm" (click)="addBlock(section, 'negative')">+ Negative</button>
+        <button appProjectReadOnly type="button" class="btn btn-ghost btn-sm" (click)="addBlock(section, 'negative')">+ Negative</button>
       }
-      <button type="button" class="btn btn-ghost btn-sm" (click)="openImagePicker(index)">+ Image from project</button>
-      <button type="button" class="btn btn-ghost btn-sm" (click)="attachFromFiles(index)">+ Image from file…</button>
+      <button appProjectReadOnly type="button" class="btn btn-ghost btn-sm" (click)="openImagePicker(index)">+ Image from project</button>
+      <button appProjectReadOnly type="button" class="btn btn-ghost btn-sm" (click)="attachFromFiles(index)">+ Image from file…</button>
     </div>
   </ng-template>
 
@@ -166,13 +166,13 @@
           aria-label="Variant name"
         />
         <span class="variant-actions">
-          <button type="button" class="icon-btn" (click)="moveVariant(i + 1, -1)" [disabled]="i === 0" title="Move up" aria-label="Move variant up">
+          <button appProjectReadOnly type="button" class="icon-btn" (click)="moveVariant(i + 1, -1)" [disabled]="i === 0" title="Move up" aria-label="Move variant up">
             <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#arrow-up" /></svg>
           </button>
-          <button type="button" class="icon-btn" (click)="moveVariant(i + 1, 1)" [disabled]="last" title="Move down" aria-label="Move variant down">
+          <button appProjectReadOnly type="button" class="icon-btn" (click)="moveVariant(i + 1, 1)" [disabled]="last" title="Move down" aria-label="Move variant down">
             <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#arrow-down" /></svg>
           </button>
-          <button type="button" class="icon-btn danger" (click)="removeVariant(i + 1)" title="Remove variant" aria-label="Remove variant">
+          <button appProjectReadOnly type="button" class="icon-btn danger" (click)="removeVariant(i + 1)" title="Remove variant" aria-label="Remove variant">
             <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#trash" /></svg>
           </button>
         </span>
@@ -181,7 +181,7 @@
     </section>
   }
 
-  <button type="button" class="btn btn-secondary add-variant" (click)="addVariant()">+ Add variant</button>
+  <button appProjectReadOnly type="button" class="btn btn-secondary add-variant" (click)="addVariant()">+ Add variant</button>
 </div>
 
 @if (lightbox) {

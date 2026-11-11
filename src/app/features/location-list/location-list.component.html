@@ -1,7 +1,7 @@
 <div class="location-list">
   <app-page-header [title]="'Locations'">
     <button class="icon-btn" (click)="refreshLocations()" title="Refresh locations" aria-label="Refresh locations"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#refresh" /></svg></button>
-    <button
+    <button appProjectReadOnly
       class="btn btn-primary"
       (click)="createNewLocation()"
       title="New Location (N)"
@@ -130,7 +130,7 @@
             <h3>No Locations Yet</h3>
             <p>Create places and settings for your story world.</p>
             <div class="empty-state-actions">
-              <button class="btn btn-primary" (click)="createNewLocation()">Create First Location</button>
+              <button appProjectReadOnly class="btn btn-primary" (click)="createNewLocation()">Create First Location</button>
             </div>
           } @else {
             <h3>No Locations Found</h3>

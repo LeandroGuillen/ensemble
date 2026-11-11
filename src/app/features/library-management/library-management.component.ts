@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../../shared/project-read-only.directive';
 import { DestroyRef, inject, Component, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NgTemplateOutlet } from "@angular/common";
@@ -39,7 +40,7 @@ type DragKind = "book" | "series" | "saga";
 
 @Component({
   selector: "app-library-management",
-  imports: [
+  imports: [ProjectReadOnlyDirective,
     NgTemplateOutlet,
     FormsModule,
     ReactiveFormsModule,

@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../../shared/project-read-only.directive';
 import {
   ChangeDetectorRef,
   Component,
@@ -63,7 +64,7 @@ const TYPE_ORDER: readonly string[] = LOCATION_TYPES.map((t) => t.value);
 
 @Component({
   selector: 'app-world-map',
-  imports: [FormsModule, PageHeaderComponent],
+  imports: [ProjectReadOnlyDirective, FormsModule, PageHeaderComponent],
   templateUrl: './world-map.component.html',
   styleUrls: ['./world-map.component.scss'],
 })

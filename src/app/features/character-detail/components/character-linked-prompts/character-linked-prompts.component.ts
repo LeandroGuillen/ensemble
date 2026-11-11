@@ -1,3 +1,4 @@
+import { ProjectReadOnlyDirective } from '../../../../shared/project-read-only.directive';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Input, OnChanges, OnInit, Output } from '@angular/core';
 import { Router } from '@angular/router';
 import { BehaviorSubject, combineLatest, map, Observable } from 'rxjs';
@@ -41,7 +42,7 @@ const MAX_IMAGES = 6;
  */
 @Component({
   selector: 'app-character-linked-prompts',
-  imports: [AsyncPipe, PromptImageComponent],
+  imports: [ProjectReadOnlyDirective, AsyncPipe, PromptImageComponent],
   templateUrl: './character-linked-prompts.component.html',
   styleUrls: ['./character-linked-prompts.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -51,3 +51,5 @@ import './app/shared/keyboard-shortcuts-dialog/shortcut-registry.spec';
 import './app/core/utils/project-health.utils.spec';
 import './app/core/services/project-health.service.spec';
 import './app/features/project-health/project-health.component.spec';
+
+import './app/core/services/character-edit-dialog.service.spec';

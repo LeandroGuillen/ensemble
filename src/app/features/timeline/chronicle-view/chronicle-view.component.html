@@ -31,8 +31,8 @@
     </label>
     <span class="grow"></span>
     <span class="count" aria-live="polite">{{ visibleCount }} of {{ totalCount }}</span>
-    <button type="button" class="btn btn-secondary btn-sm" (click)="toggleComposer()" [attr.aria-expanded]="composerOpen" title="Type a whole entry on one line">Quick add</button>
-    <button type="button" class="btn btn-primary btn-sm" (click)="newEntry()">
+    <button appProjectReadOnly type="button" class="btn btn-secondary btn-sm" (click)="toggleComposer()" [attr.aria-expanded]="composerOpen" title="Type a whole entry on one line">Quick add</button>
+    <button appProjectReadOnly type="button" class="btn btn-primary btn-sm" (click)="newEntry()">
       <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
       Add entry
     </button>
@@ -52,7 +52,7 @@
           (ngModelChange)="onQuickInput()"
           (keydown)="onQuickKeydown($event)"
         />
-        <button type="button" class="btn btn-primary btn-sm" (click)="addQuick()" [disabled]="saving">Add</button>
+        <button appProjectReadOnly type="button" class="btn btn-primary btn-sm" (click)="addQuick()" [disabled]="saving">Add</button>
       </div>
       @if (quick; as q) {
         <div class="parsed" aria-live="polite">
@@ -112,7 +112,7 @@
             Write dated events in <code>{{ chroniclePath }}</code>. Births and deaths (a character’s
             <b>Born</b>/<b>Died</b>), House reigns with dates, and books with dated chapters appear here too.
           </p>
-          <button type="button" class="btn btn-primary" (click)="chronicleExists ? newEntry() : createChronicle()">
+          <button appProjectReadOnly type="button" class="btn btn-primary" (click)="chronicleExists ? newEntry() : createChronicle()">
             {{ chronicleExists ? 'Add the first entry' : 'Create ' + chroniclePath }}
           </button>
         </div>
@@ -224,7 +224,7 @@
           <label for="entry-where">Where</label>
           <div class="link-chips">
             @for (name of form.where; track name) {
-              <span class="link-chip">⌖ {{ name }}<button type="button" (click)="removeLink('where', name)" [attr.aria-label]="'Remove ' + name">×</button></span>
+              <span class="link-chip">⌖ {{ name }}<button appProjectReadOnly type="button" (click)="removeLink('where', name)" [attr.aria-label]="'Remove ' + name">×</button></span>
             }
           </div>
           <select appProjectReadOnly id="entry-where" class="form-control" #wherePick (change)="addLink('where', wherePick.value); wherePick.value = ''">
@@ -235,7 +235,7 @@
           <label for="entry-with">With</label>
           <div class="link-chips">
             @for (name of form.with; track name) {
-              <span class="link-chip">{{ name }}<button type="button" (click)="removeLink('with', name)" [attr.aria-label]="'Remove ' + name">×</button></span>
+              <span class="link-chip">{{ name }}<button appProjectReadOnly type="button" (click)="removeLink('with', name)" [attr.aria-label]="'Remove ' + name">×</button></span>
             }
           </div>
           <select appProjectReadOnly id="entry-with" class="form-control" #withPick (change)="addLink('with', withPick.value); withPick.value = ''">
@@ -247,7 +247,7 @@
             <span class="label-inline">Books</span>
             <div class="book-toggles">
               @for (book of ctx!.books; track book.id) {
-                <button type="button" class="chip" [attr.aria-pressed]="form.books.includes(book.id)" (click)="toggleBook(book.id)">
+                <button appProjectReadOnly type="button" class="chip" [attr.aria-pressed]="form.books.includes(book.id)" (click)="toggleBook(book.id)">
                   <span class="swatch" [style.background]="book.color"></span>{{ book.name }}
                 </button>
               }
@@ -260,7 +260,7 @@
           @if (formError) { <p class="form-error" role="alert">{{ formError }}</p> }
           <div class="actions">
             <button type="button" class="btn btn-ghost btn-sm" (click)="cancelEdit()">Cancel</button>
-            <button type="submit" class="btn btn-primary btn-sm" [disabled]="saving">{{ form.line === null ? 'Add entry' : 'Save' }}</button>
+            <button appProjectReadOnly type="submit" class="btn btn-primary btn-sm" [disabled]="saving">{{ form.line === null ? 'Add entry' : 'Save' }}</button>
           </div>
           <p class="file-note">Saved to <code>{{ chroniclePath }}</code></p>
         </form>
@@ -302,9 +302,9 @@
           <div class="label">In {{ chroniclePath }}</div>
           <pre class="source">{{ sourceText(item) }}</pre>
           <div class="actions">
-            <button type="button" class="btn btn-secondary btn-sm" (click)="editEntry(item)">Edit</button>
+            <button appProjectReadOnly type="button" class="btn btn-secondary btn-sm" (click)="editEntry(item)">Edit</button>
             <button type="button" class="btn btn-ghost btn-sm" (click)="openChronicleFile()">Open file</button>
-            <button type="button" class="btn btn-ghost btn-sm danger" (click)="deleteEntry(item)">Delete</button>
+            <button appProjectReadOnly type="button" class="btn btn-ghost btn-sm danger" (click)="deleteEntry(item)">Delete</button>
           </div>
         } @else if (item.derivedFrom) {
           @if (item.body) { <p class="small">{{ plainBody(item.body) }}</p> }

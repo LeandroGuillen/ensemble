@@ -41,7 +41,7 @@
         </button>
       </div>
 
-      <button class="btn btn-primary" (click)="createNewCast()">
+      <button appProjectReadOnly class="btn btn-primary" (click)="createNewCast()">
         <svg class="ui-icon plus-glyph" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
         New Cast
       </button>
@@ -90,7 +90,7 @@
               </button>
             }
             @if (!searchTerm) {
-              <button class="btn btn-primary" (click)="createNewCast()">
+              <button appProjectReadOnly class="btn btn-primary" (click)="createNewCast()">
                 Create First Cast
               </button>
             }
@@ -148,7 +148,7 @@
               </div>
               <!-- Card Actions -->
               <div class="cast-card-actions">
-                <button
+                <button appProjectReadOnly
                   class="btn-icon btn-danger"
                   (click)="deleteCast(cast, $event)"
                   title="Delete cast"
@@ -211,7 +211,7 @@
               </div>
               <!-- List Item Actions -->
               <div class="cast-list-item-actions">
-                <button
+                <button appProjectReadOnly
                   class="text-action-danger"
                   (click)="deleteCast(cast, $event)"
                   title="Delete cast"

@@ -137,7 +137,7 @@
             <svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="assets/ui-icons.svg#map" /></svg>
             <h3>No locations yet</h3>
             <p>Create a few places first, then pin them here to see what is near what.</p>
-            <button class="btn btn-primary" (click)="createLocation()">Create a location</button>
+            <button appProjectReadOnly class="btn btn-primary" (click)="createLocation()">Create a location</button>
           </div>
         } @else if (placed.length === 0) {
           <div class="map-empty" data-testid="empty-no-pins">
@@ -173,7 +173,7 @@
               />
             </label>
             @if (!readOnly) {
-              <button class="btn btn-sm btn-danger" (click)="deleteSelectedRoad()">Remove road</button>
+              <button appProjectReadOnly class="btn btn-sm btn-danger" (click)="deleteSelectedRoad()">Remove road</button>
             }
           </section>
         }
