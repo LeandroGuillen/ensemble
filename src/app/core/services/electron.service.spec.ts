@@ -78,11 +78,11 @@ describe('ElectronService trash wrappers', () => {
     await service.writeFile('/p/notes.md', 'Notes');
     await service.writeFileAtomic('/p/book.md', 'Book notes');
     await service.rewriteWikiLinks([{ path: '/p/notes.md', expected: 'Notes', content: 'Updated' }]);
-    expect(changed).toHaveBeenCalledTimes(3);
+    expect(changed.calls.allArgs()).toEqual([['/p/notes.md'], ['/p/book.md'], ['/p/notes.md']]);
     ipcRenderer.invoke.and.resolveTo({ success: false, error: 'Read only' });
     await service.writeFile('/p/notes.md', 'Failed');
     await service.writeFileAtomic('/p/book.md', 'Failed');
-    expect(changed).toHaveBeenCalledTimes(3);
+    expect(changed.calls.allArgs()).toEqual([['/p/notes.md'], ['/p/book.md'], ['/p/notes.md']]);
     subscription.unsubscribe();
   });
 

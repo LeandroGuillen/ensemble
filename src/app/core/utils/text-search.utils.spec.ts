@@ -41,6 +41,24 @@ describe('TextSearchIndex', () => {
     expect(index.search('Mara')).toEqual([]);
   });
 
+  it('reuses normalized text while updating navigation and removing old documents', async () => {
+    index.replace([page(), page({ id: 'removed', text: 'Obsolete page' })]);
+    const normalize = spyOn(String.prototype, 'normalize').and.callThrough();
+    await index.reconcile([page({ route: ['/character', 'renamed'], book: 'Spring' })], () => true);
+    expect(normalize).not.toHaveBeenCalled();
+    expect(index.search('obsolete')).toEqual([]);
+    const result = index.search('scar')[0];
+    expect(result.route).toEqual(['/character', 'renamed']);
+    expect(result.book).toBe('Spring');
+  });
+
+  it('discards cancelled snapshots without changing the published index', async () => {
+    index.replace([page()]);
+    expect(await index.reconcile([page({ text: 'Cancelled revision' })], () => false)).toBeFalse();
+    expect(index.search('scar').length).toBe(1);
+    expect(index.search('cancelled')).toEqual([]);
+  });
+
   it('queries 1,000 synthetic records, including snippets, in under 200 ms', () => {
     index.replace(Array.from({ length: 1000 }, (_, i) => page({ id: String(i), title: `Person ${i}`,
       text: 'Worldbuilding and history. '.repeat(100) + 'José has a scar on her left hand.' })));

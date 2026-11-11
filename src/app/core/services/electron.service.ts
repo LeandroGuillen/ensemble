@@ -26,7 +26,7 @@ export class ElectronService {
   private ipcRenderer: any;
   private readonly writeProtection = inject(ProjectWriteProtectionService);
   /** Successful renderer writes, including book pages without a collection emission. */
-  readonly filesWritten$ = new Subject<void>();
+  readonly filesWritten$ = new Subject<string>();
 
   constructor(private logger: LoggingService) {
     if (this.isElectron()) {
@@ -82,7 +82,7 @@ export class ElectronService {
       return { success: false, error: 'Not running in Electron' };
     }
     const result = await this.ipcRenderer.invoke(IpcChannels.writeFile, filePath, content);
-    if (result.success) this.filesWritten$.next();
+    if (result.success) this.filesWritten$.next(filePath);
     return result;
   }
 
@@ -90,7 +90,7 @@ export class ElectronService {
     if (this.writeProtection.blocks(...changes.map(change => change.path))) return { success: false, error: READ_ONLY_PROJECT_MESSAGE };
     if (!this.isElectron()) return { success: false, error: 'File access requires Electron.' };
     const result = await this.ipcRenderer.invoke(IpcChannels.rewriteWikiLinks, changes);
-    if (result.success) this.filesWritten$.next();
+    if (result.success) for (const change of changes) this.filesWritten$.next(change.path);
     return result;
   }
 
@@ -100,7 +100,7 @@ export class ElectronService {
       return { success: false, error: 'Not running in Electron' };
     }
     const result = await this.ipcRenderer.invoke(IpcChannels.writeFileAtomic, filePath, content);
-    if (result.success) this.filesWritten$.next();
+    if (result.success) this.filesWritten$.next(filePath);
     return result;
   }
 

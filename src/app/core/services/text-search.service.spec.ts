@@ -16,7 +16,7 @@ describe('TextSearchService', () => {
   let characters$: BehaviorSubject<any[]>;
   let lore$: BehaviorSubject<any[]>;
   let drafts$: BehaviorSubject<any[]>;
-  let writes$: Subject<void>;
+  let writes$: Subject<string>;
   let watcher$: Subject<any>;
   let files: Map<string, string>;
   let readFile: jasmine.Spy;
@@ -81,7 +81,7 @@ describe('TextSearchService', () => {
     expect(service.index.search('scar').length).toBeGreaterThan(0);
     await refresh(() => characters$.next([record('Mara', 'New description')]));
     expect(service.index.search('new description').length).toBe(1);
-    await refresh(() => { files.set('/p/Mara.b.md', 'Saved book revision'); writes$.next(); });
+    await refresh(() => { files.set('/p/Mara.b.md', 'Saved book revision'); writes$.next('/p/Mara.b.md'); });
     expect(service.index.search('saved book revision')[0].book).toBe('Winter');
     await refresh(() => {
       files.set('/p/names.md', '## External\nNewly edited names');
@@ -92,6 +92,165 @@ describe('TextSearchService', () => {
       files.delete('/p/Mara.b.md'); watcher$.next({ type: 'unlink', path: '/p/Mara.b.md' });
     });
     expect(service.index.search('saved book revision')).toEqual([]);
+  });
+
+  it('reads only the saved book page and keeps other cached pages searchable', async () => {
+    await service.rebuild();
+    readFile.calls.reset();
+    const changed = firstValueFrom(service.changed$);
+    files.set('/p/Mara.b.md', 'Incremental revision');
+    writes$.next('/p/Mara.b.md');
+    await changed;
+    expect(readFile.calls.allArgs()).toEqual([['/p/Mara.b.md']]);
+    expect(service.index.search('incremental revision')[0].book).toBe('Winter');
+    expect(service.index.search('magical scar')[0].type).toBe('Concepts');
+  });
+
+  it('reconciles collection edits and removals without rereading book pages', async () => {
+    await service.rebuild();
+    readFile.calls.reset();
+    const changed = firstValueFrom(service.changed$);
+    characters$.next([{ ...record('Mara', 'Reconciled description'), books: [] }]);
+    await changed;
+    expect(readFile).not.toHaveBeenCalled();
+    expect(service.index.search('reconciled description').length).toBe(1);
+    expect(service.index.search('José saw')).toEqual([]);
+  });
+
+  it('replaces all sections of an externally edited file without reading unrelated sources', async () => {
+    await service.rebuild();
+    readFile.calls.reset();
+    const changed = firstValueFrom(service.changed$);
+    files.set('/p/names.md', '## New list\nUpdated sailor');
+    watcher$.next({ type: 'change', path: '/p/names.md' });
+    await changed;
+    expect(readFile.calls.allArgs()).toEqual([['/p/names.md']]);
+    expect(service.index.search('scarred sailor')).toEqual([]);
+    expect(service.index.search('updated sailor').length).toBe(1);
+  });
+
+  it('normalizes watcher separators and ignores files outside the active project', async () => {
+    await service.rebuild();
+    readFile.calls.reset();
+    const changed = firstValueFrom(service.changed$);
+    files.set('/p/Mara.b.md', 'Windows watcher revision');
+    watcher$.next({ type: 'change', path: '\\p\\Mara.b.md' });
+    watcher$.next({ type: 'change', path: '/other/private.md' });
+    watcher$.next({ type: 'change', path: '/p/.ensemble-trash/old.pinboard.md' });
+    await changed;
+    expect(readFile.calls.allArgs()).toEqual([['/p/Mara.b.md']]);
+    expect(service.index.search('windows watcher revision').length).toBe(1);
+  });
+
+  it('keeps invalidations that arrive during an in-flight read', async () => {
+    await service.rebuild();
+    let release!: (result: any) => void;
+    readFile.and.callFake((path: string) => path === '/p/Mara.b.md'
+      ? new Promise(resolve => release = resolve)
+      : Promise.resolve({ success: files.has(path), content: files.get(path) }));
+    writes$.next('/p/Mara.b.md');
+    const pending = service.rebuild();
+    await Promise.resolve();
+    writes$.next('/p/Mara.b.md');
+    release({ success: true, content: 'Older revision' });
+    await pending;
+    readFile.and.callFake(async (path: string) => ({ success: files.has(path), content: files.get(path) }));
+    files.set('/p/Mara.b.md', 'Newest revision');
+    const changed = firstValueFrom(service.changed$);
+    await changed;
+    expect(service.index.search('newest revision').length).toBe(1);
+    expect(service.index.search('older revision')).toEqual([]);
+  });
+
+  it('discovers added plot boards and removes deleted file sections incrementally', async () => {
+    await service.rebuild();
+    files.set('/p/new.pinboard.md', 'new board');
+    let changed = firstValueFrom(service.changed$);
+    watcher$.next({ type: 'add', path: '/p/new.pinboard.md' });
+    await changed;
+    expect(service.index.search('scar').filter(hit => hit.type === 'Plot boards').length).toBe(2);
+    readFile.calls.reset();
+    files.delete('/p/new.pinboard.md');
+    files.delete('/p/names.md');
+    changed = firstValueFrom(service.changed$);
+    watcher$.next({ type: 'unlink', path: '/p/new.pinboard.md' });
+    watcher$.next({ type: 'unlink', path: '/p/names.md' });
+    await changed;
+    expect(readFile.calls.count()).toBe(2);
+    expect(service.index.search('scar').filter(hit => hit.type === 'Plot boards').length).toBe(1);
+    expect(service.index.search('scarred sailor')).toEqual([]);
+  });
+
+  it('benchmarks saves and outside edits with 2,000 characters and 4,000 book pages', async () => {
+    // Disposable project fixture behind the IPC boundary: no user files or app instance.
+    // Include decomposed accents, which require the more expensive highlight offset map.
+    const prose = 'Jose\u0301 travelled through the northern mountains. '.repeat(60);
+    const records = Array.from({ length: 2000 }, (_, i) => ({
+      ...record(`Person ${i}`, `${i} ${prose}`), books: ['b', 'c'],
+    }));
+    for (const person of records) for (const book of person.books) {
+      files.set(`/p/${person.id}.${book}.md`, `${person.id} ${book} ${prose}`);
+    }
+    let changed = firstValueFrom(service.changed$);
+    characters$.next(records);
+    await changed;
+    expect(service.index.search('northern mountains').length).toBe(6000);
+    expect(PerformanceObserver.supportedEntryTypes).toContain('longtask');
+    const tasks: PerformanceEntry[] = [];
+    const observer = new PerformanceObserver(list => tasks.push(...list.getEntries()));
+    observer.observe({ entryTypes: ['longtask'] });
+    const measurements: { edit: string; latency: number; longestTask: number }[] = [];
+    try {
+      for (const edit of ['save', 'description', 'outside edit']) {
+        readFile.calls.reset();
+        changed = firstValueFrom(service.changed$);
+        const start = performance.now();
+        const term = `uniquely searchable ${edit}`;
+        if (edit === 'description') {
+          records[0] = { ...records[0], content: term };
+          characters$.next([...records]);
+        } else {
+          files.set('/p/Person 0.b.md', term);
+          if (edit === 'save') writes$.next('/p/Person 0.b.md');
+          else watcher$.next({ type: 'change', path: '/p/Person 0.b.md' });
+        }
+        await changed;
+        expect(service.index.search(term).length).toBe(1);
+        const finish = performance.now();
+        expect(finish - start).withContext(`${edit} searchable latency`).toBeLessThan(500);
+        expect(readFile.calls.count()).toBe(edit === 'description' ? 0 : 1);
+        await new Promise(resolve => setTimeout(resolve, 30));
+        tasks.push(...observer.takeRecords());
+        const longestTask = Math.max(0, ...tasks.filter(task => task.startTime >= start && task.startTime < finish)
+          .map(task => task.duration));
+        expect(longestTask).withContext(`${edit} indexing task duration`).toBeLessThan(100);
+        measurements.push({ edit, latency: finish - start, longestTask });
+      }
+      console.info('Text search 2000/4000 benchmark (ms)', JSON.stringify(measurements));
+    } finally {
+      observer.disconnect();
+    }
+  }, 30000);
+
+  it('does not publish again when the project closes as indexing finishes', async () => {
+    const changed = jasmine.createSpy('changed');
+    const subscription = service.changed$.subscribe(changed);
+    const reconcile = service.index.reconcile.bind(service.index);
+    const publish = spyOn(service.index, 'reconcile').and.callFake(async (documents, current) => {
+      const result = await reconcile(documents, current);
+      project$.next(null);
+      return result;
+    });
+    await service.rebuild();
+    expect(service.index.search('scar')).toEqual([]);
+    expect(changed).toHaveBeenCalledTimes(1);
+    subscription.unsubscribe();
+    publish.and.callThrough();
+    files.set('/p/Mara.b.md', 'Reopened revision');
+    project$.next({ path: '/p', metadata: { books: [{ id: 'b', name: 'Winter' }] } });
+    await service.rebuild();
+    expect(service.index.search('reopened revision').length).toBe(1);
+    expect(service.index.search('José saw')).toEqual([]);
   });
 
   it('clears results immediately on project close and discards in-flight reads', async () => {
