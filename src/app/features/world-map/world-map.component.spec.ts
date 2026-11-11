@@ -138,6 +138,49 @@ describe('WorldMapComponent', () => {
     expect(router.navigate).not.toHaveBeenCalled();
   });
 
+  for (const key of ['Delete', 'Backspace']) {
+    for (const connected of [false, true]) {
+      it(`${key} on a focused pin removes only that pin and its own roads (connected: ${connected})`, async () => {
+        locations$.next([loc('a', 'A'), loc('b', 'B'), loc('c', 'C')]);
+        const unrelatedRoad = { from: 'a', to: 'b', label: 'Coast road' };
+        const map: WorldMap = {
+          pins: [{ locationId: 'a', x: 0, y: 0 }, { locationId: 'b', x: 100, y: 0 }, { locationId: 'c', x: 200, y: 0 }],
+          roads: connected ? [unrelatedRoad, { from: 'b', to: 'c' }] : [unrelatedRoad],
+          notes: 'Keep map notes',
+        };
+        setState(map);
+        await render();
+        query('.road')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await render();
+        const pin = query('.pin[data-location-id="c"]')!;
+        pin.focus();
+        expect(document.activeElement).toBe(pin);
+        expect(component.selectedRoadKey).not.toBeNull();
+        pin.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+        await render();
+
+        expect(worldMap.apply).toHaveBeenCalledOnceWith({
+          ...map, pins: map.pins.slice(0, 2), roads: [unrelatedRoad],
+        });
+        expect(state$.value!.map.roads).toEqual([unrelatedRoad]);
+      });
+    }
+
+    it(`${key} on the document still deletes the selected road in one edit`, async () => {
+      locations$.next([loc('a', 'A'), loc('b', 'B')]);
+      const map: WorldMap = {
+        pins: [{ locationId: 'a', x: 0, y: 0 }, { locationId: 'b', x: 100, y: 0 }],
+        roads: [{ from: 'a', to: 'b' }], notes: '',
+      };
+      setState(map);
+      await render();
+      query('.road')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+      await render();
+      expect(worldMap.apply).toHaveBeenCalledOnceWith({ ...map, roads: [] });
+    });
+  }
+
   const selectLabeledRoad = async () => {
     locations$.next([loc('a', 'A'), loc('b', 'B'), loc('c', 'C')]);
     setState({
@@ -223,14 +266,20 @@ describe('WorldMapComponent', () => {
 
 // Exercise the component with the real persistence and history service, using an
 // in-memory IPC filesystem so no project files are touched.
-describe('WorldMapComponent road label persistence', () => {
-  it('writes a background-dismissed label, reopens it, and undoes it in one step', async () => {
-    const locations = [loc('a', 'A'), loc('b', 'B')];
-    let disk = serializeWorldMap({
+describe('WorldMapComponent persistence and history', () => {
+  let fixture: ComponentFixture<WorldMapComponent>;
+  let component: WorldMapComponent;
+  let service: WorldMapService;
+  let electron: jasmine.SpyObj<ElectronService>;
+  let disk: string;
+
+  beforeEach(async () => {
+    const locations = [loc('a', 'A'), loc('b', 'B'), loc('c', 'C')];
+    disk = serializeWorldMap({
       pins: [{ locationId: 'a', x: 0, y: 0 }, { locationId: 'b', x: 100, y: 0 }],
       roads: [{ from: 'a', to: 'b', label: 'Old label' }], notes: '',
     });
-    const electron = jasmine.createSpyObj('ElectronService', ['fileExists', 'readFile', 'writeFileAtomic', 'isWritable']);
+    electron = jasmine.createSpyObj('ElectronService', ['fileExists', 'readFile', 'writeFileAtomic', 'isWritable']);
     electron.fileExists.and.resolveTo(true);
     electron.isWritable.and.resolveTo(true);
     electron.readFile.and.callFake(async () => ({ success: true, content: disk }));
@@ -258,12 +307,41 @@ describe('WorldMapComponent road label persistence', () => {
         { provide: LoggingService, useValue: jasmine.createSpyObj('LoggingService', ['error']) },
       ],
     });
-    const service = TestBed.inject(WorldMapService);
+    service = TestBed.inject(WorldMapService);
     await service.load();
-    const fixture = TestBed.createComponent(WorldMapComponent);
-    const component = fixture.componentInstance;
+    fixture = TestBed.createComponent(WorldMapComponent);
+    component = fixture.componentInstance;
     fixture.detectChanges();
     await fixture.whenStable();
+  });
+
+  for (const key of ['Delete', 'Backspace']) {
+    it(`${key} on a pin writes once and one Undo restores the pin and its roads`, async () => {
+      const original: WorldMap = {
+        pins: [{ locationId: 'a', x: 0, y: 0 }, { locationId: 'b', x: 100, y: 0 }, { locationId: 'c', x: 200, y: 0 }],
+        roads: [{ from: 'a', to: 'b', label: 'Coast road' }, { from: 'b', to: 'c' }], notes: 'Keep notes',
+      };
+      disk = serializeWorldMap(original);
+      await service.load(true);
+      fixture.detectChanges();
+      component.selectRoad(component.roads[0]);
+      const pin: SVGElement = fixture.nativeElement.querySelector('.pin[data-location-id="c"]');
+      pin.focus();
+      pin.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+      await fixture.whenStable();
+
+      expect(electron.writeFileAtomic).toHaveBeenCalledTimes(1);
+      expect(parseWorldMap(disk).map).toEqual({
+        ...original, pins: original.pins.slice(0, 2), roads: original.roads.slice(0, 1),
+      });
+      await component.undo();
+      expect(parseWorldMap(disk).map).toEqual(original);
+      expect(service.snapshot?.canUndo).toBeFalse();
+      expect(service.snapshot?.canRedo).toBeTrue();
+    });
+  }
+
+  it('writes a background-dismissed label, reopens it, and undoes it in one step', async () => {
     component.selectRoad(component.roads[0]);
     fixture.changeDetectorRef.markForCheck();
     fixture.detectChanges();

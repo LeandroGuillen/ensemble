@@ -328,6 +328,7 @@ export class WorldMapComponent implements OnInit {
     if (this.readOnly) return;
     if (event.key === 'Delete' || event.key === 'Backspace') {
       event.preventDefault();
+      event.stopPropagation(); // The document shortcut must not also delete a selected road.
       await this.unpin(pin.location.id);
       return;
     }
