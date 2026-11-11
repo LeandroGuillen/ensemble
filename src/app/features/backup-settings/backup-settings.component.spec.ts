@@ -87,17 +87,29 @@ describe('BackupSettingsComponent', () => {
     expect(result.textContent).toContain('2.0 KB');
   });
 
-  it('shows skipped count and paths without reporting full success', async () => {
-    const partial = { ...snapshot, skipped: [{ path: 'characters/ilse', reason: 'Broken link' }] };
-    backupService.createSnapshot.and.resolveTo(partial);
-    fixture.nativeElement.querySelector('.form-section button').click();
-    await fixture.whenStable();
-    fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.snapshot-result').textContent).toContain('1 items skipped');
-    expect(fixture.nativeElement.querySelector('.snapshot-result').textContent).toContain('characters/ilse');
-    expect(notifications.showError).toHaveBeenCalledWith('1 items skipped: characters/ilse');
-    expect(notifications.showSuccess).not.toHaveBeenCalled();
-  });
+  for (const count of [1, 3]) {
+    it(`shows ${count} skipped item(s) with reasons in the panel and a short toast`, async () => {
+      const skipped = [
+        { path: 'characters/ilse', reason: 'Broken link' },
+        { path: 'references/loop', reason: 'Link loop' },
+        { path: 'notes/locked.md', reason: "Can't read (permission denied)" },
+      ].slice(0, count);
+      backupService.createSnapshot.and.resolveTo({ ...snapshot, skipped });
+      fixture.nativeElement.querySelector('.form-section button').click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      const panel = fixture.nativeElement.querySelector('.snapshot-result');
+      expect(panel.querySelector('[role="alert"]').textContent.trim())
+        .toBe(`${count} ${count === 1 ? 'item' : 'items'} skipped`);
+      expect(Array.from(panel.querySelectorAll('li'), (item: any) => item.textContent.trim()))
+        .toEqual(skipped.map(item => `${item.path}: ${item.reason}`));
+      expect(panel.classList.contains('success')).toBeFalse();
+      expect(notifications.showError).toHaveBeenCalledOnceWith(
+        `Snapshot created, but ${count} ${count === 1 ? 'item was' : 'items were'} skipped; see Settings → Backup for the list.`
+      );
+      expect(notifications.showSuccess).not.toHaveBeenCalled();
+    });
+  }
 
   it('restore opens a copy through ProjectService', async () => {
     const restoreButton: HTMLButtonElement = fixture.nativeElement.querySelector('.snapshot-row button');

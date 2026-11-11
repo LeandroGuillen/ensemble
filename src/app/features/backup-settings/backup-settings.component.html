@@ -20,7 +20,7 @@
               </div>
               <div class="field-hint">{{ lastResult.path }}</div>
               @if (lastResult.skipped?.length) {
-                <div role="alert">{{ lastResult.skipped!.length }} items skipped</div>
+                <div role="alert">{{ lastResult.skipped!.length }} {{ lastResult.skipped!.length === 1 ? 'item' : 'items' }} skipped</div>
                 <ul>
                   @for (item of lastResult.skipped; track item.path) {
                     <li>{{ item.path }}: {{ item.reason }}</li>

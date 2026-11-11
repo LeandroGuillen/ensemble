@@ -76,7 +76,10 @@ export class BackupSettingsComponent implements OnInit {
       const snapshot = await this.backupService.createSnapshot();
       this.lastResult = snapshot;
       if (snapshot.skipped?.length) {
-        this.notifications.showError(`${snapshot.skipped.length} items skipped: ${snapshot.skipped.map(item => item.path).join(', ')}`);
+        const count = snapshot.skipped.length;
+        this.notifications.showError(
+          `Snapshot created, but ${count} ${count === 1 ? 'item was' : 'items were'} skipped; see Settings → Backup for the list.`
+        );
       } else {
         this.notifications.showSuccess(
           `Snapshot created: ${snapshot.name} (${this.formatSize(snapshot.size)}).`
