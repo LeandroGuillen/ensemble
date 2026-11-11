@@ -170,6 +170,43 @@ export function wikiLinkRecordName(target: string, collections: WikiLinkCollecti
 }
 
 /**
+ * Preview-only index: display needs to know whether a reading exists, even when ambiguous.
+ * Keep canonical and alias keys separate so canonical readings always beat aliases. Folder
+ * indexes preserve authoritative prefixes (including empty, nested collections).
+ */
+export function buildWikiLinkRecordName(collections: WikiLinkCollection[]): WikiLinkRecordName {
+  const indexes = collections.map(collection => {
+    const folder = normalizePath(collection.folder).replace(/\/$/, '');
+    const canonical = new Set<string>();
+    const aliases = new Set<string>();
+    for (const entry of collection.targets) {
+      const path = normalizePath(entry.relativePath);
+      canonical.add(path);
+      canonical.add(`${folder}/${path}`);
+      canonical.add(entry.name.trim().toLowerCase());
+      canonical.add(path.split('/').pop()!);
+      for (const alias of normalizeAliases(entry.aliases)) aliases.add(alias.toLowerCase());
+    }
+    return { folder, canonical, aliases };
+  });
+  return target => {
+    const readings = recordReadings(target).map(reading => {
+      const key = normalizePath(reading.record);
+      const explicit = indexes.filter(index => key.startsWith(index.folder + '/'));
+      const longest = Math.max(-1, ...explicit.map(index => index.folder.length));
+      return { ...reading, key, candidates: explicit.length
+        ? explicit.filter(index => index.folder.length === longest) : indexes };
+    });
+    for (const kind of ['canonical', 'aliases'] as const) {
+      for (const { record, key, candidates } of readings) {
+        if (key && candidates.some(index => index[kind].has(key))) return record;
+      }
+    }
+    return undefined;
+  };
+}
+
+/**
  * Resolve a wikilink target against collections (the first is the default destination).
  * A project folder prefix (e.g. `locations/...`) is authoritative, including for missing targets.
  */
@@ -252,7 +289,7 @@ export function buildWikiLinkTargets(collections: WikiLinkCollection[]): WikiLin
   }
   return {
     resolve: (target) => resolveWikiLinkTarget(target, collections),
-    recordName: (target) => wikiLinkRecordName(target, collections),
+    recordName: buildWikiLinkRecordName(collections),
     suggestions,
   };
 }

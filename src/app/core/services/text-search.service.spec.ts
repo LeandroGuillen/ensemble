@@ -1,3 +1,5 @@
+import { ChangeDetectorRef } from '@angular/core';
+import { ExcerptPipe, WikiTextPipe } from '../../shared/pipes/excerpt.pipe';
 import { TestBed } from '@angular/core/testing';
 import { BehaviorSubject, Subject, firstValueFrom } from 'rxjs';
 import { TextSearchService } from './text-search.service';
@@ -20,7 +22,7 @@ describe('TextSearchService', () => {
   let watcher$: Subject<any>;
   let files: Map<string, string>;
   let readFile: jasmine.Spy;
-  const record = (id: string, text: string) => ({ id, name: id, filePath: `/p/${id}.md`, content: text, books: ['b'] });
+  const record = (id: string, text: string) => ({ id, name: id, filePath: `/p/${id}.md`, relativePath: `${id}.md`, content: text, books: ['b'] });
 
   beforeEach(() => {
     project$ = new BehaviorSubject<any>({ path: '/p', metadata: { books: [{ id: 'b', name: 'Winter' }] } });
@@ -39,14 +41,16 @@ describe('TextSearchService', () => {
       ({ success: files.has(path), content: files.get(path) }));
     TestBed.configureTestingModule({ providers: [
       TextSearchService,
+      { provide: ChangeDetectorRef, useValue: { markForCheck: () => {} } },
       { provide: ProjectService, useValue: { currentProject$: project$, getCurrentProject: () => project$.value,
         getCharactersFolderPath: () => '/p/characters', getNamesFilePath: () => '/p/names.md' } },
       { provide: CharacterService, useValue: { characters$, lore$, drafts$,
+        getReferenceCharacters: () => characters$, getDrafts: () => drafts$,
         getReferenceCharactersSnapshot: () => [...characters$.value, ...lore$.value], getDraftsSnapshot: () => drafts$.value,
         getBookPageFilePath: (record: any, book: string) => `/p/${record.id}.${book}.md` } },
-      { provide: LocationService, useValue: { locations$: new BehaviorSubject([]), getLocationsSnapshot: () =>
+      { provide: LocationService, useValue: { locations$: new BehaviorSubject([]), getLocations: () => new BehaviorSubject([]), loadLocations: async () => {}, getLocationsSnapshot: () =>
         [record('Harbor', 'Scar in the cliffs')] } },
-      { provide: HouseService, useValue: { houses$: new BehaviorSubject([]), getSnapshot: () =>
+      { provide: HouseService, useValue: { houses$: new BehaviorSubject([]), loadHouses: async () => {}, getSnapshot: () =>
         [{ ...record('House', 'History of the scar'), motto: 'Endure', leadership: [] }] } },
       { provide: ElectronService, useValue: { readFile, filesWritten$: writes$ } },
       { provide: FileWatcherService, useValue: { fileChanges$: watcher$ } },
@@ -181,12 +185,13 @@ describe('TextSearchService', () => {
     expect(service.index.search('scarred sailor')).toEqual([]);
   });
 
-  it('benchmarks saves and outside edits with 2,000 characters and 4,000 book pages', async () => {
+  it('benchmarks previews and search on saves/outside edits with 2,000 characters and 4,000 book pages', async () => {
     // Disposable project fixture behind the IPC boundary: no user files or app instance.
     // Include decomposed accents, which require the more expensive highlight offset map.
-    const prose = 'Jose\u0301 travelled through the northern mountains. '.repeat(60);
+    const prose = 'Jose\u0301 travelled through the northern mountains. '.repeat(60)
+      + ' [[Person 1999#Heading]] [[Alias#1999]] [[Person 1|Display name]]'.repeat(4);
     const records = Array.from({ length: 2000 }, (_, i) => ({
-      ...record(`Person ${i}`, `${i} ${prose}`), books: ['b', 'c'],
+      ...record(`Person ${i}`, `${i} ${prose}`), aliases: [`Alias#${i}`], books: ['b', 'c'],
     }));
     for (const person of records) for (const book of person.books) {
       files.set(`/p/${person.id}.${book}.md`, `${person.id} ${book} ${prose}`);
@@ -195,11 +200,22 @@ describe('TextSearchService', () => {
     characters$.next(records);
     await changed;
     expect(service.index.search('northern mountains').length).toBe(6000);
+    // The list's impure pipes run alongside indexing on each change-detection pass.
+    // All subscriptions use the real shared WikiLinkTargetsService, not a stub resolver.
+    const pipes = TestBed.runInInjectionContext(() => records.map(() => ({
+      excerpt: new ExcerptPipe(), wiki: new WikiTextPipe(),
+    })));
+    const render = () => records.forEach((person, i) => {
+      pipes[i].excerpt.transform(person.content);
+      pipes[i].wiki.transform(person.content);
+    });
+    render();
+    const markForCheck = spyOn(TestBed.inject(ChangeDetectorRef), 'markForCheck');
     expect(PerformanceObserver.supportedEntryTypes).toContain('longtask');
     const tasks: PerformanceEntry[] = [];
     const observer = new PerformanceObserver(list => tasks.push(...list.getEntries()));
     observer.observe({ entryTypes: ['longtask'] });
-    const measurements: { edit: string; latency: number; longestTask: number }[] = [];
+    const measurements: { edit: string; latency: number; previewTask: number; longestTask: number }[] = [];
     try {
       for (const edit of ['save', 'description', 'outside edit']) {
         readFile.calls.reset();
@@ -214,6 +230,12 @@ describe('TextSearchService', () => {
           if (edit === 'save') writes$.next('/p/Person 0.b.md');
           else watcher$.next({ type: 'change', path: '/p/Person 0.b.md' });
         }
+        // Book saves and watcher reloads also publish a fresh character array in the app.
+        if (edit !== 'description') characters$.next(records.map(person => ({ ...person })));
+        render();
+        const previewTask = performance.now() - start;
+        expect(previewTask).withContext(`${edit} synchronous preview task`).toBeLessThan(100);
+        expect(markForCheck).not.toHaveBeenCalled();
         await changed;
         expect(service.index.search(term).length).toBe(1);
         const finish = performance.now();
@@ -224,10 +246,11 @@ describe('TextSearchService', () => {
         const longestTask = Math.max(0, ...tasks.filter(task => task.startTime >= start && task.startTime < finish)
           .map(task => task.duration));
         expect(longestTask).withContext(`${edit} indexing task duration`).toBeLessThan(100);
-        measurements.push({ edit, latency: finish - start, longestTask });
+        measurements.push({ edit, latency: finish - start, previewTask, longestTask });
       }
-      console.info('Text search 2000/4000 benchmark (ms)', JSON.stringify(measurements));
+      console.info('Text search + previews 2000/4000 benchmark (ms)', JSON.stringify(measurements));
     } finally {
+      for (const pipe of pipes) { pipe.excerpt.ngOnDestroy(); pipe.wiki.ngOnDestroy(); }
       observer.disconnect();
     }
   }, 30000);

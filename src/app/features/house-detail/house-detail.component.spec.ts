@@ -42,11 +42,11 @@ describe('House editor', () => {
       { provide: HouseService, useValue: service },
       { provide: CharacterPickerService, useValue: characterPicker },
       { provide: CharacterService, useValue: {
-        getReferenceCharacters: () => of([{ id: 'ned', name: 'Eddard Stark' }, { id: 'cat', name: 'Catelyn Stark' }]),
+        getReferenceCharacters: () => of([{ id: 'ned', name: 'Eddard Stark', relativePath: 'ned/ned.md' }, { id: 'cat', name: 'Catelyn Stark', relativePath: 'cat/cat.md' }]),
         getDrafts: () => of([]),
         loadCharacters: async () => undefined, loadThumbnailsForCharacters: async () => undefined, getCachedThumbnail: () => null,
       } },
-      { provide: LocationService, useValue: { getLocations: () => of([{ id: 'winterfell', name: 'Winterfell' }]), loadLocations: async () => undefined } },
+      { provide: LocationService, useValue: { getLocations: () => of([{ id: 'winterfell', name: 'Winterfell', relativePath: '_winterfell.md' }]), loadLocations: async () => undefined } },
       { provide: ProjectService, useValue: { currentProject$: of({ metadata: { books: [{ id: 'book', name: 'First Book', color: '#ffffff' }] } }), getCurrentProject: () => ({ path: '/project' }) } },
       { provide: ImagePickerService, useValue: { state$: of({ isOpen: false }), close: () => undefined, handleNavigationAway: () => true } },
       { provide: ElectronService, useValue: { onBrowserNavigationCommand: () => undefined, removeBrowserNavigationCommandListener: () => undefined } },
@@ -167,7 +167,7 @@ describe('House editor', () => {
     expect(members.textContent).toContain('Eddard Stark');
     expect(members.textContent).not.toContain('Catelyn Stark');
     expect(members.querySelector('input')).toBeNull();
-    characterPicker.pick.and.resolveTo({ id: 'cat', name: 'Catelyn Stark' } as any);
+    characterPicker.pick.and.resolveTo({ id: 'cat', name: 'Catelyn Stark', relativePath: 'cat/cat.md' } as any);
     members.querySelector('.section-heading button').click();
     await fixture.whenStable();
     fixture.detectChanges();

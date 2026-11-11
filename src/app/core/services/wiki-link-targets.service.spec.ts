@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { of, firstValueFrom } from 'rxjs';
+import { BehaviorSubject, of, firstValueFrom } from 'rxjs';
 import { WikiLinkTargets } from '../utils/wiki-links.utils';
 import { WikiLinkRoute, WikiLinkTargetsService } from './wiki-link-targets.service';
 import { CharacterService } from './character.service';
@@ -32,6 +32,48 @@ describe('WikiLinkTargetsService', () => {
     });
     return firstValueFrom(TestBed.inject(WikiLinkTargetsService).targets$(primary));
   }
+
+  it('does not invalidate previews for saves, outside body edits or unrelated project settings', () => {
+    const initial = { ...mara, aliases: ['Alias#7'], content: 'Before' };
+    const characters$ = new BehaviorSubject([initial]);
+    const project$ = new BehaviorSubject(project);
+    TestBed.configureTestingModule({ providers: [
+      { provide: CharacterService, useValue: {
+        getReferenceCharacters: () => characters$, getDrafts: () => of([]),
+      } },
+      { provide: LocationService, useValue: { getLocations: () => of([]), loadLocations: async () => {} } },
+      { provide: HouseService, useValue: { houses$: of([]), loadHouses: async () => {} } },
+      { provide: ProjectService, useValue: { currentProject$: project$ } },
+      { provide: LoggingService, useValue: { error: () => {} } },
+    ] });
+    const seen: ((target: string) => string | undefined)[] = [];
+    const subscription = TestBed.inject(WikiLinkTargetsService).recordName$().subscribe(value => seen.push(value));
+    characters$.next([{ ...initial, content: 'Saved' }]);
+    characters$.next([{ ...initial, content: 'Outside edit' }]);
+    project$.next({ ...project, metadata: { settings: { theme: 'dark' } } });
+    expect(seen.length).toBe(1);
+    characters$.next([{ ...initial, name: 'Mara#7', content: 'Renamed' }]);
+    expect(seen.length).toBe(2);
+    expect(seen[seen.length - 1]('Mara#7#Heading')).toBe('Mara#7');
+    // In-place alias/path mutations must not be hidden by reference equality.
+    characters$.value[0].aliases.push('New#Alias');
+    characters$.next(characters$.value);
+    expect(seen.length).toBe(3);
+    expect(seen[2]('New#Alias#Heading')).toBe('New#Alias');
+    expect(seen[1]('New#Alias#Heading')).toBeUndefined();
+    characters$.value[0].relativePath = 'new/new.md';
+    characters$.next(characters$.value);
+    expect(seen.length).toBe(4);
+    expect(seen[3]('characters/new/new#Heading')).toBe('characters/new/new');
+    project$.next({ ...project, metadata: { settings: { charactersFolder: 'people' } } });
+    expect(seen.length).toBe(5);
+    expect(seen[4]('people/new/new#Heading')).toBe('people/new/new');
+    expect(seen[4]('characters/new/new#Heading')).toBeUndefined();
+    characters$.next([]);
+    expect(seen.length).toBe(6);
+    expect(seen[5]('Mara#7')).toBeUndefined();
+    subscription.unsubscribe();
+  });
 
   it('resolves a draft name to the draft route', async () => {
     const { resolve } = await targetsFor('character');

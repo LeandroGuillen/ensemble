@@ -1,4 +1,4 @@
-import { buildWikiLinkTargets, extractWikiLinks, renderWikiLinkMarkdown, resolveWikiLink, resolveWikiLinkTarget, WikiLinkCollection } from './wiki-links.utils';
+import { buildWikiLinkTargets, extractWikiLinks, renderWikiLinkMarkdown, resolveWikiLink, resolveWikiLinkTarget, WikiLinkCollection, wikiLinkRecordName } from './wiki-links.utils';
 
 describe('buildWikiLinkTargets', () => {
   const characters = (targets: any[]): WikiLinkCollection =>
@@ -7,6 +7,38 @@ describe('buildWikiLinkTargets', () => {
     targets: [{ id: 'house-id', name: 'Bulanco', relativePath: 'bulanco/bulanco.md' }],
     folder: 'houses', route: 'house', singular: 'House',
   };
+
+  it('indexes preview names once instead of reading every record for every link', () => {
+    let reads = 0;
+    const targets = Array.from({ length: 2000 }, (_, i) => ({
+      id: String(i), relativePath: `person-${i}/person-${i}.md`, aliases: [`Alias#${i}`],
+      get name() { reads++; return `Person#${i}`; },
+    }));
+    const { recordName } = buildWikiLinkTargets([characters(targets)]);
+    reads = 0;
+    expect(recordName('Person#1999#Heading')).toBe('Person#1999');
+    expect(recordName('Alias#1999#Heading')).toBe('Alias#1999');
+    expect(recordName('Missing#Heading')).toBeUndefined();
+    expect(reads).toBe(0);
+  });
+
+  it('keeps indexed preview readings equivalent to the navigation resolver', () => {
+    const collections = [characters([
+      { id: 'a', name: 'Unit#7', relativePath: 'unit/unit.md', aliases: ['Seven#7'] },
+      { id: 'b', name: 'Unit#7', relativePath: 'other/other.md' },
+      { id: 'c', name: 'Seven', relativePath: 'seven/seven.md' },
+    ]), houses, {
+      ...characters([{ id: 'd', name: 'Draft#1', relativePath: '@drafts/d/d.md', aliases: ['Seven#7'] }]),
+      secondary: true,
+    }, { ...houses, folder: 'characters/nested', targets: [] }];
+    const { recordName } = buildWikiLinkTargets(collections);
+    for (const target of ['Unit#7', 'Unit#7#Heading', 'Seven#7', 'Seven#Heading',
+      'characters/unit/unit.md#Heading', './CHARACTERS\\unit\\unit.md#Heading',
+      'characters/nested/unit/unit', '@drafts/d/d#Heading', 'Draft#1', 'houses/Bulanco',
+      'Missing#Heading', 'Seven#7#Heading', '', '#Heading']) {
+      expect(recordName(target)).withContext(target).toBe(wikiLinkRecordName(target, collections));
+    }
+  });
 
   it('resolves links and sends missing ones to the first collection', () => {
     const { resolve } = buildWikiLinkTargets([characters([{ id: 'ben', name: 'Ben', relativePath: 'ben/ben.md' }]), houses]);

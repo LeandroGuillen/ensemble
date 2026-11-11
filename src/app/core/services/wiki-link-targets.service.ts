@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, combineLatest, map, shareReplay, tap } from 'rxjs';
-import { WikiLinkCollection, WikiLinkRecordName, WikiLinkTargets, buildWikiLinkTargets } from '../utils/wiki-links.utils';
+import { Observable, combineLatest, distinctUntilChanged, map, shareReplay, tap } from 'rxjs';
+import { WikiLinkCollection, WikiLinkRecordName, WikiLinkTargets, buildWikiLinkRecordName, buildWikiLinkTargets } from '../utils/wiki-links.utils';
+import { normalizeAliases } from '../utils/character-alias.utils';
 import { CharacterService } from './character.service';
 import { HouseService } from './house.service';
 import { LocationService } from './location.service';
@@ -24,8 +25,15 @@ export class WikiLinkTargetsService {
    * exists), shared by every list preview so cards show the name the link opens.
    */
   recordName$(): Observable<WikiLinkRecordName> {
-    return this.recordNames$ ??= this.targets$('character').pipe(
-      map((targets) => targets.recordName),
+    return this.recordNames$ ??= this.collections$('character').pipe(
+      // Save/body/book/settings emissions do not change how any preview reads a name.
+      // Capture values rather than array identities: services may replace or mutate records.
+      map(collections => ({ collections, key: JSON.stringify(collections.map(collection => [
+        collection.folder,
+        collection.targets.map(entry => [entry.name, entry.relativePath, normalizeAliases(entry.aliases)]),
+      ])) })),
+      distinctUntilChanged((before, after) => before.key === after.key),
+      map(({ collections }) => buildWikiLinkRecordName(collections)),
       shareReplay({ bufferSize: 1, refCount: true })
     );
   }
@@ -35,6 +43,10 @@ export class WikiLinkTargetsService {
    * `primary` decides which "New …" page a missing link opens.
    */
   targets$(primary: WikiLinkRoute): Observable<WikiLinkTargets> {
+    return this.collections$(primary).pipe(map(collections => buildWikiLinkTargets(collections)));
+  }
+
+  private collections$(primary: WikiLinkRoute): Observable<WikiLinkCollection[]> {
     const project$ = this.projects.currentProject$.pipe(
       tap((project) => {
         if (!project) return;
@@ -64,7 +76,7 @@ export class WikiLinkTargetsService {
         ];
         const primaryIndex = collections.findIndex((collection) => collection.route === primary);
         collections.unshift(...collections.splice(primaryIndex, 1));
-        return buildWikiLinkTargets(collections);
+        return collections;
       })
     );
   }
