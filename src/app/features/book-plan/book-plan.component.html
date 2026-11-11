@@ -70,7 +70,7 @@
     @if (linkReport; as report) {
       <aside class="character-link-report" aria-label="Character linking report">
         <div class="link-report-header">
-          <strong>{{ report.count }} links added · {{ report.ambiguous.length }} mentions need review</strong>
+          <strong>{{ report.count }} {{ report.count === 1 ? 'link' : 'links' }} added · {{ report.ambiguous.length }} {{ report.ambiguous.length === 1 ? 'mention needs' : 'mentions need' }} review</strong>
           <button type="button" class="btn btn-ghost btn-sm" (click)="linkReport = null">Dismiss report</button>
         </div>
         <p>Undo in the editor (Ctrl/Cmd+Z) restores the plan. Review mentions below were left unchanged.</p>
@@ -249,7 +249,7 @@
     <div class="link-preview-backdrop" (click)="linkPreview = null">
       <section class="link-preview" cdkTrapFocus [cdkTrapFocusAutoCapture]="true" role="dialog" aria-modal="true" aria-labelledby="link-preview-title" tabindex="-1" (click)="$event.stopPropagation()" (keydown.escape)="linkPreview = null">
         <h2 id="link-preview-title">Link characters in {{ bookTitle }}</h2>
-        <p>{{ characterLinkCount }} links will be added. Unchecked suggestions and unresolved mentions will stay unchanged.</p>
+        <p>{{ characterLinkCount }} {{ characterLinkCount === 1 ? 'link' : 'links' }} will be added. Unchecked suggestions and unresolved mentions will stay unchanged.</p>
         <p>Names and aliases match exact case and whole words. Common English/Spanish words are ignored. Tick a shortened name to link it.</p>
         @for (mention of preview.ambiguous; track $index) {
           <div class="link-mention">
@@ -265,7 +265,7 @@
         }
         <div class="link-preview-actions">
           <button type="button" class="btn btn-secondary" (click)="linkPreview = null">Cancel</button>
-          <button appProjectReadOnly type="button" class="btn btn-primary" (click)="confirmCharacterLinks()">Confirm {{ characterLinkCount }} links</button>
+          <button appProjectReadOnly type="button" class="btn btn-primary" (click)="confirmCharacterLinks()">Confirm {{ characterLinkCount }} {{ characterLinkCount === 1 ? 'link' : 'links' }}</button>
         </div>
       </section>
     </div>
