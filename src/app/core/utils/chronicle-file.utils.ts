@@ -77,8 +77,11 @@ export interface ChronicleEntryDraft {
   body: string;
 }
 
-const HEADING_RE = /^(#{1,6})\s+(.*?)\s*#*\s*$/;
+// Markdown closing hashes require preceding whitespace (C# is part of a title).
+const HEADING_RE = /^(#{1,6})\s+(.*?)(?:[ \t]+#+)?[ \t]*$/;
 const PROPERTY_RE = /^(Where|With|Books?|Kind|Type|From):\s*(.*)$/i;
+const BODY_HEADING_RE = /^(\\*)(#{1,6}\s)/;
+const BODY_PROPERTY_RE = /^([ \t]*(?:Where|With|Books?|Kind|Type|From))(\\*):/i;
 const FENCE_RE = /^\s*(```|~~~)/;
 /** `<date or span>` then ` · `, ` - `, ` – ` or ` — `, then the title. */
 const DATED_HEADING_RE = /^((?:c\.\s*|~\s*)?-?\d{1,6}(?:-\d{1,3}){0,2}(?:\s*(?:→|->|\.\.)\s*(?:c\.\s*|~\s*)?-?\d{1,6}(?:-\d{1,3}){0,2})?)\s+[·\-–—]\s+(.+)$/i;
@@ -170,7 +173,7 @@ export function parseChronicle(text: string, calendar: WorldCalendar): ParsedChr
       }
       readingProps = false;
     }
-    if (entry) bodyLines.push(raw);
+    if (entry) bodyLines.push(inFence ? raw : decodeBodyLine(raw));
     else if (era) eraLines.push(raw);
   }
   closeEntry(lines.length);
@@ -183,6 +186,8 @@ export function parseChronicle(text: string, calendar: WorldCalendar): ParsedChr
 }
 
 function parseEntryHeading(text: string, line: number, eraIndex: number, calendar: WorldCalendar): ChronicleEntry {
+  // The writer escapes hashes and backslashes in titles, using Markdown escapes.
+  const decodeTitle = (title: string) => title.replace(/\\([\\#])/g, '$1');
   const base: ChronicleEntry = {
     line,
     endLine: line + 1,
@@ -190,7 +195,7 @@ function parseEntryHeading(text: string, line: number, eraIndex: number, calenda
     dateText: '',
     date: null,
     dateInvalid: false,
-    title: text,
+    title: decodeTitle(text),
     kind: 'event',
     where: [],
     with: [],
@@ -199,7 +204,7 @@ function parseEntryHeading(text: string, line: number, eraIndex: number, calenda
     eraIndex,
   };
   const undated = UNDATED_HEADING_RE.exec(text);
-  if (undated) return { ...base, title: undated[1].trim() };
+  if (undated) return { ...base, title: decodeTitle(undated[1].trim()) };
   const dated = DATED_HEADING_RE.exec(text);
   if (!dated) return base;
   const span = parseWorldSpan(dated[1], calendar);
@@ -208,7 +213,7 @@ function parseEntryHeading(text: string, line: number, eraIndex: number, calenda
     dateText: dated[1].trim(),
     date: span ?? null,
     dateInvalid: span === undefined,
-    title: dated[2].trim(),
+    title: decodeTitle(dated[2].trim()),
   };
 }
 
@@ -240,9 +245,27 @@ function trimBlankLines(lines: string[]): string[] {
 
 const link = (target: string) => `[[${target}]]`;
 
+/** Protect body syntax without changing how legacy, unescaped properties are read. */
+function encodeBody(body: string): string {
+  let inFence = false;
+  return body.split('\n').map((line) => {
+    if (FENCE_RE.test(line)) inFence = !inFence;
+    if (inFence) return line;
+    return line
+      .replace(BODY_HEADING_RE, '\\$1$2')
+      .replace(BODY_PROPERTY_RE, '$1$2\\:');
+  }).join('\n');
+}
+
+function decodeBodyLine(line: string): string {
+  return line
+    .replace(/^\\(\\*#{1,6}\s)/, '$1')
+    .replace(/^([ \t]*(?:Where|With|Books?|Kind|Type|From))\\(\\*):/i, '$1$2:');
+}
+
 /** Markdown for one entry, ending with a newline. */
 export function formatChronicleEntry(draft: ChronicleEntryDraft): string {
-  const title = draft.title.trim() || 'Untitled';
+  const title = (draft.title.trim() || 'Untitled').replace(/[\\#]/g, '\\$&');
   const head = draft.date ? `## ${serializeWorldSpan(draft.date)} · ${title}` : `## ? · ${title}`;
   const props = [
     draft.where.length ? `Where: ${draft.where.map(link).join(', ')}` : '',
@@ -250,7 +273,7 @@ export function formatChronicleEntry(draft: ChronicleEntryDraft): string {
     draft.books.length ? `${draft.books.length > 1 ? 'Books' : 'Book'}: ${draft.books.join(', ')}` : '',
     draft.kind === 'legend' ? 'Kind: legend' : '',
   ].filter(Boolean);
-  const body = draft.body.trim();
+  const body = encodeBody(trimBlankLines(draft.body.split('\n')).join('\n'));
   return [head, ...props, ...(body ? ['', body] : [])].join('\n') + '\n';
 }
 

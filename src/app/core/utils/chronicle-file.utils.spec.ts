@@ -1,4 +1,5 @@
 import {
+  ChronicleEntryDraft,
   formatChronicleEntry,
   insertChronicleEntry,
   parseChronicle,
@@ -61,6 +62,76 @@ describe('chronicle-file.utils', () => {
     expect(formatChronicleEntry({ date: { start: { year: 330, month: 3, day: 3 }, end: null }, title: 'Wren returns', kind: 'event', where: ['Vellhaven Lighthouse'], with: ['Wren Dunmore', 'Mara Vell'], books: ['lc2'], body: 'A dry girl.' }))
       .toBe('## 330-03-03 · Wren returns\nWhere: [[Vellhaven Lighthouse]]\nWith: [[Wren Dunmore]], [[Mara Vell]]\nBook: lc2\n\nA dry girl.\n');
     expect(formatChronicleEntry({ date: null, title: 'Myth', kind: 'legend', where: [], with: [], books: [], body: '' })).toBe('## ? · Myth\nKind: legend\n');
+  });
+
+  // Both editor saves and Quick add must preserve notes without changing structure.
+  const noteCases = [
+    ...Array.from({ length: 6 }, (_, i) => `${'#'.repeat(i + 1)} Aftermath\nForty boats are still out.`),
+    ...['With', 'Where', 'Book', 'Books', 'Kind', 'Type', 'From'].map(
+      (key) => `${key}: the keeper's log was lost overboard.\nThirty-nine boats return.`
+    ),
+    'Vellhaven goes dark.\n\n## Aftermath\nForty boats are still out.',
+    'Teodor taxes the light itself.\n\n# Rumors\nSome say Ilse wrote the levy.',
+    '  wItH: [[A stranger]]\n\n## Aftermath',
+    String.raw`\## Already escaped
+With\: already escaped
+\\# Another escape`,
+    '```markdown\n# An example era\n## An example entry\nWith: [[An example]]\n```\n\n## Aftermath',
+  ];
+  for (const body of noteCases) {
+    for (const action of ['insert', 'replace'] as const) {
+      it(`${action} round-trips notes ${JSON.stringify(body)}`, () => {
+        const draft: ChronicleEntryDraft = {
+          date: { start: { year: 322, month: 3 }, end: null }, title: 'Notes',
+          kind: 'legend', where: ['Vellhaven Lighthouse'], with: ['Mara Vell'], books: ['lc1', 'lc2'], body,
+        };
+        const before = parseChronicle(TEXT, CAL);
+        const result = action === 'insert'
+          ? insertChronicleEntry(TEXT, draft, CAL)
+          : replaceChronicleEntry(TEXT, 14, draft, CAL);
+        const after = parseChronicle(result.text, CAL);
+        expect(after.eras).toEqual(before.eras.map((era) => jasmine.objectContaining({
+          title: era.title, description: era.description, from: era.from,
+        })));
+        expect(after.entries.length).toBe(before.entries.length + (action === 'insert' ? 1 : 0));
+        const saved = after.entries.find((entry) => entry.line === result.line)!;
+        expect(saved).toEqual(jasmine.objectContaining(draft));
+        // A second save must neither accumulate escapes nor reinterpret notes.
+        const again = replaceChronicleEntry(result.text, saved.line, saved, CAL);
+        expect(again.text).toBe(result.text);
+      });
+    }
+  }
+
+  for (const title of ['C#', 'Learning C#', 'Wren is lost at Reach #', 'Wren ##', String.raw`Learning C\#`]) {
+    for (const date of [null, { start: { year: 322 }, end: null }]) {
+      it(`round-trips title ${JSON.stringify(title)} with date ${JSON.stringify(date)}`, () => {
+        const draft: ChronicleEntryDraft = { date, title, kind: 'event', where: [], with: [], books: [], body: '' };
+        const added = insertChronicleEntry(TEXT, draft, CAL);
+        const saved = parseChronicle(added.text, CAL).entries.find((entry) => entry.line === added.line)!;
+        expect(saved.title).toBe(title);
+        const edited = replaceChronicleEntry(added.text, saved.line, saved, CAL);
+        expect(parseChronicle(edited.text, CAL).entries.find((entry) => entry.line === edited.line)!.title).toBe(title);
+        expect(edited.text).toBe(added.text);
+      });
+    }
+  }
+
+  it('keeps hand-written closing hashes, spaced properties and fenced headings working', () => {
+    const parsed = parseChronicle([
+      '# The Dark Harbor #', '', 'From: 322', '',
+      '## 322 · The blackout ##', '', 'Where: [[Vellhaven Lighthouse]]', '',
+      'With: [[Mara Vell]]', 'Books: lc1, lc2', 'Type: myth', '',
+      '### Aftermath', '```markdown', '# Example', '## Example', '```',
+    ].join('\n'), CAL);
+    expect(parsed.eras.length).toBe(1);
+    expect(parsed.eras[0].title).toBe('The Dark Harbor');
+    expect(parsed.eras[0].from).toEqual({ start: { year: 322 }, end: null });
+    expect(parsed.entries.length).toBe(1);
+    expect(parsed.entries[0]).toEqual(jasmine.objectContaining({
+      title: 'The blackout', where: ['Vellhaven Lighthouse'], with: ['Mara Vell'],
+      books: ['lc1', 'lc2'], kind: 'legend', body: '### Aftermath\n```markdown\n# Example\n## Example\n```',
+    }));
   });
 
   it('inserts entries in date order within their era', () => {

@@ -197,6 +197,14 @@ Kind: legend
 Free Markdown text.
 ```
 
+When saving notes, Ensemble escapes body headings (`\## Aftermath`) and property
+keywords (`With\: a memory`) outside code fences. These reopen as the original
+Markdown notes, rather than new entries, eras or properties. Existing backslashes
+in those positions are escaped once more so repeated saves preserve them. Titles
+use Markdown escapes for hashes and backslashes (for example, `Learning C\#`).
+Hand-written, unescaped headings and properties retain their structural meaning;
+Markdown closing hashes separated by whitespace are still accepted in headings.
+
 `Kind: legend` marks uncertain or mythical entries. Ensemble edits only the lines of
 the entry being changed, in date order within its era; it refuses to save when the
 file changed on disk since it was read.
