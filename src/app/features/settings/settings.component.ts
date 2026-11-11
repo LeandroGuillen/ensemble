@@ -98,7 +98,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
         {
           id: 'categories',
           label: 'Categories',
-          description: 'Character categories, folder modes, and default',
+          description: 'Character categories and default',
         },
         {
           id: 'tags',

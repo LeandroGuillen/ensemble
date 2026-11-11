@@ -104,37 +104,6 @@ export class CharacterService {
   }
 
   /**
-   * Gets the folder path for a category based on its folder mode configuration.
-   * @param categoryId The category ID to look up
-   * @returns The subfolder name (relative to characters/), or null for flat mode
-   */
-  getCategoryFolderPath(categoryId: string): string | null {
-    const project = this.projectService.getCurrentProject();
-    if (!project?.metadata?.categories) {
-      // Fallback to slugified category ID for backward compatibility
-      return asciiSlugify(categoryId);
-    }
-
-    const category = project.metadata.categories.find((c) => c.id === categoryId);
-    if (!category) {
-      // Category not found, use slugified ID
-      return asciiSlugify(categoryId);
-    }
-
-    const folderMode = category.folderMode || 'auto'; // Default to 'auto' for backward compatibility
-
-    switch (folderMode) {
-      case 'flat':
-        return null; // No subfolder, characters go directly in characters/
-      case 'specify':
-        return category.folderPath || asciiSlugify(categoryId); // Use custom path or fallback to slug
-      case 'auto':
-      default:
-        return asciiSlugify(categoryId); // Use category slug as folder name
-    }
-  }
-
-  /**
    * Gets a Category object by its ID from project metadata
    */
   getCategoryById(categoryId: string): Category | undefined {

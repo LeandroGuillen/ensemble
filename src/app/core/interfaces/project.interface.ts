@@ -86,8 +86,9 @@ export interface Category {
   name: string;
   color: string;
   description?: string;
-  folderMode?: CategoryFolderMode;  // Default: 'auto' for backward compatibility
-  folderPath?: string;              // Custom folder path, used when folderMode is 'specify'
+  /** Legacy category folder settings: preserved on save, no longer used for file placement. */
+  folderMode?: CategoryFolderMode;
+  folderPath?: string;
 }
 
 export interface Tag {

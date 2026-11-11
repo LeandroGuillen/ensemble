@@ -1548,39 +1548,6 @@ describe('CharacterService', () => {
     });
   });
 
-  describe('getCategoryFolderPath', () => {
-    it('should return null for flat mode', () => {
-      const project = createValidProject();
-      project.metadata.categories[0].folderMode = 'flat';
-      projectService.getCurrentProject.and.returnValue(project);
-      (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
-
-      const path = service.getCategoryFolderPath('main-character');
-      expect(path).toBeNull();
-    });
-
-    it('should return slugified category id for auto mode', () => {
-      const project = createValidProject();
-      project.metadata.categories[0].folderMode = 'auto';
-      projectService.getCurrentProject.and.returnValue(project);
-      (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
-
-      const path = service.getCategoryFolderPath('main-character');
-      expect(path).toBe('main-character');
-    });
-
-    it('should return custom folder path for specify mode', () => {
-      const project = createValidProject();
-      project.metadata.categories[0].folderMode = 'specify';
-      project.metadata.categories[0].folderPath = 'custom-folder';
-      projectService.getCurrentProject.and.returnValue(project);
-      (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
-
-      const path = service.getCategoryFolderPath('main-character');
-      expect(path).toBe('custom-folder');
-    });
-  });
-
   describe('getCategoryById', () => {
     it('should return category by id', () => {
       const project = createValidProject();

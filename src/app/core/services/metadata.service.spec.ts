@@ -191,6 +191,19 @@ describe('MetadataService', () => {
       })).toBeRejected();
     });
 
+    it('preserves legacy folder settings when editing a category name', async () => {
+      const project = createValidProject();
+      const category = { ...project.metadata.categories[0], folderMode: 'specify' as const, folderPath: 'heroes' };
+      project.metadata.categories = [category];
+      projectService.getCurrentProject.and.returnValue(project);
+      (projectService.currentProject$ as BehaviorSubject<Project | null>).next(project);
+
+      const updated = await service.updateCategory(category.id, { name: 'Heroes' });
+
+      expect(updated).toEqual({ ...category, name: 'Heroes' });
+      expect(projectService.updateMetadata.calls.mostRecent().args[0].categories).toEqual([updated]);
+    });
+
     it('should update an existing category', async () => {
       const updated = await service.updateCategory('main-character', {
         name: 'Updated Name'

@@ -23,7 +23,7 @@ import { ZoomService } from '../../core/services/zoom.service';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { ModalService } from '../../core/services/modal.service';
 import { PendingEditsService } from '../../core/services/pending-edits.service';
-import { Category, Tag, ProjectSettings, CategoryFolderMode, CharacterStyle } from '../../core/interfaces/project.interface';
+import { Category, Tag, ProjectSettings, CharacterStyle } from '../../core/interfaces/project.interface';
 import { Theme } from '../../core/interfaces/theme.interface';
 import { Character } from '../../core/interfaces/character.interface';
 import { Skin } from '../../core/interfaces/skin.interface';
@@ -42,8 +42,6 @@ interface CategoryFormData {
   name: string;
   color: string;
   description?: string;
-  folderMode?: CategoryFolderMode;
-  folderPath?: string;
 }
 
 interface TagFormData {
@@ -162,9 +160,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
     this.categoryForm = this.fb.group({
       name: ['', [Validators.required, Validators.maxLength(100)]],
       color: [DEFAULT_BASE_COLORS[0], [Validators.required, Validators.pattern(/^#[0-9A-Fa-f]{6}$/)]],
-      description: ['', [Validators.maxLength(500)]],
-      folderMode: ['auto'],
-      folderPath: ['', [Validators.maxLength(100)]]
+      description: ['', [Validators.maxLength(500)]]
     });
 
     this.tagForm = this.fb.group({
@@ -428,9 +424,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
     this.categoryForm.reset({
       name: '',
       color: defaultColor,
-      description: '',
-      folderMode: 'auto',
-      folderPath: ''
+      description: ''
     });
   }
 
@@ -441,9 +435,7 @@ export class MetadataManagementComponent implements OnInit, OnChanges, OnDestroy
     this.categoryForm.patchValue({
       name: category.name,
       color: category.color,
-      description: category.description || '',
-      folderMode: category.folderMode || 'auto',
-      folderPath: category.folderPath || ''
+      description: category.description || ''
     });
   }
 

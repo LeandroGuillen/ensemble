@@ -162,6 +162,29 @@ describe('ProjectService', () => {
       expect(electronService.setWorkFolder).not.toHaveBeenCalled();
     });
 
+    it('preserves legacy category folder keys when loading and saving ensemble.json', async () => {
+      const metadata = createValidMetadata();
+      metadata.categories = [
+        { id: 'main-character', name: 'Main Character', color: '#FF0000', folderMode: 'specify', folderPath: 'heroes' },
+        { id: 'support', name: 'Support', color: '#00FF00', folderMode: 'flat' },
+        { id: 'other', name: 'Other', color: '#0000FF', folderMode: 'auto' },
+      ];
+      electronService.isDirectory.and.resolveTo(true);
+      electronService.fileExists.and.callFake(async path => path.endsWith('ensemble.json'));
+      electronService.readFile.and.resolveTo({ success: true, content: JSON.stringify(metadata) });
+      electronService.createDirectory.and.resolveTo({ success: true });
+      electronService.writeFileAtomic.and.resolveTo({ success: true });
+      electronService.readDirectoryFiles.and.resolveTo({ success: true, files: [], directories: [] });
+
+      await service.loadProject('/test/project');
+      expect(service.getCurrentProject()?.metadata.categories).toEqual(metadata.categories);
+      await service.updateMetadata({ projectName: 'Renamed' });
+
+      const [path, content] = electronService.writeFileAtomic.calls.mostRecent().args;
+      expect(path).toBe('/test/project/ensemble.json');
+      expect(JSON.parse(content).categories).toEqual(metadata.categories);
+    });
+
     it('should load project from ensemble.json', async () => {
       const projectPath = '/test/project';
       const metadata = createValidMetadata();

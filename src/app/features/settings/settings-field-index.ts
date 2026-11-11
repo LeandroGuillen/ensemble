@@ -129,7 +129,7 @@ export const SETTINGS_FIELD_INDEX: SettingsFieldIndex[] = [
     id: 'categories',
     section: 'categories',
     label: 'Categories',
-    keywords: ['category', 'folder mode', 'auto', 'flat', 'custom folder'],
+    keywords: ['category'],
     valueKeys: ['categoryNames'],
   },
   {

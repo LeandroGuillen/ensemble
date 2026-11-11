@@ -20,6 +20,8 @@ import { PreferencesService } from '../../core/services/preferences.service';
 import { ModalService } from '../../core/services/modal.service';
 import { LoggingService } from '../../core/services/logging.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { SettingsSearchService } from '../settings/settings-search.service';
+import { SETTINGS_FIELD_INDEX } from '../settings/settings-field-index';
 import { PendingEditsService } from '../../core/services/pending-edits.service';
 
 /** Delete confirmation for categories and tags: says how many characters use them. */
@@ -153,12 +155,65 @@ describe('MetadataManagementComponent pending autosave on leave', () => {
         { provide: NotificationService, useValue: toasts },
       ],
     })
-      .overrideComponent(MetadataManagementComponent, { set: { template: '', imports: [] } })
       .compileComponents();
 
     fixture = TestBed.createComponent(MetadataManagementComponent);
     component = fixture.componentInstance;
+    component.activeSection = 'categories';
+    // The mocked metadata observable supplies the loaded state for these form tests.
+    spyOn<any>(component, 'loadData').and.resolveTo();
+    fixture.changeDetectorRef.markForCheck();
     fixture.detectChanges();
+  });
+
+  it('adds categories without offering or saving folder settings', async () => {
+    const addCategory = jasmine.createSpy('addCategory').and.resolveTo();
+    Object.assign(metadataService, { addCategory });
+    component.showAddCategoryForm();
+    component.categoryForm.patchValue({ name: 'Hero', color: '#123456' });
+    fixture.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+
+    const form = fixture.nativeElement.querySelector('form');
+    expect(form).not.toBeNull();
+    expect(form.querySelector('[formControlName="folderMode"], [formControlName="folderPath"]')).toBeNull();
+    expect(form.textContent).not.toContain('Folder Structure');
+    await component.saveCategory();
+    expect(addCategory).toHaveBeenCalledOnceWith({ name: 'Hero', color: '#123456', description: '' });
+  });
+
+  it('edits legacy categories without offering or overwriting folder settings', async () => {
+    const updateCategory = jasmine.createSpy('updateCategory').and.resolveTo();
+    Object.assign(metadataService, { updateCategory });
+    const category = { id: 'hero', name: 'Hero', color: '#123456', folderMode: 'specify' as const, folderPath: 'heroes' };
+    component.categories = [category];
+    component.showEditCategoryForm(category);
+    component.categoryForm.patchValue({ name: 'Heroes' });
+    fixture.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+
+    const form = fixture.nativeElement.querySelector('form');
+    expect(form).not.toBeNull();
+    expect(form.querySelector('[formControlName="folderMode"], [formControlName="folderPath"]')).toBeNull();
+    expect(form.textContent).not.toContain('Folder:');
+    await component.saveCategory();
+    expect(updateCategory).toHaveBeenCalledOnceWith('hero', { name: 'Heroes', color: '#123456', description: '' });
+  });
+
+  it('does not match obsolete category folder terms in settings search', () => {
+    const search = TestBed.inject(SettingsSearchService);
+    const categoryField = SETTINGS_FIELD_INDEX.find(field => field.id === 'categories')!;
+    for (const query of ['folder mode', 'auto', 'flat', 'custom folder']) {
+      search.setQuery(query);
+      fixture.changeDetectorRef.markForCheck();
+      fixture.detectChanges();
+      expect(search.matches(categoryField.label, ...categoryField.keywords)).withContext(query).toBeFalse();
+      expect(fixture.nativeElement.querySelector('.categories-section').hidden).withContext(query).toBeTrue();
+    }
+    search.setQuery('categories');
+    fixture.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.categories-section').hidden).toBeFalse();
   });
 
   it('saves a Project Name typed less than 600 ms before leaving Settings', fakeAsync(() => {
