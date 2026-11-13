@@ -132,6 +132,26 @@ describe('Character detail save', () => {
     expect(characterService.promoteDraft).not.toHaveBeenCalled();
   });
 
+  it('ignores departing draft reloads while navigating after a collection move', async () => {
+    component.isDraftMode = true;
+    characterService.promoteDraft.and.resolveTo({ id: 'ada', name: 'Ada', lore: true });
+    // The destination query parameters can reach the old editor before it is
+    // destroyed. The promoted record is no longer available as a draft.
+    characterService.getDraftById = jasmine.createSpy('getDraftById');
+    router.navigate.and.callFake(async () => {
+      await (component as any).loadCharacter('ada');
+      return true;
+    });
+
+    await component.convertDraft('lore');
+
+    expect(router.navigate).toHaveBeenCalledTimes(2);
+    expect(characterService.getDraftById).not.toHaveBeenCalled();
+    expect(notification.showError).not.toHaveBeenCalled();
+    expect(notification.showSuccess).toHaveBeenCalled();
+    expect(component.isSaving).toBeFalse();
+  });
+
   it('keeps a draft open when an edited book page has an external conflict', async () => {
     component.isDraftMode = true;
     component.externalBookConflicts.add('b1');

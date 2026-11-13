@@ -545,6 +545,11 @@ export class CharacterDetailComponent
   }
 
   private async loadCharacter(id: string): Promise<void> {
+    // Query parameters can change on the departing route during navigation.
+    // A collection move has already removed the record from this editor's
+    // collection, so do not reload it while saving and leaving the editor.
+    if (this.isSaving) return;
+
     this.isLoading = true;
     this.error = null;
 
