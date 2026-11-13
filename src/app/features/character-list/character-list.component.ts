@@ -407,14 +407,13 @@ export class CharacterListComponent implements OnInit {
     return `characterCollectionFilters:${this.currentProject?.path || ''}:${this.collection}`;
   }
 
+  // View preferences are shared through PreferencesService; only filters belong to a collection.
   private saveCollectionFilters(): void {
     if (!this.collectionInitialized || !this.currentProject) return;
     localStorage.setItem(this.collectionFilterKey, JSON.stringify({
       searchTerm: this.searchTerm, disabledCategoryIds: this.disabledCategoryIds,
       selectedTags: this.selectedTags, selectedCast: this.selectedCast, selectedHouse: this.selectedHouse,
       selectedBook: this.selectedBook, selectedPictureFilter: this.selectedPictureFilter, selectedPromptFilter: this.selectedPromptFilter, povOnly: this.povOnly,
-      groupBy: this.groupBy, sortBy: this.sortBy, sortDirection: this.sortDirection,
-      viewMode: this.viewMode, columns: this.columns, galleryThumbnailSize: this.galleryThumbnailSize,
     }));
   }
 
@@ -436,14 +435,6 @@ export class CharacterListComponent implements OnInit {
     this.selectedPictureFilter = raw['selectedPictureFilter'] === 'with' || raw['selectedPictureFilter'] === 'without' ? raw['selectedPictureFilter'] : '';
     this.selectedPromptFilter = raw['selectedPromptFilter'] === 'with' || raw['selectedPromptFilter'] === 'without' ? raw['selectedPromptFilter'] : '';
     this.povOnly = !this.drawerMode && raw['povOnly'] === true;
-    const group = raw['groupBy'];
-    this.groupBy = group === 'category' || group === 'tag' || group === 'cast' || group === 'book' ? group : 'none';
-    this.sortBy = raw['sortBy'] === 'category' ? 'category' : 'name';
-    this.sortDirection = raw['sortDirection'] === 'desc' ? 'desc' : 'asc';
-    const view = raw['viewMode'];
-    this.viewMode = view === 'list' || view === 'compact' || view === 'gallery' || view === 'prompts' ? view : 'grid';
-    this.columns = raw['columns'] === 1 ? 1 : 2;
-    this.galleryThumbnailSize = raw['galleryThumbnailSize'] === 'small' || raw['galleryThumbnailSize'] === 'big' ? raw['galleryThumbnailSize'] : 'medium';
     this.recomputePovBadgeState();
   }
 
