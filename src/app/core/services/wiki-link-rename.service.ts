@@ -54,7 +54,7 @@ export class WikiLinkRenameService {
       const raw = read.content;
       // Preserve frontmatter verbatim; image paths and other metadata are not prose links.
       const prefix = raw.match(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/)?.[0] || '';
-      const rewrite = rewriteRenamedLinks(raw.slice(prefix.length), before, old.id, route, replacement);
+      const rewrite = rewriteRenamedLinks(raw.slice(prefix.length), before, after, old.id, route, replacement);
       if (!rewrite.count) continue;
       count += rewrite.count;
       changes.push({ path: file.absolutePath, expected: raw, content: prefix + rewrite.content });

@@ -85,6 +85,21 @@ describe('WikiLinkRenameService', () => {
     expect(resolved).toEqual(jasmine.objectContaining({ state: 'resolved', id: 'canonical' }));
     expect((result as { aliases?: string[] }).aliases).toEqual(['Dess']);
   });
+  it('leaves links through a surviving alias alone and excludes them from the count', async () => {
+    const before = { ...old, aliases: ['The Lamplighter'] };
+    const after = { ...saved(), aliases: ['The Lamplighter'] };
+    const collection = (targets: any[]) => buildWikiLinkTargets([{ folder: 'characters', route: 'character', singular: 'Character', targets }]);
+    const targets$ = spyOn(TestBed.inject(WikiLinkTargetsService), 'targets$');
+    targets$.and.returnValues(of(collection([before])), of(collection([after])));
+    electron.readDirectoryRecursive.and.resolveTo({ success: true, files: [
+      { relativePath: 'characters/oren/oren.md', absolutePath: '/project/characters/oren/oren.md' },
+    ] });
+    electron.readFile.and.resolveTo({ success: true, content: 'Call her [[The Lamplighter]] or [[The Lamplighter|her]], not [[Dess]].' });
+    await service.run(before, 'Dessir', 'character', async () => after);
+    expect(modal.confirmLinkRename).toHaveBeenCalledWith(jasmine.stringMatching('Update 1 links in 1 files'));
+    expect(electron.rewriteWikiLinks.calls.mostRecent().args[0][0].content)
+      .toBe('Call her [[The Lamplighter]] or [[The Lamplighter|her]], not [[Dessir]].');
+  });
   it('surfaces batch failure without claiming the alias was saved', async () => {
     modal.confirmLinkRename.and.resolveTo({ update: true, alias: true });
     electron.rewriteWikiLinks.and.resolveTo({ success: false, error: 'changed on disk' });

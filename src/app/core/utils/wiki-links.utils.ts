@@ -111,6 +111,8 @@ export interface ResolvedWikiLink {
    * (e.g. "Unit #7"), otherwise the text before a heading `#`.
    */
   record: string;
+  /** Set when the link resolved through one of the record's aliases rather than its name or path. */
+  viaAlias?: boolean;
   /** Hash route (e.g. `#/character/<id>`); absent when ambiguous. */
   href?: string;
   route: string;
@@ -132,6 +134,8 @@ interface WikiLinkReading {
   reading: { record: string; fragment?: string };
   explicitCollections: WikiLinkCollection[];
   matches: { entry: WikiLinkTarget; collection: WikiLinkCollection }[];
+  /** True when the matches came from aliases (no canonical name or path matched). */
+  viaAlias?: boolean;
 }
 
 /**
@@ -151,7 +155,7 @@ function readWikiLinkTarget(target: string, collections: WikiLinkCollection[]): 
       const found = preferPrimary(candidates.flatMap(collection =>
         match(candidate.record, collection.targets, collection.folder).map(entry => ({ entry, collection }))
       ));
-      if (found.length) return { reading: candidate, explicitCollections: explicit, matches: found };
+      if (found.length) return { reading: candidate, explicitCollections: explicit, matches: found, ...(match === matchingAliases ? { viaAlias: true } : {}) };
     }
   }
   return { reading, explicitCollections: explicitCollectionsFor(reading.record, collections), matches: [] };
@@ -211,7 +215,7 @@ export function buildWikiLinkRecordName(collections: WikiLinkCollection[]): Wiki
  * A project folder prefix (e.g. `locations/...`) is authoritative, including for missing targets.
  */
 export function resolveWikiLinkTarget(target: string, collections: WikiLinkCollection[]): ResolvedWikiLink {
-  const { reading, explicitCollections, matches } = readWikiLinkTarget(target, collections);
+  const { reading, explicitCollections, matches, viaAlias } = readWikiLinkTarget(target, collections);
   const record = reading.record;
   const resolved = matches.length === 1 ? matches[0] : undefined;
   const destination = resolved?.collection
@@ -219,7 +223,7 @@ export function resolveWikiLinkTarget(target: string, collections: WikiLinkColle
     || collections.find(collection => !collection.secondary)
     || collections[0];
   if (resolved) {
-    return { state: 'resolved', ...(reading.fragment !== undefined ? { fragment: reading.fragment } : {}), id: resolved.entry.id, href: `#/${destination.route}/${encodeURIComponent(resolved.entry.id)}`, route: destination.route, title: target, record };
+    return { state: 'resolved', ...(reading.fragment !== undefined ? { fragment: reading.fragment } : {}), id: resolved.entry.id, href: `#/${destination.route}/${encodeURIComponent(resolved.entry.id)}`, route: destination.route, title: target, record, ...(viaAlias ? { viaAlias } : {}) };
   }
   if (!matches.length && !target.includes('#')) {
     const creationName = explicitCollections.length
