@@ -12,7 +12,9 @@ module.exports = function (config) {
       require('karma-coverage'),
       
     ],
+    // Wall-clock benchmarks run explicitly, outside coverage-instrumented CI.
     client: {
+      args: process.env.ENSEMBLE_PERFORMANCE_TESTS === '1' ? ['--performance'] : [],
       jasmine: {
         // you can add configuration options for Jasmine here
         // the possible options are listed at https://jasmine.github.io/api/edge/Configuration.html

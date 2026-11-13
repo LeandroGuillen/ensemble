@@ -11,3 +11,6 @@ release
 # any project it opens (e.g. examples/demo-project), plus the old snapshot folder
 .ensemble-backup/
 ensemble-backups/
+
+# Test coverage reports
+coverage/

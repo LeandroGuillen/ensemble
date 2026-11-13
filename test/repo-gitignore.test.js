@@ -51,7 +51,11 @@ test('opening the demo in a checkout and an update snapshot leave git status cle
     // A throwaway checkout: the repo's real .gitignore plus a copy of the committed demo.
     const demo = path.join(tmp, 'examples', 'demo-project');
     await fsp.copyFile(path.join(repo, '.gitignore'), path.join(tmp, '.gitignore'));
-    await fsp.cp(path.join(repo, 'examples', 'demo-project'), demo, { recursive: true });
+    // Use only the committed fixture, excluding local backup state and staged trash.
+    for (const file of git(repo, 'ls-files', '-z', 'examples/demo-project').split('\0').filter(Boolean)) {
+      await fsp.mkdir(path.dirname(path.join(tmp, file)), { recursive: true });
+      await fsp.copyFile(path.join(repo, file), path.join(tmp, file));
+    }
     git(tmp, 'init', '-q');
     git(tmp, 'add', '-A');
     git(tmp, '-c', 'user.name=t', '-c', 'user.email=t@example.invalid', '-c', 'commit.gpgsign=false', 'commit', '-q', '-m', 'init');

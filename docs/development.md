@@ -56,3 +56,18 @@ npm run build-electron
 Current versions of those dependencies: Electron 43, Angular 21, `vis-network`
 (the graph library, used by cast pinboards), `chokidar`, `unified`/`remark`, and
 CodeMirror 6 (`@codemirror/*`) for the Markdown editor.
+
+### Tests and performance measurements
+
+`npm test` runs the Node tests and all Angular specs. Angular discovers specs
+instead of maintaining a second list of imports in `src/test.ts`; `--include`
+can select a smaller suite. To reproduce CI's browser checks, run
+`CHROME_BIN=/usr/bin/chromium npx ng test --watch=false --browsers=ChromeHeadless --code-coverage`
+(adjust `CHROME_BIN` for your system).
+
+Run `CHROME_BIN=/usr/bin/chromium npm run test:performance` explicitly for the
+2,000-character / 4,000-page search and rendering benchmark. Its strict timing
+budgets need an idle machine without coverage instrumentation. Routine tests
+still exercise search, incremental indexing, and rendering behavior; they skip
+this large timing benchmark because shared CI load makes wall-clock limits
+unreliable.

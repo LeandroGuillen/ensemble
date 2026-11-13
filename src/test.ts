@@ -12,44 +12,4 @@ getTestBed().initTestEnvironment(
   platformBrowserDynamicTesting(),
 );
 
-// Manually import all test files
-// Validators
-import './app/core/validators/character.validator.spec';
-import './app/core/validators/project.validator.spec';
-import './app/core/validators/pinboard.validator.spec';
-
-// Services
-import './app/core/services/backstage.service.spec';
-import './app/core/services/character.service.spec';
-import './app/core/services/metadata.service.spec';
-import './app/core/services/project.service.spec';
-import './app/core/services/file-watcher.service.spec';
-import './app/features/character-detail/character-detail.external-edit.spec';
-
-import './app/core/services/cast.service.spec';
-import './app/core/utils/cast-pinboard.utils.spec';
-
-import './app/core/services/cast-editor-session.service.spec';
-
-import './app/features/pinboard-view/components/connection-edit-dialog/connection-edit-dialog.component.spec';
-
-import './app/core/services/house.service.spec';
-import './app/features/character-detail/character-detail.save.spec';
-import './app/features/house-detail/house-detail.component.spec';
-import './app/shared/character-houses/character-houses.component.spec';
-
-import './app/features/character-list/character-list.pictures.spec';
-import './app/features/character-detail/character-detail.pictures.spec';
-import './app/features/character-detail/character-detail.focus.spec';
-
-import './app/core/utils/text-search.utils.spec';
-import './app/core/services/text-search.service.spec';
-import './app/core/services/electron.service.spec';
-import './app/shared/text-search/text-search.component.spec';
-import './app/shared/keyboard-shortcuts-dialog/shortcut-registry.spec';
-
-import './app/core/utils/project-health.utils.spec';
-import './app/core/services/project-health.service.spec';
-import './app/features/project-health/project-health.component.spec';
-
-import './app/core/services/character-edit-dialog.service.spec';
+// Specs are discovered by the Angular test builder, including --include selections.

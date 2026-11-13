@@ -195,7 +195,9 @@ describe('TextSearchService', () => {
     expect(service.index.search('scarred sailor')).toEqual([]);
   });
 
-  it('benchmarks previews and search on saves/outside edits with 2,000 characters and 4,000 book pages', async () => {
+  // Shared CI hosts and coverage instrumentation cannot provide stable timing budgets.
+  const performanceTest = (window as any).__karma__?.config?.args?.includes('--performance') ? it : xit;
+  performanceTest('benchmarks previews and search on saves/outside edits with 2,000 characters and 4,000 book pages', async () => {
     // Disposable project fixture behind the IPC boundary: no user files or app instance.
     // Include decomposed accents, which require the more expensive highlight offset map.
     const prose = 'Jose\u0301 travelled through the northern mountains. '.repeat(60)

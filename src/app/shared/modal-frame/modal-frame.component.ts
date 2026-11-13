@@ -37,6 +37,7 @@ export class ModalFrameComponent implements AfterViewInit, OnDestroy {
   @ViewChild('dialogPanel') private dialogPanel?: ElementRef<HTMLElement>;
 
   readonly fallbackTitleId = `modal-frame-title-${++nextModalTitleId}`;
+  private destroyed = false;
   private previouslyFocused: HTMLElement | null = null;
 
   get resolvedTitleId(): string {
@@ -54,6 +55,7 @@ export class ModalFrameComponent implements AfterViewInit, OnDestroy {
    * first footer action (Cancel for confirmations), else the first tabbable.
    */
   private focusInitialElement(): void {
+    if (this.destroyed) return;
     const panel = this.dialogPanel?.nativeElement;
     if (!panel) {
       this.trapFocus?.focusTrap?.focusInitialElementWhenReady();
@@ -76,6 +78,7 @@ export class ModalFrameComponent implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
     this.previouslyFocused?.focus?.();
   }
 
