@@ -358,10 +358,30 @@ export function isMapMember(map: WorldMap, location: Pick<Location, 'id' | 'type
   return !rules.exclude.includes(location.id) && (rules.types.includes(location.type || 'unspecified') || rules.include.includes(location.id));
 }
 
-/** Save rules without guessing geographical positions. Retained pins never move. */
+/** Locations this rule edit takes off the map: members under the current rules that are not members under the new ones.
+ * Places that were already hidden (e.g. after a type change) or deleted keep their pins, areas and roads. */
+function locationsLeavingMap(map: WorldMap, membership: MapMembership, locations: readonly Pick<Location, 'id' | 'type'>[]): Set<string> {
+  const next = { ...map, membership };
+  return new Set(locations.filter(location => isMapMember(map, location) && !isMapMember(next, location)).map(location => location.id));
+}
+
+export interface MapRulesRemovals { positions: number; areas: number; roads: number; }
+
+/** What `setMapRules()` would drop, for the Apply preview. */
+export function mapRulesRemovals(map: WorldMap, membership: MapMembership, locations: readonly Pick<Location, 'id' | 'type'>[]): MapRulesRemovals {
+  const removed = locationsLeavingMap(map, membership, locations);
+  return {
+    positions: map.pins.filter(pin => removed.has(pin.locationId)).length,
+    areas: (map.areas || []).filter(area => removed.has(area.locationId)).length,
+    roads: map.roads.filter(road => removed.has(road.from) || removed.has(road.to)).length,
+  };
+}
+
+/** Save rules without guessing geographical positions. Retained pins never move.
+ * Only places this edit takes off the map lose their pins, areas and roads. */
 export function setMapRules(map: WorldMap, membership: MapMembership, locations: readonly Pick<Location, 'id' | 'type'>[]): WorldMap {
   const next = { ...map, membership };
-  const removed = new Set(locations.filter(location => !isMapMember(next, location)).map(location => location.id));
+  const removed = locationsLeavingMap(map, membership, locations);
   return { ...next, ...(map.areas ? { areas: map.areas.filter(area => !removed.has(area.locationId)) } : {}), pins: map.pins.filter(pin => !removed.has(pin.locationId)), roads: map.roads.filter(road => !removed.has(road.from) && !removed.has(road.to)) };
 }
 

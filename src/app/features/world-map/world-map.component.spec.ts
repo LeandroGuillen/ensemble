@@ -802,6 +802,53 @@ describe('WorldMapComponent', () => {
     expect(worldMap.apply).not.toHaveBeenCalled();
   });
 
+  it('keeps a type-hidden pin and its labeled road through an unrelated Apply, and restores them when the type changes back', async () => {
+    const port = loc('port-saltmere', 'Port Saltmere', 'settlement');
+    const lighthouse = loc('vellhaven-lighthouse', 'Vellhaven Lighthouse', 'building');
+    const undertide = loc('the-undertide', 'The Undertide', 'district');
+    locations$.next([port, lighthouse, undertide]);
+    setState({ ...emptyWorldMap(), membership: { types: ['settlement'], include: ['vellhaven-lighthouse'], exclude: [] },
+      pins: [{ locationId: 'port-saltmere', x: 0, y: 0 }, { locationId: 'vellhaven-lighthouse', x: 200, y: 50 }],
+      roads: [{ from: 'port-saltmere', to: 'vellhaven-lighthouse', label: 'Cliff road' }] });
+    await render();
+    expect(component.placed.map(pin => pin.location.id).sort()).toEqual(['port-saltmere', 'vellhaven-lighthouse']);
+    locations$.next([{ ...port, type: 'district' }, lighthouse, undertide]);
+    await render();
+    expect(component.placed.map(pin => pin.location.id)).toEqual(['vellhaven-lighthouse']);
+    expect(component.roads.length).toBe(0);
+    component.openMembership();
+    component.setMember('the-undertide', true);
+    fixture.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    expect(query('.selection-preview')!.textContent).not.toContain('removed');
+    await component.saveMembership();
+    expect(state$.value!.map.pins.map(pin => pin.locationId)).toEqual(['port-saltmere', 'vellhaven-lighthouse']);
+    expect(state$.value!.map.roads).toEqual([{ from: 'port-saltmere', to: 'vellhaven-lighthouse', label: 'Cliff road' }]);
+    locations$.next([port, lighthouse, undertide]);
+    await render();
+    expect(component.placed.map(pin => pin.location.id).sort()).toEqual(['port-saltmere', 'vellhaven-lighthouse']);
+    expect(component.roads.map(road => road.label)).toEqual(['Cliff road']);
+    expect(component.unpositionedLocations.map(location => location.id)).toEqual(['the-undertide']);
+  });
+
+  it('names the positions, areas and roads an Apply will remove before saving', async () => {
+    const points = [{ x: -100, y: -50 }, { x: 100, y: -50 }, { x: 0, y: 100 }];
+    locations$.next([loc('a', 'Harbor', 'settlement'), loc('b', 'Castle', 'building'), loc('c', 'Village', 'settlement')]);
+    setState(setLocationArea({ ...emptyWorldMap(), membership: { types: ['settlement'], include: ['b'], exclude: [] },
+      pins: [{ locationId: 'a', x: 0, y: 0 }, { locationId: 'b', x: 200, y: 0 }, { locationId: 'c', x: 100, y: 100 }],
+      roads: [{ from: 'a', to: 'b' }, { from: 'b', to: 'c' }] }, 'a', points));
+    await render();
+    component.openMembership();
+    component.setMember('b', false);
+    fixture.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    expect(query('.selection-preview')!.textContent).toContain('1 position and 2 roads will be removed');
+    component.setMember('a', false);
+    fixture.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    expect(query('.selection-preview')!.textContent).toContain('2 positions, 1 area and 2 roads will be removed');
+  });
+
   it('places a member only at a deliberate click, with Escape cancelling without saving', async () => {
     const a = loc('a', 'Harbor', 'settlement');
     locations$.next([a]);

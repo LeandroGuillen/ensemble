@@ -149,7 +149,10 @@ retained pins. Rule changes are previewed until **Apply changes**. Removing a
 placement explicitly excludes that location from automatic membership and removes
 only that map's connected roads; its Location file and placements elsewhere remain
 intact. Missing location IDs are
-retained to support undoing Location deletes.
+retained to support undoing Location deletes. Applying a rule change drops pins,
+areas and roads only for locations that the change takes off the map (the preview
+names them); a location that was already hidden, for example after its type
+changed, keeps its pin and roads so changing the type back restores them.
 
 SVG, PNG, JPEG, WebP and GIF backgrounds are copied unchanged into `assets/maps/`.
 Raster uploads are limited to 25 MB and validated using their file signatures and

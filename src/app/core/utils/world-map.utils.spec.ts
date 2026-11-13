@@ -209,6 +209,21 @@ roads:
     expect(map.pins.length).toBe(3);
   });
 
+  it('keeps pins and roads of places that are off the map under both the old and the new rules', () => {
+    const map = { ...emptyWorldMap(), membership: { types: ['settlement'], include: ['lighthouse'], exclude: [] },
+      pins: [{ locationId: 'port', x: 0, y: 0 }, { locationId: 'lighthouse', x: 200, y: 50 }],
+      roads: [{ from: 'port', to: 'lighthouse', label: 'Cliff road' }] };
+    // `port` changed type (settlement → district), so its pin is hidden but kept; the edit only adds `undertide`.
+    const locations = [{ id: 'port', type: 'district' as const }, { id: 'lighthouse', type: 'building' as const }, { id: 'undertide', type: 'district' as const }];
+    const next = setMapRules(map, { types: ['settlement'], include: ['lighthouse', 'undertide'], exclude: [] }, locations);
+    expect(next.pins).toEqual(map.pins);
+    expect(next.roads).toEqual(map.roads);
+    const dropped = { types: [], include: ['undertide'], exclude: [] };
+    const narrowed = setMapRules(map, dropped, locations);
+    expect(narrowed.pins).toEqual([map.pins[0]]);
+    expect(narrowed.roads).toEqual([]);
+  });
+
   it('keeps automatic removals excluded and allows explicit re-addition without touching other members', () => {
     const map = { ...emptyWorldMap(), membership: { types: ['settlement'], include: [], exclude: [] }, pins: [{ locationId: 'city', x: 20, y: 30 }] };
     const removed = removePin(map, 'city');

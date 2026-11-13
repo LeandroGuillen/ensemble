@@ -40,6 +40,7 @@ import {
   mapMembership,
   isMapMember,
   setMapRules,
+  mapRulesRemovals,
   includeMapLocation,
   removePin, removeAreaPin,
   roadKey,
@@ -575,6 +576,16 @@ export class WorldMapComponent implements OnInit, AfterViewInit, OnDestroy {
     const draft = this.draftRules();
     return (['types', 'include', 'exclude'] as const).some(key =>
       JSON.stringify([...saved[key]].sort()) !== JSON.stringify([...draft[key]].sort()));
+  }
+  /** Names what Apply would drop (positions, areas, roads), or '' when nothing is removed. */
+  get membershipRemovalSummary(): string {
+    if (!this.state || !this.membershipChanged) return '';
+    const { positions, areas, roads } = mapRulesRemovals(this.state.map, this.draftRules(), this.locations);
+    const count = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+    const parts = [positions && count(positions, 'position'), areas && count(areas, 'area'), roads && count(roads, 'road')].filter(Boolean) as string[];
+    if (!parts.length) return '';
+    const list = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : parts[0];
+    return `${list} will be removed`;
   }
   private draftRules(): MapMembership {
     return { types: [...this.membershipTypes], include: [...this.membershipIncludes], exclude: [...this.membershipExcludes] };

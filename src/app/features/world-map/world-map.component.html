@@ -94,7 +94,8 @@
         <div class="membership-search"><input class="form-control" type="search" aria-label="Search locations to add" placeholder="Find a location…" [(ngModel)]="membershipSearch" [disabled]="mapBusy" /><button class="icon-btn" title="Create location" aria-label="Create location" [disabled]="readOnly || mapBusy" (click)="membershipOpen = false; createLocation()"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg></button></div>
         @let candidates = membershipCandidates;
         @let selected = membershipDraft;
-        <div class="selection-preview" role="status">{{ selected.size }} included · {{ draftUnpositionedCount }} to position</div>
+        @let removals = membershipRemovalSummary;
+        <div class="selection-preview" role="status">{{ selected.size }} included · {{ draftUnpositionedCount }} to position@if (removals) { · <strong class="selection-removals">{{ removals }}</strong> }</div>
         <div class="membership-list">
           @for (location of candidates; track location.id) {
             <div class="membership-location">
