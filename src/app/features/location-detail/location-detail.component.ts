@@ -1,5 +1,5 @@
 import { ProjectReadOnlyDirective } from '../../shared/project-read-only.directive';
-import { WikiLinkRenameService } from '../../core/services/wiki-link-rename.service';
+import { RenameCancelledError, WikiLinkRenameService } from '../../core/services/wiki-link-rename.service';
 import {
   DestroyRef,
   inject,
@@ -484,6 +484,14 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
         await this.navigateBackAfterSave();
       }
     } catch (error) {
+      if (error instanceof RenameCancelledError) {
+        // The name belongs to another record and the user kept the current one: nothing was saved.
+        // Autosave puts the saved name back so the next save doesn't ask again; the other edits stay.
+        if (automatic && this.location && this.locationForm.getRawValue().name === formData.name) {
+          this.locationForm.patchValue({ name: this.location.name }, { emitEvent: false });
+        }
+        return;
+      }
       this.saveError = error instanceof Error ? error.message : 'Could not save location';
       this.logger.error('Failed to save location:', error);
       if (!automatic) this.toasts.showError(this.saveError);

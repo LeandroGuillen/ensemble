@@ -1,5 +1,5 @@
-import { buildWikiLinkTargets } from './wiki-links.utils';
-import { rewriteRenamedLinks } from './wiki-link-rename.utils';
+import { buildWikiLinkTargets, WikiLinkCollection } from './wiki-links.utils';
+import { collectionsAfterRename, countRetargetedLinks, findRenameConflicts, RetargetCount, rewriteRenamedLinks } from './wiki-link-rename.utils';
 
 describe('rename wiki links', () => {
   const targets = buildWikiLinkTargets([{ folder: 'characters', route: 'character', singular: 'Character', targets: [
@@ -65,4 +65,46 @@ describe('rename leaves alias links alone', () => {
       });
     });
   }
+});
+
+describe('rename name conflicts', () => {
+  const collections: WikiLinkCollection[] = [
+    { folder: 'characters', route: 'character', singular: 'Character', targets: [
+      { id: 'mara', name: 'Mara Vell', relativePath: 'mara-vell/mara-vell.md', aliases: ['The Lamplighter'] },
+      { id: 'oren', name: 'Oren Vell', relativePath: 'oren-vell/oren-vell.md', aliases: ['Old Oren'] },
+    ] },
+    { folder: 'locations', route: 'location', singular: 'Location', targets: [
+      { id: 'harbor', name: 'Grey Harbor', relativePath: '_grey-harbor.md', aliases: ['The Docks'] },
+    ] },
+    { folder: 'characters', route: 'character-draft', singular: 'Draft', secondary: true, targets: [
+      { id: 'heir', name: 'The Heir', relativePath: '@drafts/heir/heir.md' },
+    ] },
+  ];
+  it('finds other records whose name or alias is the new name, across collections, case-insensitively', () => {
+    expect(findRenameConflicts(collections, 'character', 'oren', ' the lamplighter ')).toEqual([
+      { id: 'mara', name: 'Mara Vell', route: 'character', singular: 'Character', via: 'alias' },
+    ]);
+    expect(findRenameConflicts(collections, 'character', 'oren', 'Grey Harbor')).toEqual([
+      { id: 'harbor', name: 'Grey Harbor', route: 'location', singular: 'Location', via: 'name' },
+    ]);
+    expect(findRenameConflicts(collections, 'location', 'harbor', 'The Heir').map(c => c.route)).toEqual(['character-draft']);
+  });
+  it("ignores the record's own name and aliases", () => {
+    expect(findRenameConflicts(collections, 'character', 'oren', 'Old Oren')).toEqual([]);
+    expect(findRenameConflicts(collections, 'location', 'harbor', 'the docks')).toEqual([]);
+    expect(findRenameConflicts(collections, 'character', 'oren', 'Someone')).toEqual([]);
+  });
+  it('counts links that will open the renamed record or stop resolving', () => {
+    const before = buildWikiLinkTargets(collections);
+    const counts = new Map<string, RetargetCount>();
+    const alias = findRenameConflicts(collections, 'character', 'oren', 'The Lamplighter');
+    countRetargetedLinks('[[The Lamplighter]] [[The Lamplighter#Past|x]] [[Mara Vell]] `[[The Lamplighter]]`', before,
+      buildWikiLinkTargets(collectionsAfterRename(collections, 'character', 'oren', 'The Lamplighter')), alias, 'oren', 'character', counts);
+    expect(counts.get('character:mara')).toEqual({ retarget: 2, lost: 0 });
+    const name = new Map<string, RetargetCount>();
+    countRetargetedLinks('[[Mara Vell]] [[The Lamplighter]]', before,
+      buildWikiLinkTargets(collectionsAfterRename(collections, 'character', 'oren', 'Mara Vell')),
+      findRenameConflicts(collections, 'character', 'oren', 'Mara Vell'), 'oren', 'character', name);
+    expect(name.get('character:mara')).toEqual({ retarget: 0, lost: 1 });
+  });
 });

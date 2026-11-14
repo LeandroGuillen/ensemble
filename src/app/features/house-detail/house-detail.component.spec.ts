@@ -8,6 +8,8 @@ import { HouseService } from '../../core/services/house.service';
 import { CharacterPickerService, CharacterService, ImagePickerService, LocationService, ProjectService } from '../../core/services';
 import { ElectronService } from '../../core/services/electron.service';
 import { ModalService } from '../../core/services/modal.service';
+import { NotificationService } from '../../core/services/notification.service';
+import { RenameCancelledError, WikiLinkRenameService } from '../../core/services/wiki-link-rename.service';
 
 function house(): House {
   return {
@@ -174,6 +176,24 @@ describe('House editor', () => {
     expect(data.currentLeadershipId).toBe('ned-reign');
     expect(revision).toBe('revision-one');
     expect(component.dirty).toBeFalse();
+  });
+
+  it('cancelling a rename to a name in use saves nothing, shows no error and keeps the edit', async () => {
+    const linkRename = TestBed.inject(WikiLinkRenameService);
+    spyOn(linkRename, 'run').and.rejectWith(new RenameCancelledError());
+    const toasts = TestBed.inject(NotificationService);
+    spyOn(toasts, 'showError');
+    const navigate = TestBed.inject(Router).navigate as jasmine.Spy;
+    navigate.calls.reset();
+    component.model.name = 'The Lamplighter';
+    component.changed();
+    await component.save();
+    expect(service.updateHouse).not.toHaveBeenCalled();
+    expect(toasts.showError).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+    expect(component.model.name).toBe('The Lamplighter');
+    expect(component.dirty).toBeTrue();
+    expect(component.saving).toBeFalse();
   });
 
   it('keeps unsaved edits and blocks saving when an external revision arrives', async () => {

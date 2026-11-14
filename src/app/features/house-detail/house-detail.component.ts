@@ -1,6 +1,6 @@
 import { ProjectWriteProtectionService } from '../../core/services/project-write-protection.service';
 import { ProjectReadOnlyDirective } from '../../shared/project-read-only.directive';
-import { WikiLinkRenameService } from '../../core/services/wiki-link-rename.service';
+import { RenameCancelledError, WikiLinkRenameService } from '../../core/services/wiki-link-rename.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { ChangeDetectorRef, Component, DestroyRef, HostListener, inject, OnDestroy, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -221,6 +221,8 @@ export class HouseDetailComponent implements OnInit, OnDestroy {
       this.saving = false;
       await this.router.navigate(['/house', saved.id], { replaceUrl: true });
     } catch (error) {
+      // The name belongs to another record and the user kept the current one: nothing was saved.
+      if (error instanceof RenameCancelledError) return;
       const message = String(error);
       this.toasts.showError(message);
       if (message.includes('changed on disk')) this.conflict = true;

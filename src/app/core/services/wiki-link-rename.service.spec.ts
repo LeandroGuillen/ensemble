@@ -25,8 +25,9 @@ describe('WikiLinkRenameService', () => {
     ] });
     electron.readFile.and.callFake(async path => ({ success: true, content: path === saved().filePath ? '---\nid: dess\nname: Dessir\n---\n\nNotes' : '---\nthumbnail: "[[Dess]]"\n---\n\n[[Dess|the witch]] and [[characters/dess/dess#History]] `[[Dess]]`' }));
     electron.rewriteWikiLinks.and.resolveTo({ success: true });
-    modal = jasmine.createSpyObj('ModalService', ['confirmLinkRename']);
+    modal = jasmine.createSpyObj('ModalService', ['confirmLinkRename', 'confirm']);
     modal.confirmLinkRename.and.resolveTo({ update: true, alias: false });
+    modal.confirm.and.resolveTo(true);
     TestBed.configureTestingModule({ providers: [
       { provide: ElectronService, useValue: electron },
       { provide: ProjectService, useValue: { getCurrentProject: () => ({ path: '/project', metadata: { settings: {} } }) } },
@@ -106,5 +107,115 @@ describe('WikiLinkRenameService', () => {
     const record = saved();
     await expectAsync(service.run(old, 'Dessir', 'character', async () => record)).toBeRejectedWithError('changed on disk');
     expect((record as { aliases?: string[] }).aliases).toBeUndefined();
+  });
+});
+
+describe('WikiLinkRenameService name conflicts', () => {
+  let service: WikiLinkRenameService;
+  let electron: jasmine.SpyObj<ElectronService>;
+  let modal: jasmine.SpyObj<ModalService>;
+  let collections: any[];
+  const cases = [
+    { folder: 'characters', route: 'character', singular: 'Character', noun: 'character',
+      self: { id: 'oren', name: 'Oren Vell', relativePath: 'oren-vell/oren-vell.md', filePath: '/project/characters/oren-vell/oren-vell.md', content: '', aliases: ['Old Oren'] },
+      other: { id: 'mara', name: 'Mara Vell', relativePath: 'mara-vell/mara-vell.md', aliases: ['The Lamplighter'] } },
+    { folder: 'locations', route: 'location', singular: 'Location', noun: 'location',
+      self: { id: 'docks', name: 'Low Docks', relativePath: '_low-docks.md', filePath: '/project/locations/_low-docks.md', content: '', aliases: ['Old Oren'] },
+      other: { id: 'mara', name: 'Mara Vell', relativePath: '_mara-vell.md', aliases: ['The Lamplighter'] } },
+    { folder: 'houses', route: 'house', singular: 'House', noun: 'House',
+      self: { id: 'oren', name: 'House Oren', relativePath: 'house-oren/house-oren.md', filePath: '/project/houses/house-oren/house-oren.md', content: '', aliases: ['Old Oren'] },
+      other: { id: 'mara', name: 'Mara Vell', relativePath: 'mara-vell/mara-vell.md', aliases: ['The Lamplighter'] } },
+  ];
+  const prose = 'See [[The Lamplighter]], [[The Lamplighter#Past|her]] and [[Mara Vell]]. [[Old Oren]]';
+  const setup = (c: typeof cases[number]) => {
+    collections = [{ folder: c.folder, route: c.route, singular: c.singular, targets: [c.self, c.other] }];
+    electron = jasmine.createSpyObj('ElectronService', ['readDirectoryRecursive', 'readFile', 'rewriteWikiLinks']);
+    electron.readDirectoryRecursive.and.resolveTo({ success: true, files: [
+      { relativePath: 'notes/a.md', absolutePath: '/project/notes/a.md' },
+      { relativePath: '.ensemble-trash/x/a.md', absolutePath: '/project/.ensemble-trash/x/a.md' },
+    ] });
+    electron.readFile.and.resolveTo({ success: true, content: '---\nnote: "[[The Lamplighter]]"\n---\n' + prose });
+    electron.rewriteWikiLinks.and.resolveTo({ success: true });
+    modal = jasmine.createSpyObj('ModalService', ['confirmLinkRename', 'confirm']);
+    modal.confirmLinkRename.and.resolveTo({ update: false, alias: false });
+    modal.confirm.and.resolveTo(true);
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ providers: [
+      { provide: ElectronService, useValue: electron },
+      { provide: ProjectService, useValue: { getCurrentProject: () => ({ path: '/project', metadata: { settings: {} } }) } },
+      { provide: ModalService, useValue: modal },
+      { provide: WikiLinkTargetsService, useValue: { targets$: () => of(buildWikiLinkTargets(collections)) } },
+      { provide: CharacterService, useValue: { forceReloadCharacters: async () => {} } },
+      { provide: LocationService, useValue: { forceReloadLocations: async () => {} } },
+      { provide: HouseService, useValue: { loadHouses: async () => {} } },
+    ] });
+    service = TestBed.inject(WikiLinkRenameService);
+  };
+  /** Simulates the save: the record now answers to `name` (as the real services do). */
+  const saveAs = (c: typeof cases[number], name: string) => jasmine.createSpy('save').and.callFake(async () => {
+    const record = { ...c.self, name };
+    collections = collections.map((collection, index) => index ? collection : { ...collection, targets: [record, c.other] });
+    return record;
+  });
+
+  for (const c of cases) {
+    describe(c.route, () => {
+      beforeEach(() => setup(c));
+      it("warns before saving when the new name is another record's alias, naming it and the links that retarget", async () => {
+        let warnedBeforeSave = false;
+        const save = saveAs(c, 'The Lamplighter');
+        await service.run(c.self, 'The Lamplighter', c.route as any, async () => { warnedBeforeSave = modal.confirm.calls.count() === 1; return save(); });
+        expect(warnedBeforeSave).toBeTrue();
+        expect(modal.confirm).toHaveBeenCalledTimes(1);
+        const [message, title, options] = modal.confirm.calls.mostRecent().args;
+        expect(title).toBe('Name already in use');
+        expect(message).toContain('"The Lamplighter" is an alias of Mara Vell (' + c.singular + ').');
+        // Frontmatter and the staged trash don't count; the [[Mara Vell]] name link keeps opening Mara.
+        expect(message).toContain(`2 links to Mara Vell will point to this ${c.noun} instead.`);
+        expect(options).toEqual(jasmine.objectContaining({ confirmText: 'Rename anyway', cancelText: 'Cancel' }));
+      });
+      it('continuing saves and links through the alias open the renamed record, as before', async () => {
+        const save = saveAs(c, 'The Lamplighter');
+        await service.run(c.self, 'The Lamplighter', c.route as any, save);
+        expect(save).toHaveBeenCalledTimes(1);
+        expect(buildWikiLinkTargets(collections).resolve('The Lamplighter')).toEqual(jasmine.objectContaining({ state: 'resolved', id: c.self.id }));
+      });
+      it('cancel saves nothing, writes nothing and leaves link resolution as it was', async () => {
+        modal.confirm.and.resolveTo(false);
+        const save = saveAs(c, 'The Lamplighter');
+        await expectAsync(service.run(c.self, 'The Lamplighter', c.route as any, save)).toBeRejectedWith(jasmine.objectContaining({ name: 'RenameCancelledError' }));
+        expect(save).not.toHaveBeenCalled();
+        expect(electron.rewriteWikiLinks).not.toHaveBeenCalled();
+        expect(modal.confirmLinkRename).not.toHaveBeenCalled();
+        expect(buildWikiLinkTargets(collections).resolve('The Lamplighter')).toEqual(jasmine.objectContaining({ state: 'resolved', id: 'mara' }));
+      });
+      it("warns when the new name is another record's name", async () => {
+        await service.run(c.self, 'mara vell', c.route as any, saveAs(c, 'mara vell'));
+        expect(modal.confirm).toHaveBeenCalledTimes(1);
+        const message = modal.confirm.calls.mostRecent().args[0];
+        expect(message).toContain('"mara vell" is the name of Mara Vell (' + c.singular + ').');
+        expect(message).toContain('1 link to Mara Vell will no longer resolve (ambiguous).');
+      });
+      it('does not warn when the new name is the record\'s own alias', async () => {
+        const save = saveAs(c, 'Old Oren');
+        await service.run(c.self, 'Old Oren', c.route as any, save);
+        expect(modal.confirm).not.toHaveBeenCalled();
+        expect(save).toHaveBeenCalledTimes(1);
+      });
+      it('does not warn for a name nobody uses', async () => {
+        await service.run(c.self, 'Someone New', c.route as any, saveAs(c, 'Someone New'));
+        expect(modal.confirm).not.toHaveBeenCalled();
+      });
+    });
+  }
+
+  it('names every conflicting record across collections', async () => {
+    setup(cases[0]);
+    collections.push({ folder: 'houses', route: 'house', singular: 'House', targets: [{ id: 'h', name: 'House Lamp', relativePath: 'h/h.md', aliases: ['the lamplighter'] }] });
+    await service.run(cases[0].self, 'The Lamplighter', 'character', saveAs(cases[0], 'The Lamplighter'));
+    expect(modal.confirm).toHaveBeenCalledTimes(1);
+    const message = modal.confirm.calls.mostRecent().args[0];
+    expect(message).toContain('is an alias of Mara Vell (Character)');
+    expect(message).toContain('is an alias of House Lamp (House)');
   });
 });

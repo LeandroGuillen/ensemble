@@ -1,5 +1,5 @@
 import { ProjectReadOnlyDirective } from '../../shared/project-read-only.directive';
-import { WikiLinkRenameService } from '../../core/services/wiki-link-rename.service';
+import { RenameCancelledError, WikiLinkRenameService } from '../../core/services/wiki-link-rename.service';
 import { DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -934,6 +934,8 @@ export class CharacterDetailComponent
         ...(collectionChanged ? { replaceUrl: true } : {}),
       });
     } catch (error) {
+      // The name belongs to another record and the user kept the current one: nothing was saved.
+      if (error instanceof RenameCancelledError) return;
       this.notificationService.showError(
         `Failed to save ${this.isDraftMode ? 'draft' : 'character'}: ${error}`
       );
@@ -1865,6 +1867,7 @@ export class CharacterDetailComponent
       );
       this.router.navigate(['/characters'], { queryParams: { drawer: 'true' }, replaceUrl: true });
     } catch (error) {
+      if (error instanceof RenameCancelledError) return;
       this.notificationService.showError(
         error instanceof Error ? error.message : `Failed to move character to drafts: ${error}`
       );

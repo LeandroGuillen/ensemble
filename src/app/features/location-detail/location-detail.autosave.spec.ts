@@ -1,5 +1,6 @@
 import { FormBuilder, Validators } from '@angular/forms';
 import { LocationDetailComponent } from './location-detail.component';
+import { RenameCancelledError } from '../../core/services/wiki-link-rename.service';
 
 describe('Location sidebar autosave', () => {
   let component: LocationDetailComponent;
@@ -57,6 +58,21 @@ describe('Location sidebar autosave', () => {
     component.activeMapId = 'city';
     await component.openDestination();
     expect(emit).not.toHaveBeenCalled();
+  });
+
+  it('cancelling a rename to a name in use keeps the saved name, shows no error and still saves other edits', async () => {
+    const run = jasmine.createSpy('run').and.callFake(async (old: { name: string }, name: string, _route: string, save: () => Promise<unknown>) => {
+      if (name !== old.name) throw new RenameCancelledError();
+      return save();
+    });
+    (component as any).linkRename = { run };
+    component.locationForm.patchValue({ name: 'The Lamplighter', content: 'Notes' });
+    component.locationForm.markAsDirty();
+    expect(await component.flushAutoSave(false)).toBeTrue();
+    expect(component.saveError).toBe('');
+    expect(component.locationForm.get('name')!.value).toBe('Harbor');
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(update.calls.mostRecent().args[1]).toEqual(jasmine.objectContaining({ name: 'Harbor', content: 'Notes' }));
   });
 
   it('saves edits without a button, toast, or navigation', async () => {

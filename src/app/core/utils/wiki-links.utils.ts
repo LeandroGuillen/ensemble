@@ -256,6 +256,8 @@ export interface WikiLinkTargets {
   /** Record part of a target as `resolve` reads it; `undefined` when nothing matches. */
   recordName: WikiLinkRecordName;
   suggestions: WikiLinkSuggestion[];
+  /** The collections the resolver reads (set by `buildWikiLinkTargets`). */
+  collections?: WikiLinkCollection[];
 }
 
 /**
@@ -295,6 +297,7 @@ export function buildWikiLinkTargets(collections: WikiLinkCollection[]): WikiLin
     resolve: (target) => resolveWikiLinkTarget(target, collections),
     recordName: buildWikiLinkRecordName(collections),
     suggestions,
+    collections,
   };
 }
 

@@ -166,6 +166,10 @@ new name without editing inbound links. **Add old name as alias** keeps the old
 name available as a link target; aliases resolve only when no name or path matches
 and they identify one record.
 Link rewriting leaves code examples, image embeds and frontmatter references untouched.
+If the new name is already another record's name or alias, Ensemble warns before
+saving, naming that record and how many links to it would open the renamed record
+instead (or stop resolving). **Cancel** saves nothing; **Rename anyway** saves as
+before. Renaming to one of the record's own aliases does not warn.
 
 If a draft has the same name as a published character, `[[Name]]` links to the
 published character. Link the draft by its path instead, e.g.
