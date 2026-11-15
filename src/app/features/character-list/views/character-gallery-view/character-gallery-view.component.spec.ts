@@ -10,6 +10,11 @@ describe('Gallery PoV indicators', () => {
       { id: 'short', name: 'Reól Bardez', tags: [] },
     ]);
     fixture.componentRef.setInput('povCharacterIds', new Set(['long', 'short']));
+    // Cards render within a small time budget; on a slow runner (coverage) the second one lands a tick later.
+    fixture.detectChanges();
+    for (let tries = 0; tries < 50 && fixture.nativeElement.querySelectorAll('.gallery-name').length < 2; tries++) {
+      await new Promise(resolve => setTimeout(resolve, 20));
+    }
 
     for (const [size, width] of [['small', 100], ['medium', 160], ['big', 240]] as const) {
       fixture.componentRef.setInput('thumbnailSize', size);
