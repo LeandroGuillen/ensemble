@@ -35,6 +35,7 @@
     <button class="map-inline-action" title="Reload" [disabled]="mapBusy || backgroundBusy" (click)="loadAll(true)"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#refresh" /></svg>Reload</button>
     <button class="map-inline-action" title="Duplicate map" [disabled]="readOnly || mapBusy || backgroundBusy" (click)="duplicateActiveMap()"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#copy" /></svg>Duplicate map</button>
     <span class="toolbar-divider"></span>
+    <button class="btn btn-primary new-location-btn" title="Add a location (N). Tip: double-click or right-click the map to add one right there" [disabled]="readOnly || mapBusy || backgroundBusy || quickAddBusy" (click)="openQuickAdd('add', null)"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg><span class="new-location-label">New location</span></button>
     <button class="locations-trigger" title="Manage Locations" aria-label="Manage Locations" [disabled]="!state || mapBusy || backgroundBusy" (click)="openMembership()"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#map-pin" /></svg><span class="locations-label">Manage Locations</span><span class="toolbar-count">{{ mapLocations.length }}</span></button>
     <input class="form-control map-search" type="search" placeholder="Search this map…" aria-label="Search this map" [(ngModel)]="searchTerm" (ngModelChange)="filtersChanged()" />
     <button #filterButton cdkOverlayOrigin #filterOrigin="cdkOverlayOrigin" class="icon-btn" title="Filter this map" aria-label="Filter this map" [attr.aria-expanded]="filtersOpen" [class.active]="filtersOpen" (click)="filtersOpen = !filtersOpen"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#sort" /></svg></button>
@@ -82,7 +83,7 @@
     </app-modal-frame>
   }
   @if (membershipOpen) {
-    <app-modal-frame dialogClass="map-membership-dialog" [title]="'Locations · ' + activeMapName" [closeOnEscape]="!mapBusy" [closeOnBackdrop]="!mapBusy" [showCloseButton]="!mapBusy" (closed)="membershipOpen = false">
+    <app-modal-frame dialogClass="map-membership-dialog" [title]="'Locations · ' + activeMapName" [closeOnEscape]="!mapBusy" [closeOnBackdrop]="!mapBusy" [showCloseButton]="!mapBusy" (closed)="membershipOpen = false; closeNewLocation()">
       <div class="membership-editor">
         <fieldset class="automatic-types" [disabled]="mapBusy || readOnly"><legend>Automatically include</legend>
           @for (type of locationTypes; track type.value) {
@@ -91,7 +92,17 @@
           <button class="type-chip" [class.active]="membershipTypes.has('unspecified')" [attr.aria-pressed]="membershipTypes.has('unspecified')" (click)="toggleMembershipType('unspecified')"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#map" /></svg>Unspecified</button>
         </fieldset>
         <p class="panel-empty">Types include current and future locations. Use the list for individual additions or exclusions. Positions you keep will stay in place.</p>
-        <div class="membership-search"><input class="form-control" type="search" aria-label="Search locations to add" placeholder="Find a location…" [(ngModel)]="membershipSearch" [disabled]="mapBusy" /><button class="icon-btn" title="Create location" aria-label="Create location" [disabled]="readOnly || mapBusy" (click)="membershipOpen = false; createLocation()"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg></button></div>
+        <div class="membership-search"><input class="form-control" type="search" aria-label="Search locations to add" placeholder="Find a location…" [(ngModel)]="membershipSearch" [disabled]="mapBusy" /><button class="btn btn-secondary btn-sm" title="Create a new location and include it in this map" [disabled]="readOnly || mapBusy || newLocationMode === 'membership'" (click)="openNewLocation()"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>New location</button></div>
+        @if (newLocationMode === 'membership') {
+          <form class="membership-create" (ngSubmit)="submitNewLocation()" (keydown.escape)="$event.preventDefault(); $event.stopPropagation(); closeNewLocation()">
+            <input #autoFocus class="form-control" name="newLocationName" aria-label="New location name" placeholder="New location name" maxlength="200" [(ngModel)]="newLocationName" [disabled]="newLocationBusy" />
+            <div class="type-icons" role="group" aria-label="New location type">@for (type of locationTypes; track type.value) { <button type="button" class="icon-btn" [class.active]="newLocationType === type.value" [attr.aria-pressed]="newLocationType === type.value" [title]="type.label" [attr.aria-label]="type.label" [disabled]="newLocationBusy" (click)="newLocationType = newLocationType === type.value ? '' : type.value"><svg class="ui-icon" aria-hidden="true"><use [attr.href]="'assets/ui-icons.svg#' + type.icon" /></svg></button> }</div>
+            <button type="submit" class="btn btn-primary btn-sm" [disabled]="newLocationBusy || !newLocationName.trim()">{{ newLocationBusy ? 'Creating…' : 'Create' }}</button>
+            <button type="button" class="icon-btn" title="Cancel" aria-label="Cancel new location" [disabled]="newLocationBusy" (click)="closeNewLocation()"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg></button>
+            @if (newLocationDuplicate; as existing) { <small class="membership-create-note" role="status">{{ existing.name }} already exists.</small> }
+            @if (newLocationError) { <small class="map-form-error" role="alert">{{ newLocationError }}</small> }
+          </form>
+        }
         @let candidates = membershipCandidates;
         @let selected = membershipDraft;
         @let removals = membershipRemovalSummary;
@@ -112,7 +123,7 @@
           } @empty { <p class="panel-empty">No matching locations.</p> }
         </div>
         @if (membershipError) { <p class="map-form-error" role="alert">{{ membershipError }}</p> }
-        <div class="modal-actions"><button class="btn btn-secondary" [disabled]="mapBusy" (click)="membershipOpen = false">{{ readOnly ? 'Close' : 'Cancel' }}</button>@if (!readOnly) { <button class="btn btn-primary" [disabled]="mapBusy" (click)="saveMembership()">{{ mapBusy ? 'Saving…' : 'Apply changes' }}</button> }</div>
+        <div class="modal-actions"><button class="btn btn-secondary" [disabled]="mapBusy" (click)="membershipOpen = false; closeNewLocation()">{{ readOnly ? 'Close' : 'Cancel' }}</button>@if (!readOnly) { <button class="btn btn-primary" [disabled]="mapBusy" (click)="saveMembership()">{{ mapBusy ? 'Saving…' : 'Apply changes' }}</button> }</div>
       </div>
     </app-modal-frame>
   }
@@ -172,6 +183,8 @@
         (dragover)="onCanvasDragOver($event)"
         (dragleave)="onCanvasDragLeave()"
         (drop)="onCanvasDrop($event)"
+        (dblclick)="onCanvasDoubleClick($event)"
+        (contextmenu)="onCanvasContextMenu($event)"
       >
         <defs>
           <clipPath id="location-image-clip"><circle r="18" /></clipPath>
@@ -284,8 +297,49 @@
               <text class="pin-label" [attr.transform]="labelScale" [attr.y]="nameY" text-anchor="middle">{{ pin.location.name }}</text>
             </g>
           }
+          @if (quickAdd?.world || canvasMenu?.world; as point) {
+            <g class="quick-add-marker" [attr.transform]="'translate(' + point.x + ' ' + point.y + ')'" pointer-events="none"><g [attr.transform]="markerScale"><circle r="18" /><circle class="quick-add-dot" r="3" /></g></g>
+          }
         </g>
       </svg>
+
+      @if (canvasMenu; as menu) {
+        <div class="pin-context-menu canvas-menu" role="menu" aria-label="Map actions" [style.left.px]="menu.left" [style.top.px]="menu.top" (keydown.escape)="canvasMenu = null">
+          <button #autoFocus role="menuitem" class="canvas-menu-item" (click)="canvasMenuAction('create')"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>New location here…</button>
+          <button role="menuitem" class="canvas-menu-item" (click)="canvasMenuAction('add')"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#map-pin" /></svg>Add existing location here…</button>
+        </div>
+      }
+      @if (quickAdd; as qa) {
+        <div class="quick-add" role="dialog" [attr.aria-label]="qa.mode === 'create' ? 'New location' : 'Add a location'" [style.left.px]="qa.left" [style.top.px]="qa.top" (keydown)="onQuickAddKeydown($event)">
+          <div class="quick-add-head">
+            <strong>{{ qa.mode === 'create' ? 'New location' : 'Add a location' }}</strong>
+            @if (!qa.world) { <small>then click the map</small> }
+            <button class="icon-btn" title="Close (Esc)" aria-label="Close" [disabled]="quickAddBusy" (click)="closeQuickAdd()"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg></button>
+          </div>
+          <input #autoFocus class="form-control" type="search" [attr.aria-label]="qa.mode === 'create' ? 'Location name' : 'Search or name a new location'" [placeholder]="qa.mode === 'create' ? 'Name' : 'Search, or type a new name…'" maxlength="200" [(ngModel)]="quickAddSearch" (ngModelChange)="quickAddIndex = -1; quickAddError = ''" [disabled]="quickAddBusy" />
+          <div class="type-icons" role="group" [attr.aria-label]="qa.mode === 'create' ? 'Type' : 'Filter by type'">
+            @for (type of locationTypes; track type.value) {
+              <button class="icon-btn" [class.active]="quickAddType === type.value" [attr.aria-pressed]="quickAddType === type.value" [title]="type.label" [attr.aria-label]="type.label" [disabled]="quickAddBusy" (click)="toggleQuickAddType(type.value)"><svg class="ui-icon" aria-hidden="true"><use [attr.href]="'assets/ui-icons.svg#' + type.icon" /></svg></button>
+            }
+          </div>
+          @if (qa.mode === 'add') {
+            @let matches = quickAddMatches;
+            <div class="quick-add-list" role="listbox" aria-label="Locations not on this map">
+              @for (location of quickAddCandidates; track location.id; let i = $index) {
+                <button role="option" class="quick-add-item" [class.highlighted]="i === quickAddIndex" [attr.aria-selected]="i === quickAddIndex" [disabled]="quickAddBusy" (click)="quickAddLocation(location)"><svg class="ui-icon" aria-hidden="true"><use [attr.href]="getTypeIcon(location.type)" /></svg><span>{{ location.name }}</span></button>
+              } @empty {
+                <p class="quick-add-empty">{{ quickAddSearch.trim() || quickAddType ? 'No unplaced locations match.' : 'Every location is already on this map.' }}</p>
+              }
+              @if (matches.length > quickAddCandidates.length) { <p class="quick-add-more">{{ matches.length - quickAddCandidates.length }} more · type to narrow</p> }
+            </div>
+          }
+          @if (quickAddError) { <p class="map-form-error" role="alert">{{ quickAddError }}</p> }
+          @if (qa.mode === 'create' || quickAddNewName) {
+            <button class="btn btn-primary btn-sm quick-add-create" [disabled]="quickAddBusy || !quickAddNewName" (click)="quickAddCreate()"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>{{ quickAddBusy ? 'Creating…' : quickAddNewName ? 'Create “' + quickAddNewName + '”' + (qa.world ? ' here' : '') : 'Create' }}</button>
+          }
+          @if (qa.mode === 'create' && quickAddExisting; as existing) { <small class="quick-add-note">{{ existing.name }} already exists{{ hasPosition(existing.id) ? ' on this map' : '' }}.@if (!hasPosition(existing.id)) { <button class="quick-add-link" (click)="quickAddLocation(existing)">Add it here</button> }</small> }
+        </div>
+      }
 
       <div class="map-controls" role="toolbar" aria-label="Map view">
         <button class="icon-btn" (click)="zoomBy(1.25)" [disabled]="view.k >= zoomLimits.max" title="Zoom in" aria-label="Zoom in">
@@ -337,8 +391,8 @@
           <div class="map-empty" data-testid="empty-no-locations">
             <svg class="ui-icon ui-icon-lg" aria-hidden="true"><use href="assets/ui-icons.svg#map" /></svg>
             <h3>No locations yet</h3>
-            <p>Open Locations to choose types or create a place.</p>
-            <button class="btn btn-primary" (click)="openMembership()">Locations</button>
+            <p>Double-click the map to add a place right there.</p>
+            @if (!readOnly) { <button class="btn btn-primary" (click)="openQuickAdd('add', null)">New location</button> }
           </div>
         } @else if (filteredLocations.length === 0) {
           <div class="map-empty"><h3>No matching locations</h3><p>Try changing your filters.</p><button class="btn btn-secondary" (click)="clearFilters()">Clear filters</button></div>

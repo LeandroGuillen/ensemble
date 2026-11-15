@@ -97,6 +97,8 @@ export const SHORTCUT_REGISTRY: readonly Shortcut[] = [
   { keys: ['Enter'], description: 'Edit focused cell', category: 'Plot Board' },
 
   // World map
+  { keys: ['N'], description: 'Add a location, then click the map to place it', category: 'World map' },
+  { keys: ['Double-click'], description: 'Add or create a location at that spot (right-click: New location here)', category: 'World map' },
   { keys: ['Ctrl', 'Z'], description: 'Undo map change', category: 'World map' },
   { keys: ['Ctrl', 'Shift', 'Z'], description: 'Redo map change', category: 'World map' },
   { keys: ['↑', '↓', '←', '→'], description: 'Move focused pin (Shift: bigger steps)', category: 'World map' },

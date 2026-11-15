@@ -12,6 +12,8 @@ import {
   OnInit,
   OnDestroy,
   ViewChild,
+  ViewChildren,
+  QueryList,
   inject,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -195,6 +197,13 @@ export class WorldMapComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('canvas') canvasRef?: ElementRef<SVGSVGElement>;
   @ViewChild('filterButton') filterButtonRef?: ElementRef<HTMLButtonElement>;
   @ViewChild('options') optionsRef?: ElementRef<HTMLDetailsElement>;
+  /** Focus the first field of a popover or inline form as soon as it appears. */
+  @ViewChildren('autoFocus') set autoFocus(list: QueryList<ElementRef<HTMLElement>>) {
+    const element = list?.first?.nativeElement;
+    if (element && element !== this.lastAutoFocus) { this.lastAutoFocus = element; setTimeout(() => element.focus()); }
+    if (!element) this.lastAutoFocus = null;
+  }
+  private lastAutoFocus: HTMLElement | null = null;
 
   isLoading = true;
   state: WorldMapState | null = null;
@@ -1050,8 +1059,234 @@ export class WorldMapComponent implements OnInit, AfterViewInit, OnDestroy {
     await this.router.navigate(['/location', location.id], { queryParams: { map: this.activeMapId }, queryParamsHandling: 'merge' });
   }
 
-  createLocation(): void {
-    void this.router.navigate(['/location'], { queryParams: { map: this.activeMapId }, queryParamsHandling: 'merge' });
+  /** Inline create row in Manage Locations (name + type icons). */
+  newLocationMode: 'membership' | null = null;
+  newLocationName = '';
+  newLocationType = '';
+  newLocationBusy = false;
+  newLocationError = '';
+  /** Set while a location just created without a map point waits for its first click on the map. */
+  private placingNewLocationId: string | null = null;
+
+  openNewLocation(): void {
+    if (this.readOnly || this.mapBusy || this.newLocationBusy) return;
+    this.newLocationName = this.membershipSearch.trim();
+    this.newLocationType = '';
+    this.newLocationError = '';
+    this.newLocationMode = 'membership';
+  }
+
+  closeNewLocation(): void {
+    if (this.newLocationBusy) return;
+    this.newLocationMode = null;
+    this.newLocationError = '';
+  }
+
+  get newLocationDuplicate(): Location | undefined { return this.findByName(this.newLocationName); }
+
+  private findByName(value: string): Location | undefined {
+    const name = value.trim().toLowerCase();
+    return name ? this.locations.find(location => location.name.trim().toLowerCase() === name) : undefined;
+  }
+
+  private async createNamedLocation(name: string, typeValue: string): Promise<Location> {
+    const type = LOCATION_TYPES.find(entry => entry.value === typeValue)?.value;
+    const location = await this.locationService.createLocation({ name, type, books: [], content: '' });
+    if (!this.locations.some(entry => entry.id === location.id)) this.locations = [...this.locations, location];
+    return location;
+  }
+
+  async submitNewLocation(): Promise<void> {
+    const name = this.newLocationName.trim();
+    if (!this.newLocationMode || !name || this.readOnly || this.newLocationBusy) return;
+    this.newLocationBusy = true;
+    this.newLocationError = '';
+    try {
+      const location = await this.createNamedLocation(name, this.newLocationType);
+      this.newLocationMode = null;
+      // Stay in the dialog: the new place is checked in the draft and applied with the other changes.
+      this.setMember(location.id, true);
+      this.membershipSearch = location.name;
+    } catch (error) {
+      this.newLocationError = error instanceof Error ? error.message : 'Could not create the location.';
+    } finally {
+      this.newLocationBusy = false;
+      if (!this.destroyRef.destroyed) this.cdr.markForCheck();
+    }
+  }
+
+  // ---- Quick add: double-click / right-click on the map, or the toolbar button ----
+
+  /** Popover state. `world` is where the pin goes; null (toolbar) means "click the map next". */
+  quickAdd: { mode: 'add' | 'create'; world: MapPoint | null; left: number; top: number } | null = null;
+  quickAddSearch = '';
+  quickAddType = '';
+  quickAddIndex = -1;
+  quickAddBusy = false;
+  quickAddError = '';
+  canvasMenu: { world: MapPoint; left: number; top: number } | null = null;
+  static readonly QUICK_ADD_LIMIT = 8;
+
+  /** Locations without a pin or area on this map, matching the name search and type filter. */
+  get quickAddMatches(): Location[] {
+    const search = this.quickAddSearch.trim().toLowerCase();
+    return this.locations
+      .filter(location => !this.hasPosition(location.id))
+      .filter(location => !this.quickAddType || location.type === this.quickAddType)
+      .filter(location => !search || [location.name, ...(location.aliases || [])].some(name => name.toLowerCase().includes(search)))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+  get quickAddCandidates(): Location[] { return this.quickAddMatches.slice(0, WorldMapComponent.QUICK_ADD_LIMIT); }
+  /** Typed name that is not an existing location's name: offered as "Create". */
+  get quickAddNewName(): string {
+    const name = this.quickAddSearch.trim();
+    return name && !this.findByName(name) ? name : '';
+  }
+  get quickAddExisting(): Location | undefined { return this.findByName(this.quickAddSearch); }
+
+  private stagePoint(clientX: number, clientY: number, width: number, height: number): { left: number; top: number } {
+    const stage = this.canvasRef?.nativeElement.parentElement?.getBoundingClientRect();
+    if (!stage) return { left: 12, top: 12 };
+    const left = Math.max(8, Math.min(clientX - stage.left + 8, stage.width - width - 8));
+    const top = Math.max(8, Math.min(clientY - stage.top + 8, stage.height - height - 8));
+    return { left, top };
+  }
+
+  private canAddHere(): boolean {
+    return !this.readOnly && !this.mapBusy && !this.areaLocation && !this.roadMode && !this.placementLocation;
+  }
+
+  openQuickAdd(mode: 'add' | 'create', world: MapPoint | null, clientX?: number, clientY?: number): void {
+    if (!this.canAddHere()) return;
+    this.canvasMenu = null;
+    const position = clientX === undefined || clientY === undefined ? { left: 12, top: 12 } : this.stagePoint(clientX, clientY, 300, mode === 'add' ? 420 : 200);
+    this.quickAdd = { mode, world: world && { x: Math.round(world.x), y: Math.round(world.y) }, ...position };
+    this.quickAddSearch = '';
+    this.quickAddType = '';
+    this.quickAddIndex = -1;
+    this.quickAddError = '';
+  }
+
+  closeQuickAdd(): void {
+    if (this.quickAddBusy) return;
+    this.quickAdd = null;
+    this.quickAddError = '';
+  }
+
+  onCanvasDoubleClick(event: MouseEvent): void {
+    if (event.button !== 0 || this.isMapItemTarget(event.target)) return;
+    event.preventDefault();
+    this.openQuickAdd('add', this.toWorld(event.clientX, event.clientY), event.clientX, event.clientY);
+  }
+
+  onCanvasContextMenu(event: MouseEvent): void {
+    if (this.isMapItemTarget(event.target) || !this.canAddHere()) return;
+    event.preventDefault();
+    this.quickAdd = null;
+    this.closePinMenu();
+    this.canvasMenu = { world: this.toWorld(event.clientX, event.clientY), ...this.stagePoint(event.clientX, event.clientY, 220, 90) };
+  }
+
+  private isMapItemTarget(target: EventTarget | null): boolean {
+    return target instanceof Element && !!target.closest('.pin, .location-area, .road, .area-vertex, .area-insert');
+  }
+
+  canvasMenuAction(mode: 'add' | 'create'): void {
+    const menu = this.canvasMenu;
+    if (!menu) return;
+    this.canvasMenu = null;
+    const stage = this.canvasRef?.nativeElement.parentElement?.getBoundingClientRect();
+    this.openQuickAdd(mode, menu.world, (stage?.left ?? 0) + menu.left - 8, (stage?.top ?? 0) + menu.top - 8);
+  }
+
+  toggleQuickAddType(type: string): void {
+    this.quickAddType = this.quickAddType === type ? '' : type;
+    this.quickAddIndex = -1;
+  }
+
+  onQuickAddKeydown(event: KeyboardEvent): void {
+    const count = this.quickAdd?.mode === 'add' ? this.quickAddCandidates.length : 0;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      this.closeQuickAdd();
+    } else if (event.key === 'ArrowDown' && count) {
+      event.preventDefault();
+      this.quickAddIndex = (this.quickAddIndex + 1) % count;
+    } else if (event.key === 'ArrowUp' && count) {
+      event.preventDefault();
+      this.quickAddIndex = this.quickAddIndex <= 0 ? count - 1 : this.quickAddIndex - 1;
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      void this.submitQuickAdd();
+    }
+  }
+
+  /** Enter: the highlighted place, else an existing place with exactly that name, else a new one. */
+  async submitQuickAdd(): Promise<void> {
+    if (!this.quickAdd) return;
+    const highlighted = this.quickAdd.mode === 'add' ? this.quickAddCandidates[this.quickAddIndex] : undefined;
+    const existing = highlighted || this.quickAddExisting;
+    if (existing && (highlighted || !this.hasPosition(existing.id))) await this.quickAddLocation(existing);
+    else if (existing) this.quickAddError = `${existing.name} is already on this map.`;
+    else await this.quickAddCreate();
+  }
+
+  async quickAddCreate(): Promise<void> {
+    const name = this.quickAddSearch.trim();
+    if (!this.quickAdd || !name || this.quickAddBusy || this.readOnly) return;
+    this.quickAddBusy = true;
+    this.quickAddError = '';
+    try {
+      const location = await this.createNamedLocation(name, this.quickAddType);
+      await this.placeQuickAdd(location, true);
+    } catch (error) {
+      this.quickAddError = error instanceof Error ? error.message : 'Could not create the location.';
+    } finally {
+      this.quickAddBusy = false;
+      if (!this.destroyRef.destroyed) this.cdr.markForCheck();
+    }
+  }
+
+  async quickAddLocation(location: Location): Promise<void> {
+    if (!this.quickAdd || this.quickAddBusy || this.readOnly) return;
+    this.quickAddBusy = true;
+    this.quickAddError = '';
+    try {
+      await this.placeQuickAdd(location, false);
+    } finally {
+      this.quickAddBusy = false;
+      if (!this.destroyRef.destroyed) this.cdr.markForCheck();
+    }
+  }
+
+  /** Add to this map and pin at the clicked point in one undo step (or wait for a click when there is no point). */
+  private async placeQuickAdd(location: Location, created: boolean): Promise<void> {
+    const point = this.quickAdd?.world;
+    const member = (map: WorldMap) => isMapMember(map, location) ? map : includeMapLocation(map, location.id);
+    if (!point) {
+      if (!(await this.applyEdit(member))) { this.quickAddError = `Could not add ${location.name} to this map.`; return; }
+      this.quickAdd = null;
+      this.cancelArea();
+      this.placingNewLocationId = created ? location.id : null;
+      this.placementLocation = location;
+      this.roadMode = false;
+      this.roadFrom = null;
+      return;
+    }
+    if (!(await this.applyEdit(map => setPinPosition(member(map), location.id, point.x, point.y)))) {
+      this.quickAddError = `Could not add ${location.name} to this map.`;
+      return;
+    }
+    this.quickAdd = null;
+    if (created) await this.openLocation(location);
+  }
+
+  /** After the first placement of a freshly created location, open its details beside the map. */
+  private async afterPlacement(location: Location): Promise<void> {
+    if (this.placingNewLocationId !== location.id) return;
+    this.placingNewLocationId = null;
+    await this.openLocation(location);
   }
 
   onPinMenuOpened(trigger: CdkContextMenuTrigger): void {
@@ -1182,6 +1417,8 @@ export class WorldMapComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   onCanvasPointerDown(event: PointerEvent): void {
+    this.canvasMenu = null;
+    if (event.button === 0 && this.quickAdd && !this.quickAddBusy) this.quickAdd = null;
     if (event.button !== 0 && event.button !== 1) return;
     this.cancelLocationClick();
     this.closePinMenu();
@@ -1260,6 +1497,7 @@ export class WorldMapComponent implements OnInit, AfterViewInit, OnDestroy {
         this.placementLocation = null;
         const saved = await this.applyEdit(map => setPinPosition(map, location.id, position.x, position.y));
         if (!saved) this.placementLocation = location;
+        else await this.afterPlacement(location);
         return;
       }
       if (this.areaLocation) return;
@@ -1405,7 +1643,13 @@ export class WorldMapComponent implements OnInit, AfterViewInit, OnDestroy {
       event.preventDefault();
       return;
     }
-    if (this.mapForm || this.membershipOpen || isEditableKeyboardTarget(event.target)) return;
+    if (event.key === 'Escape' && (this.canvasMenu || this.quickAdd)) {
+      event.preventDefault();
+      this.canvasMenu = null;
+      this.closeQuickAdd();
+      return;
+    }
+    if (this.mapForm || this.membershipOpen || this.quickAdd || this.canvasMenu || isEditableKeyboardTarget(event.target)) return;
     if (this.areaLocation) {
       if (event.key === 'Escape') { event.preventDefault(); this.cancelArea(); }
       else if (event.key === 'Enter' && !isInteractiveKeyboardTarget(event.target)) { event.preventDefault(); void this.finishArea(); }
@@ -1419,12 +1663,16 @@ export class WorldMapComponent implements OnInit, AfterViewInit, OnDestroy {
     if (event.key === 'Escape' && this.placementLocation) {
       event.preventDefault();
       this.placementLocation = null;
+      this.placingNewLocationId = null;
       this.placementPointer = null;
       return;
     }
     const mod = event.ctrlKey || event.metaKey;
     const key = event.key.toLowerCase();
-    if (mod && key === 'z' && !event.shiftKey) {
+    if (key === 'n' && !mod && !event.altKey && !event.shiftKey && !this.readOnly && !this.areaLocation && !this.drawerOpen) {
+      event.preventDefault();
+      this.openQuickAdd('add', null);
+    } else if (mod && key === 'z' && !event.shiftKey) {
       event.preventDefault();
       void this.undo();
     } else if (mod && (key === 'y' || (key === 'z' && event.shiftKey))) {

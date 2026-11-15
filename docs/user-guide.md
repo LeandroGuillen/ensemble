@@ -83,9 +83,13 @@ Characters belong to one or more Houses across your world's history.
 
 ## World map
 
-The **World map** (sidebar, under Locations) answers "what is near what?". Drag
-places from the *Not on the map* list onto the canvas, or use **Pin all
-unplaced** for a rough layout to rearrange. Drag pins to move them, drag the
+The **World map** (sidebar, under Locations) answers "what is near what?".
+Double-click an empty spot to add a place right there: the popover lists
+locations not yet on this map (filter them with the type icons or by typing a
+name), and typing a new name offers **Create "…" here**. Right-click an empty
+spot for **New location here…**. The toolbar's **New location** button (or N)
+opens the same list, then you click the map to place your pick. **Manage
+Locations** chooses which types join the map automatically. Drag pins to move them, drag the
 background to pan, and scroll to zoom. Clicking a pin opens the location.
 **Draw roads** connects pins: click one, then another; clicking a connected
 pair again removes the road. Click a road to give it a label such as "Coast

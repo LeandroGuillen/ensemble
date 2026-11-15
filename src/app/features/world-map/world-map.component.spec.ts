@@ -723,6 +723,162 @@ describe('WorldMapComponent', () => {
     expect(query('.pin')).toBeNull();
   });
 
+  const pointer = (type: string, x: number, y: number, button = 0) => {
+    const rect = component.canvasRef!.nativeElement.getBoundingClientRect();
+    return new PointerEvent(type, { button, pointerId: 1, clientX: rect.left + x, clientY: rect.top + y, bubbles: true });
+  };
+  const mouse = (type: string, x: number, y: number, target?: Element) => {
+    const rect = component.canvasRef!.nativeElement.getBoundingClientRect();
+    const event = new MouseEvent(type, { button: type === 'contextmenu' ? 2 : 0, clientX: rect.left + x, clientY: rect.top + y, bubbles: true, cancelable: true });
+    (target || component.canvasRef!.nativeElement).dispatchEvent(event);
+    return event;
+  };
+  const stubCreate = (created: Location) => {
+    const spy = jasmine.createSpy('createLocation').and.callFake(async () => {
+      locations$.next([...locations$.value, created]);
+      return created;
+    });
+    (TestBed.inject(LocationService) as any).createLocation = spy;
+    return spy;
+  };
+
+  it('double-click opens a quick add listing unplaced locations, filtered by type and name', async () => {
+    locations$.next([loc('a', 'Ashford', 'settlement'), loc('b', 'Black Peak', 'natural-feature'), loc('c', 'Cove', 'settlement'), loc('p', 'Placed', 'settlement')]);
+    setState({ ...emptyWorldMap(), membership: { types: ['settlement', 'natural-feature'], include: [], exclude: [] }, pins: [{ locationId: 'p', x: 0, y: 0 }] } as WorldMap);
+    await render();
+    component.view = { tx: 0, ty: 0, k: 1 };
+    mouse('dblclick', 40, 30);
+    await render();
+    expect(query('.quick-add')).not.toBeNull();
+    expect(component.quickAdd!.world).toEqual({ x: 40, y: 30 });
+    expect(component.quickAddCandidates.map(l => l.id)).toEqual(['a', 'b', 'c']);
+    component.toggleQuickAddType('settlement');
+    expect(component.quickAddCandidates.map(l => l.id)).toEqual(['a', 'c']);
+    component.quickAddSearch = 'cov';
+    expect(component.quickAddCandidates.map(l => l.id)).toEqual(['c']);
+    await component.quickAddLocation(component.quickAddCandidates[0]);
+    await render();
+    expect(state$.value!.map.pins).toContain(jasmine.objectContaining({ locationId: 'c', x: 40, y: 30 }));
+    expect(component.quickAdd).toBeNull();
+    expect(router.navigate).not.toHaveBeenCalledWith(['/location', 'c'], jasmine.anything());
+  });
+
+  it('quick add places a location that is not a member yet in one undoable edit', async () => {
+    locations$.next([loc('x', 'Outsider', 'building')]);
+    setState(emptyWorldMap());
+    await render();
+    component.openQuickAdd('add', { x: 5, y: 6 });
+    const applies = worldMap.apply.calls.count();
+    await component.quickAddLocation(locations$.value[0]);
+    expect(worldMap.apply.calls.count()).toBe(applies + 1);
+    expect(component.mapLocations.map(l => l.id)).toEqual(['x']);
+    expect(state$.value!.map.pins).toEqual([jasmine.objectContaining({ locationId: 'x', x: 5, y: 6 })]);
+  });
+
+  it('typing a new name in quick add creates it at the clicked point and opens its details', async () => {
+    const createLocation = stubCreate(loc('new', 'Grey Harbor', 'settlement'));
+    setState(emptyWorldMap());
+    await render();
+    component.openQuickAdd('add', { x: 12, y: 34 });
+    component.quickAddSearch = '  Grey Harbor ';
+    component.toggleQuickAddType('settlement');
+    expect(component.quickAddNewName).toBe('Grey Harbor');
+    await component.submitQuickAdd();
+    expect(createLocation).toHaveBeenCalledWith({ name: 'Grey Harbor', type: 'settlement', books: [], content: '' });
+    expect(state$.value!.map.pins).toEqual([jasmine.objectContaining({ locationId: 'new', x: 12, y: 34 })]);
+    expect(router.navigate).toHaveBeenCalledWith(['/location', 'new'], jasmine.objectContaining({ queryParams: { map: 'world' } }));
+  });
+
+  it('Enter in quick add picks an unplaced location with exactly that name instead of creating a duplicate', async () => {
+    const createLocation = stubCreate(loc('dup', 'Ashford'));
+    locations$.next([loc('a', 'Ashford')]);
+    setState({ ...emptyWorldMap(), membership: { types: ['unspecified'], include: [], exclude: [] } } as WorldMap);
+    await render();
+    component.openQuickAdd('add', { x: 1, y: 2 });
+    component.quickAddSearch = 'ashford';
+    await component.submitQuickAdd();
+    expect(createLocation).not.toHaveBeenCalled();
+    expect(state$.value!.map.pins.map(pin => pin.locationId)).toEqual(['a']);
+  });
+
+  it('right-click on empty map offers to create a location right there', async () => {
+    const createLocation = stubCreate(loc('new', 'Tollbridge'));
+    locations$.next([loc('p', 'Placed')]);
+    setState({ ...emptyWorldMap(), membership: { types: ['unspecified'], include: [], exclude: [] }, pins: [{ locationId: 'p', x: 100, y: 100 }] } as WorldMap);
+    await render();
+    component.view = { tx: 0, ty: 0, k: 1 };
+    await render();
+    const pinEvent = mouse('contextmenu', 0, 0, query('.pin')!);
+    expect(component.canvasMenu).toBeNull();
+    expect(pinEvent.defaultPrevented).toBeTrue();
+    const event = mouse('contextmenu', 70, 20);
+    expect(event.defaultPrevented).toBeTrue();
+    await render();
+    expect(query('.canvas-menu')?.textContent).toContain('New location here');
+    (query('.canvas-menu-item') as HTMLButtonElement).click();
+    await render();
+    expect(component.quickAdd).toEqual(jasmine.objectContaining({ mode: 'create', world: { x: 70, y: 20 } }));
+    expect(query('.quick-add-list')).toBeNull();
+    component.quickAddSearch = 'Tollbridge';
+    await component.submitQuickAdd();
+    expect(createLocation).toHaveBeenCalled();
+    expect(state$.value!.map.pins).toContain(jasmine.objectContaining({ locationId: 'new', x: 70, y: 20 }));
+  });
+
+  it('toolbar button and N open quick add, then a click on the map places the pick; read-only maps do neither', async () => {
+    locations$.next([loc('a', 'Ashford')]);
+    setState(emptyWorldMap());
+    await render();
+    (query('.new-location-btn') as HTMLButtonElement).click();
+    await render();
+    expect(component.quickAdd).toEqual(jasmine.objectContaining({ mode: 'add', world: null }));
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(component.quickAdd).toBeNull();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'n' }));
+    expect(component.quickAdd).not.toBeNull();
+    await component.quickAddLocation(locations$.value[0]);
+    expect(component.placementLocation?.id).toBe('a');
+    component.view = { tx: 0, ty: 0, k: 1 };
+    const canvas = component.canvasRef!.nativeElement;
+    spyOn(canvas, 'setPointerCapture').and.stub();
+    spyOn(canvas, 'releasePointerCapture').and.stub();
+    const down = pointer('pointerdown', 40, 30);
+    component.onCanvasPointerDown(down);
+    await component.onCanvasPointerUp(down);
+    expect(state$.value!.map.pins).toEqual([jasmine.objectContaining({ locationId: 'a', x: 40, y: 30 })]);
+    setState(emptyWorldMap(), { readOnly: true });
+    await render();
+    expect((query('.new-location-btn') as HTMLButtonElement).disabled).toBeTrue();
+    mouse('dblclick', 10, 10);
+    expect(mouse('contextmenu', 10, 10).defaultPrevented).toBeFalse();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'n' }));
+    expect(component.quickAdd).toBeNull();
+    expect(component.canvasMenu).toBeNull();
+  });
+
+  it('creates a location inside Manage Locations without leaving the dialog', async () => {
+    const created = loc('new', 'Tollbridge');
+    const createLocation = jasmine.createSpy('createLocation').and.callFake(async () => {
+      locations$.next([...locations$.value, created]);
+      return created;
+    });
+    (TestBed.inject(LocationService) as any).createLocation = createLocation;
+    locations$.next([loc('a', 'Ashford')]);
+    setState(emptyWorldMap());
+    await render();
+    component.openMembership();
+    component.membershipSearch = 'Tollbridge';
+    component.openNewLocation();
+    expect(component.newLocationName).toBe('Tollbridge');
+    await component.submitNewLocation();
+    await render();
+    expect(component.membershipOpen).toBeTrue();
+    expect(router.navigate).not.toHaveBeenCalledWith(['/location'], jasmine.anything());
+    expect(component.membershipDraft.has('new')).toBeTrue();
+    await component.saveMembership();
+    expect(component.mapLocations.map(location => location.id)).toContain('new');
+  });
+
   it('keeps the default toolbar compact and moves secondary settings into a closed menu', async () => {
     setState(emptyWorldMap());
     await render();
