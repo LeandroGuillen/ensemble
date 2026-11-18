@@ -37,6 +37,8 @@ export class BookEditorComponent implements OnInit, OnChanges {
   @Input() sagasList: Saga[] = [];
   @Input() isVisible = false;
   @Input() saving = false;
+  /** Series/saga a new book starts in (the shelf its "New book" button was on). */
+  @Input() newBookPlacement: { seriesId?: string; sagaId?: string } | null = null;
   @Output() save = new EventEmitter<BookFormData>();
   @Output() cancel = new EventEmitter<void>();
   @Output() delete = new EventEmitter<Book>();
@@ -132,7 +134,7 @@ export class BookEditorComponent implements OnInit, OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['book'] || changes['isVisible']) {
+    if (changes['book'] || changes['isVisible'] || changes['newBookPlacement']) {
       this.initializeForm();
     }
   }
@@ -166,8 +168,8 @@ export class BookEditorComponent implements OnInit, OnChanges {
         publicationDate: '',
         isbn: '',
         coverImage: '',
-        seriesId: '',
-        sagaId: '',
+        seriesId: this.newBookPlacement?.seriesId || '',
+        sagaId: (this.newBookPlacement?.seriesId && this.newBookPlacement.sagaId) || '',
         planPath: '',
         manuscriptDir: ''
       });

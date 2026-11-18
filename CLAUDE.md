@@ -29,6 +29,7 @@ Located in `src/app/core/services/`:
 - **ElectronService**: IPC bridge to Electron main process for all file system operations (including directory operations)
 - **ProjectService**: Manages work folder selection and `ensemble.json` (categories, tags, settings, `lastSession`, pinboards). `loadProject()` first asks the main process for the folder to open (`resolveProjectFolder`, `lib/demo-project.js`): the committed demo (`.ensemble-demo` marker) inside a git checkout opens as a writable copy under `<userData>/demo-projects/`
 - **ProjectIconService**: Sidebar project icon (`ensemble.json` → `projectIcon`, a project-relative image path). Images picked from outside the project are copied to `<imagesFolder>/project-icon.<ext>`
+- **PinnedBooksService**: Books pinned to the sidebar (`ensemble.json` → `pinnedBookIds`, ordered; the first is the current book). The sidebar shows the current book as a card just above the Story section with chapter progress (plan chapters vs `<code>-*` files in `manuscriptDir`, re-read when the plan changes on disk and when the window regains focus); the rest are chips. Pin/unpin from the book page header, or drag a book from the Books page onto the sidebar (`startBookDrag()`/`draggingBookId$` light up the pin area while dragging); deleting a book unpins it
 - **CharacterService**: CRUD operations for convention-based character folders under `characters/`
 - **LocationService**: CRUD operations for location files (`_*.md`), recursive scan under `locations/`, flat-file format
 - **CharacterDuplicateService**: Duplicate action (character page, grid/list views, palette): picks a unique `<Name> (copy N)` across characters, Lore, drafts, locations and Houses, calls `CharacterService.duplicateCharacter()` (new folder, renamed book pages, portraits copied into `<folder>/img/`, never touches other files), opens the copy
@@ -139,7 +140,7 @@ Each project has this structure:
 
 ```
 project-folder/
-├── ensemble.json           # Project metadata: categories, tags, settings (incl. calendar), lastSession, pinboards
+├── ensemble.json           # Project metadata: categories, tags, settings (incl. calendar), lastSession, pinboards, pinnedBookIds
 ├── chronicle.md            # Timeline chronicle: `#` eras, `## <date> · <title>` entries (path configurable)
 ├── .ensemble-trash/        # Staged deletes before OS trash (exclude from backups/exports)
 ├── comfyui-workflows/      # ComfyUI API-format workflow JSON (optional; image generation)

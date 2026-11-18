@@ -38,6 +38,22 @@
           }
         </button>
 
+        @if (currentBook; as book) {
+          <button
+            type="button"
+            class="header-filter-toggle header-book-toggle"
+            [class.active]="currentBookFilterOn"
+            (click)="toggleCurrentBookFilter()"
+            [attr.aria-pressed]="currentBookFilterOn"
+            [attr.aria-label]="'Only characters in ' + currentBookName"
+            [title]="currentBookFilterOn ? 'Showing only characters in ' + currentBookName + '. Click to show all' : 'Show only characters in ' + currentBookName"
+            data-testid="current-book-filter"
+          >
+            <span class="book-dot" [style.background]="book.color" aria-hidden="true"></span>
+            <span class="book-label">{{ currentBookLabel }}</span>
+          </button>
+        }
+
         <div class="compact-select-control">
           <span class="toolbar-label">Sort</span>
           <select
@@ -143,6 +159,22 @@
             <span class="filter-count" aria-hidden="true">{{ activeFilterCount }}</span>
           }
         </button>
+
+        @if (currentBook; as book) {
+          <button
+            type="button"
+            class="header-filter-toggle header-book-toggle"
+            [class.active]="currentBookFilterOn"
+            (click)="toggleCurrentBookFilter()"
+            [attr.aria-pressed]="currentBookFilterOn"
+            [attr.aria-label]="'Only characters in ' + currentBookName"
+            [title]="currentBookFilterOn ? 'Showing only characters in ' + currentBookName + '. Click to show all' : 'Show only characters in ' + currentBookName"
+            data-testid="current-book-filter"
+          >
+            <span class="book-dot" [style.background]="book.color" aria-hidden="true"></span>
+            <span class="book-label">{{ currentBookLabel }}</span>
+          </button>
+        }
 
         <div class="toolbar-control">
           <span class="toolbar-label">Sort</span>

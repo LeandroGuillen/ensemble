@@ -19,7 +19,7 @@
 
   &.dragging {
     opacity: 0.5;
-    transform: rotateY(30deg) scale(0.95);
+    transform: rotateY(30deg);
     z-index: 1000;
     cursor: grabbing;
   }
@@ -154,7 +154,7 @@
 // Drag and Drop States
 .book-container.dragging {
   opacity: 0.5;
-  transform: rotateY(30deg) scale(0.95);
+  transform: rotateY(30deg);
   z-index: 1000;
 
   .book {
@@ -181,4 +181,17 @@
 .book-container:focus-visible .book-cover {
   outline: 3px solid var(--focus-ring-color);
   outline-offset: 4px;
+}
+
+// Books page "small" size: the whole 3D book scales (zoom keeps layout and hit
+// boxes in step, so shelves and drop positions follow).
+:host-context(.books-small) .book-container {
+  zoom: 0.62;
+}
+
+// The drop ghost keeps the pose the book had under the cursor when the drag
+// began (the hover tilt), so picking it up does not snap it flat.
+:host-context(.book-ghost) .book {
+  transform: rotateY(10deg);
+  transition: none;
 }

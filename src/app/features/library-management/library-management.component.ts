@@ -1,5 +1,5 @@
 import { ProjectReadOnlyDirective } from '../../shared/project-read-only.directive';
-import { DestroyRef, inject, Component, OnInit } from '@angular/core';
+import { DestroyRef, inject, Component, HostListener, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NgTemplateOutlet } from "@angular/common";
 
@@ -35,9 +35,23 @@ import {
   BookFormData,
 } from "../../core/services/book-edit-actions.service";
 import { Router } from "@angular/router";
+import { BOOK_DRAG_TYPE, PinnedBooksService } from "../../core/services/pinned-books.service";
+import { setBookDragImage } from "./book-drag-image";
+import { insertionIndexAt } from "./book-drop-position";
 
 type DragKind = "book" | "series" | "saga";
 
+
+/** A ghost of the dragged book on a shelf, drawn before item `renderBefore`. */
+interface BookGhost {
+  id: number;
+  placementKey: string;
+  renderBefore: number;
+  /** Shrinking away after the ghost moved on; removed when its animation ends. */
+  leaving: boolean;
+  /** The ghost the drag starts with, in the book's own place: it fades in instead of growing. */
+  initial?: boolean;
+}
 @Component({
   selector: "app-library-management",
   imports: [ProjectReadOnlyDirective,
@@ -53,6 +67,7 @@ type DragKind = "book" | "series" | "saga";
 })
 export class LibraryManagementComponent implements OnInit {
   private readonly toasts = inject(NotificationService);
+  private readonly pinnedBooks = inject(PinnedBooksService);
   private readonly destroyRef = inject(DestroyRef);
 
   books: Book[] = [];
@@ -61,6 +76,8 @@ export class LibraryManagementComponent implements OnInit {
   grouping: LibraryGrouping = { seriesGroups: [], ungrouped: [] };
 
   viewMode: "gallery" | "list" = "gallery";
+  /** Book size in the gallery view. */
+  gallerySize: "large" | "small" = "large";
 
   showBookForm = false;
   editingBook: Book | null = null;
@@ -82,8 +99,25 @@ export class LibraryManagementComponent implements OnInit {
   // Book DnD
   draggedBookId: string | null = null;
   dragOverPlacementKey: string | null = null;
-  dragOverIndex: number | null = null;
-  dragOverSide: "left" | "right" | null = null;
+  newBookPlacement: { seriesId?: string; sagaId?: string } | null = null;
+  /** Book lifted out of its shelf while dragged (its slot collapses so the shelf closes up). */
+  liftedBookId: string | null = null;
+  /**
+   * Ghosts of the dragged book: the current one (where the book would land)
+   * plus any still shrinking away from earlier spots. Keeping a departing
+   * ghost until its shrink animation ends lets the books on both sides close
+   * the old gap while the new one opens, so books move left as well as right.
+   * (Angular's `animate.leave` is skipped under the app's legacy
+   * `provideAnimations()`, so the departure is handled here.)
+   */
+  ghosts: BookGhost[] = [];
+  /** Set for the frame that ends a drop, so the shelf settles without animating. */
+  settleInstantly = false;
+  /** Set for the frames where a picked-up book turns into its ghost in place. */
+  liftInstant = false;
+  private ghostSeq = 0;
+  private settlingDrop = false;
+  private liftTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Series / saga reorder DnD
   dragKind: DragKind | null = null;
@@ -160,6 +194,10 @@ export class LibraryManagementComponent implements OnInit {
     if (savedViewMode === "gallery" || savedViewMode === "list") {
       this.viewMode = savedViewMode;
     }
+    const savedSize = localStorage.getItem("libraryGallerySize");
+    if (savedSize === "large" || savedSize === "small") {
+      this.gallerySize = savedSize;
+    }
 
     this.loadData();
 
@@ -178,6 +216,16 @@ export class LibraryManagementComponent implements OnInit {
   setViewMode(mode: "gallery" | "list"): void {
     this.viewMode = mode;
     localStorage.setItem("libraryViewMode", mode);
+  }
+
+  setGallerySize(size: "large" | "small"): void {
+    this.gallerySize = size;
+    localStorage.setItem("libraryGallerySize", size);
+  }
+
+  /** The size slider has two stops: 0 small, 1 large. */
+  setGallerySizeFromSlider(value: string): void {
+    this.setGallerySize(value === "0" ? "small" : "large");
   }
 
   private refreshGrouping(): void {
@@ -219,7 +267,9 @@ export class LibraryManagementComponent implements OnInit {
 
   // --- Book CRUD ---
 
-  showAddBookForm(): void {
+  /** Opens the New Book form; from a shelf's "New book" button it starts in that series/saga. */
+  showAddBookForm(placement?: BookPlacement): void {
+    this.newBookPlacement = placement?.seriesId ? { seriesId: placement.seriesId, sagaId: placement.sagaId } : null;
     this.showBookForm = true;
     this.editingBook = null;
     this.selectedBook = null;
@@ -243,6 +293,7 @@ export class LibraryManagementComponent implements OnInit {
   }
 
   cancelBookForm(): void {
+    this.newBookPlacement = null;
     this.showBookForm = false;
     this.editingBook = null;
     this.selectedBook = null;
@@ -394,6 +445,22 @@ export class LibraryManagementComponent implements OnInit {
     this.showSagaForm = true;
   }
 
+  /**
+   * Escape closes the Series and Saga dialogs. A dialog opened on top of them
+   * (e.g. the "Delete saga?" confirmation, a modal-frame) handles its own Escape.
+   */
+  @HostListener("document:keydown.escape", ["$event"])
+  onEscapeKey(event: Event): void {
+    if (!this.showSagaForm && !this.showSeriesForm) return;
+    if (document.querySelector("app-modal-frame .modal-overlay")) return;
+    event.preventDefault();
+    if (this.showSagaForm) {
+      this.cancelSagaForm();
+    } else {
+      this.cancelSeriesForm();
+    }
+  }
+
   cancelSagaForm(): void {
     this.showSagaForm = false;
     this.editingSaga = null;
@@ -482,95 +549,48 @@ export class LibraryManagementComponent implements OnInit {
   onBookDragStart(event: DragEvent, book: Book): void {
     this.dragKind = "book";
     this.draggedBookId = book.id;
+    // Dropping on the sidebar pins the book (a copy); shelves move it.
+    this.pinnedBooks.startBookDrag(book.id);
     if (event.dataTransfer) {
-      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.effectAllowed = "copyMove";
       event.dataTransfer.setData("text/plain", book.id);
-      const canvas = document.createElement("canvas");
-      canvas.width = 1;
-      canvas.height = 1;
-      event.dataTransfer.setDragImage(canvas, 0, 0);
+      event.dataTransfer.setData(BOOK_DRAG_TYPE, book.id);
+      setBookDragImage(event.dataTransfer, book);
     }
+    // Where the book sits now: its ghost starts there, so picking a book up
+    // just fades it in place instead of sliding the shelf.
+    const origin = this.originSpot(event, book);
+    // Collapse the source after the drag has started (hiding it inside
+    // dragstart would cancel the drag in Chromium).
+    this.liftTimer = setTimeout(() => {
+      this.liftTimer = null;
+      if (this.draggedBookId !== book.id) return;
+      this.liftInstant = true;
+      this.liftedBookId = book.id;
+      if (origin) {
+        this.ghosts = [{ id: ++this.ghostSeq, ...origin, leaving: false, initial: true }];
+      }
+      // Later changes (a cancelled drag returning the book) animate again.
+      requestAnimationFrame(() => requestAnimationFrame(() => (this.liftInstant = false)));
+    }, 0);
   }
 
   onBookDragEnd(): void {
+    // A drop on a shelf finishes once the move is saved (see onShelfDrop).
+    if (this.settlingDrop) return;
     this.clearBookDragState();
   }
 
-  onBookDragOver(
-    event: DragEvent,
-    placement: BookPlacement,
-    index: number,
-    side?: "left" | "right"
-  ): void {
+  /**
+   * The shelf works out where the book would land from the cursor (see
+   * `insertionIndexAt`) and moves a ghost of it there, so the other books
+   * slide apart to show the place. A drop lands where the ghost is.
+   */
+  onShelfDragOver(event: DragEvent, placement: BookPlacement, layout: "grid" | "list" = "grid"): void {
     if (this.acceptGroupDragOver(event, placement)) {
       return;
     }
-    if (this.dragKind !== "book") {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    if (event.dataTransfer) {
-      event.dataTransfer.dropEffect = "move";
-    }
-    this.dragOverPlacementKey = placementKey(placement);
-    this.dragOverIndex = index;
-    this.dragOverSide = side || null;
-  }
-
-  onBookDragEnter(
-    event: DragEvent,
-    placement: BookPlacement,
-    index: number,
-    side?: "left" | "right"
-  ): void {
-    if (this.acceptGroupDragOver(event, placement)) {
-      return;
-    }
-    if (this.dragKind !== "book") {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    this.dragOverPlacementKey = placementKey(placement);
-    this.dragOverIndex = index;
-    this.dragOverSide = side || null;
-  }
-
-  onBookDragLeave(event: DragEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
-    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-    const x = event.clientX;
-    const y = event.clientY;
-    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
-      this.dragOverIndex = null;
-      this.dragOverSide = null;
-    }
-  }
-
-  onBookDrop(
-    event: DragEvent,
-    placement: BookPlacement,
-    dropIndex: number
-  ): void {
-    if (this.handleGroupDrop(event, placement)) {
-      return;
-    }
-    if (this.dragKind !== "book" || !this.draggedBookId) {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    void this.performBookMove(this.draggedBookId, placement, dropIndex);
-    this.clearBookDragState();
-  }
-
-  onShelfDragOver(event: DragEvent, placement: BookPlacement): void {
-    if (this.acceptGroupDragOver(event, placement)) {
-      return;
-    }
-    if (this.dragKind !== "book") {
+    if (this.dragKind !== "book" || this.settlingDrop) {
       return;
     }
     event.preventDefault();
@@ -578,19 +598,160 @@ export class LibraryManagementComponent implements OnInit {
       event.dataTransfer.dropEffect = "move";
     }
     this.dragOverPlacementKey = placementKey(placement);
+    const target = this.dropTarget(event, layout);
+    const key = placementKey(placement);
+    if (target.othersCount === 0) {
+      // Empty shelf: its book-sized "Drop here" box lights up instead of a
+      // ghost. Swapping one for the other would resize the shelf under the
+      // cursor, fire dragleave and make the two blink in turns.
+      this.moveGhost(null);
+    } else {
+      this.moveGhost({ placementKey: key, renderBefore: target.renderBefore });
+    }
   }
 
-  onShelfDrop(event: DragEvent, placement: BookPlacement, shelfLength: number): void {
+  /** The ghost leaves when the cursor leaves the shelf (e.g. on its way to the sidebar). */
+  onShelfDragLeave(event: DragEvent): void {
+    const shelf = event.currentTarget as HTMLElement | null;
+    const next = event.relatedTarget as Node | null;
+    if (this.dragKind !== "book" || this.settlingDrop || (shelf && next && shelf.contains(next))) {
+      return;
+    }
+    this.moveGhost(null);
+    this.dragOverPlacementKey = null;
+  }
+
+  onShelfDrop(event: DragEvent, placement: BookPlacement, layout: "grid" | "list" = "grid"): void {
     if (this.handleGroupDrop(event, placement)) {
       return;
     }
-    if (this.dragKind !== "book" || !this.draggedBookId) {
+    if (this.dragKind !== "book" || !this.draggedBookId || this.settlingDrop) {
       return;
     }
     event.preventDefault();
     event.stopPropagation();
-    void this.performBookMove(this.draggedBookId, placement, shelfLength);
+    const { insertIndex } = this.dropTarget(event, layout);
+    const bookId = this.draggedBookId;
+    const fromIndex = this.shelfIndexOf(bookId, placement);
+    // Keep the ghost and the lifted slot until the new order is saved, then
+    // settle in one frame: the book appears exactly where its ghost was.
+    this.settlingDrop = true;
+    const move = fromIndex === insertIndex
+      ? Promise.resolve()
+      : this.performBookMove(bookId, placement, insertIndex);
+    void move.finally(() => this.settleDrop());
+  }
+
+  private settleDrop(): void {
+    this.settleInstantly = true;
+    this.settlingDrop = false;
     this.clearBookDragState();
+    requestAnimationFrame(() => requestAnimationFrame(() => (this.settleInstantly = false)));
+  }
+
+  /**
+   * Insert position among the shelf's other books (the dragged one left out),
+   * and the list item the ghost goes before.
+   */
+  private dropTarget(
+    event: DragEvent,
+    layout: "grid" | "list"
+  ): { insertIndex: number; renderBefore: number; othersCount: number } {
+    const shelf = event.currentTarget as HTMLElement | null;
+    const all = shelf
+      ? Array.from(shelf.querySelectorAll<HTMLElement>("[data-book-slot]")).filter(
+          (el) => el.closest(".shelf-panel") === shelf
+        )
+      : [];
+    const others = all.filter((el) => el.dataset["bookId"] !== this.draggedBookId);
+    const insertIndex = insertionIndexAt(
+      others.map((el) => el.getBoundingClientRect()),
+      event.clientX,
+      event.clientY,
+      layout
+    );
+    const renderBefore = insertIndex < others.length ? all.indexOf(others[insertIndex]) : all.length;
+    return { insertIndex, renderBefore, othersCount: others.length };
+  }
+
+  /** The dragged book's own spot as a ghost position: its shelf, and the item after it. */
+  private originSpot(event: DragEvent, book: Book): { placementKey: string; renderBefore: number } | null {
+    const slot = (event.target as Element | null)?.closest?.("[data-book-slot]") as HTMLElement | null;
+    const shelf = slot?.closest(".shelf-panel");
+    if (!slot || !shelf) return null;
+    const all = Array.from(shelf.querySelectorAll<HTMLElement>("[data-book-slot]")).filter(
+      (el) => el.closest(".shelf-panel") === shelf
+    );
+    const index = all.indexOf(slot);
+    if (index === -1) return null;
+    const placement: BookPlacement = book.sagaId
+      ? { seriesId: book.seriesId, sagaId: book.sagaId }
+      : book.seriesId
+        ? { seriesId: book.seriesId }
+        : {};
+    return { placementKey: placementKey(placement), renderBefore: index + 1 };
+  }
+
+  /** Ghosts to draw before item `index` of a shelf (the list length = at the end). */
+  ghostsBefore(placement: BookPlacement, index: number): BookGhost[] {
+    if (!this.ghosts.length || !this.draggedBook) return [];
+    const key = placementKey(placement);
+    return this.ghosts.filter((g) => g.placementKey === key && g.renderBefore === index);
+  }
+
+  /** Sends the current ghost to `spot` (null: none), letting the old one shrink away. */
+  private moveGhost(spot: { placementKey: string; renderBefore: number } | null): void {
+    const current = this.ghosts.find((g) => !g.leaving);
+    if (current && spot && current.placementKey === spot.placementKey && current.renderBefore === spot.renderBefore) {
+      return;
+    }
+    if (!current && !spot) return;
+    const next = this.ghosts.map((g) => (g === current ? { ...g, leaving: true } : g));
+    if (current) {
+      const id = current.id;
+      // Fallback in case animationend never comes (reduced motion, hidden tab).
+      setTimeout(() => this.removeGhost(id), 400);
+    }
+    if (spot) next.push({ id: ++this.ghostSeq, ...spot, leaving: false });
+    this.ghosts = next;
+  }
+
+  onGhostAnimationEnd(ghost: BookGhost, event: AnimationEvent): void {
+    if (ghost.leaving && event.target === event.currentTarget) this.removeGhost(ghost.id);
+  }
+
+  private removeGhost(id: number): void {
+    if (this.ghosts.some((g) => g.id === id)) this.ghosts = this.ghosts.filter((g) => g.id !== id);
+  }
+
+  trackGhost(_: number, ghost: BookGhost): number {
+    return ghost.id;
+  }
+
+  /** No visible books: none at all, or only the one lifted out by the drag. */
+  shelfLooksEmpty(books: Book[]): boolean {
+    return books.every((book) => book.id === this.liftedBookId);
+  }
+
+  get draggedBook(): Book | null {
+    return this.draggedBookId ? this.books.find((b) => b.id === this.draggedBookId) ?? null : null;
+  }
+
+  /** Position of a book among the books of a shelf, or -1 when it is on another shelf. */
+  private shelfIndexOf(bookId: string, placement: BookPlacement): number {
+    return this.shelfPeers(placement).findIndex((b) => b.id === bookId);
+  }
+
+  private shelfPeers(placement: BookPlacement): Book[] {
+    return this.books.filter((b) => {
+      if (placement.sagaId) {
+        return b.sagaId === placement.sagaId;
+      }
+      if (placement.seriesId) {
+        return b.seriesId === placement.seriesId && !b.sagaId;
+      }
+      return !b.seriesId;
+    });
   }
 
   /** Allow series/saga drops while hovering book/shelf children. */
@@ -663,29 +824,8 @@ export class LibraryManagementComponent implements OnInit {
         return;
       }
 
-      // Adjust insert index when moving within the same shelf after the current index
-      const sameShelf =
-        (book.seriesId || undefined) === (placement.seriesId || undefined) &&
-        (book.sagaId || undefined) === (placement.sagaId || undefined);
-
-      let insertIndex = dropIndex;
-      if (sameShelf) {
-        const peers = this.books.filter((b) => {
-          if (placement.sagaId) {
-            return b.sagaId === placement.sagaId;
-          }
-          if (placement.seriesId) {
-            return b.seriesId === placement.seriesId && !b.sagaId;
-          }
-          return !b.seriesId;
-        });
-        const fromIndex = peers.findIndex((b) => b.id === bookId);
-        if (fromIndex !== -1 && dropIndex > fromIndex) {
-          insertIndex = dropIndex - 1;
-        }
-      }
-
-      await this.metadataService.moveBook(bookId, placement, insertIndex);
+      // `dropIndex` counts the shelf's other books only (the dragged one left out).
+      await this.metadataService.moveBook(bookId, placement, dropIndex);
     } catch (error) {
       this.logger.error("Failed to move book:", error);
       this.toasts.showError(`Failed to move book: ${error}`);
@@ -695,10 +835,15 @@ export class LibraryManagementComponent implements OnInit {
   }
 
   private clearBookDragState(): void {
+    this.pinnedBooks.endBookDrag();
+    if (this.liftTimer) {
+      clearTimeout(this.liftTimer);
+      this.liftTimer = null;
+    }
     this.draggedBookId = null;
+    this.liftedBookId = null;
+    this.ghosts = [];
     this.dragOverPlacementKey = null;
-    this.dragOverIndex = null;
-    this.dragOverSide = null;
     if (this.dragKind === "book") {
       this.dragKind = null;
     }
@@ -706,18 +851,6 @@ export class LibraryManagementComponent implements OnInit {
 
   isBookDragging(book: Book): boolean {
     return this.draggedBookId === book.id;
-  }
-
-  isDropHighlight(
-    placement: BookPlacement,
-    index: number,
-    side: "left" | "right"
-  ): boolean {
-    return (
-      this.dragOverPlacementKey === placementKey(placement) &&
-      this.dragOverIndex === index &&
-      this.dragOverSide === side
-    );
   }
 
   // --- Series reorder DnD ---

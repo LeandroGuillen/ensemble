@@ -20,6 +20,7 @@ import {
 } from '../../../core/utils/world-date.utils';
 import { PovChipComponent } from '../pov-chip.component';
 import { TimelinePortraits } from '../../timeline/timeline-shared';
+import { getBookDisplayName, getBookSpineLabel } from '../../../core/utils/book-display.utils';
 
 type Mode = 'story' | 'reading';
 type LaneBy = 'pov' | 'place';
@@ -298,7 +299,7 @@ export class StoryTimeComponent implements OnInit, OnChanges, AfterViewInit {
         this.readingLabels.push({
           x,
           w: SLOT - 14,
-          label: `${this.scope === 'series' ? `${chapter.bookId} ` : ''}ch ${chapter.code}`,
+          label: `${this.scope === 'series' ? `${this.bookCode(chapter.bookId)} ` : ''}ch ${chapter.code}`,
           sub: chapter.range ? formatDayRange({ start: chapter.range.start, end: chapter.range.start }, cal) : chapter.invalid ? 'unreadable date' : 'no date',
           back,
         });
@@ -375,7 +376,14 @@ export class StoryTimeComponent implements OnInit, OnChanges, AfterViewInit {
   // ------------------------------------------------------------ chapter detail
 
   bookName(id: string): string {
-    return this.ctx?.books.find((b) => b.id === id)?.name ?? id;
+    const book = this.ctx?.books.find((b) => b.id === id);
+    return book ? getBookDisplayName(book) : id;
+  }
+
+  /** Short book label for series-wide chapter tags: the code, else the title (never the internal id). */
+  bookCode(id: string): string {
+    const book = this.ctx?.books.find((b) => b.id === id);
+    return book ? getBookSpineLabel(book) : id;
   }
 
   bookColor(id: string): string {
@@ -391,7 +399,7 @@ export class StoryTimeComponent implements OnInit, OnChanges, AfterViewInit {
   }
 
   chapterLabel(chapter: StoryChapter): string {
-    return `${this.scope === 'series' ? `${chapter.bookId} ` : ''}ch ${chapter.code}`;
+    return `${this.scope === 'series' ? `${this.bookCode(chapter.bookId)} ` : ''}ch ${chapter.code}`;
   }
 
   placeText(chapter: StoryChapter): string {

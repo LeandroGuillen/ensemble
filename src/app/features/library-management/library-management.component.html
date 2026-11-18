@@ -1,22 +1,42 @@
 <div class="library-management">
   <app-page-header [title]="'Books'">
     <div class="page-actions">
-      <div class="view-toggle view-toggle-text" role="group" aria-label="Book view">
+      <!-- Size first: it comes and goes with the view, so the view switcher stays put. -->
+      @if (viewMode === 'gallery') {
+        <div class="thumbnail-size-slider">
+          <button type="button" class="thumbnail-size-step" (click)="setGallerySize('small')"
+            [disabled]="gallerySize === 'small'" aria-label="Smaller books" title="Smaller books">−</button>
+          <input #bookSizeSlider type="range" min="0" max="1" step="1"
+            [value]="gallerySize === 'small' ? 0 : 1"
+            (input)="setGallerySizeFromSlider(bookSizeSlider.value)"
+            [attr.aria-valuetext]="gallerySize + ' books'"
+            aria-label="Book size" [title]="gallerySize === 'small' ? 'Small books' : 'Large books'" />
+          <button type="button" class="thumbnail-size-step" (click)="setGallerySize('large')"
+            [disabled]="gallerySize === 'large'" aria-label="Larger books" title="Larger books">+</button>
+        </div>
+      }
+      <div class="view-toggle view-toggle-icons" role="group" aria-label="Book view">
         <button
+          type="button"
           class="toggle-option"
           [class.active]="viewMode === 'gallery'"
+          [attr.aria-pressed]="viewMode === 'gallery'"
           (click)="setViewMode('gallery')"
           title="Gallery view"
+          aria-label="Gallery view"
         >
-          Gallery
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
         </button>
         <button
+          type="button"
           class="toggle-option"
           [class.active]="viewMode === 'list'"
+          [attr.aria-pressed]="viewMode === 'list'"
           (click)="setViewMode('list')"
           title="List view"
+          aria-label="List view"
         >
-          List
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="1" y="2" width="4" height="4" rx="1"/><rect x="7" y="2" width="8" height="2" rx="1"/><rect x="7" y="5" width="6" height="1" rx=".5"/><rect x="1" y="10" width="4" height="4" rx="1"/><rect x="7" y="10" width="8" height="2" rx="1"/><rect x="7" y="13" width="6" height="1" rx=".5"/></svg>
         </button>
       </div>
 
@@ -46,7 +66,7 @@
     </div>
   </app-page-header>
 
-  <div class="library-content">
+  <div class="library-content" [class.books-small]="viewMode === 'gallery' && gallerySize === 'small'">
     <div class="library-inner">
       @if (loading) {
         <div class="loading">
@@ -104,31 +124,11 @@
                         type="button"
                         class="btn-text"
                         draggable="false"
-                        (click)="showAddSagaForm(group.series.id)"
-                        [disabled]="saving"
-                        [attr.aria-label]="'New saga in ' + group.series.name"
-                      >
-                        New saga
-                      </button>
-                      <button appProjectReadOnly
-                        type="button"
-                        class="btn-text"
-                        draggable="false"
                         (click)="showEditSeriesForm(group.series)"
                         [disabled]="saving"
                         [attr.aria-label]="'Edit series ' + group.series.name"
                       >
-                        Edit
-                      </button>
-                      <button appProjectReadOnly
-                        type="button"
-                        class="btn-text danger"
-                        draggable="false"
-                        (click)="deleteSeries(group.series)"
-                        [disabled]="saving"
-                        [attr.aria-label]="'Delete series ' + group.series.name"
-                      >
-                        Delete
+                        Edit Series
                       </button>
                     </div>
                   </div>
@@ -164,26 +164,17 @@
                                 <h3 class="saga-name">
                                   {{ shelf.saga!.name }}
                                 </h3>
-                                <div class="saga-actions">
-                                  <button appProjectReadOnly
-                                    type="button"
-                                    class="btn-text"
-                                    draggable="false"
-                                    (click)="showEditSagaForm(shelf.saga!)"
-                                    [disabled]="saving"
-                                  >
-                                    Edit
-                                  </button>
-                                  <button appProjectReadOnly
-                                    type="button"
-                                    class="btn-text danger"
-                                    draggable="false"
-                                    (click)="deleteSaga(shelf.saga!)"
-                                    [disabled]="saving"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
+                                <button appProjectReadOnly
+                                  type="button"
+                                  class="saga-edit"
+                                  draggable="false"
+                                  (click)="showEditSagaForm(shelf.saga!)"
+                                  [disabled]="saving"
+                                  [title]="'Edit saga ' + shelf.saga!.name"
+                                  [attr.aria-label]="'Edit saga ' + shelf.saga!.name"
+                                >
+                                  <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#edit" /></svg>
+                                </button>
                               </div>
                               <ng-container
                                 *ngTemplateOutlet="
@@ -258,26 +249,17 @@
                             ><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#grip" /></svg></span
                           >
                           <h3 class="saga-name">{{ shelf.saga!.name }}</h3>
-                          <div class="saga-actions">
-                            <button appProjectReadOnly
-                              type="button"
-                              class="btn-text"
-                              draggable="false"
-                              (click)="showEditSagaForm(shelf.saga!)"
-                              [disabled]="saving"
-                            >
-                              Edit
-                            </button>
-                            <button appProjectReadOnly
-                              type="button"
-                              class="btn-text danger"
-                              draggable="false"
-                              (click)="deleteSaga(shelf.saga!)"
-                              [disabled]="saving"
-                            >
-                              Delete
-                            </button>
-                          </div>
+                          <button appProjectReadOnly
+                            type="button"
+                            class="saga-edit"
+                            draggable="false"
+                            (click)="showEditSagaForm(shelf.saga!)"
+                            [disabled]="saving"
+                            [title]="'Edit saga ' + shelf.saga!.name"
+                            [attr.aria-label]="'Edit saga ' + shelf.saga!.name"
+                          >
+                            <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#edit" /></svg>
+                          </button>
                         </div>
                         <ng-container
                           *ngTemplateOutlet="
@@ -383,35 +365,30 @@
     @if (books.length > 0 || alwaysShow || isDraggingBook) {
       <div
         class="shelf-panel"
+        [class.settle-instantly]="settleInstantly"
+        [class.drag-lit]="isDraggingBook"
         [class.drop-target]="
           isDraggingBook &&
           dragOverPlacementKey === placementKeyFor(placement)
         "
         (dragover)="onShelfDragOver($event, placement)"
-        (drop)="onShelfDrop($event, placement, books.length)"
+        (dragleave)="onShelfDragLeave($event)"
+        (drop)="onShelfDrop($event, placement)"
       >
         <div class="bookshelf">
           @for (book of books; track book.id; let i = $index) {
+            @for (g of ghostsBefore(placement, i); track g.id) {
+              <div class="book-slot book-ghost" aria-hidden="true" inert [class.book-ghost-leave]="g.leaving" [class.book-ghost-initial]="g.initial" (animationend)="onGhostAnimationEnd(g, $event)">
+                <app-book-item [book]="draggedBook!"></app-book-item>
+              </div>
+            }
             <div
               class="book-slot"
-              [class.drag-active]="isDraggingBook"
-              [class.drag-over-left]="isDropHighlight(placement, i, 'left')"
-              [class.drag-over-right]="isDropHighlight(placement, i, 'right')"
+              data-book-slot
+              [attr.data-book-id]="book.id"
+              [class.lifted]="liftedBookId === book.id"
+              [class.lift-instant]="liftInstant"
             >
-              <div
-                class="drop-zone-left"
-                (dragover)="onBookDragOver($event, placement, i, 'left')"
-                (dragenter)="onBookDragEnter($event, placement, i, 'left')"
-                (dragleave)="onBookDragLeave($event)"
-                (drop)="onBookDrop($event, placement, i)"
-              ></div>
-              <div
-                class="drop-zone-right"
-                (dragover)="onBookDragOver($event, placement, i, 'right')"
-                (dragenter)="onBookDragEnter($event, placement, i, 'right')"
-                (dragleave)="onBookDragLeave($event)"
-                (drop)="onBookDrop($event, placement, i + 1)"
-              ></div>
               <app-book-item
                 [book]="book"
                 [isSelected]="selectedBook?.id === book.id"
@@ -424,8 +401,23 @@
               </app-book-item>
             </div>
           }
-          @if (books.length === 0) {
-            <div class="shelf-empty-hint">Drop books here</div>
+          @for (g of ghostsBefore(placement, books.length); track g.id) {
+            <div class="book-slot book-ghost" aria-hidden="true" inert [class.book-ghost-leave]="g.leaving" [class.book-ghost-initial]="g.initial" (animationend)="onGhostAnimationEnd(g, $event)">
+              <app-book-item [book]="draggedBook!"></app-book-item>
+            </div>
+          }
+          @if (shelfLooksEmpty(books)) {
+            @if (isDraggingBook) {
+              <div class="shelf-drop-empty" aria-hidden="true">
+                <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#book-open" /></svg>
+                <span>Drop here</span>
+              </div>
+            } @else if (placement.seriesId) {
+              <button appProjectReadOnly type="button" class="shelf-new-book" (click)="showAddBookForm(placement)" [disabled]="saving">
+                <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
+                New book
+              </button>
+            }
           }
         </div>
       </div>
@@ -442,26 +434,44 @@
     @if (books.length > 0 || alwaysShow || isDraggingBook) {
       <div
         class="books-list shelf-panel"
+        [class.settle-instantly]="settleInstantly"
+        [class.drag-lit]="isDraggingBook"
         [class.drop-target]="
           isDraggingBook &&
           dragOverPlacementKey === placementKeyFor(placement)
         "
-        (dragover)="onShelfDragOver($event, placement)"
-        (drop)="onShelfDrop($event, placement, books.length)"
+        (dragover)="onShelfDragOver($event, placement, 'list')"
+        (dragleave)="onShelfDragLeave($event)"
+        (drop)="onShelfDrop($event, placement, 'list')"
       >
         @for (book of books; track book.id; let i = $index) {
+          @for (g of ghostsBefore(placement, i); track g.id) {
+            <div class="book-row book-ghost-row" aria-hidden="true" inert [class.book-ghost-leave]="g.leaving" [class.book-ghost-initial]="g.initial" (animationend)="onGhostAnimationEnd(g, $event)">
+              <span class="book-color-swatch" [style.background]="draggedBook!.color"></span>
+              <span class="book-row-main">
+                <span class="book-row-title-line">
+                  @if (draggedBook!.code) {
+                    <span class="book-row-code">{{ draggedBook!.code }}</span>
+                  }
+                  <span class="book-row-title">{{ getBookTitle(draggedBook!) }}</span>
+                </span>
+              </span>
+            </div>
+          }
           <button
             type="button"
             [attr.aria-label]="'Open book ' + getBookTitle(book)"
             class="book-row"
+            data-book-slot
+            [attr.data-book-id]="book.id"
+            [class.lifted]="liftedBookId === book.id"
+              [class.lift-instant]="liftInstant"
             draggable="true"
             [class.selected]="selectedBook?.id === book.id"
             [class.dragging]="isBookDragging(book)"
             (click)="onBookClick(book)"
             (dragstart)="onBookDragStart($event, book)"
             (dragend)="onBookDragEnd()"
-            (dragover)="onBookDragOver($event, placement, i, 'left')"
-            (drop)="onBookDrop($event, placement, i)"
           >
             <span
               class="book-color-swatch"
@@ -485,8 +495,31 @@
             </span>
           </button>
         }
-        @if (books.length === 0) {
-          <div class="shelf-empty-hint list-hint">Drop books here</div>
+        @for (g of ghostsBefore(placement, books.length); track g.id) {
+          <div class="book-row book-ghost-row" aria-hidden="true" inert [class.book-ghost-leave]="g.leaving" [class.book-ghost-initial]="g.initial" (animationend)="onGhostAnimationEnd(g, $event)">
+            <span class="book-color-swatch" [style.background]="draggedBook!.color"></span>
+            <span class="book-row-main">
+              <span class="book-row-title-line">
+                @if (draggedBook!.code) {
+                  <span class="book-row-code">{{ draggedBook!.code }}</span>
+                }
+                <span class="book-row-title">{{ getBookTitle(draggedBook!) }}</span>
+              </span>
+            </span>
+          </div>
+        }
+        @if (shelfLooksEmpty(books)) {
+          @if (isDraggingBook) {
+            <div class="shelf-drop-empty list-hint" aria-hidden="true">
+              <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#book-open" /></svg>
+              <span>Drop here</span>
+            </div>
+          } @else if (placement.seriesId) {
+            <button appProjectReadOnly type="button" class="shelf-new-book list-hint" (click)="showAddBookForm(placement)" [disabled]="saving">
+              <svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>
+              New book
+            </button>
+          }
         }
       </div>
     }
@@ -498,6 +531,7 @@
     [seriesList]="seriesList"
     [sagasList]="sagasList"
     [isVisible]="showBookForm"
+    [newBookPlacement]="newBookPlacement"
     [saving]="saving"
     (save)="onEditorSave($event)"
     (cancel)="onEditorCancel()"
@@ -508,7 +542,7 @@
   <!-- Series form overlay -->
   @if (showSeriesForm) {
     <div class="simple-overlay" (click)="cancelSeriesForm()">
-      <div class="simple-modal" (click)="$event.stopPropagation()">
+      <div class="simple-modal" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
         <h2>{{ editingSeries ? "Edit Series" : "New Series" }}</h2>
         <form [formGroup]="seriesForm" (ngSubmit)="saveSeries()">
           <div class="form-group">
@@ -589,7 +623,7 @@
   <!-- Saga form overlay -->
   @if (showSagaForm) {
     <div class="simple-overlay" (click)="cancelSagaForm()">
-      <div class="simple-modal" (click)="$event.stopPropagation()">
+      <div class="simple-modal" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
         <h2>{{ editingSaga ? "Edit Saga" : "New Saga" }}</h2>
         <form [formGroup]="sagaForm" (ngSubmit)="saveSaga()">
           <div class="form-group">
@@ -598,7 +632,6 @@
               id="sagaSeries"
               formControlName="seriesId"
               class="form-control"
-              [disabled]="!!editingSaga"
             >
               @for (s of seriesList; track s.id) {
                 <option [value]="s.id">{{ s.name }}</option>

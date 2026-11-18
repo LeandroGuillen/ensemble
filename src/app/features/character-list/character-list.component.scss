@@ -116,6 +116,24 @@
   gap: var(--spacing-sm);
 }
 
+// Quick filter for the sidebar's current book
+.header-book-toggle {
+  max-width: 180px;
+
+  .book-dot {
+    width: 9px;
+    height: 12px;
+    flex-shrink: 0;
+    border-radius: 1px 2px 2px 1px;
+  }
+
+  .book-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
 .header-filter-toggle {
   height: 36px;
   display: inline-flex;
@@ -437,52 +455,6 @@
   }
 }
 
-.thumbnail-size-slider {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 36px;
-  padding: 0 9px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-bg-tertiary);
-  box-sizing: border-box;
-}
-
-.thumbnail-size-step {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  width: 20px;
-  height: 26px;
-  padding: 0;
-  border: 0;
-  border-radius: 3px;
-  background: transparent;
-  color: var(--color-text-secondary);
-  font-size: 18px;
-  line-height: 1;
-  cursor: pointer;
-
-  &:hover:not(:disabled) {
-    background: var(--color-bg-hover);
-    color: var(--color-text-primary);
-  }
-
-  &:disabled {
-    color: var(--color-text-muted);
-    opacity: 0.5;
-    cursor: default;
-  }
-}
-
-.thumbnail-size-slider input[type='range'] {
-  width: 76px;
-  margin: 0;
-  accent-color: var(--color-accent-primary);
-  cursor: pointer;
-}
 
 .toggle-option {
   display: inline-flex;

@@ -751,6 +751,9 @@ export class MetadataService {
       ...metadata,
       books: books.filter((candidate) => candidate.id !== id),
     };
+    if (metadata.pinnedBookIds?.includes(id)) {
+      updatedMetadata.pinnedBookIds = metadata.pinnedBookIds.filter((pinned) => pinned !== id);
+    }
 
     await this.saveMetadata(updatedMetadata);
 

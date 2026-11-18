@@ -129,3 +129,25 @@ describe('Book editor delete book', () => {
     expect(savingBook).toBeFalse();
   });
 });
+
+describe('Book editor new book placement', () => {
+  it('starts a new book in the series and saga of the shelf it was created from', () => {
+    const editor = Object.create(BookEditorComponent.prototype) as BookEditorComponent;
+    const patched: Record<string, unknown>[] = [];
+    Object.assign(editor, {
+      book: null,
+      bookForm: { reset: (value: Record<string, unknown>) => patched.push(value) },
+      refreshPovCharacters: () => Promise.resolve(),
+    });
+
+    editor.newBookPlacement = { seriesId: 'uqu', sagaId: 'saga-1' };
+    (editor as any).initializeForm();
+    expect(patched[0]['seriesId']).toBe('uqu');
+    expect(patched[0]['sagaId']).toBe('saga-1');
+
+    editor.newBookPlacement = null;
+    (editor as any).initializeForm();
+    expect(patched[1]['seriesId']).toBe('');
+    expect(patched[1]['sagaId']).toBe('');
+  });
+});

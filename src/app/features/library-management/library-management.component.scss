@@ -61,9 +61,10 @@
 }
 
 .bookshelf {
+  --shelf-gap: var(--spacing-lg);
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-lg);
+  gap: var(--shelf-gap);
   justify-content: flex-start;
   align-items: flex-end;
   min-height: 200px;
@@ -186,6 +187,37 @@
   flex-shrink: 0;
 }
 
+// Pencil after a saga's name: opens Edit Saga (which also deletes it).
+.saga-edit {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color var(--transition-fast), background var(--transition-fast);
+
+  .ui-icon {
+    width: 14px;
+    height: 14px;
+  }
+
+  &:hover:not(:disabled) {
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.5;
+  }
+}
+
 .btn-text {
   background: none;
   border: none;
@@ -259,7 +291,8 @@
 .shelf-row {
   display: flex;
   flex-wrap: nowrap;
-  align-items: flex-end;
+  // Segments take the full height: saga headers at the top, books on the plank.
+  align-items: stretch;
   gap: 0;
   min-height: 11rem;
   width: max-content;
@@ -270,7 +303,11 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  justify-content: flex-end;
+  justify-content: flex-start;
+
+  > .shelf-panel {
+    margin-top: auto;
+  }
   flex: 0 0 auto;
   min-width: 0;
 
@@ -300,7 +337,12 @@
 
 .saga-name {
   margin: 0;
-  flex: 1;
+  // Sized to the text so the edit pencil sits right after the name.
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -352,9 +394,10 @@
 }
 
 .shelf-bay .bookshelf {
+  --shelf-gap: var(--spacing-md);
   display: flex;
   flex-wrap: nowrap;
-  gap: var(--spacing-md);
+  gap: var(--shelf-gap);
   justify-content: flex-start;
   align-items: flex-end;
   min-height: 0;
@@ -369,33 +412,157 @@
 }
 
 .shelf-bay .book-slot {
-  margin: 0;
+  --slot-margin: 0px;
   // Perspective books overhang slightly above the plank
   filter: drop-shadow(2px 6px 8px rgba(0, 0, 0, 0.35));
 }
 
-.shelf-empty-hint {
-  min-width: 7rem;
+// Empty shelf: a "New book" button, or a lit drop area while a book is dragged
+// (same look as the sidebar's pin area).
+.shelf-new-book,
+.shelf-drop-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  // The size of a book on the shelf (15rem × 20rem, about 13rem wide once tilted).
+  flex: 0 0 auto;
+  width: 13rem;
+  height: 20rem;
+  box-sizing: border-box;
   padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
   text-align: center;
-  color: var(--color-text-muted);
-  font-size: 0.75rem;
-  border: 1px dashed var(--color-border-subtle);
-  border-radius: var(--radius-sm);
-  margin-bottom: 4px;
-  opacity: 0.7;
+
+  .ui-icon {
+    width: 20px;
+    height: 20px;
+  }
 
   &.list-hint {
+    flex-direction: row;
     width: 100%;
-    min-width: 0;
+    height: auto;
+    min-height: 48px;
     padding: var(--spacing-sm) var(--spacing-md);
   }
 }
 
-.shelf-panel.drop-target .bookshelf {
-  outline: 2px dashed var(--color-accent-primary);
-  outline-offset: 4px;
+// Small gallery books (zoom 0.62 on the book): empty boxes follow.
+.books-small {
+  .shelf-new-book:not(.list-hint),
+  .shelf-drop-empty:not(.list-hint) {
+    width: calc(13rem * 0.62);
+    height: calc(20rem * 0.62);
+    font-size: 0.75rem;
+  }
+
+  // :not(.lifted): this selector outranks `.book-slot.lifted`, which must still collapse.
+  .book-slot:not(.lifted) {
+    max-width: calc(16rem * 0.62);
+  }
+}
+
+.shelf-new-book {
+  border: 1px dashed var(--color-border);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: color var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast);
+
+  &:hover:not(:disabled) {
+    border-color: var(--color-accent-primary);
+    background: var(--color-accent-subtle);
+    color: var(--color-accent-primary);
+  }
+}
+
+.shelf-drop-empty {
+  border: 1.5px dashed var(--color-accent-primary);
+  background: color-mix(in srgb, var(--color-accent-primary) 12%, transparent);
+  color: var(--color-accent-primary);
+  pointer-events: none;
+  animation:
+    drop-area-fade-in 240ms ease-out both,
+    shelf-drop-glow 1.4s 240ms ease-in-out infinite alternate;
+}
+
+// Drop areas light up gradually when a drag starts.
+@keyframes drop-area-fade-in {
+  from { opacity: 0; }
+}
+
+@keyframes shelf-drop-glow {
+  from { box-shadow: 0 0 0 0 transparent; }
+  to { box-shadow: var(--shadow-glow); }
+}
+
+// While a book is dragged every shelf is outlined; the one under the cursor glows.
+// Gallery shelves draw the frame inside the shelf's own box (no outline-offset)
+// so the shelf's horizontal scrollbar never covers its bottom edge.
+.shelf-panel.drag-lit .bookshelf::before {
+  content: "";
+  display: block;
+  position: absolute;
+  inset: -4px -4px 0;
+  border: 1.5px dashed color-mix(in srgb, var(--color-accent-primary) 55%, transparent);
   border-radius: var(--radius-sm);
+  pointer-events: none;
+  animation: drop-area-fade-in 240ms ease-out both;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.shelf-panel.drag-lit.drop-target .bookshelf::before {
+  border: 2px solid var(--color-accent-primary);
+  box-shadow: var(--shadow-glow);
+}
+
+.books-list {
+  outline: 1.5px dashed transparent;
+  outline-offset: 4px;
+  transition: outline-color 240ms ease-out, box-shadow 240ms ease-out;
+}
+
+.books-list.drag-lit {
+  outline-color: color-mix(in srgb, var(--color-accent-primary) 55%, transparent);
+  border-radius: var(--radius-sm);
+}
+
+.books-list.drag-lit.drop-target {
+  outline: 2px solid var(--color-accent-primary);
+  box-shadow: var(--shadow-glow);
+}
+
+// An empty shelf's "Drop here" box is its indicator: no frame around it too.
+.shelf-panel.drag-lit .bookshelf:has(> .shelf-drop-empty)::before {
+  display: none;
+}
+
+.books-list.drag-lit:has(> .shelf-drop-empty) {
+  outline: none;
+  box-shadow: none;
+}
+
+.shelf-panel.drop-target .shelf-drop-empty {
+  border-style: solid;
+  background: color-mix(in srgb, var(--color-accent-primary) 22%, transparent);
+  animation: none;
+  box-shadow: var(--shadow-glow);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shelf-drop-empty,
+  .shelf-panel.drag-lit .bookshelf::before {
+    animation: none;
+  }
+
+  .books-list {
+    transition: none;
+  }
 }
 
 // List view saga bands (kept simple)
@@ -422,6 +589,8 @@
 .book-row.dragging {
   opacity: 0.5;
 }
+
+
 
 // Simple series/saga modals
 .simple-overlay {
@@ -465,9 +634,15 @@
     padding: 8px 10px;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
-    background: var(--color-bg-secondary);
+    // background-color, not the shorthand: the shorthand would erase the
+    // shared select chevron (a background-image).
+    background-color: var(--color-bg-secondary);
     color: var(--color-text-primary);
     font: inherit;
+  }
+
+  select.form-control {
+    padding-right: 36px;
   }
 }
 
@@ -542,47 +717,168 @@
   }
 }
 
-// Smart Drop Zone Styles
+// Book slots. While a book is dragged its own slot collapses (lifted) and a
+// ghost of it opens a gap where it would land; both animate their width so the
+// other books slide aside.
+$book-move: 220ms cubic-bezier(0.2, 0, 0, 1);
+
 .book-slot {
+  --slot-margin: var(--spacing-xs);
   position: relative;
   display: inline-block;
-  margin: 0 var(--spacing-xs);
+  max-width: 16rem;
+  margin: 0 var(--slot-margin);
+  transition: max-width $book-move, margin $book-move, opacity $book-move;
 
-  .drop-zone-left,
-  .drop-zone-right {
-    position: absolute;
-    top: 0;
-    width: 50%;
-    height: 100%;
-    z-index: 5;
-    pointer-events: none;
+  &.lifted {
+    max-width: 0;
+    margin: 0 calc(-1 * var(--shelf-gap, 0px)) 0 0;
+    opacity: 0;
+    overflow: hidden;
+  }
+}
+
+.book-ghost {
+  opacity: 0.4;
+  pointer-events: none;
+  filter: saturate(0.7);
+  outline: 2px dashed var(--color-accent-primary);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm);
+}
+
+@keyframes book-ghost-grow {
+  from {
+    max-width: 0;
+    margin: 0 calc(-1 * var(--shelf-gap, 0px)) 0 0;
+    opacity: 0;
+  }
+}
+
+@keyframes book-ghost-shrink {
+  to {
+    max-width: 0;
+    margin: 0 calc(-1 * var(--shelf-gap, 0px)) 0 0;
+    opacity: 0;
+  }
+}
+
+.book-ghost {
+  overflow: hidden;
+  animation: book-ghost-grow $book-move both;
+}
+
+// Picking a book up: it fades into its ghost where it stands (no slide).
+.book-ghost.book-ghost-initial {
+  animation: book-ghost-settle $book-move both;
+}
+
+@keyframes book-ghost-settle {
+  from {
+    opacity: 0.6;
+    filter: none;
+    outline-color: transparent;
+  }
+}
+
+.book-slot.lifted.lift-instant,
+.book-row.lifted.lift-instant {
+  transition: none;
+}
+
+.book-ghost.book-ghost-leave {
+  overflow: hidden;
+  animation: book-ghost-shrink $book-move both;
+}
+
+// List view: rows collapse and open by height.
+.book-row {
+  max-height: 6rem;
+  transition: max-height $book-move, margin $book-move, padding $book-move, opacity $book-move,
+    background var(--transition-fast), border-color var(--transition-fast);
+
+  &.lifted {
+    max-height: 0;
+    margin-bottom: calc(-1 * var(--spacing-xs));
+    padding-top: 0;
+    padding-bottom: 0;
+    border-width: 0;
+    opacity: 0;
+    overflow: hidden;
+  }
+}
+
+// Doubled class: outranks the base .book-row border declared further down.
+.book-row.book-ghost-row {
+  opacity: 0.45;
+  pointer-events: none;
+  border: 1.5px dashed var(--color-accent-primary);
+}
+
+@keyframes book-row-ghost-grow {
+  from {
+    max-height: 0;
+    margin-bottom: calc(-1 * var(--spacing-xs));
+    padding-top: 0;
+    padding-bottom: 0;
+    opacity: 0;
+  }
+}
+
+@keyframes book-row-ghost-shrink {
+  to {
+    max-height: 0;
+    margin-bottom: calc(-1 * var(--spacing-xs));
+    padding-top: 0;
+    padding-bottom: 0;
+    opacity: 0;
+  }
+}
+
+.book-row.book-ghost-row {
+  overflow: hidden;
+  animation: book-row-ghost-grow $book-move both;
+}
+
+.book-row.book-ghost-row.book-ghost-initial {
+  animation: book-row-ghost-settle $book-move both;
+}
+
+@keyframes book-row-ghost-settle {
+  from {
+    opacity: 0.6;
+    border-color: transparent;
+  }
+}
+
+.book-row.book-ghost-row.book-ghost-leave {
+  overflow: hidden;
+  animation: book-row-ghost-shrink $book-move both;
+}
+
+// The frame a drop settles in: the book takes its ghost's place without moving.
+.shelf-panel.settle-instantly {
+  .book-slot,
+  .book-row {
+    transition: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .book-slot,
+  .book-row {
+    transition: none;
   }
 
-  .drop-zone-left { left: -25%; }
-  .drop-zone-right { right: -25%; }
-
-  &.drag-active {
-    .drop-zone-left,
-    .drop-zone-right {
-      pointer-events: auto;
-    }
+  .book-ghost,
+  .book-row.book-ghost-row {
+    animation: none;
   }
 
-  &.drag-over-left::before,
-  &.drag-over-right::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    width: 3px;
-    height: 100%;
-    background: var(--color-accent-primary);
-    box-shadow: 0 0 12px rgba(229, 168, 85, 0.4);
-    z-index: 10;
-    border-radius: var(--radius-xs);
+  .book-ghost.book-ghost-leave,
+  .book-row.book-ghost-row.book-ghost-leave {
+    display: none;
   }
-
-  &.drag-over-left::before { left: -8px; }
-  &.drag-over-right::after { right: -8px; }
 }
 
 @media (max-width: 768px) {
@@ -617,7 +913,6 @@
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background var(--transition-fast), border-color var(--transition-fast);
 
   &:hover {
     background: var(--color-bg-tertiary);

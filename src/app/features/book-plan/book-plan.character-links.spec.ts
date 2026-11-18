@@ -10,6 +10,7 @@ import { ElectronService } from '../../core/services/electron.service';
 import { LoggingService } from '../../core/services/logging.service';
 import { MetadataService } from '../../core/services/metadata.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { PinnedBooksService } from '../../core/services/pinned-books.service';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { ProjectService } from '../../core/services/project.service';
 import { WikiLinkTargetsService } from '../../core/services/wiki-link-targets.service';
@@ -128,7 +129,7 @@ describe('Book plan character linking text', () => {
         ...[ActivatedRoute, Router, BookEditActionsService, BookPlanService,
           CharacterPickerService, CharacterService, ElectronService, LoggingService,
           MetadataService, NotificationService, ProjectService, WikiLinkTargetsService,
-          CommandPaletteService].map(provide => ({ provide, useValue: {} })),
+          CommandPaletteService, PinnedBooksService].map(provide => ({ provide, useValue: {} })),
         { provide: PreferencesService, useValue: { getPlanOutlineSide: () => 'left' } },
       ],
     });

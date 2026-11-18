@@ -33,6 +33,8 @@ import {
   isInteractiveKeyboardTarget,
 } from '../../core/utils/list-keyboard.utils';
 import { resolveThumbnailForBookStyle } from '../../core/utils/thumbnail.utils';
+import { getBookDisplayName, getBookSpineLabel } from '../../core/utils/book-display.utils';
+import { resolvePinnedBooks } from '../../core/services/pinned-books.service';
 import { isTrashStagingError } from '../../core/trash/trash-record-id';
 import { buildCharacterDeleteMessage } from '../character-detail/character-delete-message.utils';
 import { CharacterFilterComponent } from '../../shared/character-filter/character-filter.component';
@@ -125,6 +127,8 @@ export class CharacterListComponent implements OnInit {
   selectedTags: string[] = [];
   selectedCast = '';
   selectedBook = '';
+  /** The sidebar's current book (first pinned), for the quick filter; null when none is pinned. */
+  currentBook: Book | null = null;
   selectedPictureFilter: '' | 'with' | 'without' = '';
   /** '' = all, 'with' / 'without' = has / lacks a linked prompt file. */
   selectedPromptFilter: '' | 'with' | 'without' = '';
@@ -304,6 +308,7 @@ export class CharacterListComponent implements OnInit {
     // Subscribe to project changes
     this.projectService.currentProject$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((project) => {
       this.currentProject = project;
+      this.currentBook = resolvePinnedBooks(project)[0] ?? null;
       const projectChanged = this.collectionInitialized && this.filterProjectPath !== project?.path;
       this.filterProjectPath = project?.path;
       this.categories = this.projectService.getCategories();
@@ -795,6 +800,27 @@ export class CharacterListComponent implements OnInit {
   onCastDropdownChange(castId: string): void {
     this.selectedCast = castId;
     this.onCastChange();
+  }
+
+  /** True while the list shows only the sidebar's current (first pinned) book. */
+  get currentBookFilterOn(): boolean {
+    return !!this.currentBook && this.selectedBook === this.currentBook.id;
+  }
+
+  get currentBookName(): string {
+    return this.currentBook ? getBookDisplayName(this.currentBook) : '';
+  }
+
+  /** Code when the book has one, otherwise its title. */
+  get currentBookLabel(): string {
+    return this.currentBook ? getBookSpineLabel(this.currentBook) : '';
+  }
+
+  /** Quick filter: same Book filter as the Filters panel, set to the current book. */
+  toggleCurrentBookFilter(): void {
+    if (!this.currentBook) return;
+    this.selectedBook = this.currentBookFilterOn ? '' : this.currentBook.id;
+    this.onBookChange();
   }
 
   onBookChange(): void {

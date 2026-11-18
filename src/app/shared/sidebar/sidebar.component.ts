@@ -4,6 +4,9 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, NavigationEnd } from '@angular/router';
 
 import { ProjectIconService, ProjectService } from '../../core/services';
+import { BOOK_DRAG_TYPE, PinnedBookProgress, PinnedBooksService } from '../../core/services/pinned-books.service';
+import { Book } from '../../core/interfaces/project.interface';
+import { getBookDisplayName, getBookSpineLabel, getBookTitle } from '../../core/utils/book-display.utils';
 import { ElectronService } from '../../core/services/electron.service';
 import { UpdateService, UpdateStatus } from '../../core/services/update.service';
 import { NotificationService } from '../../core/services/notification.service';
@@ -39,6 +42,17 @@ interface NavSection {
 export class SidebarComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly projectIconService = inject(ProjectIconService);
+  private readonly pinnedBooks = inject(PinnedBooksService);
+  /** First pinned book: shown as the card just above the Story section. */
+  currentBook: Book | null = null;
+  /** Remaining pinned books, shown as chips on the card. */
+  otherBooks: Book[] = [];
+  bookProgress: PinnedBookProgress | null = null;
+  /** A book is being dragged from the Books page: the pin area becomes a drop target. */
+  bookDragActive = false;
+  /** The dragged book is over the pin area. */
+  bookDropHover = false;
+  private projectReadOnly = false;
   currentProjectName = '';
   /** Custom project icon (data URL); null shows the Ensemble logo. */
   projectIconUrl: string | null = null;
@@ -130,10 +144,27 @@ export class SidebarComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(url => this.projectIconUrl = url);
 
+    this.pinnedBooks.pinned$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(books => {
+        this.currentBook = books[0] ?? null;
+        this.otherBooks = books.slice(1);
+      });
+    this.pinnedBooks.draggingBookId$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(id => {
+        this.bookDragActive = id !== null && !this.projectReadOnly;
+        if (!this.bookDragActive) this.bookDropHover = false;
+      });
+    this.pinnedBooks.progress$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(progress => this.bookProgress = progress);
+
     this.projectService.currentProject$.subscribe((project: any) => {
       const folderName = typeof project?.path === 'string'
         ? project.path.split(/[\\/]/).filter(Boolean).pop() || ''
         : '';
+      this.projectReadOnly = !!project?.readOnly;
       this.currentProjectName = project?.metadata?.projectName || project?.name || folderName;
     });
 
@@ -192,6 +223,111 @@ export class SidebarComponent implements OnInit {
     return item.title;
   }
 
+  private static readonly BOOK_STATUS_LABELS: Record<string, string> = {
+    draft: 'Draft',
+    'in-progress': 'In progress',
+    published: 'Published',
+    archived: 'Archived',
+  };
+
+  bookName(book: Book): string {
+    return getBookDisplayName(book);
+  }
+
+  /** The title; a book identified only by its code shows the code. */
+  bookTitle(book: Book): string {
+    const title = getBookTitle(book);
+    return title === 'Untitled' ? getBookSpineLabel(book) : title;
+  }
+
+  /** At most four characters fit the rail tile. */
+  bookTileLabel(book: Book): string {
+    return getBookSpineLabel(book).slice(0, 4);
+  }
+
+  /** Code, or a short form of the name, for the rail tile and the chips. */
+  bookShortLabel(book: Book): string {
+    return getBookSpineLabel(book);
+  }
+
+  /** "sr2 · In progress": whichever of code and status the book has. */
+  bookMeta(book: Book): string {
+    const status = book.status ? SidebarComponent.BOOK_STATUS_LABELS[book.status] ?? book.status : '';
+    return [book.code?.trim(), status].filter(Boolean).join(' · ');
+  }
+
+  get progressLabel(): string | null {
+    const progress = this.bookProgress;
+    if (!progress || progress.total === 0) return null;
+    if (progress.drafted === null) {
+      return progress.total === 1 ? '1 chapter' : `${progress.total} chapters`;
+    }
+    return `${progress.drafted} of ${progress.total} drafted`;
+  }
+
+  /** Drafted share of the plan's chapters; null when there is nothing to measure. */
+  get progressPercent(): number | null {
+    const progress = this.bookProgress;
+    if (!progress || progress.drafted === null || progress.total === 0) return null;
+    return Math.round((progress.drafted / progress.total) * 100);
+  }
+
+  isBookOpen(book: Book): boolean {
+    return this.currentRoute.split(/[?#]/)[0] === `/book/${book.id}`;
+  }
+
+  openBook(book: Book, view?: 'timeline'): void {
+    void this.router.navigate(['/book', book.id], view ? { queryParams: { view } } : {});
+  }
+
+  /** Opens another pinned book and makes it the card's book. */
+  switchBook(book: Book): void {
+    this.openBook(book);
+    // A read-only project still opens the book; it just keeps its card.
+    this.pinnedBooks.makeCurrent(book.id).catch(() => undefined);
+  }
+
+  /** Shown while dragging a book: the card, or an empty lit area to drop on. */
+  get showBookSection(): boolean {
+    return !!this.currentBook || this.bookDragActive;
+  }
+
+  onBookDragOver(event: DragEvent): void {
+    if (!this.bookDragActive) return;
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+    this.bookDropHover = true;
+  }
+
+  onBookDragLeave(event: DragEvent): void {
+    const target = event.currentTarget as HTMLElement | null;
+    const next = event.relatedTarget as Node | null;
+    if (target && next && target.contains(next)) return;
+    this.bookDropHover = false;
+  }
+
+  /** Dropping a book from the Books page pins it as the current book. */
+  onBookDrop(event: DragEvent): void {
+    if (!this.bookDragActive) return;
+    event.preventDefault();
+    this.bookDropHover = false;
+    const bookId = this.pinnedBooks.draggingBookId || event.dataTransfer?.getData(BOOK_DRAG_TYPE) || '';
+    if (!bookId) return;
+    this.pinnedBooks.pin(bookId).catch((error: unknown) => {
+      this.notificationService.showError(
+        `Could not pin the book: ${error instanceof Error ? error.message : String(error)}`
+      );
+    });
+  }
+
+  unpinBook(book: Book): void {
+    this.pinnedBooks.unpin(book.id).catch((error: unknown) => {
+      this.notificationService.showError(
+        `Could not unpin the book: ${error instanceof Error ? error.message : String(error)}`
+      );
+    });
+  }
+
   navigateTo(route: string): void {
     this.router.navigate([route]);
   }
@@ -207,6 +343,12 @@ export class SidebarComponent implements OnInit {
   @HostListener('document:click')
   onDocumentClick(): void {
     this.closeThemeMenu();
+  }
+
+  /** Back from another editor: chapters may have been written meanwhile. */
+  @HostListener('window:focus')
+  onWindowFocus(): void {
+    if (this.currentBook) this.pinnedBooks.refresh();
   }
 
   @HostListener('window:resize')

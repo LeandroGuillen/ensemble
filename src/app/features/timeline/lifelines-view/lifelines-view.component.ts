@@ -15,6 +15,7 @@ import {
 } from '../../../core/utils/world-date.utils';
 import { PovChipComponent } from '../../book-plan/pov-chip.component';
 import { TimelinePortraits } from '../timeline-shared';
+import { getBookSpineLabel } from '../../../core/utils/book-display.utils';
 
 type ColorBy = 'house' | 'place';
 type GroupBy = 'house' | 'age';
@@ -76,7 +77,7 @@ export class LifelinesViewComponent implements OnInit, AfterViewInit {
   lines: Lifeline[] = [];
   undated: Character[] = [];
   events: TimelineItem[] = [];
-  books: { id: string; name: string; color: string; from: number; to: number }[] = [];
+  books: { id: string; name: string; label: string; color: string; from: number; to: number }[] = [];
   eras: { title: string; from: number; to: number }[] = [];
   now = 0;
   full: [number, number] = [0, 1];
@@ -147,7 +148,7 @@ export class LifelinesViewComponent implements OnInit, AfterViewInit {
     const spans = bookSpans({ books: ctx.books, plans: ctx.plans, calendar: cal });
     this.books = ctx.books
       .filter((b) => spans.has(b.id))
-      .map((b) => ({ id: b.id, name: b.name, color: b.color, from: dayToYear(spans.get(b.id)!.start, cal), to: dayToYear(spans.get(b.id)!.end + 1, cal) }));
+      .map((b) => ({ id: b.id, name: b.name, label: getBookSpineLabel(b), color: b.color, from: dayToYear(spans.get(b.id)!.start, cal), to: dayToYear(spans.get(b.id)!.end + 1, cal) }));
 
     const marks = [
       ...this.events.map((e) => dayToYear(e.range!.end + 1, cal)),
@@ -316,7 +317,7 @@ export class LifelinesViewComponent implements OnInit, AfterViewInit {
       .map((book) => {
         const a = this.x(book.from);
         const w = Math.max(5, this.x(book.to) - a);
-        return { x: a, w, label: book.id, color: book.color, showLabel: true };
+        return { x: a, w, label: book.label, color: book.color, showLabel: true };
       })
       .filter((band) => band.x + band.w > LEFT && band.x < this.width - RIGHT);
 

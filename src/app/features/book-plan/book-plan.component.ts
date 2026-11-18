@@ -16,6 +16,7 @@ import { ElectronService } from '../../core/services/electron.service';
 import { LoggingService } from '../../core/services/logging.service';
 import { MetadataService } from '../../core/services/metadata.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { PinnedBooksService } from '../../core/services/pinned-books.service';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { ProjectService } from '../../core/services/project.service';
 import { WikiLinkTargetsService } from '../../core/services/wiki-link-targets.service';
@@ -87,6 +88,8 @@ export class BookPlanComponent implements OnInit, OnDestroy {
   private readonly electronService = inject(ElectronService);
   private readonly bookEditActions = inject(BookEditActionsService);
   private readonly notifications = inject(NotificationService);
+  private readonly pinnedBooks = inject(PinnedBooksService);
+  private pinnedBookIds = new Set<string>();
   /** Plan read/save errors persist until resolved: one sticky toast per error, dismissed when it clears. */
   private planError: string | null = null;
   private planErrorToastId: string | null = null;
@@ -222,6 +225,9 @@ export class BookPlanComponent implements OnInit, OnDestroy {
   private pendingLine: number | null = null;
 
   ngOnInit(): void {
+    this.pinnedBooks.pinned$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((books) => (this.pinnedBookIds = new Set(books.map((b) => b.id))));
     combineLatest([this.route.paramMap, this.route.queryParamMap])
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(([params, query]) => {
@@ -771,6 +777,23 @@ export class BookPlanComponent implements OnInit, OnDestroy {
 
   backToLibrary(): void {
     void this.router.navigate(['/library']);
+  }
+
+  // --- Pin to the sidebar ---
+
+  get isPinned(): boolean {
+    return !!this.book && this.pinnedBookIds.has(this.book.id);
+  }
+
+  async togglePinned(): Promise<void> {
+    if (!this.book) return;
+    try {
+      await this.pinnedBooks.toggle(this.book.id);
+    } catch (error) {
+      this.notifications.showError(
+        `Could not ${this.isPinned ? 'unpin' : 'pin'} the book: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
   }
 
   // --- Edit book modal ---

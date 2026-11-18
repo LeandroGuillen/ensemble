@@ -730,3 +730,51 @@
     to { opacity: 1; transform: scale(1); }
   }
 }
+
+/* Thumbnail / book size slider (− [range] +), shared by Characters and Books */
+.thumbnail-size-slider {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 9px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-tertiary);
+  box-sizing: border-box;
+}
+
+.thumbnail-size-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+  }
+
+  &:disabled {
+    color: var(--color-text-muted);
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.thumbnail-size-slider input[type='range'] {
+  width: 76px;
+  margin: 0;
+  accent-color: var(--color-accent-primary);
+  cursor: pointer;
+}

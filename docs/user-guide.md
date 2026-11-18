@@ -66,6 +66,18 @@ a character **per book**:
 - per-book **category**, **tags** and **portrait** overrides change how they
   look in that book without altering their main profile.
 
+**Pin** a book from its page (the Pin button in the header), or drag it from the
+Books page onto the sidebar, to keep it in the
+sidebar, just above the Story section. The card shows the book's status and how
+many of its planned chapters are drafted (updated when you come back to the
+window), with shortcuts to its plan and its
+story time. Pin more books and they appear as small chips on the card; clicking
+one opens it and makes it the card's book. Hover the card to unpin.
+
+While a book is pinned, the Characters toolbar has a button with that book's
+code next to **Filters**: click it to show only the characters in the current
+book, and again to show everyone.
+
 On a book's plan screen, **Link characters** previews links for exact-case,
 whole-word character names and aliases in that plan. Confirm to add them as one
 undoable edit; Ctrl/Cmd+Z in the editor restores the original text. Shared names,

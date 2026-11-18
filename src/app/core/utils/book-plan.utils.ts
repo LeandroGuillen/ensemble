@@ -215,6 +215,18 @@ export function manuscriptChapterCode(fileName: string): string | null {
   return /^(\d{2,5})(?=[-_ .])/.exec(base)?.[1] ?? null;
 }
 
+/** Chapters in a plan and how many of them have a manuscript file (`draftedCodes`). */
+export function planChapterProgress(
+  plan: ParsedBookPlan,
+  draftedCodes: ReadonlySet<string>
+): { total: number; drafted: number } {
+  const chapters = flattenOutline(plan).filter((heading) => heading.kind === 'chapter');
+  return {
+    total: chapters.length,
+    drafted: chapters.filter((chapter) => !!chapter.code && draftedCodes.has(chapter.code)).length,
+  };
+}
+
 /** A part of the plan the focus editor can show on its own: a `#` section's intro, or a `##` section/chapter. */
 export interface PlanFocusTarget {
   heading: PlanHeading;

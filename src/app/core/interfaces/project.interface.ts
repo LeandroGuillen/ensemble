@@ -41,6 +41,8 @@ export interface ProjectMetadata {
   /** Legacy: casts metadata now lives in casts.json inside the casts folder (CastService). */
   casts?: Cast[];
   books: Book[];
+  /** Books pinned to the sidebar, by id. The first is the current book (the sidebar card). */
+  pinnedBookIds?: string[];
   /** Ordered series shelves; optional for backward compatibility. */
   series?: Series[];
   /** Ordered sagas (each belongs to a series); optional for backward compatibility. */

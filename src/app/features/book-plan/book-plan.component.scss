@@ -83,6 +83,21 @@ app-story-time {
   }
 }
 
+.pin-book {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  &.active svg {
+    fill: currentColor;
+  }
+}
+
 .edit-book-link {
   font: inherit;
   font-size: 0.875rem;

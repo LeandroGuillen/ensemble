@@ -91,7 +91,7 @@
             (click)="select(block.chapter)"
             (dblclick)="openInPlan(block.chapter)"
           >
-            <b>{{ scope === 'series' ? block.chapter.bookId + '·' : '' }}{{ block.chapter.code }}</b>
+            <b>{{ scope === 'series' ? bookCode(block.chapter.bookId) + '·' : '' }}{{ block.chapter.code }}</b>
             <span>{{ block.chapter.title }}</span>
           </button>
         }

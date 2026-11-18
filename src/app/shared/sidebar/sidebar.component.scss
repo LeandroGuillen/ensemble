@@ -467,6 +467,314 @@ $transition-timing: cubic-bezier(0.16, 1, 0.3, 1);
   }
 }
 
+// Current pinned book (card below the Characters section)
+.book-card {
+  position: relative;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-tertiary);
+  transition: var(--theme-transition);
+
+  // Same marker as the current nav item: a left accent bar, never a ring.
+  &.active {
+    background: var(--selected-bg);
+    box-shadow: inset 3px 0 0 var(--color-accent-primary);
+  }
+}
+
+.book-card-main {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover .book-name {
+    color: var(--color-accent-primary);
+  }
+}
+
+.book-cover {
+  width: 30px;
+  height: 42px;
+  flex-shrink: 0;
+  border-radius: 2px 4px 4px 2px;
+  background: var(--book-color, var(--color-accent-primary));
+  box-shadow: inset 4px 0 0 rgba(0, 0, 0, 0.25);
+}
+
+.book-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  // Room for the unpin button in the card's corner.
+  padding-right: 18px;
+}
+
+.book-name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--color-text-primary);
+  transition: color var(--transition-fast);
+}
+
+.book-meta {
+  overflow: hidden;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--color-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.book-unpin {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .book-card:hover &,
+  &:focus-visible {
+    opacity: 1;
+  }
+
+  &:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+  }
+}
+
+.book-progress {
+  height: 4px;
+  margin-top: var(--spacing-sm);
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-primary);
+
+  span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--color-accent-primary);
+    transition: width var(--transition-base);
+  }
+}
+
+.book-quick {
+  display: flex;
+  gap: 6px;
+  margin-top: var(--spacing-sm);
+
+  button {
+    flex: 1;
+    min-width: 0;
+    min-height: 26px;
+    padding: 2px 4px;
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-secondary);
+    font: inherit;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+
+    &:hover {
+      background: var(--color-bg-hover);
+      color: var(--color-text-primary);
+    }
+  }
+}
+
+.book-others {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: var(--spacing-sm);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--color-border);
+}
+
+.book-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  // Two chips per row at most, so a long title never takes a row of its own.
+  max-width: calc(50% - 2px);
+  min-width: 0;
+  min-height: 22px;
+  padding: 1px 8px 1px 6px;
+  background: var(--color-bg-primary);
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+
+  .chip-dot {
+    width: 7px;
+    height: 7px;
+    flex-shrink: 0;
+    border-radius: 50%;
+  }
+
+  .chip-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &:hover {
+    border-color: var(--color-border-light);
+    color: var(--color-text-primary);
+  }
+}
+
+// Drop target while a book is dragged from the Books page
+.book-drop-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  min-height: 64px;
+  padding: var(--spacing-sm);
+  border: 1.5px dashed var(--color-accent-primary);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-accent-primary) 12%, transparent);
+  color: var(--color-accent-primary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  pointer-events: none;
+  animation:
+    book-drop-fade-in 240ms ease-out both,
+    book-drop-glow 1.4s 240ms ease-in-out infinite alternate;
+
+  svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+
+  &.collapsed {
+    min-height: 44px;
+    padding: 4px;
+  }
+
+  .drop-hover & {
+    border-style: solid;
+    background: color-mix(in srgb, var(--color-accent-primary) 22%, transparent);
+    box-shadow: var(--shadow-glow);
+    animation: none;
+  }
+}
+
+@keyframes book-drop-fade-in {
+  from { opacity: 0; }
+}
+
+@keyframes book-drop-glow {
+  from { box-shadow: 0 0 0 0 transparent; }
+  to { box-shadow: var(--shadow-glow); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .book-drop-empty {
+    animation: none;
+    box-shadow: var(--shadow-glow);
+  }
+
+  .book-card,
+  .book-tile-item {
+    transition: none;
+  }
+}
+
+// With a book pinned, the card (or the rail tile) is the drop target:
+// dropping makes the dragged book the current one.
+.book-card,
+.book-tile-item {
+  outline: 1.5px dashed transparent;
+  outline-offset: 2px;
+  transition: outline-color 240ms ease-out, box-shadow 240ms ease-out;
+}
+
+.book-section.drop-target {
+  .book-card,
+  .book-tile-item {
+    outline-color: var(--color-accent-primary);
+  }
+
+  // Children must not swallow dragleave/dragover while hovering the card.
+  .book-card *,
+  .book-tile-item * {
+    pointer-events: none;
+  }
+}
+
+.book-section.drop-hover {
+  .book-card,
+  .book-tile-item {
+    outline-style: solid;
+    box-shadow: var(--shadow-glow);
+  }
+}
+
+// Collapsed rail: the current book as a small cover tile.
+.book-tile-item {
+  padding: 4px !important;
+}
+
+.book-tile {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 36px;
+  overflow: hidden;
+  border-radius: 2px 4px 4px 2px;
+  box-shadow: inset 3px 0 0 rgba(0, 0, 0, 0.25);
+  color: var(--color-text-inverse);
+  font-family: var(--font-mono);
+  font-size: 0.5625rem;
+  font-weight: 700;
+  line-height: 1;
+  padding-left: 3px;
+}
+
 // Bottom Bar: Settings / Shortcuts / Collapse
 .sidebar-version {
   padding: var(--spacing-xs) var(--spacing-md) var(--spacing-sm);

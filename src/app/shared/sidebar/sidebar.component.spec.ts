@@ -4,6 +4,7 @@ import { BehaviorSubject, of } from 'rxjs';
 import { SidebarComponent } from './sidebar.component';
 import { ProjectService } from '../../core/services';
 import { ElectronService } from '../../core/services/electron.service';
+import { PinnedBooksService } from '../../core/services/pinned-books.service';
 import { UpdateService, UpdateStatus } from '../../core/services/update.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { CharacterEditDialogService } from '../../core/services/character-edit-dialog.service';
@@ -44,6 +45,7 @@ describe('SidebarComponent update control', () => {
           )
         },
         { provide: ProjectService, useValue: { currentProject$: of({ name: 'Test Project' }) } },
+        { provide: PinnedBooksService, useValue: { pinned$: of([]), progress$: of(null), draggingBookId$: of(null) } },
         { provide: ElectronService, useValue: { getVersion: () => Promise.resolve('1.21.17') } },
         { provide: NotificationService, useValue: jasmine.createSpyObj('NotificationService', ['showError']) },
         { provide: CharacterEditDialogService, useValue: jasmine.createSpyObj('CharacterEditDialogService', ['openCreateDraft']) },

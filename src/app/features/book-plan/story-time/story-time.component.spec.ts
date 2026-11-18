@@ -42,3 +42,16 @@ describe('Story time overlapping chapters', () => {
     expect(a.y).not.toBe(b.y);
   });
 });
+
+describe('Story time book labels', () => {
+  it('names books by their code, not their internal id (after a code change)', () => {
+    const component = Object.create(StoryTimeComponent.prototype) as StoryTimeComponent;
+    Object.assign(component, {
+      ctx: { books: [{ id: 'n26', code: 'b2', name: 'Nueva Alascar', color: '#111' }, { id: 'x', name: 'Untitled', color: '#222' }] },
+    });
+    expect(component.bookCode('n26')).toBe('b2');
+    expect(component.bookName('n26')).toBe('b2 — Nueva Alascar');
+    expect(component.bookCode('x')).toBe('Untitled');
+    expect(component.bookCode('gone')).toBe('gone');
+  });
+});
