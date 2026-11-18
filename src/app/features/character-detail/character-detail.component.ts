@@ -59,6 +59,7 @@ import {
   FileWatcherService,
 } from "../../core/services";
 import { ModalService } from "../../core/services/modal.service";
+import { ProjectWriteProtectionService } from "../../core/services/project-write-protection.service";
 import {
   parseThumbnailReference,
   resolveThumbnailPath,
@@ -113,6 +114,7 @@ export class CharacterDetailComponent
   implements OnInit, OnDestroy, AfterViewInit
 {
   private readonly linkRename = inject(WikiLinkRenameService);
+  private readonly writeProtection = inject(ProjectWriteProtectionService);
   @ViewChild("nameInput") nameInput?: ElementRef<HTMLInputElement>;
   @ViewChild("addBookMenu") addBookMenu?: ElementRef<HTMLDetailsElement>;
   @ViewChild("portraitMenu") portraitMenu?: ElementRef<HTMLDetailsElement>;
@@ -200,6 +202,7 @@ export class CharacterDetailComponent
   // Thumbnail previews by character style
   thumbnailPreviewUrls: Map<string, string> = new Map();
   private thumbnailPreviewRequest = 0;
+  private styleSelectionRequest = 0;
   characterStyles: CharacterStyle[] = [];
   defaultCharacterStyle = '';
   /** Style currently shown in the hero thumbnail (change/remove/generate target). */
@@ -1356,8 +1359,24 @@ export class CharacterDetailComponent
     return this.thumbnailPreviewUrls.get(styleId) || null;
   }
 
-  selectStyle(styleId: string): void {
-    if (!styleId || styleId === this.selectedStyleId) return;
+  async selectStyle(styleId: string): Promise<void> {
+    if (!styleId || this.showImagePickerDialog) return;
+    const request = ++this.styleSelectionRequest;
+    if (!this.writeProtection.readOnlyPath) {
+      const bookId = this.activeBookId;
+      const character = this.character;
+      const projectPath = this.currentProject?.path;
+      const imagePath = this.getStyleImagePath(styleId, bookId);
+      const file = imagePath ? await this.electronService.getFileStats(imagePath) : null;
+      if (request !== this.styleSelectionRequest || bookId !== this.activeBookId ||
+          character !== this.character || projectPath !== this.currentProject?.path ||
+          this.showImagePickerDialog) return;
+      if (!file?.success || !file.stats?.isFile) {
+        await this.openImagePicker(styleId);
+        return;
+      }
+    }
+    if (styleId === this.selectedStyleId) return;
     this.selectedStyleId = styleId;
     this.cdr.markForCheck();
   }
@@ -1373,6 +1392,18 @@ export class CharacterDetailComponent
 
   get activeBookId(): string | null {
     return this.activeContentTab === 'main' ? null : this.activeContentTab;
+  }
+
+  private getStyleImagePath(styleId: string, bookId: string | null): string | null {
+    const projectPath = this.currentProject?.path;
+    if (!projectPath) return null;
+    const raw = resolveThumbnailForBookStyle(this.thumbnailsMap, this.bookThumbnailsMap, bookId, styleId);
+    const reference = raw && parseThumbnailReference(raw);
+    return reference ? resolveThumbnailPath(
+      projectPath,
+      reference,
+      this.character ? pathDirname(this.character.filePath) : undefined
+    ) : null;
   }
 
   getSelectedCategoryForActiveTab(): string {
@@ -1436,23 +1467,10 @@ export class CharacterDetailComponent
     }
     await Promise.all(
       this.characterStyles.map(async (style) => {
-        const raw = resolveThumbnailForBookStyle(
-          this.thumbnailsMap,
-          this.bookThumbnailsMap,
-          bookId,
-          style.id
-        );
-        if (!raw) return;
-        const parsed = parseThumbnailReference(raw);
-        if (!parsed) return;
+        const imagePath = this.getStyleImagePath(style.id, bookId);
+        if (!imagePath) return;
         try {
-          const dataUrl = await this.electronService.getImageAsDataUrl(
-            resolveThumbnailPath(
-              this.currentProject!.path,
-              parsed,
-              this.character ? pathDirname(this.character.filePath) : undefined
-            )
-          );
+          const dataUrl = await this.electronService.getImageAsDataUrl(imagePath);
           if (dataUrl) {
             next.set(style.id, dataUrl);
           }
@@ -1684,6 +1702,7 @@ export class CharacterDetailComponent
       formatThumbnailWikiLink(image.relativePath),
       this.pickerTargetBookId
     );
+    this.selectedStyleId = styleId;
     this.showImagePickerDialog = false;
     this.cdr.markForCheck();
   }
