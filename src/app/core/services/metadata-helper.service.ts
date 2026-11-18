@@ -11,6 +11,9 @@ import { CastService } from './cast.service';
  * Eliminates duplicate getCategoryName, getTagColor, etc. methods
  * that appear across multiple components.
  */
+/** Built-in category for characters without one (or whose category was deleted). */
+export const UNCATEGORIZED_CATEGORY_ID = 'uncategorized';
+
 @Injectable({
   providedIn: 'root'
 })
@@ -23,7 +26,9 @@ export class MetadataHelperService {
   // Category helpers
   getCategoryName(categoryId: string): string {
     const categories = this.projectService.getCategories();
-    return categories.find(c => c.id === categoryId)?.name || categoryId;
+    const name = categories.find(c => c.id === categoryId)?.name;
+    if (name) return name;
+    return categoryId === UNCATEGORIZED_CATEGORY_ID ? 'Uncategorized' : categoryId;
   }
 
   getCategoryColor(categoryId: string): string {

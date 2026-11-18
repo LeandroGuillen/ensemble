@@ -113,13 +113,12 @@ npm run build-electron-linux        # AppImage + .deb
 npm run build-electron-linux-appimage  # AppImage only
 npm run build-electron-linux-deb    # .deb only
 npm run build-electron-win          # Windows (requires proper icons)
-npm run build-electron-mac          # macOS (REQUIRES macOS system)
 
-# Build all platforms (use only on macOS)
+# Build Linux and Windows
 npm run dist
 ```
 
-Cross-platform note: the macOS build must run on macOS, and Windows builds need proper icons. See `docs/releasing.md` for how releases are cut.
+There is no macOS build target. Windows builds need proper icons. See `docs/releasing.md` for how releases are cut.
 
 ### Testing
 

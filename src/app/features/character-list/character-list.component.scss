@@ -395,18 +395,18 @@
 .character-scope-toggle {
   margin-left: var(--spacing-sm);
 
-  .drawer-drop-target.drag-over {
+  .collection-drop-target.drag-over {
     outline: 2px dashed var(--color-accent-primary);
     outline-offset: -2px;
     color: var(--color-accent-primary);
   }
 
-  .drawer-drop-target.drag-over.active {
+  .collection-drop-target.drag-over.active {
     color: var(--selected-fg);
     outline-color: var(--color-accent-primary);
   }
 
-  .drawer-drop-target.pulsing {
+  .collection-drop-target.pulsing {
     --drop-glow: color-mix(in srgb, var(--color-accent-primary) 45%, transparent);
     animation: drawer-drop-pulse 1.4s ease-in-out infinite;
   }
@@ -422,7 +422,7 @@
     }
   }
 
-  .drawer-drop-target.pulsing.active {
+  .collection-drop-target.pulsing.active {
     --drop-glow: color-mix(in srgb, var(--color-accent-primary) 45%, transparent);
   }
 }
@@ -721,6 +721,14 @@
   &.drop-disabled {
     opacity: 0.96;
   }
+}
+
+.empty-group-hint {
+  margin: 0;
+  padding: var(--spacing-md);
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  text-align: center;
 }
 
 .drop-hint {

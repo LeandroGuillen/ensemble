@@ -22,8 +22,6 @@
     { test: /\.snap$/i, key: 'snap', label: 'Snap package', platform: 'Linux', primary: true },
     { test: /\.flatpak$/i, key: 'flatpak', label: 'Flatpak bundle', platform: 'Linux', primary: true },
     { test: /\.tar\.(gz|xz|bz2)$/i, key: 'tar', label: 'Tarball', platform: 'Linux', primary: true },
-    { test: /\.dmg$/i, key: 'dmg', label: 'macOS disk image', platform: 'macOS', primary: true },
-    { test: /-mac\.zip$|darwin.*\.zip$/i, key: 'maczip', label: 'macOS zip', platform: 'macOS', primary: true },
     { test: /\.exe$/i, key: 'exe', label: 'Windows installer', platform: 'Windows', primary: true },
     { test: /\.msi$/i, key: 'msi', label: 'Windows installer (MSI)', platform: 'Windows', primary: true },
     { test: /\.blockmap$/i, key: 'blockmap', label: 'Updater block map', primary: false },

@@ -68,7 +68,6 @@ try {
   console.log('\n✓ Icon generation complete!');
   console.log('\nGenerated files:');
   console.log('  - icon.ico (Windows)');
-  console.log('  - icon.icns (macOS)');
   console.log('  - Multiple PNG files (Linux)');
   console.log('\nYou can now build the application with proper icons.\n');
 

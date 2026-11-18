@@ -86,7 +86,7 @@ describe('CharacterListComponent grouping with stale category/tag ids', () => {
       notificationService: jasmine.createSpyObj('NotificationService', ['showError', 'showSuccess']),
       logger: jasmine.createSpyObj('Logger', ['error']),
       metadataHelper: { getCategoryName: (id: string) => id },
-      isOverDrawerDropPoint: () => false,
+      collectionDropTarget: () => null,
       isCategoryDragDropEnabled: () => true,
       updateCategoryDropListIds: () => undefined,
     });
@@ -95,5 +95,99 @@ describe('CharacterListComponent grouping with stale category/tag ids', () => {
       'uncategorized'
     );
     expect(updateCharacter).not.toHaveBeenCalled();
+  });
+  it('moves a character dropped on the Lore toggle into Lore instead of changing its category', async () => {
+    const updateCharacter = jasmine.createSpy('updateCharacter').and.resolveTo({ ...ilse, lore: true });
+    const notificationService = jasmine.createSpyObj('NotificationService', ['showError', 'showSuccess']);
+    Object.assign(component, {
+      characterService: { updateCharacter },
+      notificationService,
+      logger: jasmine.createSpyObj('Logger', ['error']),
+      collectionDropTarget: () => 'lore',
+      isCategoryDragDropEnabled: () => true,
+    });
+    await component.onCategoryDrop(
+      { item: { data: ilse }, container: {}, previousContainer: {} } as any,
+      'main-character'
+    );
+    expect(updateCharacter).toHaveBeenCalledOnceWith(ilse.id, { lore: true });
+    expect(notificationService.showSuccess).toHaveBeenCalled();
+  });
+  it('always shows an Uncategorized group in Characters, even when empty', () => {
+    Object.assign(component, { filteredCharacters: [mara], collection: 'characters' });
+    const groups = groupByCategory();
+    expect(groups.map((g) => g.categoryId)).toEqual(['main', 'uncategorized']);
+    expect(groups[1].characters).toEqual([]);
+
+    Object.assign(component, { collection: 'lore' });
+    expect(groupByCategory().map((g) => g.categoryId)).toEqual(['main']);
+  });
+
+  it('moves a Lore figure dropped on the Characters toggle into Characters', async () => {
+    const updateCharacter = jasmine.createSpy('updateCharacter').and.callFake(async (id: string) => ({ id }));
+    Object.assign(component, {
+      characterService: { updateCharacter },
+      notificationService: jasmine.createSpyObj('NotificationService', ['showError', 'showSuccess']),
+      logger: jasmine.createSpyObj('Logger', ['error']),
+      metadataHelper: { getCategoryName: (id: string) => id },
+      collectionDropTarget: () => 'characters',
+    });
+    const drop = (data: Character) => component.onCategoryDrop(
+      { item: { data }, container: {}, previousContainer: {} } as any, 'main');
+
+    await drop({ ...mara, lore: true });
+    await drop({ ...orin, lore: true });
+    expect(updateCharacter.calls.allArgs()).toEqual([
+      ['mara', { lore: false, category: 'main' }],
+      ['orin', { lore: false, category: 'uncategorized' }],
+    ]);
+  });
+  describe('dropping onto a category with a Book filter', () => {
+    let updateCharacter: jasmine.Spy;
+    let notificationService: jasmine.SpyObj<{ showError: () => void; showSuccess: () => void }>;
+    const drop = (data: Character, target: string) => component.onCategoryDrop(
+      { item: { data }, container: {}, previousContainer: {} } as any, target);
+
+    beforeEach(() => {
+      updateCharacter = jasmine.createSpy('updateCharacter').and.callFake(async (id: string) => ({ id, name: id }));
+      notificationService = jasmine.createSpyObj('NotificationService', ['showError', 'showSuccess']);
+      Object.assign(component, {
+        groupBy: 'category',
+        isUpdatingCategory: false,
+        selectedBook: 'b1',
+        characterService: { updateCharacter },
+        notificationService,
+        logger: jasmine.createSpyObj('Logger', ['error']),
+        metadataHelper: { getCategoryName: (id: string) => id, getBookName: (id: string) => id },
+        collectionDropTarget: () => null,
+        updateCategoryDropListIds: () => undefined,
+      });
+    });
+
+    it('is enabled', () => {
+      expect(component.isCategoryDragDropEnabled()).toBeTrue();
+    });
+
+    it('sets the book override, and clears it when dropped back on the default category', async () => {
+      const inBook = make('vera', 'main', [], { books: ['b1'], bookCategories: { b0: 'main' } });
+      await drop(inBook, 'supporting');
+      await drop({ ...inBook, bookCategories: { b0: 'main', b1: 'supporting' } }, 'main');
+      expect(updateCharacter.calls.allArgs()).toEqual([
+        ['vera', { bookCategories: { b0: 'main', b1: 'supporting' } }],
+        ['vera', { bookCategories: { b0: 'main' } }],
+      ]);
+    });
+
+    it('refuses Uncategorized and characters outside the book', async () => {
+      await drop(make('vera', 'main', [], { books: ['b1'] }), 'uncategorized');
+      await drop(make('nell', 'main', [], { books: [] }), 'supporting');
+      expect(updateCharacter).not.toHaveBeenCalled();
+      expect(notificationService.showError).toHaveBeenCalledTimes(2);
+    });
+
+    it('hides the empty Uncategorized group', () => {
+      Object.assign(component, { filteredCharacters: [mara], collection: 'characters' });
+      expect(groupByCategory().map((g) => g.categoryId)).toEqual(['main']);
+    });
   });
 });

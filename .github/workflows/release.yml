@@ -62,57 +62,6 @@ jobs:
             release/latest-linux.yml
           if-no-files-found: error
 
-  build-mac:
-    if: github.event_name == 'push'
-    needs: test
-    runs-on: macos-latest
-    env:
-      CSC_LINK: ${{ secrets.MAC_CERTIFICATE }}
-      CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
-      APPLE_ID: ${{ secrets.APPLE_ID }}
-      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '26.4.0'
-          cache: npm
-      - name: Check release version and signing credentials
-        id: credentials
-        run: |
-          node -e "if ('v' + require('./package.json').version !== process.env.GITHUB_REF_NAME) throw new Error('Tag and package.json version differ')"
-          if [[ -z "$CSC_LINK" && -z "$CSC_KEY_PASSWORD" && -z "$APPLE_ID" && -z "$APPLE_APP_SPECIFIC_PASSWORD" && -z "$APPLE_TEAM_ID" ]]; then
-            echo 'macOS signing credentials are not configured; publishing Linux packages only.'
-            echo 'enabled=false' >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          for name in CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
-            test -n "${!name}" || { echo "Missing $name: signed, notarized macOS releases require all five macOS secrets"; exit 1; }
-          done
-          echo 'enabled=true' >> "$GITHUB_OUTPUT"
-      - if: steps.credentials.outputs.enabled == 'true'
-        run: npm ci
-      - name: Install ImageMagick
-        if: steps.credentials.outputs.enabled == 'true'
-        run: brew install imagemagick
-      - if: steps.credentials.outputs.enabled == 'true'
-        run: npm run build-icons
-      - if: steps.credentials.outputs.enabled == 'true'
-        run: npm run build -- --configuration production
-      - name: Build signed macOS packages and update metadata
-        if: steps.credentials.outputs.enabled == 'true'
-        run: npx electron-builder --mac dmg zip --x64 --arm64 --publish never
-      - uses: actions/upload-artifact@v4
-        if: steps.credentials.outputs.enabled == 'true'
-        with:
-          name: mac-release
-          path: |
-            release/*.dmg
-            release/*.zip
-            release/latest-mac.yml
-          if-no-files-found: error
-
   smoke-debian:
     needs: build-linux
     runs-on: ubuntu-latest
@@ -170,7 +119,7 @@ jobs:
 
   publish:
     if: github.event_name == 'push'
-    needs: [build-linux, build-mac, smoke-debian, smoke-appimage, smoke-fedora]
+    needs: [build-linux, smoke-debian, smoke-appimage, smoke-fedora]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -186,11 +135,6 @@ jobs:
           compgen -G 'release/*.AppImage' > /dev/null
           compgen -G 'release/*.deb' > /dev/null
           compgen -G 'release/*.rpm' > /dev/null
-          if [[ -e release/latest-mac.yml ]]; then
-            test -s release/latest-mac.yml
-            compgen -G 'release/*.zip' > /dev/null
-            compgen -G 'release/*.dmg' > /dev/null
-          fi
       - uses: softprops/action-gh-release@v2
         with:
           files: release/*

@@ -12,9 +12,9 @@ import { CharacterDuplicateService } from '../../core/services/character-duplica
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Observable } from 'rxjs';
-import { Book, Cast, Category, Character, CharacterStyle, Project, Tag } from '../../core/interfaces';
+import { Book, Cast, Category, Character, CharacterFormData, CharacterStyle, Project, Tag } from '../../core/interfaces';
 import { CastService, CharacterEditDialogService, CharacterService, LoggingService, MetadataService, NotificationService, ProjectService } from '../../core/services';
-import { MetadataHelperService } from '../../core/services/metadata-helper.service';
+import { MetadataHelperService, UNCATEGORIZED_CATEGORY_ID } from '../../core/services/metadata-helper.service';
 import { ModalService } from '../../core/services/modal.service';
 import { CharacterViewMode, PreferencesService } from '../../core/services/preferences.service';
 import { PromptService } from '../../core/services/prompt.service';
@@ -1373,9 +1373,8 @@ getFilterSummary(): string {
   }
 
   isCategoryDragDropEnabled(): boolean {
-    // Disable while a book filter is active — drag would ambiguously change
-    // the default category rather than the book-specific override.
-    return this.groupBy === 'category' && !this.isUpdatingCategory && !this.selectedBook;
+    // With a Book filter active, a drop sets that book's category override.
+    return this.groupBy === 'category' && !this.isUpdatingCategory;
   }
 
   getCategoryDropListId(categoryId: string): string {
@@ -1491,11 +1490,14 @@ getFilterSummary(): string {
       }
     }
 
-    // Then add any uncategorized characters
-    if (grouped.has('uncategorized')) {
+    // Then Uncategorized. In Characters it is always shown (even empty) so a
+    // character can be dropped there to clear its category; not with a Book
+    // filter, where a drop sets a per-book category and cannot clear it.
+    if (!knownCategoryIds.has(UNCATEGORIZED_CATEGORY_ID)
+      && (grouped.has(UNCATEGORIZED_CATEGORY_ID) || (this.collection === 'characters' && !this.selectedBook))) {
       result.push({
-        categoryId: 'uncategorized',
-        characters: grouped.get('uncategorized')!,
+        categoryId: UNCATEGORIZED_CATEGORY_ID,
+        characters: grouped.get(UNCATEGORIZED_CATEGORY_ID) ?? [],
       });
     }
 
@@ -1508,46 +1510,90 @@ getFilterSummary(): string {
     );
   }
 
-  // --- Drag to Drawer ---
+  // --- Drag to Drawer / Lore ---
 
   drawerDropHighlighted = false;
+  loreDropHighlighted = false;
+  charactersDropHighlighted = false;
 
   @ViewChild('drawerToggle')
   private drawerToggle?: ElementRef<HTMLElement>;
 
-  /** Live hover highlight on the Drawer toggle while a character is being dragged. */
+  @ViewChild('loreToggle')
+  private loreToggle?: ElementRef<HTMLElement>;
+
+  @ViewChild('charactersToggle')
+  private charactersToggle?: ElementRef<HTMLElement>;
+
+  /** Live hover highlight on the collection toggles while a character is being dragged. */
   @HostListener('document:mousemove', ['$event'])
   onDocumentMouseMoveWhileDragging(event: MouseEvent): void {
     if (!this.isDraggingCharacter) return;
-    const over = this.isPointerOverDrawer(event.clientX, event.clientY);
-    if (over !== this.drawerDropHighlighted) {
-      this.drawerDropHighlighted = over;
+    const target = this.collectionDropTargetAt(event.clientX, event.clientY);
+    const overDrawer = target === 'drawer';
+    const overLore = target === 'lore';
+    const overCharacters = target === 'characters';
+    if (overDrawer !== this.drawerDropHighlighted || overLore !== this.loreDropHighlighted
+      || overCharacters !== this.charactersDropHighlighted) {
+      this.drawerDropHighlighted = overDrawer;
+      this.loreDropHighlighted = overLore;
+      this.charactersDropHighlighted = overCharacters;
       this.cdr.markForCheck();
     }
+  }
+
+  private clearCollectionDropHighlights(): void {
+    this.drawerDropHighlighted = false;
+    this.loreDropHighlighted = false;
+    this.charactersDropHighlighted = false;
   }
 
   getCharacterPaneDropListId(): string {
     return 'character-pane-drop-list';
   }
 
-  private isPointerOverDrawer(clientX: number, clientY: number): boolean {
-    const el = this.drawerToggle?.nativeElement;
+  private isPointerOver(el: HTMLElement | undefined, clientX: number, clientY: number): boolean {
     if (!el) return false;
     const rect = el.getBoundingClientRect();
     return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
   }
 
-  private isOverDrawerDropPoint(event: CdkDragDrop<Character[]>): boolean {
-    const point = event.dropPoint;
-    return !!point && this.isPointerOverDrawer(point.x, point.y) && !this.drawerMode;
+  /** Which collection toggle (if any) accepts a drop at this point; the current collection never does. */
+  private collectionDropTargetAt(clientX: number, clientY: number): 'drawer' | 'lore' | 'characters' | null {
+    if (!this.drawerMode && this.isPointerOver(this.drawerToggle?.nativeElement, clientX, clientY)) {
+      return 'drawer';
+    }
+    if (!this.loreMode && !this.drawerMode && this.isPointerOver(this.loreToggle?.nativeElement, clientX, clientY)) {
+      return 'lore';
+    }
+    if (this.loreMode && this.isPointerOver(this.charactersToggle?.nativeElement, clientX, clientY)) {
+      return 'characters';
+    }
+    return null;
   }
 
-  onPaneDrop(event: CdkDragDrop<Character[]>): void {
-    this.drawerDropHighlighted = false;
-    this.cdr.markForCheck();
-    if (this.isOverDrawerDropPoint(event)) {
-      this.moveDraggedCharacterToDrawer(event);
+  private collectionDropTarget(event: CdkDragDrop<Character[]>): 'drawer' | 'lore' | 'characters' | null {
+    const point = event.dropPoint;
+    return point ? this.collectionDropTargetAt(point.x, point.y) : null;
+  }
+
+  /** Moves the dragged character when dropped on a collection toggle; returns whether it was handled. */
+  private async handleCollectionDrop(event: CdkDragDrop<Character[]>): Promise<boolean> {
+    const target = this.collectionDropTarget(event);
+    if (target === 'drawer') {
+      await this.moveDraggedCharacterToDrawer(event);
+    } else if (target === 'lore') {
+      await this.moveDraggedCharacterToLore(event);
+    } else if (target === 'characters') {
+      await this.moveDraggedLoreFigureToCharacters(event);
     }
+    return target !== null;
+  }
+
+  async onPaneDrop(event: CdkDragDrop<Character[]>): Promise<void> {
+    this.clearCollectionDropHighlights();
+    this.cdr.markForCheck();
+    await this.handleCollectionDrop(event);
   }
 
   private async moveDraggedCharacterToDrawer(event: CdkDragDrop<Character[]>): Promise<void> {
@@ -1569,12 +1615,62 @@ getFilterSummary(): string {
     }
   }
 
+  private async moveDraggedCharacterToLore(event: CdkDragDrop<Character[]>): Promise<void> {
+    const draggedCharacter = event.item.data as Character | undefined;
+    if (!draggedCharacter || draggedCharacter.lore || draggedCharacter.draft) {
+      return;
+    }
+
+    const displayName = this.getCharacterDisplayName(draggedCharacter);
+    try {
+      const updated = await this.characterService.updateCharacter(draggedCharacter.id, { lore: true });
+      if (!updated) {
+        this.notificationService.showError('Could not move character to Lore.');
+        return;
+      }
+      this.notificationService.showSuccess(`"${displayName}" moved to Lore.`);
+    } catch (error) {
+      this.notificationService.showError(
+        error instanceof Error ? error.message : `Failed to move character to Lore: ${error}`
+      );
+      this.logger.error('Move to Lore error:', error);
+      this.cdr.markForCheck();
+    }
+  }
+
+  /** Lore figure → Characters; keeps its category when it still exists, otherwise Uncategorized. */
+  private async moveDraggedLoreFigureToCharacters(event: CdkDragDrop<Character[]>): Promise<void> {
+    const draggedCharacter = event.item.data as Character | undefined;
+    if (!draggedCharacter?.lore) {
+      return;
+    }
+
+    const knownCategory = this.categories.some((category) => category.id === draggedCharacter.category);
+    const category = knownCategory ? draggedCharacter.category : UNCATEGORIZED_CATEGORY_ID;
+    const displayName = this.getCharacterDisplayName(draggedCharacter);
+    try {
+      const updated = await this.characterService.updateCharacter(draggedCharacter.id, { lore: false, category });
+      if (!updated) {
+        this.notificationService.showError('Could not move Lore figure to Characters.');
+        return;
+      }
+      this.notificationService.showSuccess(
+        `"${displayName}" moved to Characters (${this.metadataHelper.getCategoryName(category)}).`
+      );
+    } catch (error) {
+      this.notificationService.showError(
+        error instanceof Error ? error.message : `Failed to move Lore figure to Characters: ${error}`
+      );
+      this.logger.error('Move to Characters error:', error);
+      this.cdr.markForCheck();
+    }
+  }
+
 
   async onCategoryDrop(event: CdkDragDrop<Character[]>, targetCategoryId: string): Promise<void> {
     this.activeDropCategoryId = null;
-    this.drawerDropHighlighted = false;
-    if (this.isOverDrawerDropPoint(event)) {
-      await this.moveDraggedCharacterToDrawer(event);
+    this.clearCollectionDropHighlights();
+    if (await this.handleCollectionDrop(event)) {
       return;
     }
     if (!this.isCategoryDragDropEnabled()) {
@@ -1588,15 +1684,41 @@ getFilterSummary(): string {
 
     // Dropped back into its own group: nothing to change. Also keeps a stale
     // category id (shown under Uncategorized) from being rewritten on disk.
-    if (draggedCharacter.category === targetCategoryId || event.previousContainer === event.container) {
+    const bookId = this.selectedBook;
+    if (resolveEffectiveCategory(draggedCharacter, bookId) === targetCategoryId
+      || event.previousContainer === event.container) {
       return;
+    }
+
+    // With a Book filter the groups show each character's category in that book,
+    // so the drop sets (or clears) the book's category override.
+    let change: Partial<CharacterFormData> = { category: targetCategoryId };
+    if (bookId) {
+      const bookName = this.metadataHelper.getBookName(bookId);
+      if (!(draggedCharacter.books ?? []).includes(bookId)) {
+        this.notificationService.showError(
+          `"${draggedCharacter.name}" is not in ${bookName}; add the book to the character first.`
+        );
+        return;
+      }
+      if (!this.categories.some((category) => category.id === targetCategoryId)) {
+        this.notificationService.showError(
+          `A character can't be Uncategorized in just one book. Clear the Book filter to remove its category.`
+        );
+        return;
+      }
+      const bookCategories = { ...(draggedCharacter.bookCategories ?? {}) };
+      if (targetCategoryId === draggedCharacter.category) {
+        delete bookCategories[bookId];
+      } else {
+        bookCategories[bookId] = targetCategoryId;
+      }
+      change = { bookCategories };
     }
 
     try {
       this.isUpdatingCategory = true;
-      const updated = await this.characterService.updateCharacter(draggedCharacter.id, {
-        category: targetCategoryId,
-      });
+      const updated = await this.characterService.updateCharacter(draggedCharacter.id, change);
 
       if (!updated) {
         this.notificationService.showError('Could not move character to the selected category.');
@@ -1604,7 +1726,8 @@ getFilterSummary(): string {
       }
 
       const targetCategoryName = this.metadataHelper.getCategoryName(targetCategoryId);
-      this.notificationService.showSuccess(`Moved "${updated.name}" to ${targetCategoryName}.`);
+      const scope = bookId ? ` in ${this.metadataHelper.getBookName(bookId)}` : '';
+      this.notificationService.showSuccess(`Moved "${updated.name}" to ${targetCategoryName}${scope}.`);
     } catch (error) {
       this.logger.error('Failed to move character to category:', error);
       this.notificationService.showError('Failed to move character. Please try again.');
@@ -1776,7 +1899,7 @@ getFilterSummary(): string {
     setTimeout(() => {
       this.isDraggingCharacter = false;
       this.renderScheduler.resume();
-      this.drawerDropHighlighted = false;
+      this.clearCollectionDropHighlights();
       this.activeDropCategoryId = null;
       this.cdr.markForCheck();
     }, 0);

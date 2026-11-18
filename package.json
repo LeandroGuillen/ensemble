@@ -1,6 +1,6 @@
 {
   "name": "ensemble",
-  "version": "1.35.1",
+  "version": "1.36.0",
   "description": "Character management application for writers and worldbuilders",
   "main": "main.js",
   "scripts": {
@@ -15,8 +15,7 @@
     "electron-dev:test-updates-error": "ENABLE_UPDATE_TESTING=1 UPDATE_TEST_SCENARIO=error node scripts/electron-dev.js",
     "electron-prod": "ng build --configuration production && electron .",
     "build-electron": "ng build --configuration production && electron-builder",
-    "build-electron-all": "ng build --configuration production && electron-builder --mac --win --linux",
-    "build-electron-mac": "ng build --configuration production && electron-builder --mac",
+    "build-electron-all": "ng build --configuration production && electron-builder --win --linux",
     "build-electron-win": "ng build --configuration production && electron-builder --win",
     "build-electron-linux": "ng build --configuration production && electron-builder --linux",
     "build-electron-linux-appimage": "ng build --configuration production && electron-builder --linux AppImage",
@@ -171,31 +170,6 @@
         ]
       }
     ],
-    "mac": {
-      "category": "public.app-category.productivity",
-      "icon": "build/icons/icon.icns",
-      "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
-        },
-        {
-          "target": "zip",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
-        }
-      ],
-      "darkModeSupport": true,
-      "hardenedRuntime": true,
-      "gatekeeperAssess": false,
-      "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist"
-    },
     "win": {
       "icon": "build/icons/icon.ico",
       "target": [
@@ -280,27 +254,6 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Ensemble"
-    },
-    "dmg": {
-      "title": "Ensemble ${version}",
-      "backgroundColor": "#2c3e50",
-      "window": {
-        "width": 540,
-        "height": 380
-      },
-      "contents": [
-        {
-          "x": 410,
-          "y": 190,
-          "type": "link",
-          "path": "/Applications"
-        },
-        {
-          "x": 130,
-          "y": 190,
-          "type": "file"
-        }
-      ]
     },
     "publish": {
       "provider": "github",

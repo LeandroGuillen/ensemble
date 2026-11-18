@@ -3,13 +3,17 @@
     @if (currentProject) {
       <ng-container pageHeaderSuffix>
       <div class="character-scope-toggle view-toggle view-toggle-text" aria-label="Character collection">
-        <button type="button" class="toggle-option" [class.active]="collection === 'characters'" [attr.aria-pressed]="collection === 'characters'" (click)="setCollection('characters')">
+        <button type="button" #charactersToggle class="toggle-option collection-drop-target" [class.active]="collection === 'characters'" [attr.aria-pressed]="collection === 'characters'" [class.drag-over]="charactersDropHighlighted" [class.pulsing]="isDraggingCharacter && loreMode"
+          (click)="setCollection('characters')"
+          [title]="loreMode ? 'Drop a Lore figure here to move it to Characters' : ''">
           Characters <span class="scope-count">{{ activeCharacters.length }}</span>
         </button>
-        <button type="button" class="toggle-option" [class.active]="loreMode" [attr.aria-pressed]="loreMode" (click)="setCollection('lore')">
+        <button type="button" #loreToggle class="toggle-option collection-drop-target" [class.active]="loreMode" [attr.aria-pressed]="loreMode" [class.drag-over]="loreDropHighlighted" [class.pulsing]="isDraggingCharacter && !loreMode && !drawerMode"
+          (click)="setCollection('lore')"
+          title="Drop a character here to move it to Lore">
           Lore <span class="scope-count">{{ loreFigures.length }}</span>
         </button>
-        <button type="button" #drawerToggle class="toggle-option drawer-drop-target" [class.active]="drawerMode" [attr.aria-pressed]="drawerMode" [class.drag-over]="drawerDropHighlighted" [class.pulsing]="isDraggingCharacter"
+        <button type="button" #drawerToggle class="toggle-option collection-drop-target" [class.active]="drawerMode" [attr.aria-pressed]="drawerMode" [class.drag-over]="drawerDropHighlighted" [class.pulsing]="isDraggingCharacter && !drawerMode"
           (click)="setDrawerMode(true)"
           title="Drop a character here to move it to the Drawer">
           Drawer <span class="scope-count">{{ draftCharacters.length }}</span>
@@ -460,6 +464,9 @@
                         >
                         Drop here for {{ metadataHelper.getCategoryName(group.categoryId) }}
                       </div>
+                      @if (group.characters.length === 0) {
+                        <p class="empty-group-hint">Drop a character here to clear its category.</p>
+                      }
                       <!-- Grid View (Cards) -->
                       @if (viewMode === 'grid') {
                         <app-character-grid-view

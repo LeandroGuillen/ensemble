@@ -1,27 +1,14 @@
 # Releasing
 
-How Ensemble releases are cut and signed, and how the Linux packages are tested. See the [README](../README.md) for the project overview.
+How Ensemble releases are cut, and how the Linux packages are tested. See the [README](../README.md) for the project overview.
 
 ## Releases and updates
 
 Push a tag matching `package.json` (for example, `v1.14.5`) to run the release
-workflow. It builds AppImage, DEB, and RPM packages on Linux. When macOS signing
-credentials are configured, it also builds signed, notarized DMG and ZIP
-packages for both macOS architectures. One publish job uploads the packages
-and their update metadata to the same GitHub release. The update feed needs
-both the package and its metadata; uploading an installer alone is insufficient.
-
-Before tagging, add these repository Actions secrets for the macOS build:
-
-- `MAC_CERTIFICATE`: base64 encoded Developer ID Application `.p12` certificate
-- `MAC_CERTIFICATE_PASSWORD`: password for that certificate
-- `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`: Apple notarization credentials
-
-Without any macOS credentials, the workflow publishes Linux packages only.
-Partially configured credentials fail the release. macOS automatic updates
-require the installed app and its replacement to be signed.
-Anyone using an earlier unsigned macOS build should install the first signed
-release manually, then subsequent releases can update in the app.
+workflow. It builds AppImage, DEB, and RPM packages on Linux, and one publish
+job uploads the packages and their update metadata to the same GitHub release.
+The update feed needs both the package and its metadata; uploading an installer
+alone is insufficient. There is no macOS build.
 
 Installed builds check GitHub Releases at startup and every four hours. Users
 can also check in Settings. When an update is ready, **Quit and Install** asks

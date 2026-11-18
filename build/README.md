@@ -9,7 +9,6 @@ build/
 ├── icons/                  # Application icons for all platforms
 │   ├── icon.svg           # Source SVG icon (512x512)
 │   ├── icon.ico           # Windows icon (multiple sizes)
-│   ├── icon.icns          # macOS icon (multiple sizes)
 │   ├── 16x16.png          # Linux icon
 │   ├── 32x32.png          # Linux icon
 │   ├── 48x48.png          # Linux icon
@@ -17,7 +16,6 @@ build/
 │   ├── 128x128.png        # Linux icon
 │   ├── 256x256.png        # Linux icon
 │   └── 512x512.png        # Linux icon
-├── entitlements.mac.plist # macOS entitlements for code signing
 └── README.md              # This file
 ```
 
@@ -26,11 +24,6 @@ build/
 ### Windows (.ico)
 - Must contain multiple sizes: 16x16, 32x32, 48x48, 256x256
 - Use tools like GIMP, Photoshop, or online converters
-
-### macOS (.icns)
-- Must contain multiple sizes: 16x16, 32x32, 128x128, 256x256, 512x512, 1024x1024
-- Use `iconutil` on macOS or online converters
-- Example: `iconutil -c icns icon.iconset`
 
 ### Linux (.png)
 - Individual PNG files for each size
@@ -63,11 +56,10 @@ electron-icon-builder --input=build/icons/icon.svg --output=build/icons --flatte
 The following npm scripts are available for building:
 
 ```bash
-# Build for all platforms
+# Build for Linux and Windows
 npm run build-electron-all
 
 # Build for specific platforms
-npm run build-electron-mac
 npm run build-electron-win
 npm run build-electron-linux
 
@@ -79,11 +71,6 @@ npm run dist
 ```
 
 ## Platform-Specific Notes
-
-### macOS
-- Requires macOS to build .dmg and .app files
-- Code signing requires Apple Developer account
-- Notarization required for distribution outside App Store
 
 ### Windows
 - Can be built on any platform
@@ -101,8 +88,6 @@ Built applications will be placed in the `release/` directory with the following
 
 ```
 release/
-├── Ensemble-1.0.0.dmg              # macOS installer
-├── Ensemble-1.0.0-mac.zip          # macOS app bundle
 ├── Ensemble Setup 1.0.0.exe        # Windows installer
 ├── Ensemble 1.0.0.exe               # Windows portable
 ├── Ensemble-1.0.0.AppImage          # Linux AppImage
