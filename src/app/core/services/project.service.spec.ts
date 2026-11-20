@@ -434,6 +434,37 @@ describe('ProjectService', () => {
       expect(project?.metadata.projectName).toBe('Updated Project');
     });
 
+    it('persists named Characters filters on reopen and in a copied folder', async () => {
+      const files = new Map(['/original', '/unrelated'].map(path =>
+        [`${path}/ensemble.json`, JSON.stringify(createValidMetadata())]));
+      electronService.isDirectory.and.resolveTo(true);
+      electronService.fileExists.and.callFake(async path => files.has(path));
+      electronService.createDirectory.and.resolveTo({ success: true });
+      electronService.readDirectoryFiles.and.resolveTo({ success: true, files: [], directories: [] });
+      electronService.readFile.and.callFake(async path => ({ success: files.has(path), content: files.get(path) }));
+      electronService.writeFileAtomic.and.callFake(async (path, content) => {
+        files.set(path, content);
+        return { success: true };
+      });
+
+      const presets = [{
+        id: 'preset', name: 'Magic users', filters: {
+          searchTerm: '', disabledCategoryIds: [], selectedTags: ['magic-user'], selectedCast: '',
+          selectedHouse: '', selectedBook: '', selectedPictureFilter: '', selectedPromptFilter: '', povOnly: false,
+        },
+      }] satisfies NonNullable<ProjectMetadata['characterFilterPresets']>;
+
+      await service.loadProject('/original');
+      await service.updateMetadata({ characterFilterPresets: presets });
+      await service.loadProject('/unrelated');
+      expect(service.getCurrentProject()?.metadata.characterFilterPresets ?? []).toEqual([]);
+      await service.loadProject('/original');
+      expect(service.getCurrentProject()?.metadata.characterFilterPresets).toEqual(presets);
+      files.set('/copy/ensemble.json', files.get('/original/ensemble.json')!);
+      await service.loadProject('/copy');
+      expect(service.getCurrentProject()?.metadata.characterFilterPresets).toEqual(presets);
+    });
+
     it('should throw error when no project is loaded', async () => {
       await expectAsync(service.updateMetadata({})).toBeRejected();
     });

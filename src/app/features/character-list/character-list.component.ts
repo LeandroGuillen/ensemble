@@ -6,6 +6,8 @@ import { animate, state, style, transition, trigger } from '@angular/animations'
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { ChangeDetectorRef, Component, DestroyRef, ElementRef, HostListener, inject, OnInit, ViewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { CharacterFilterPreset, CharacterFilters } from '../../core/interfaces/project.interface';
+import { PendingEditsService } from '../../core/services/pending-edits.service';
 import { House } from '../../core/interfaces/house.interface';
 import { HouseService } from '../../core/services/house.service';
 import { CharacterDuplicateService } from '../../core/services/character-duplicate.service';
@@ -22,6 +24,7 @@ import {
   isEffectiveCategoryEnabled,
   resolveEffectiveCategory,
 } from '../../core/utils/character-category.utils';
+import { generateId } from '../../core/utils/id.utils';
 import { contrastTextColor } from '../../core/utils/color-contrast.utils';
 import { aliasesMatchSearch } from '../../core/utils/character-alias.utils';
 import { getCharacterDisplayName } from '../../core/utils/character-display.utils';
@@ -100,6 +103,7 @@ export class CharacterListComponent implements OnInit {
   }
 
   private readonly toasts = inject(NotificationService);
+  private readonly pendingEdits = inject(PendingEditsService);
   /** The last load failed: hide the (empty) list; the toast offers Retry. */
   loadFailed = false;
   @ViewChild('scrollableContent', { static: false })
@@ -153,6 +157,18 @@ export class CharacterListComponent implements OnInit {
   get loreMode(): boolean { return this.collection === 'lore'; }
   private collectionInitialized = false;
   private filterProjectPath: string | undefined;
+  selectedPresetId = '';
+  presetName = '';
+  savingPresets = false;
+  presetNotice = '';
+
+  get savedFilters(): CharacterFilterPreset[] {
+    return this.currentProject?.metadata.characterFilterPresets ?? [];
+  }
+
+  get selectedPreset(): CharacterFilterPreset | undefined {
+    return this.savedFilters.find(preset => preset.id === this.selectedPresetId);
+  }
   // Use service cache - sync from service on init and after loading
   thumbnailDataUrls: Map<string, string> = new Map();
   thumbnailModificationTimes: Map<string, string> = new Map();
@@ -307,6 +323,9 @@ export class CharacterListComponent implements OnInit {
 
     // Subscribe to project changes
     this.projectService.currentProject$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((project) => {
+      if (this.currentProject?.path !== project?.path) {
+        this.selectPreset('');
+      }
       this.currentProject = project;
       this.currentBook = resolvePinnedBooks(project)[0] ?? null;
       const projectChanged = this.collectionInitialized && this.filterProjectPath !== project?.path;
@@ -412,14 +431,24 @@ export class CharacterListComponent implements OnInit {
     return `characterCollectionFilters:${this.currentProject?.path || ''}:${this.collection}`;
   }
 
+  private captureFilters(): CharacterFilters {
+    return {
+      searchTerm: this.searchTerm,
+      disabledCategoryIds: [...this.disabledCategoryIds],
+      selectedTags: [...this.selectedTags],
+      selectedCast: this.selectedCast,
+      selectedHouse: this.selectedHouse,
+      selectedBook: this.selectedBook,
+      selectedPictureFilter: this.selectedPictureFilter,
+      selectedPromptFilter: this.selectedPromptFilter,
+      povOnly: this.povOnly,
+    };
+  }
+
   // View preferences are shared through PreferencesService; only filters belong to a collection.
   private saveCollectionFilters(): void {
     if (!this.collectionInitialized || !this.currentProject) return;
-    localStorage.setItem(this.collectionFilterKey, JSON.stringify({
-      searchTerm: this.searchTerm, disabledCategoryIds: this.disabledCategoryIds,
-      selectedTags: this.selectedTags, selectedCast: this.selectedCast, selectedHouse: this.selectedHouse,
-      selectedBook: this.selectedBook, selectedPictureFilter: this.selectedPictureFilter, selectedPromptFilter: this.selectedPromptFilter, povOnly: this.povOnly,
-    }));
+    localStorage.setItem(this.collectionFilterKey, JSON.stringify(this.captureFilters()));
   }
 
   private restoreCollectionFilters(): void {
@@ -428,19 +457,146 @@ export class CharacterListComponent implements OnInit {
     if (!saved && !this.collectionInitialized && this.collection === 'characters') return;
     let raw: Record<string, unknown> = {};
     try { if (saved) raw = JSON.parse(saved) || {}; } catch { /* Reset invalid preferences. */ }
-    const strings = (value: unknown): string[] => Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : [];
-    const text = (value: unknown): string => typeof value === 'string' ? value : '';
-    this.searchTerm = text(raw['searchTerm']);
-    this.disabledCategoryIds = strings(raw['disabledCategoryIds']).filter(id => this.categories.some(category => category.id === id));
-    this.enabledCategoryIds = this.categories.filter(category => !this.disabledCategoryIds.includes(category.id)).map(category => category.id);
-    this.selectedTags = strings(raw['selectedTags']);
-    this.selectedCast = text(raw['selectedCast']);
-    this.selectedHouse = text(raw['selectedHouse']);
-    this.selectedBook = text(raw['selectedBook']);
-    this.selectedPictureFilter = raw['selectedPictureFilter'] === 'with' || raw['selectedPictureFilter'] === 'without' ? raw['selectedPictureFilter'] : '';
-    this.selectedPromptFilter = raw['selectedPromptFilter'] === 'with' || raw['selectedPromptFilter'] === 'without' ? raw['selectedPromptFilter'] : '';
-    this.povOnly = !this.drawerMode && raw['povOnly'] === true;
+    this.setFilters(this.readFilters(raw));
     this.recomputePovBadgeState();
+  }
+
+  private readFilters(raw: Partial<Record<keyof CharacterFilters, unknown>>): CharacterFilters {
+    const strings = (value: unknown): string[] =>
+      Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : [];
+    const text = (value: unknown): string => typeof value === 'string' ? value : '';
+    const presence = (value: unknown): '' | 'with' | 'without' =>
+      value === 'with' || value === 'without' ? value : '';
+    return {
+      searchTerm: text(raw.searchTerm),
+      disabledCategoryIds: strings(raw.disabledCategoryIds),
+      selectedTags: strings(raw.selectedTags),
+      selectedCast: text(raw.selectedCast),
+      selectedHouse: text(raw.selectedHouse),
+      selectedBook: text(raw.selectedBook),
+      selectedPictureFilter: presence(raw.selectedPictureFilter),
+      selectedPromptFilter: presence(raw.selectedPromptFilter),
+      povOnly: raw.povOnly === true,
+    };
+  }
+
+  private setFilters(filters: CharacterFilters): void {
+    this.searchTerm = filters.searchTerm;
+    this.disabledCategoryIds = filters.disabledCategoryIds.filter(id => this.categories.some(category => category.id === id));
+    this.enabledCategoryIds = this.categories.filter(category => !this.disabledCategoryIds.includes(category.id)).map(category => category.id);
+    this.selectedTags = [...filters.selectedTags];
+    this.selectedCast = filters.selectedCast;
+    this.selectedHouse = filters.selectedHouse;
+    this.selectedBook = filters.selectedBook;
+    this.selectedPictureFilter = filters.selectedPictureFilter;
+    this.selectedPromptFilter = filters.selectedPromptFilter;
+    this.povOnly = !this.drawerMode && filters.povOnly;
+  }
+
+  selectPreset(id: string): void {
+    this.selectedPresetId = id;
+    this.presetName = this.selectedPreset?.name ?? '';
+    this.presetNotice = '';
+  }
+
+  applyPreset(): void {
+    const preset = this.selectedPreset;
+    if (!preset || this.collection !== 'characters') return;
+    const filters = this.readFilters(preset.filters ?? {});
+    const missing: string[] = [];
+    const available = (kind: string, ids: string[], options: { id: string }[]): string[] =>
+      ids.filter(id => {
+        if (options.some(option => option.id === id)) return true;
+        missing.push(`${kind} "${preset.criterionLabels?.[`${kind}:${id}`] || id}"`);
+        return false;
+      });
+
+    filters.disabledCategoryIds = available('Category', filters.disabledCategoryIds, this.categories);
+    filters.selectedTags = available('Tag', filters.selectedTags, this.tags);
+    if (filters.selectedBook) filters.selectedBook = available('Book', [filters.selectedBook], this.books)[0] ?? '';
+    if (filters.selectedCast) filters.selectedCast = available('Cast', [filters.selectedCast], this.casts)[0] ?? '';
+    if (filters.selectedHouse) filters.selectedHouse = available('House', [filters.selectedHouse], this.houses)[0] ?? '';
+    const hasCriteria = filters.searchTerm.trim() || filters.disabledCategoryIds.length || filters.selectedTags.length ||
+      filters.selectedBook || filters.selectedCast || filters.selectedHouse || filters.selectedPictureFilter ||
+      filters.selectedPromptFilter || filters.povOnly;
+    this.presetNotice = missing.length ? `Missing criteria: ${missing.join(', ')}.` : '';
+    if (missing.length && !hasCriteria) {
+      this.presetNotice += ' Current filters were kept.';
+      return;
+    }
+
+    this.setFilters(filters);
+    this.refreshBookFilters();
+  }
+
+  async savePreset(): Promise<void> {
+    const name = this.getPresetName();
+    if (!name || !this.activeFilterCount) return;
+    const filters = this.captureFilters();
+    const references: [string, string[], { id: string; name: string }[]][] = [
+      ['Category', filters.disabledCategoryIds, this.categories],
+      ['Tag', filters.selectedTags, this.tags],
+      ['Book', [filters.selectedBook], this.books],
+      ['Cast', [filters.selectedCast], this.casts],
+      ['House', [filters.selectedHouse], this.houses],
+    ];
+    const criterionLabels: Record<string, string> = {};
+    for (const [kind, ids, options] of references) {
+      for (const option of options) {
+        if (ids.includes(option.id)) criterionLabels[`${kind}:${option.id}`] = option.name;
+      }
+    }
+    const preset = { id: generateId(), name, filters, criterionLabels };
+    await this.persistPresets([...this.savedFilters, preset], preset.id);
+  }
+
+  async renamePreset(): Promise<void> {
+    const preset = this.selectedPreset;
+    const name = this.getPresetName(preset?.id);
+    if (!preset || !name || name === preset.name) return;
+    await this.persistPresets(
+      this.savedFilters.map(item => item.id === preset.id ? { ...item, name } : item),
+      preset.id,
+    );
+  }
+
+  async deletePreset(): Promise<void> {
+    const preset = this.selectedPreset;
+    const projectPath = this.currentProject?.path;
+    if (!preset || !projectPath || this.currentProject?.readOnly || this.savingPresets) return;
+    const confirmed = await this.modalService.confirm(`Delete "${preset.name}"?`, 'Delete saved filter', {
+      confirmText: 'Delete', danger: true,
+    });
+    if (!confirmed || this.currentProject?.path !== projectPath) return;
+    await this.persistPresets(this.savedFilters.filter(item => item.id !== preset.id), '');
+  }
+
+  private getPresetName(exceptId?: string): string {
+    const name = this.presetName.trim();
+    if (!name) return '';
+    if (this.savedFilters.some(preset => preset.id !== exceptId && preset.name.toLowerCase() === name.toLowerCase())) {
+      this.presetNotice = 'A saved filter already uses that name.';
+      return '';
+    }
+    return name;
+  }
+
+  private async persistPresets(presets: CharacterFilterPreset[], selection: string): Promise<void> {
+    const project = this.currentProject;
+    if (!project || project.readOnly || this.savingPresets || this.collection !== 'characters') return;
+    this.savingPresets = true;
+    this.presetNotice = '';
+    try {
+      const save = this.projectService.updateMetadata({ characterFilterPresets: presets });
+      this.pendingEdits.track(save);
+      await save;
+      if (this.currentProject?.path === project.path) this.selectPreset(selection);
+    } catch (error) {
+      this.toasts.showError(`Failed to save filters: ${error}`);
+    } finally {
+      this.savingPresets = false;
+      this.cdr.markForCheck();
+    }
   }
 
   /**
@@ -826,6 +982,10 @@ export class CharacterListComponent implements OnInit {
   onBookChange(): void {
     // Save selected book to localStorage
     localStorage.setItem('characterSelectedBook', this.selectedBook);
+    this.refreshBookFilters();
+  }
+
+  private refreshBookFilters(): void {
     this.recomputePovBadgeState();
     this.syncCacheFromService();
     void this.loadThumbnailDataUrls(this.allCharacters);

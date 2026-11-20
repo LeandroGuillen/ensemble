@@ -314,6 +314,36 @@
           [inert]="!filtersVisible"
           >
         <div class="filters-sidebar-content">
+          @if (collection === 'characters' && currentProject) {
+            <section class="saved-filters" aria-labelledby="saved-filters-label">
+              <label id="saved-filters-label" for="saved-filter-select">Saved filters</label>
+              <select id="saved-filter-select" [ngModel]="selectedPresetId" (ngModelChange)="selectPreset($event)"
+                [disabled]="savingPresets">
+                <option value="">Choose a saved filter</option>
+                @for (preset of savedFilters; track preset.id) {
+                  <option [value]="preset.id">{{ preset.name }}</option>
+                }
+              </select>
+              @if (selectedPreset) {
+                <button type="button" class="btn btn-secondary" (click)="applyPreset()">Apply</button>
+              }
+              @if (!currentProject.readOnly) {
+                <label for="saved-filter-name">Preset name</label>
+                <input id="saved-filter-name" type="text" [(ngModel)]="presetName" [disabled]="savingPresets">
+                <div class="saved-filter-actions">
+                  <button type="button" class="btn btn-secondary" (click)="savePreset()"
+                    [disabled]="savingPresets || !presetName.trim() || !activeFilterCount">Save current</button>
+                  @if (selectedPreset; as preset) {
+                    <button type="button" class="btn btn-secondary" (click)="renamePreset()"
+                      [disabled]="savingPresets || !presetName.trim() || presetName.trim() === preset.name">Rename</button>
+                    <button type="button" class="btn btn-secondary" (click)="deletePreset()"
+                      [disabled]="savingPresets">Delete</button>
+                  }
+                </div>
+              }
+              <div role="status">{{ presetNotice }}</div>
+            </section>
+          }
           <app-character-filter
             [sidebar]="true"
             [categories]="categories"

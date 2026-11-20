@@ -31,6 +31,26 @@ export interface CharacterStyle {
   name: string;
 }
 
+export interface CharacterFilters {
+  searchTerm: string;
+  disabledCategoryIds: string[];
+  selectedTags: string[];
+  selectedCast: string;
+  selectedHouse: string;
+  selectedBook: string;
+  selectedPictureFilter: '' | 'with' | 'without';
+  selectedPromptFilter: '' | 'with' | 'without';
+  povOnly: boolean;
+}
+
+export interface CharacterFilterPreset {
+  id: string;
+  name: string;
+  filters: CharacterFilters;
+  /** Display names retained for criteria that may later be removed. */
+  criterionLabels?: Record<string, string>;
+}
+
 export interface ProjectMetadata {
   projectName: string;
   /** Project-relative image shown in the sidebar instead of the Ensemble logo. */
@@ -50,6 +70,8 @@ export interface ProjectMetadata {
   settings: ProjectSettings;
   pinboards?: Pinboard[];  // New: array of pinboards
   lastSession?: ProjectLastSession;
+  /** Named filter combinations for the Characters collection. */
+  characterFilterPresets?: CharacterFilterPreset[];
   /**
    * Names of deleted characters / locations, by id, that prompt files may
    * still link (`PromptService.rememberDeletedName()`), so such a link shows
