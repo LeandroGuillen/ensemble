@@ -17,11 +17,11 @@ import {
   isLegacyCharacterMainFile,
   parseCharacterMainFileLocation,
 } from '../utils/character-path.utils';
-import { parseThumbnailReference, resolveThumbnailPath, resolveThumbnailForStyle, resolveThumbnailForBookStyle, normalizeThumbnailsMap, normalizeBookThumbnailsMap, thumbnailCacheKey, formatThumbnailWikiLink } from '../utils/thumbnail.utils';
+import { parseThumbnailReference, resolveThumbnailPath, resolveThumbnailForBookStyle, normalizeThumbnailsMap, normalizeBookThumbnailsMap, thumbnailCacheKey, formatThumbnailWikiLink } from '../utils/thumbnail.utils';
 import { normalizeBookCategories, normalizeBookTags } from '../utils/character-category.utils';
 import { normalizeAliases } from '../utils/character-alias.utils';
 import { bookPageSuffix } from '../utils/book-display.utils';
-import { assertIpcSuccess, withIpcError } from '../utils/ipc.utils';
+import { assertIpcSuccess } from '../utils/ipc.utils';
 import { requireProject } from '../utils/project.utils';
 import {
   CharacterReferenceSnapshot,
@@ -41,7 +41,6 @@ import { ElectronService } from './electron.service';
 import { FileWatcherService } from './file-watcher.service';
 import { ProjectService } from './project.service';
 import { LoggingService } from './logging.service';
-import { MetadataService } from './metadata.service';
 import { PlotBoardService } from './plot-board.service';
 import { CastService } from './cast.service';
 import { ReferenceCleanupService } from './reference-cleanup.service';
@@ -92,7 +91,6 @@ export class CharacterService {
     private projectService: ProjectService,
     private fileWatcherService: FileWatcherService,
     private logger: LoggingService,
-    private metadataService: MetadataService,
     private plotBoardService: PlotBoardService,
     private castService: CastService,
     private referenceCleanup: ReferenceCleanupService,
@@ -252,17 +250,6 @@ export class CharacterService {
         this.logger.error(`Failed to move ${move.to} back to ${move.from}: ${back.error}`);
       }
     }
-  }
-
-  /**
-   * Checks if a book page file exists for the given character and book.
-   */
-  async bookPageExists(characterId: string, bookId: string): Promise<boolean> {
-    const character = this.findRecord(characterId);
-    if (!character) return false;
-    const filePath = this.getBookPageFilePath(character, bookId);
-    const result = await this.electronService.fileExists(filePath);
-    return result;
   }
 
   /**
@@ -566,9 +553,8 @@ export class CharacterService {
       return;
     }
 
-    let remappedProject = false;
     try {
-      remappedProject = await this.projectService.remapCharacterIds(idMap);
+      await this.projectService.remapCharacterIds(idMap);
     } catch (error) {
       this.logger.error('Failed to remap character ids in project metadata', error);
     }
@@ -1866,16 +1852,6 @@ export class CharacterService {
     return this.thumbnailModificationTimes.get(thumbnailCacheKey(characterId, style, bookId)) || null;
   }
 
-  removeCachedThumbnail(characterId: string, styleId?: string): void {
-    if (styleId) {
-      const key = thumbnailCacheKey(characterId, styleId);
-      this.thumbnailDataUrls.delete(key);
-      this.thumbnailModificationTimes.delete(key);
-      return;
-    }
-    this.removeCachedThumbnailsForCharacter(characterId);
-  }
-
   /** Removes all cached style variants for a character. */
   removeCachedThumbnailsForCharacter(characterId: string): void {
     const prefix = `${characterId}:`;
@@ -1885,48 +1861,6 @@ export class CharacterService {
         this.thumbnailModificationTimes.delete(key);
       }
     }
-  }
-
-  /**
-   * @deprecated Images library removed - returns null
-   */
-  getCachedCharacterImages(characterId: string): string[] | null {
-    return null;
-  }
-
-  /**
-   * @deprecated Images library removed - no-op
-   */
-  setCachedCharacterImages(characterId: string, imageUrls: string[]): void {
-    // No-op
-  }
-
-  /**
-   * @deprecated Images library removed - no-op
-   */
-  async reorderImages(_characterId: string, _imageIds: string[]): Promise<void> {
-    // No-op
-  }
-
-  /**
-   * @deprecated Images library removed - returns null
-   */
-  async getImagePath(_characterId: string, _imageId: string): Promise<string | null> {
-    return null;
-  }
-
-  /**
-   * @deprecated Images library removed - returns null
-   */
-  getPrimaryImage(_character: Character): null {
-    return null;
-  }
-
-  /**
-   * @deprecated Images library removed - no-op
-   */
-  private async handleImageFileChange(_event: { type: string; path: string; filename: string }): Promise<void> {
-    // No-op
   }
 
   /**

@@ -321,18 +321,6 @@
   .pov-filter-row {
     margin-top: 4px;
   }
-
-  ::ng-deep {
-    .cast-dropdown-container,
-    .book-selector-container {
-      width: 100%;
-    }
-
-    .selected-book-display,
-    .cast-dropdown-trigger {
-      width: 100%;
-    }
-  }
 }
 
 @keyframes slideDown {

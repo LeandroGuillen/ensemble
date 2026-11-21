@@ -24,7 +24,6 @@ describe('Character reference restore integration (Real DI)', () => {
   let houseService: HouseService;
   let castService: CastService;
   let metadataService: MetadataService;
-  let pinboardService: PinboardService;
   let plotBoardService: PlotBoardService;
   let projectService: any;
   let project$: BehaviorSubject<Project | null>;
@@ -217,7 +216,6 @@ describe('Character reference restore integration (Real DI)', () => {
     houseService = TestBed.inject(HouseService);
     castService = TestBed.inject(CastService);
     metadataService = TestBed.inject(MetadataService);
-    pinboardService = TestBed.inject(PinboardService);
     plotBoardService = TestBed.inject(PlotBoardService);
 
     (metadataService as any).metadataSubject.next(structuredClone(project$.value!.metadata));

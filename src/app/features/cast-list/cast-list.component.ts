@@ -20,7 +20,7 @@ import {
 import { pathJoin } from "../../core/utils/path.utils";
 import { aliasesMatchSearch } from "../../core/utils/character-alias.utils";
 import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
-import { isTrashStagingError } from '../../core/trash/trash-record-id';
+import { deleteFailureMessage } from '../../core/trash/trash-record-id';
 
 @Component({
     selector: "app-cast-list",
@@ -265,11 +265,8 @@ export class CastListComponent implements OnInit {
         await this.metadataService.removeCast(cast.id);
       } catch (error) {
         this.logger.error("Failed to delete cast:", error);
-        // Staging/rollback already toasted; avoid a misleading inline "Failed to delete".
-        // Service already prefixes "Failed to delete cast:"; use its message once.
-        if (!isTrashStagingError(error)) {
-          this.toasts.showError(error instanceof Error ? error.message : `Failed to delete cast: ${error}`);
-        }
+        const message = deleteFailureMessage(error, 'cast');
+        if (message) this.toasts.showError(message);
       }
     }
   }

@@ -170,10 +170,6 @@ describe('LocationService', () => {
     expect(service.getLocationsSnapshot()).toEqual([]);
   });
 
-  it('should be created', () => {
-    expect(service).toBeTruthy();
-  });
-
   describe('loadLocations', () => {
     it('creates the locations directory when missing', async () => {
       electronService.fileExists.and.returnValue(Promise.resolve(false));

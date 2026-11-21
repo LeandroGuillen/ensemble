@@ -33,7 +33,7 @@ import { formatWorldDate, parseWorldDate, resolveCalendar } from '../../core/uti
 import { MarkdownEditorComponent, WikiLinkSuggestion } from '../../shared/markdown-editor/markdown-editor.component';
 import { MentionedInComponent } from '../../shared/mentioned-in/mentioned-in.component';
 import { buildCharacterDeleteMessage } from './character-delete-message.utils';
-import { isTrashStagingError } from '../../core/trash/trash-record-id';
+import { deleteFailureMessage } from '../../core/trash/trash-record-id';
 import {
   Book,
   Category,
@@ -1982,13 +1982,8 @@ export class CharacterDetailComponent
       });
     } catch (error) {
       this.logger.error("Delete error:", error);
-      // Staging/rollback toasts come from the service (TrashStagingError).
-      // Service already prefixes "Failed to delete character:"; use its message once.
-      if (!isTrashStagingError(error)) {
-        const message =
-          error instanceof Error ? error.message : `Failed to delete character: ${error}`;
-        this.notificationService.showError(message);
-      }
+      const message = deleteFailureMessage(error, 'character');
+      if (message) this.notificationService.showError(message);
       this.cdr.markForCheck();
     }
   }

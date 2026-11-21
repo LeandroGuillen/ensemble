@@ -15,7 +15,7 @@ import { PlotBoardService } from './plot-board.service';
 import { CastService } from './cast.service';
 import { ReferenceCleanupService } from './reference-cleanup.service';
 import { UndoDeleteService } from './undo-delete.service';
-import { Project, ProjectMetadata } from '../interfaces/project.interface';
+import { Project } from '../interfaces/project.interface';
 import { Character, CharacterFormData } from '../interfaces/character.interface';
 
 function emptyCharacterSnapshot(characterId: string) {
@@ -33,12 +33,8 @@ describe('CharacterService', () => {
   let service: CharacterService;
   let electronService: jasmine.SpyObj<ElectronService>;
   let projectService: jasmine.SpyObj<ProjectService>;
-  let fileWatcherService: jasmine.SpyObj<FileWatcherService>;
-  let loggingService: jasmine.SpyObj<LoggingService>;
   let notificationService: jasmine.SpyObj<NotificationService>;
-  let metadataService: jasmine.SpyObj<MetadataService>;
   let plotBoardService: jasmine.SpyObj<PlotBoardService>;
-  let castService: jasmine.SpyObj<CastService>;
   let referenceCleanupService: jasmine.SpyObj<ReferenceCleanupService>;
   let undoDeleteService: jasmine.SpyObj<UndoDeleteService>;
 
@@ -160,12 +156,8 @@ describe('CharacterService', () => {
     service = TestBed.inject(CharacterService);
     electronService = TestBed.inject(ElectronService) as jasmine.SpyObj<ElectronService>;
     projectService = TestBed.inject(ProjectService) as jasmine.SpyObj<ProjectService>;
-    fileWatcherService = TestBed.inject(FileWatcherService) as jasmine.SpyObj<FileWatcherService>;
-    loggingService = TestBed.inject(LoggingService) as jasmine.SpyObj<LoggingService>;
     notificationService = TestBed.inject(NotificationService) as jasmine.SpyObj<NotificationService>;
-    metadataService = TestBed.inject(MetadataService) as jasmine.SpyObj<MetadataService>;
     plotBoardService = TestBed.inject(PlotBoardService) as jasmine.SpyObj<PlotBoardService>;
-    castService = TestBed.inject(CastService) as jasmine.SpyObj<CastService>;
     referenceCleanupService = TestBed.inject(ReferenceCleanupService) as jasmine.SpyObj<ReferenceCleanupService>;
     undoDeleteService = TestBed.inject(UndoDeleteService) as jasmine.SpyObj<UndoDeleteService>;
 
@@ -198,10 +190,6 @@ describe('CharacterService', () => {
     expect(electronService.writeFileAtomic).not.toHaveBeenCalled();
     expect(electronService.createDirectory).not.toHaveBeenCalled();
     expect(service.getReferenceCharactersSnapshot()).toEqual([]);
-  });
-
-  it('should be created', () => {
-    expect(service).toBeTruthy();
   });
 
   describe('getCharacters', () => {

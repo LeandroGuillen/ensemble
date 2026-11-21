@@ -260,34 +260,18 @@ describe('ReferenceCleanupService', () => {
       );
     });
 
-    it('should remove character from book PoVs', async () => {
+    it('removes the character from book PoVs, casts, houses, pinboards and plot threads', async () => {
       await service.removeCharacterReferences('char-1');
 
-      expect(metadataService.removeCharacterFromBookPovs).toHaveBeenCalledWith('char-1');
-    });
-
-    it('should remove character from casts', async () => {
-      await service.removeCharacterReferences('char-1');
-
-      expect(castService.removeCharacterFromCasts).toHaveBeenCalledWith('char-1');
-    });
-
-    it('should remove character from houses', async () => {
-      await service.removeCharacterReferences('char-1');
-
-      expect(houseService.removeCharacterFromHouses).toHaveBeenCalledWith('char-1');
-    });
-
-    it('should remove character from pinboards', async () => {
-      await service.removeCharacterReferences('char-1');
-
-      expect(pinboardService.removeCharacterConnections).toHaveBeenCalledWith('char-1');
-    });
-
-    it('should remove character from plot threads', async () => {
-      await service.removeCharacterReferences('char-1');
-
-      expect(plotBoardService.removeCharacterFromThreads).toHaveBeenCalledWith('char-1');
+      for (const step of [
+        metadataService.removeCharacterFromBookPovs,
+        castService.removeCharacterFromCasts,
+        houseService.removeCharacterFromHouses,
+        pinboardService.removeCharacterConnections,
+        plotBoardService.removeCharacterFromThreads,
+      ]) {
+        expect(step).toHaveBeenCalledWith('char-1');
+      }
     });
 
     it('should continue cleanup even if one step fails', async () => {
@@ -315,6 +299,20 @@ describe('ReferenceCleanupService', () => {
       expect(pinboardService.removeCharacterConnections).toHaveBeenCalledWith('char-1');
       expect(plotBoardService.removeCharacterFromThreads).toHaveBeenCalledWith('char-1');
       expect(loggingService.error).toHaveBeenCalledTimes(2);
+      expect(loggingService.warn).toHaveBeenCalled();
+    });
+
+    it('should continue cleanup if plot thread removal fails', async () => {
+      plotBoardService.removeCharacterFromThreads.and.returnValue(Promise.reject(new Error('Plot error')));
+
+      await service.removeCharacterReferences('char-1');
+
+      // All other cleanup methods should still be called
+      expect(metadataService.removeCharacterFromBookPovs).toHaveBeenCalledWith('char-1');
+      expect(castService.removeCharacterFromCasts).toHaveBeenCalledWith('char-1');
+      expect(houseService.removeCharacterFromHouses).toHaveBeenCalledWith('char-1');
+      expect(pinboardService.removeCharacterConnections).toHaveBeenCalledWith('char-1');
+      expect(loggingService.error).toHaveBeenCalled();
       expect(loggingService.warn).toHaveBeenCalled();
     });
 
@@ -401,53 +399,6 @@ describe('ReferenceCleanupService', () => {
         `Couldn't update the House "House Fail", so this link was left in place.`
       );
       expect(loggingService.error).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('Plot thread cleanup', () => {
-    beforeEach(() => {
-      plotBoardService.removeCharacterFromThreads.and.returnValue(
-        Promise.resolve(emptySnap('char-1'))
-      );
-      plotBoardService.countCharacterReferences.and.returnValue(Promise.resolve([
-        { id: 'board1.plotboard.md', name: 'board1' }
-      ]));
-    });
-
-    it('should count character references in plot threads', async () => {
-      const result = await service.countCharacterReferences('char-1');
-
-      expect(plotBoardService.countCharacterReferences).toHaveBeenCalledWith('char-1');
-      expect(result.plotBoards.length).toBe(1);
-      expect(result.plotBoards[0].name).toBe('board1');
-    });
-
-    it('should remove character from plot threads', async () => {
-      await service.removeCharacterReferences('char-1');
-
-      expect(plotBoardService.removeCharacterFromThreads).toHaveBeenCalledWith('char-1');
-    });
-
-    it('should continue cleanup if plot thread removal fails', async () => {
-      plotBoardService.removeCharacterFromThreads.and.returnValue(Promise.reject(new Error('Plot error')));
-      metadataService.removeCharacterFromBookPovs.and.returnValue(
-        Promise.resolve(emptySnap('char-1'))
-      );
-      castService.removeCharacterFromCasts.and.returnValue(Promise.resolve(emptySnap('char-1')));
-      houseService.removeCharacterFromHouses.and.returnValue(Promise.resolve(emptySnap('char-1')));
-      pinboardService.removeCharacterConnections.and.returnValue(
-        Promise.resolve(emptySnap('char-1'))
-      );
-
-      await service.removeCharacterReferences('char-1');
-
-      // All other cleanup methods should still be called
-      expect(metadataService.removeCharacterFromBookPovs).toHaveBeenCalledWith('char-1');
-      expect(castService.removeCharacterFromCasts).toHaveBeenCalledWith('char-1');
-      expect(houseService.removeCharacterFromHouses).toHaveBeenCalledWith('char-1');
-      expect(pinboardService.removeCharacterConnections).toHaveBeenCalledWith('char-1');
-      expect(loggingService.error).toHaveBeenCalled();
-      expect(loggingService.warn).toHaveBeenCalled();
     });
   });
 });

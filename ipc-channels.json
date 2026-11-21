@@ -30,7 +30,6 @@
   "writeFileAtomic": "write-file-atomic",
 
   "deleteFile": "delete-file",
-  "listDirectory": "list-directory",
   "copyFile": "copy-file",
   "moveFile": "move-file",
   "getFileStats": "get-file-stats",
@@ -64,6 +63,5 @@
 
   "checkForUpdates": "check-for-updates",
   "downloadUpdate": "download-update",
-  "getUpdateStatus": "get-update-status",
   "quitAndInstall": "quit-and-install"
 }

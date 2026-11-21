@@ -1,12 +1,11 @@
 import { ProjectReadOnlyDirective } from '../../shared/project-read-only.directive';
 import { isInteractiveKeyboardTarget } from '../../core/utils/list-keyboard.utils';
 import { NotificationService } from '../../core/services/notification.service';
-import { DestroyRef, inject, Component, OnInit, HostListener, SecurityContext } from '@angular/core';
+import { DestroyRef, inject, Component, OnInit, HostListener } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { FormsModule } from "@angular/forms";
 import { ActivatedRoute } from "@angular/router";
-import { DomSanitizer, SafeHtml } from "@angular/platform-browser";
 import { AiService } from "../../core/services/ai.service";
 import { BackstageService } from "../../core/services/backstage.service";
 import { CharacterEditDialogService } from "../../core/services/character-edit-dialog.service";
@@ -79,7 +78,6 @@ export class BackstageComponent implements OnInit {
     private backstageService: BackstageService,
     private route: ActivatedRoute,
     private electronService: ElectronService,
-    private sanitizer: DomSanitizer,
     private logger: LoggingService,
     private characterEditDialog: CharacterEditDialogService
     , private modalService: ModalService
@@ -477,13 +475,9 @@ export class BackstageComponent implements OnInit {
     return escaped.replace(/~~(.+?)~~/g, '<del>$1</del>');
   }
 
-  // Convert markdown to HTML for rendering
-  renderMarkdown(markdown: string | undefined): SafeHtml {
-    if (!markdown) return '';
-
-    const html = markdownToHtml(markdown);
-    const sanitized = this.sanitizer.sanitize(SecurityContext.HTML, html);
-    return this.sanitizer.bypassSecurityTrustHtml(sanitized || '');
+  /** Markdown as HTML; Angular's [innerHTML] binding sanitizes it again. */
+  renderMarkdown(markdown: string | undefined): string {
+    return markdownToHtml(markdown ?? '');
   }
 
   toggleEditNotes(): void {

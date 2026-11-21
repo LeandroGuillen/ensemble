@@ -42,10 +42,6 @@ export class PreferencesService {
     return (localStorage.getItem('characterSortDirection') as any) || 'asc';
   }
 
-  setSortDirection(direction: 'asc' | 'desc'): void {
-    localStorage.setItem('characterSortDirection', direction);
-  }
-
   getGroupBy(): 'none' | 'category' | 'tag' | 'cast' | 'book' {
     return (localStorage.getItem('characterGroupBy') as any) || 'none';
   }
@@ -54,47 +50,12 @@ export class PreferencesService {
     localStorage.setItem('characterGroupBy', groupBy);
   }
 
-  getSearchTerm(): string {
-    return localStorage.getItem('characterSearchTerm') || '';
-  }
-
   setSearchTerm(term: string): void {
     localStorage.setItem('characterSearchTerm', term);
   }
 
   getSelectedCategory(): string {
     return localStorage.getItem('characterSelectedCategory') || '';
-  }
-
-  setSelectedCategory(category: string): void {
-    localStorage.setItem('characterSelectedCategory', category);
-  }
-
-  getSelectedTags(): string[] {
-    const saved = localStorage.getItem('characterSelectedTags');
-    return saved ? JSON.parse(saved) : [];
-  }
-
-  setSelectedTags(tags: string[]): void {
-    localStorage.setItem('characterSelectedTags', JSON.stringify(tags));
-  }
-
-  getSelectedBooks(): string[] {
-    const saved = localStorage.getItem('characterSelectedBooks');
-    return saved ? JSON.parse(saved) : [];
-  }
-
-  setSelectedBooks(books: string[]): void {
-    localStorage.setItem('characterSelectedBooks', JSON.stringify(books));
-  }
-
-  getSelectedCasts(): string[] {
-    const saved = localStorage.getItem('characterSelectedCasts');
-    return saved ? JSON.parse(saved) : [];
-  }
-
-  setSelectedCasts(casts: string[]): void {
-    localStorage.setItem('characterSelectedCasts', JSON.stringify(casts));
   }
 
   getGalleryThumbnailSize(): 'big' | 'medium' | 'small' {

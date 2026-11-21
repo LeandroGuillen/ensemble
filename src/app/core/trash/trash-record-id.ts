@@ -34,6 +34,15 @@ export function isTrashStagingError(error: unknown): error is TrashStagingError 
   );
 }
 
+/**
+ * Toast text for a failed delete, or null for a TrashStagingError (the service already
+ * toasted). Services prefix "Failed to delete <what>:", so their message is used as is.
+ */
+export function deleteFailureMessage(error: unknown, what: string): string | null {
+  if (isTrashStagingError(error)) return null;
+  return error instanceof Error ? error.message : `Failed to delete ${what}: ${error}`;
+}
+
 /** Staging-failure / post-stage rollback toast text (exact). */
 export function trashStagingFailureMessage(name: string, error: string): string {
   return `Couldn't delete "${name}": ${error}. Nothing was changed.`;

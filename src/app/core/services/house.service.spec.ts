@@ -344,9 +344,9 @@ describe('HouseService', () => {
 
   describe('Character reference cleanup', () => {
     it('counts character references across all houses', async () => {
-      const house1 = await service.createHouse({ ...data(), characterIds: ['char-1', 'char-2'] });
-      const house2 = await service.createHouse({ ...data('House Tully'), characterIds: ['char-1', 'char-3'] });
-      const house3 = await service.createHouse({ ...data('House Lannister'), characterIds: ['char-4'] });
+      await service.createHouse({ ...data(), characterIds: ['char-1', 'char-2'] });
+      await service.createHouse({ ...data('House Tully'), characterIds: ['char-1', 'char-3'] });
+      await service.createHouse({ ...data('House Lannister'), characterIds: ['char-4'] });
 
       expect(service.countCharacterReferences('char-1').length).toBe(2);
       expect(service.countCharacterReferences('char-2').length).toBe(1);
@@ -355,7 +355,7 @@ describe('HouseService', () => {
     });
 
     it('counts character references in leadership entries', async () => {
-      const house = await service.createHouse({
+      await service.createHouse({
         ...data(),
         characterIds: ['char-1'],
         leadership: [

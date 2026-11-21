@@ -63,30 +63,6 @@ export function asciiSlugify(text: string): string {
 }
 
 /**
- * Converts a filename to a human-readable field name
- * Examples:
- * - "another-file.md" → "Another File"
- * - "character-background.md" → "Character Background"
- * - "some_notes.md" → "Some Notes"
- *
- * @param filename - The filename to convert
- * @returns A human-readable field name
- */
-export function filenameToFieldName(filename: string): string {
-  // Remove .md extension
-  let name = filename.replace(/\.md$/i, '');
-
-  // Replace hyphens and underscores with spaces
-  name = name.replace(/[-_]/g, ' ');
-
-  // Capitalize first letter of each word
-  return name
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
-}
-
-/**
  * Next filename stem when duplicating a plot board file: increment a trailing `-123` or final digit run, else append `-2`.
  */
 export function nextPlotBoardDuplicateStem(stem: string): string {

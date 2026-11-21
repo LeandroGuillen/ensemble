@@ -1,4 +1,3 @@
-import { pathBasename } from './path.utils';
 
 export const CHARACTER_DRAFTS_FOLDER = '@drafts';
 
@@ -57,10 +56,3 @@ export function characterFolderRelativePath(relativePath: string): string | null
     : location.folderName;
 }
 
-export function characterFolderName(relativePath: string): string | null {
-  return parseCharacterMainFileLocation(relativePath)?.folderName ?? null;
-}
-
-export function characterMainFilename(relativePath: string): string {
-  return pathBasename(relativePath);
-}

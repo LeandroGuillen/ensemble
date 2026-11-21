@@ -19,23 +19,3 @@ export const DEFAULT_BASE_COLORS = [
   '#34495e'  // Dark Blue-Grey
 ] as const;
 
-/**
- * Gets a color from the palette by index (wraps around if index exceeds palette size)
- */
-export function getColorFromPalette(index: number): string {
-  return DEFAULT_BASE_COLORS[index % DEFAULT_BASE_COLORS.length];
-}
-
-/**
- * Gets the next available color from the palette that hasn't been used
- */
-export function getNextAvailableColor(usedColors: string[]): string {
-  for (const color of DEFAULT_BASE_COLORS) {
-    if (!usedColors.includes(color)) {
-      return color;
-    }
-  }
-  // If all colors are used, return the first one
-  return DEFAULT_BASE_COLORS[0];
-}
-

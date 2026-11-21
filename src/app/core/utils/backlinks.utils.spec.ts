@@ -39,6 +39,7 @@ describe('extractWikiLinks', () => {
     expect(extractWikiLinks('![[Mara Vell]]').length).toBe(0);
     expect(extractWikiLinks('`[[InCode]]` [[Real]]').map((s) => s.target)).toEqual(['Real']);
     expect(extractWikiLinks('```\n[[InBlock]]\n```').length).toBe(0);
+    expect(extractWikiLinks('\\[[Escaped]] [ [[InLabel]] ](https://example.com)').length).toBe(0);
   });
 
   it('reports span offsets that locate the link in the source', () => {

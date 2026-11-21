@@ -16,7 +16,6 @@ import { CastEditorSessionService } from './cast-editor-session.service';
 import { CastService } from './cast.service';
 import { ProjectService } from './project.service';
 import { CharacterService } from './character.service';
-import { LoggingService } from './logging.service';
 
 @Injectable({
   providedIn: 'root'
@@ -33,8 +32,7 @@ export class PinboardService {
     private projectService: ProjectService,
     private characterService: CharacterService,
     private castService: CastService,
-    private editorSession: CastEditorSessionService,
-    private logger: LoggingService
+    private editorSession: CastEditorSessionService
   ) {
     this.editorSession.changes$.pipe(takeUntilDestroyed()).subscribe(state => {
       if (state) {
@@ -573,109 +571,8 @@ export class PinboardService {
   }
 
   /**
-   * Updates pinboard data from vis.js Network positions
-   */
-  async updateFromVisJsPositions(positions: { [pinId: string]: { x: number; y: number } }): Promise<void> {
-    requireProject(this.projectService.getCurrentProject());
-
-    const currentData = this.pinboardDataSubject.value;
-    const updatedNodes = currentData.nodes.map(node => ({
-      ...node,
-      position: positions[node.id] || node.position
-    }));
-
-    const updatedData = {
-      ...currentData,
-      nodes: updatedNodes
-    };
-
-    await this.saveData(updatedData);
-    this.pinboardDataSubject.next(updatedData);
-  }
-
-  /**
-   * Gets available connection types
-   */
-  getConnectionTypes(): string[] {
-    return [
-      'family',
-      'friend',
-      'enemy',
-      'romantic',
-      'mentor',
-      'colleague',
-      'rival',
-      'ally',
-      'subordinate',
-      'superior'
-    ];
-  }
-
-  /**
    * Gets category color from project metadata
    */
-
-  /**
-   * Generates a consistent default position for new pins
-   */
-  private generateDefaultPosition(characterId: string): { x: number; y: number } {
-    // Use character ID to generate a consistent but pseudo-random position
-    let hash = 0;
-    for (let i = 0; i < characterId.length; i++) {
-      const char = characterId.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
-    }
-
-    // Convert hash to position within a reasonable range
-    const x = (Math.abs(hash) % 800) - 400; // Range: -400 to 400
-    const y = (Math.abs(hash >> 16) % 600) - 300; // Range: -300 to 300
-
-    return { x, y };
-  }
-
-  /**
-   * Finds an unoccupied position for a new pin considering existing pins and grid size
-   */
-  findUnoccupiedPosition(gridSize: number = 100): { x: number; y: number } {
-    const currentData = this.pinboardDataSubject.value;
-    const occupiedPositions = new Set<string>();
-
-    // Build a set of occupied grid positions (only if pins exist)
-    if (currentData && currentData.nodes && currentData.nodes.length > 0) {
-      currentData.nodes.forEach(node => {
-        // Snap existing positions to grid
-        const gridX = Math.round(node.position.x / gridSize) * gridSize;
-        const gridY = Math.round(node.position.y / gridSize) * gridSize;
-        occupiedPositions.add(`${gridX},${gridY}`);
-      });
-    }
-
-    // Try to find an unoccupied position in a spiral pattern from origin
-    let radius = 0;
-    const maxRadius = 20; // Maximum search radius in grid cells
-
-    while (radius <= maxRadius) {
-      // Try positions in a spiral pattern at this radius
-      for (let angle = 0; angle < 360; angle += 45) {
-        const radians = (angle * Math.PI) / 180;
-        const x = Math.round(Math.cos(radians) * radius) * gridSize;
-        const y = Math.round(Math.sin(radians) * radius) * gridSize;
-        const posKey = `${x},${y}`;
-
-        if (!occupiedPositions.has(posKey)) {
-          return { x, y };
-        }
-      }
-      radius++;
-    }
-
-    // If all positions in the spiral are occupied (unlikely), generate a random position far away
-    return {
-      x: (Math.random() - 0.5) * 2000,
-      y: (Math.random() - 0.5) * 2000
-    };
-  }
 
   /**
    * Adds a single pin to the pinboard at an unoccupied position
@@ -711,22 +608,6 @@ export class PinboardService {
     if (!cast) throw new Error('No active cast');
     await this.castService.updateCast(cast.id, {
       characterIds: cast.characterIds.filter(id => id !== characterId),
-    });
-  }
-
-  /**
-   * Debug method to log current pinboard state
-   */
-  debugLogPinboardState(): void {
-    const currentData = this.pinboardDataSubject.value;
-    this.logger.log('Current pinboard state:', {
-      pinCount: currentData.nodes.length,
-      connectionCount: currentData.edges.length,
-      pins: currentData.nodes.map(n => ({
-        id: n.id,
-        name: n.name,
-        position: n.position
-      }))
     });
   }
 

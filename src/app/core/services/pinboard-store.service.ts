@@ -6,7 +6,6 @@ import {
   PinboardViewState,
   Project,
 } from '../interfaces/project.interface';
-import { generateId } from '../utils/id.utils';
 import { pathJoin } from '../utils/path.utils';
 import { assertIpcSuccess } from '../utils/ipc.utils';
 import { ENSEMBLE_JSON_FILE } from '../constants/project.constants';
@@ -48,38 +47,8 @@ export class PinboardStoreService {
     if (!project.readOnly) await this.persist(project);
   }
 
-  async create(project: Project, name: string, duplicateFromId?: string): Promise<Pinboard> {
-    const pinboards = [...(project.metadata.pinboards || [])];
-    if (pinboards.some((pinboard) => pinboard.name === name)) {
-      throw new Error(`A pinboard named "${name}" already exists`);
-    }
-    const created: Pinboard = {
-      id: generateId(), name, nodes: [], edges: [], createdAt: new Date().toISOString(),
-    };
-    const source = duplicateFromId && pinboards.find((pinboard) => pinboard.id === duplicateFromId);
-    if (source) {
-      created.nodes = structuredClone(source.nodes);
-      created.edges = structuredClone(source.edges);
-      if (source.viewState) created.viewState = structuredClone(source.viewState);
-    }
-    pinboards.push(created);
-    project.metadata.pinboards = pinboards;
-    if (pinboards.length === 1) this.ensureLastSession(project.metadata).lastPinboardId = created.id;
-    await this.persist(project);
-    return created;
-  }
-
   async updateData(project: Project, id: string, data: PinboardData): Promise<void> {
     this.update(project, id, { nodes: data.nodes, edges: data.edges });
-    await this.persist(project);
-  }
-
-  async updateName(project: Project, id: string, name: string): Promise<void> {
-    const pinboards = project.metadata.pinboards || [];
-    if (pinboards.some((pinboard) => pinboard.name === name && pinboard.id !== id)) {
-      throw new Error(`A pinboard named "${name}" already exists`);
-    }
-    this.update(project, id, { name });
     await this.persist(project);
   }
 

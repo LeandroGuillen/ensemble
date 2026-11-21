@@ -18,6 +18,8 @@ export interface UpdateStatus {
   error?: string;
 }
 
+type UpdateResult = { success: boolean; error?: string };
+
 @Injectable({
   providedIn: 'root'
 })
@@ -33,83 +35,31 @@ export class UpdateService {
     private logger: LoggingService
   ) {
     // Listen for update status events from Electron
-    if (this.electronService.isElectron()) {
-      this.electronService.onUpdateStatus((event: any, status: UpdateStatus) => {
-        this.updateStatusSubject.next(status);
-        this.logger.log('Update status changed:', status);
-      });
-    }
+    this.electronService.onUpdateStatus((event: any, status: UpdateStatus) => {
+      this.updateStatusSubject.next(status);
+      this.logger.log('Update status changed:', status);
+    });
   }
 
-  /**
-   * Manually check for updates
-   */
-  async checkForUpdates(): Promise<{ success: boolean; error?: string }> {
-    if (!this.electronService.isElectron()) {
-      return { success: false, error: 'Not running in Electron' };
-    }
+  checkForUpdates(): Promise<UpdateResult> {
+    return this.run('checking for updates', () => this.electronService.checkForUpdates());
+  }
 
+  downloadUpdate(): Promise<UpdateResult> {
+    return this.run('downloading update', () => this.electronService.downloadUpdate());
+  }
+
+  /** Quit and install the downloaded update. */
+  quitAndInstall(): Promise<UpdateResult> {
+    return this.run('quitting for install', () => this.electronService.quitAndInstall());
+  }
+
+  private async run(action: string, call: () => Promise<UpdateResult>): Promise<UpdateResult> {
     try {
-      return await this.electronService.checkForUpdates();
+      return await call();
     } catch (error: any) {
-      this.logger.error('Error checking for updates', error);
-      return { success: false, error: error.message || 'Unknown error' };
+      this.logger.error(`Error ${action}`, error);
+      return { success: false, error: error?.message || 'Unknown error' };
     }
   }
-
-  /**
-   * Download the available update
-   */
-  async downloadUpdate(): Promise<{ success: boolean; error?: string }> {
-    if (!this.electronService.isElectron()) {
-      return { success: false, error: 'Not running in Electron' };
-    }
-
-    try {
-      return await this.electronService.downloadUpdate();
-    } catch (error: any) {
-      this.logger.error('Error downloading update', error);
-      return { success: false, error: error.message || 'Unknown error' };
-    }
-  }
-
-  /**
-   * Get current update status
-   */
-  async getUpdateStatus(): Promise<{ success: boolean; updateInfo?: any; error?: string }> {
-    if (!this.electronService.isElectron()) {
-      return { success: false, error: 'Not running in Electron' };
-    }
-
-    try {
-      return await this.electronService.getUpdateStatus();
-    } catch (error: any) {
-      this.logger.error('Error getting update status', error);
-      return { success: false, error: error.message || 'Unknown error' };
-    }
-  }
-
-  /**
-   * Quit and install the downloaded update
-   */
-  async quitAndInstall(): Promise<{ success: boolean; error?: string }> {
-    if (!this.electronService.isElectron()) {
-      return { success: false, error: 'Not running in Electron' };
-    }
-
-    try {
-      return await this.electronService.quitAndInstall();
-    } catch (error: any) {
-      this.logger.error('Error quitting for install', error);
-      return { success: false, error: error.message || 'Unknown error' };
-    }
-  }
-
-  /**
-   * Get current update status observable
-   */
-  getCurrentStatus(): UpdateStatus {
-    return this.updateStatusSubject.value;
-  }
-
 }

@@ -5,13 +5,11 @@ import { LoggingService } from './logging.service';
 import { NotificationService } from './notification.service';
 import { ProjectWriteProtectionService } from './project-write-protection.service';
 import { PendingEditsService } from './pending-edits.service';
-import { Project, ProjectMetadata } from '../interfaces/project.interface';
+import { ProjectMetadata } from '../interfaces/project.interface';
 
 describe('ProjectService', () => {
   let service: ProjectService;
   let electronService: jasmine.SpyObj<ElectronService>;
-  let loggingService: jasmine.SpyObj<LoggingService>;
-  let notificationService: jasmine.SpyObj<NotificationService>;
 
   const createValidMetadata = (): ProjectMetadata => ({
     projectName: 'Test Project',
@@ -62,8 +60,6 @@ describe('ProjectService', () => {
 
     service = TestBed.inject(ProjectService);
     electronService = TestBed.inject(ElectronService) as jasmine.SpyObj<ElectronService>;
-    loggingService = TestBed.inject(LoggingService) as jasmine.SpyObj<LoggingService>;
-    notificationService = TestBed.inject(NotificationService) as jasmine.SpyObj<NotificationService>;
 
     electronService.isElectron.and.returnValue(true);
     electronService.isWritable.and.resolveTo(true);
@@ -72,10 +68,6 @@ describe('ProjectService', () => {
     electronService.getRecentProjects.and.returnValue(Promise.resolve([]));
     electronService.saveRecentProjects.and.returnValue(Promise.resolve({ success: true }));
     electronService.deleteFile.and.returnValue(Promise.resolve({ success: true }));
-  });
-
-  it('should be created', () => {
-    expect(service).toBeTruthy();
   });
 
   describe('getCurrentProject', () => {

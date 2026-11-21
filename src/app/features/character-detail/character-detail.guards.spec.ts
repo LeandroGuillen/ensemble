@@ -1,4 +1,3 @@
-import { TestBed } from '@angular/core/testing';
 import { FormBuilder } from '@angular/forms';
 import { CharacterDetailComponent } from './character-detail.component';
 import { ImagePickerService } from '../../core/services';

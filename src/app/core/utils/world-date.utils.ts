@@ -135,10 +135,6 @@ export function dayToYear(day: number, calendar: WorldCalendar): number {
   return day / daysInYear(calendar);
 }
 
-export function yearToDay(year: number, calendar: WorldCalendar): number {
-  return Math.round(year * daysInYear(calendar));
-}
-
 /** Middle of a date's range as a decimal year. */
 export function dateToYear(date: WorldDate, calendar: WorldCalendar, edge: 'start' | 'end' | 'mid' = 'start'): number {
   if (edge === 'mid') {

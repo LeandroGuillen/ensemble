@@ -6,7 +6,6 @@ import { PinboardService } from '../../../../core/services/pinboard.service';
 import { ProjectService } from '../../../../core/services/project.service';
 import { CharacterService } from '../../../../core/services/character.service';
 import { CastService } from '../../../../core/services/cast.service';
-import { LoggingService } from '../../../../core/services/logging.service';
 import { createEmptyConnectionForm } from '../../pinboard-connection-form';
 
 describe('Connection arrow preview', () => {
@@ -30,7 +29,7 @@ describe('Connection arrow preview', () => {
           getCurrentPinboard: () => board, getDefaultCharacterStyle: () => 'default',
         } as unknown as ProjectService;
         const service = TestBed.runInInjectionContext(() => new PinboardService(
-          projects, {} as CharacterService, {} as CastService, session, {} as LoggingService,
+          projects, {} as CharacterService, {} as CastService, session,
         ));
         const graph = await service.getVisJsDataWithThumbnails([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }]);
         const ends = fixture.nativeElement.querySelectorAll('.preview-node-container');

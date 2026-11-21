@@ -1,7 +1,6 @@
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
 import type { Root, RootContent } from 'mdast';
-import { escapeHtml, markdownToHtml } from './markdown.utils';
 import { normalizeAliases } from './character-alias.utils';
 
 export interface WikiLinkTarget {
@@ -82,23 +81,6 @@ function matchingAliases<T extends WikiLinkTarget>(record: string, targets: T[])
   return targets.filter(entry => normalizeAliases(entry.aliases).some(alias => alias.toLowerCase() === normalized));
 }
 
-/** Matches for the longest reading of the target that matches anything. */
-function matchingTargets<T extends WikiLinkTarget>(target: string, targets: T[], folderName: string): T[] {
-  const readings = recordReadings(target);
-  for (const match of [matchingRecords, matchingAliases]) {
-    for (const { record } of readings) {
-      const matches = match(record, targets, folderName);
-      if (matches.length) return matches;
-    }
-  }
-  return [];
-}
-
-export function resolveWikiLink<T extends WikiLinkTarget>(target: string, targets: T[], folder: string): T | undefined {
-  const matches = matchingTargets(target, targets, folder);
-  return matches.length === 1 ? matches[0] : undefined;
-}
-
 export interface ResolvedWikiLink {
   /** resolved: unique match; missing: no match (href opens creation); ambiguous: several or unsupported matches. */
   state: 'resolved' | 'missing' | 'ambiguous';
@@ -165,7 +147,6 @@ function readWikiLinkTarget(target: string, collections: WikiLinkCollection[]): 
  * The record part of a wiki link target as the resolver reads it (`Unit#7` when a record has
  * that name, `Mara` for `Mara#Backstory`), or `undefined` when no record matches any reading.
  */
-/** Record part of a wiki link target as the link resolver reads it; `undefined` when nothing matches. */
 export type WikiLinkRecordName = (target: string) => string | undefined;
 
 export function wikiLinkRecordName(target: string, collections: WikiLinkCollection[]): string | undefined {
@@ -301,10 +282,6 @@ export function buildWikiLinkTargets(collections: WikiLinkCollection[]): WikiLin
   };
 }
 
-function escapeAttribute(value: string): string {
-  return escapeHtml(value).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-
 /** A `[[wikilink]]` span found in prose. */
 export interface WikiLinkSpan {
   /** Start offset of the `[[...]]` span in the source content. */
@@ -320,7 +297,7 @@ export interface WikiLinkSpan {
 /**
  * Extract `[[wikilink]]` spans from prose, leaving code, Markdown links and
  * embeds untouched and skipping embeds (`![[...]]`) and escapes (`\[[`).
- * Shared by the Markdown renderer and the backlink index so both see the same links.
+ * Shared by the backlink index, link renames and project health so all see the same links.
  */
 export function extractWikiLinks(content: string): WikiLinkSpan[] {
   const protectedRanges: { start: number; end: number }[] = [];
@@ -348,36 +325,4 @@ export function extractWikiLinks(content: string): WikiLinkSpan[] {
     spans.push({ start, end, target, label });
   }
   return spans;
-}
-
-/** Render wikilinks only in prose, leaving code, Markdown links and embeds untouched. */
-export function renderWikiLinkMarkdown<T extends WikiLinkTarget>(
-  content: string,
-  targets: T[],
-  options: WikiLinkOptions,
-  otherCollections: WikiLinkCollection[] = []
-): { html: string; missingLinks: string[] } {
-  const missingLinks = new Set<string>();
-  const collections: WikiLinkCollection[] = [{ ...options, targets }, ...otherCollections];
-  let prefix = 'ENSEMBLEWIKILINK';
-  while (content.includes(prefix)) prefix += 'X';
-  const replacements: { start: number; end: number; token: string; html: string }[] = [];
-  for (const span of extractWikiLinks(content)) {
-    const link = resolveWikiLinkTarget(span.target, collections);
-    if (link.state === 'missing') missingLinks.add(span.target);
-    const token = `${prefix}${replacements.length}END`;
-    const html = link.state === 'resolved'
-      ? `<a href="${escapeAttribute(link.href!)}" title="${escapeAttribute(span.target)}">${escapeHtml(span.label)}</a>`
-      : link.state === 'missing'
-        ? `<a class="unresolved-${link.route}-link" href="${escapeAttribute(link.href!)}" title="${escapeAttribute(link.title)}">${escapeHtml(span.label)}</a>`
-        : `<span class="unresolved-${link.route}-link" title="${escapeAttribute(link.title)}">${escapeHtml(span.label)}</span>`;
-    replacements.push({ start: span.start, end: span.end, token, html });
-  }
-  let source = content;
-  for (const replacement of [...replacements].reverse()) {
-    source = source.slice(0, replacement.start) + replacement.token + source.slice(replacement.end);
-  }
-  let html = markdownToHtml(source);
-  for (const replacement of replacements) html = html.replace(replacement.token, replacement.html);
-  return { html, missingLinks: [...missingLinks] };
 }

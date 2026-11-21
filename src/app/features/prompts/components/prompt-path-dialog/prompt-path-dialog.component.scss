@@ -1,4 +1,19 @@
-@use '../../../../shared/pinboard-create-dialog/pinboard-create-dialog.component.scss';
+.error-message {
+  padding: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+  background: var(--color-error);
+  color: var(--color-text-inverse);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: var(--spacing-xs);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
 
 .form-help {
   display: block;

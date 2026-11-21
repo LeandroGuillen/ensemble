@@ -17,7 +17,6 @@ export interface MarkdownParseResult<T = any> {
 
 const FRONTMATTER_DELIMITER = "---";
 
-
 /**
  * Parses a markdown file with YAML frontmatter
  */
@@ -104,90 +103,6 @@ export function generateMarkdown<T = any>(frontmatter: T, content: string): stri
     return `${FRONTMATTER_DELIMITER}\n${yamlContent}${FRONTMATTER_DELIMITER}\n\n${content}`;
   } catch (error) {
     throw new Error(`Failed to generate markdown: ${error}`);
-  }
-}
-
-/**
- * Validates markdown file structure
- */
-export function validateMarkdownStructure(content: string): {
-  isValid: boolean;
-  errors: string[];
-} {
-  const errors: string[] = [];
-
-  try {
-    const parseResult = parseMarkdown(content);
-
-    if (!parseResult.success) {
-      errors.push(parseResult.error!);
-    }
-  } catch (error) {
-    errors.push(`Markdown validation failed: ${error}`);
-  }
-
-  return {
-    isValid: errors.length === 0,
-    errors,
-  };
-}
-
-/**
- * Extracts frontmatter from markdown content without parsing the full file
- */
-export function extractFrontmatter<T = any>(content: string): T | null {
-  try {
-    const parseResult = parseMarkdown<T>(content);
-    return parseResult.success ? parseResult.data!.frontmatter : null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Extracts content from markdown without frontmatter
- */
-export function extractContent(content: string): string {
-  try {
-    const parseResult = parseMarkdown(content);
-    return parseResult.success ? parseResult.data!.content : content;
-  } catch {
-    return content;
-  }
-}
-
-/**
- * Checks if content has valid frontmatter
- */
-export function hasFrontmatter(content: string): boolean {
-  const trimmedContent = content.trim();
-  return trimmedContent.startsWith(FRONTMATTER_DELIMITER);
-}
-
-/**
- * Converts frontmatter object to YAML string
- */
-export function frontmatterToYaml<T = any>(frontmatter: T): string {
-  try {
-    return yaml.dump(frontmatter, {
-      indent: 2,
-      lineWidth: -1,
-      noRefs: true,
-      sortKeys: false,
-    });
-  } catch (error) {
-    throw new Error(`Failed to convert frontmatter to YAML: ${error}`);
-  }
-}
-
-/**
- * Parses YAML string to object
- */
-export function yamlToObject<T = any>(yamlString: string): T {
-  try {
-    return yaml.load(yamlString) as T;
-  } catch (error) {
-    throw new Error(`Failed to parse YAML: ${error}`);
   }
 }
 

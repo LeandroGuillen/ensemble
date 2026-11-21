@@ -6,16 +6,13 @@ import { ProjectService } from './project.service';
 import { CastService } from './cast.service';
 import { LoggingService } from './logging.service';
 import { NotificationService } from './notification.service';
-import { Project, ProjectMetadata, Category, Tag, Book, ProjectSettings } from '../interfaces/project.interface';
+import { Project, ProjectMetadata } from '../interfaces/project.interface';
 import { Character, CharacterFormData } from '../interfaces/character.interface';
 
 describe('MetadataService', () => {
   let service: MetadataService;
   let electronService: jasmine.SpyObj<ElectronService>;
   let projectService: jasmine.SpyObj<ProjectService>;
-  let castService: jasmine.SpyObj<CastService>;
-  let loggingService: jasmine.SpyObj<LoggingService>;
-  let notificationService: jasmine.SpyObj<NotificationService>;
 
   const createValidMetadata = (): ProjectMetadata => ({
     projectName: 'Test Project',
@@ -61,19 +58,12 @@ describe('MetadataService', () => {
     service = TestBed.inject(MetadataService);
     electronService = TestBed.inject(ElectronService) as jasmine.SpyObj<ElectronService>;
     projectService = TestBed.inject(ProjectService) as jasmine.SpyObj<ProjectService>;
-    castService = TestBed.inject(CastService) as jasmine.SpyObj<CastService>;
-    loggingService = TestBed.inject(LoggingService) as jasmine.SpyObj<LoggingService>;
-    notificationService = TestBed.inject(NotificationService) as jasmine.SpyObj<NotificationService>;
 
     projectService.getCurrentProject.and.returnValue(createValidProject());
     projectService.updateMetadata.and.returnValue(Promise.resolve());
     projectService.getCharactersFolderPath.and.returnValue('/test/project/characters');
     projectService.getLocationsFolderPath.and.returnValue('/test/project/locations');
     electronService.readDirectoryRecursive.and.returnValue(Promise.resolve({ success: true, files: [] }));
-  });
-
-  it('should be created', () => {
-    expect(service).toBeTruthy();
   });
 
   describe('getCurrentMetadata', () => {

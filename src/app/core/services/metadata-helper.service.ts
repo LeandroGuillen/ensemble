@@ -1,7 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Character } from '../interfaces/character.interface';
 import { getBookDisplayName } from '../utils/book-display.utils';
-import { resolveEffectiveCategory } from '../utils/character-category.utils';
 import { ProjectService } from './project.service';
 import { CastService } from './cast.service';
 
@@ -44,16 +42,6 @@ export class MetadataHelperService {
       return category.description;
     }
     return category.name;
-  }
-
-  /**
-   * Effective category for list/filter/display when a book filter may be active.
-   */
-  getEffectiveCategory(
-    character: Pick<Character, 'category' | 'bookCategories'>,
-    bookId?: string | null
-  ): string {
-    return resolveEffectiveCategory(character, bookId);
   }
 
   // Tag helpers

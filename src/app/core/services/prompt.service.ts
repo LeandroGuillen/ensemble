@@ -88,8 +88,6 @@ function sortPrompts(files: PromptFile[]): PromptFile[] {
 export class PromptService {
   private readonly promptsSubject = new BehaviorSubject<PromptFile[]>([]);
   readonly prompts$: Observable<PromptFile[]> = this.promptsSubject.asObservable();
-  private readonly loadingSubject = new BehaviorSubject<boolean>(false);
-  readonly loading$ = this.loadingSubject.asObservable();
 
   private loadedProjectPath: string | null = null;
   private loadPromise: Promise<void> | null = null;
@@ -165,39 +163,34 @@ export class PromptService {
   }
 
   private async scan(projectPath: string): Promise<void> {
-    this.loadingSubject.next(true);
-    try {
-      const root = this.projectService.getPromptsFolderPath();
-      if (!(await this.electronService.fileExists(root))) {
-        this.unreadable.clear();
-        this.promptsSubject.next([]);
-        return;
-      }
-      const result = await this.electronService.readDirectoryRecursive(root, '*.md');
-      if (!result.success || !result.files) {
-        this.logger.warn('Could not scan the prompts folder', result.error);
-        if (this.projectService.getCurrentProject()?.path !== projectPath) return;
-        // Links are unknown: deletes keep the name for any prompt still linking.
-        this.unreadable.clear();
-        this.unreadable.add('.');
-        this.promptsSubject.next([]);
-        return;
-      }
-      const loaded: PromptFile[] = [];
-      const unreadable: string[] = [];
-      for (const { relativePath, absolutePath } of result.files) {
-        const file = await this.readPromptFile(absolutePath, relativePath);
-        if (file) loaded.push(file);
-        else unreadable.push(normalizeRelative(relativePath));
-      }
-      // A project switch during the scan makes this result stale.
-      if (this.projectService.getCurrentProject()?.path !== projectPath) return;
+    const root = this.projectService.getPromptsFolderPath();
+    if (!(await this.electronService.fileExists(root))) {
       this.unreadable.clear();
-      unreadable.forEach((path) => this.unreadable.add(path));
-      this.promptsSubject.next(sortPrompts(loaded));
-    } finally {
-      this.loadingSubject.next(false);
+      this.promptsSubject.next([]);
+      return;
     }
+    const result = await this.electronService.readDirectoryRecursive(root, '*.md');
+    if (!result.success || !result.files) {
+      this.logger.warn('Could not scan the prompts folder', result.error);
+      if (this.projectService.getCurrentProject()?.path !== projectPath) return;
+      // Links are unknown: deletes keep the name for any prompt still linking.
+      this.unreadable.clear();
+      this.unreadable.add('.');
+      this.promptsSubject.next([]);
+      return;
+    }
+    const loaded: PromptFile[] = [];
+    const unreadable: string[] = [];
+    for (const { relativePath, absolutePath } of result.files) {
+      const file = await this.readPromptFile(absolutePath, relativePath);
+      if (file) loaded.push(file);
+      else unreadable.push(normalizeRelative(relativePath));
+    }
+    // A project switch during the scan makes this result stale.
+    if (this.projectService.getCurrentProject()?.path !== projectPath) return;
+    this.unreadable.clear();
+    unreadable.forEach((path) => this.unreadable.add(path));
+    this.promptsSubject.next(sortPrompts(loaded));
   }
 
   private async readPromptFile(absolutePath: string, relativePath: string): Promise<PromptFile | null> {

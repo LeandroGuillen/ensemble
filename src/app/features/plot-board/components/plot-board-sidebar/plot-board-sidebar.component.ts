@@ -6,7 +6,6 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { PlotBoardService } from '../../../../core/services/plot-board.service';
 import { ProjectService } from '../../../../core/services/project.service';
-import { LoggingService } from '../../../../core/services/logging.service';
 import { pathBasename } from '../../../../core/utils/path.utils';
 
 @Component({
@@ -19,7 +18,6 @@ export class PlotBoardSidebarComponent implements OnInit {
   private readonly plotBoardService = inject(PlotBoardService);
   private readonly projectService = inject(ProjectService);
   private readonly router = inject(Router);
-  private readonly logger = inject(LoggingService);
   private readonly toasts = inject(NotificationService);
 
   @Input() open = true;

@@ -1,11 +1,7 @@
 import { UndoDeleteEntry, UndoDeleteService } from '../services/undo-delete.service';
 import { ElectronService } from '../services/electron.service';
 import { NotificationService } from '../services/notification.service';
-import {
-  TrashStagingError,
-  trashOrphanStickyMessage,
-  trashStagingFailureMessage,
-} from './trash-record-id';
+import { trashOrphanStickyMessage } from './trash-record-id';
 
 export type RestoreStagedOutcome = 'restored' | 'undo-registered' | 'sticky';
 
@@ -43,13 +39,6 @@ export async function restoreStagedOrOfferUndo(options: {
     0
   );
   return 'sticky';
-}
-
-/**
- * Toast "Nothing was changed." and throw TrashStagingError so UI skips a second toast.
- */
-export function throwAfterStagingToast(name: string, error: string): never {
-  throw new TrashStagingError(trashStagingFailureMessage(name, error));
 }
 
 export function errorMessage(error: unknown): string {

@@ -5,7 +5,6 @@ import { PinboardService } from './pinboard.service';
 import { ProjectService } from './project.service';
 import { CharacterService } from './character.service';
 import { CastService } from './cast.service';
-import { LoggingService } from './logging.service';
 import { Cast, Pinboard } from '../interfaces/project.interface';
 
 describe('Shared cast editor draft', () => {
@@ -30,7 +29,7 @@ describe('Shared cast editor draft', () => {
     } as unknown as ProjectService;
     TestBed.configureTestingModule({});
     pins = TestBed.runInInjectionContext(() => new PinboardService(
-      projects, {} as CharacterService, {} as CastService, session, {} as LoggingService,
+      projects, {} as CharacterService, {} as CastService, session,
     ));
     session.begin(savedCast, savedBoard);
   });

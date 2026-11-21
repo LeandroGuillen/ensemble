@@ -44,7 +44,6 @@ export interface IpcChannels {
   readonly writeFileAtomic: string;
 
   readonly deleteFile: string;
-  readonly listDirectory: string;
   readonly copyFile: string;
   readonly moveFile: string;
   readonly getFileStats: string;
@@ -78,7 +77,6 @@ export interface IpcChannels {
 
   readonly checkForUpdates: string;
   readonly downloadUpdate: string;
-  readonly getUpdateStatus: string;
   readonly quitAndInstall: string;
 }
 

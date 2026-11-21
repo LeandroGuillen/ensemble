@@ -27,31 +27,3 @@ export function assertIpcSuccess<T>(
     throw new Error(`${operation} failed: ${result.error}`);
   }
 }
-
-/**
- * Wraps an async operation with standardized error handling
- *
- * @param operation - Human-readable operation name for error messages
- * @param fn - The async function to execute
- * @returns The result of the function
- * @throws Error with operation context if fn throws
- *
- * @example
- * ```typescript
- * async createCharacter(data: CharacterFormData): Promise<Character> {
- *   return withIpcError('Create character', async () => {
- *     // ... implementation
- *   });
- * }
- * ```
- */
-export async function withIpcError<T>(
-  operation: string,
-  fn: () => Promise<T>
-): Promise<T> {
-  try {
-    return await fn();
-  } catch (error) {
-    throw new Error(`${operation} failed: ${error}`);
-  }
-}

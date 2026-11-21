@@ -23,7 +23,6 @@ import { Character } from '../interfaces/character.interface';
 describe('Character Cleanup Integration (Real DI)', () => {
   let characterService: CharacterService;
   let pinboardService: PinboardService;
-  let houseService: HouseService;
   let projectService: ProjectService;
   let electronService: jasmine.SpyObj<ElectronService>;
   let project$: BehaviorSubject<Project | null>;
@@ -140,22 +139,14 @@ describe('Character Cleanup Integration (Real DI)', () => {
 
     characterService = TestBed.inject(CharacterService);
     pinboardService = TestBed.inject(PinboardService);
-    houseService = TestBed.inject(HouseService);
     projectService = TestBed.inject(ProjectService);
     electronService = TestBed.inject(ElectronService) as jasmine.SpyObj<ElectronService>;
   });
 
-  it('should construct CharacterService without NG0200 circular dependency error', () => {
+  it('constructs CharacterService, PinboardService and ReferenceCleanupService without an NG0200 circular dependency', () => {
     expect(characterService).toBeTruthy();
-  });
-
-  it('should construct PinboardService without NG0200 circular dependency error', () => {
     expect(pinboardService).toBeTruthy();
-  });
-
-  it('should construct ReferenceCleanupService without NG0200 circular dependency error', () => {
-    const cleanupService = TestBed.inject(ReferenceCleanupService);
-    expect(cleanupService).toBeTruthy();
+    expect(TestBed.inject(ReferenceCleanupService)).toBeTruthy();
   });
 
   it('should count character references in pinboards through real services', async () => {

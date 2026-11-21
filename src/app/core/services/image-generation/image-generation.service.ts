@@ -1,6 +1,5 @@
 import { Injectable } from '@angular/core';
 import {
-  GeneratedImage,
   ImageGenerationRequest,
   ImageWorkflow,
   ProjectImage,
@@ -23,8 +22,6 @@ import {
 import { GeminiImageProvider } from './gemini-image.provider';
 import { InvokeAiProvider } from './invokeai.provider';
 import { OpenAiImageProvider } from './openai-image.provider';
-
-const IMAGE_PATTERNS = ['*.png', '*.jpg', '*.jpeg', '*.webp', '*.gif'];
 
 @Injectable({ providedIn: 'root' })
 export class ImageGenerationService {
@@ -199,38 +196,6 @@ export class ImageGenerationService {
     const absolutePath = pathJoin(project.path, relativePath);
     await provider.download(image, absolutePath);
     return relativePath.replace(/\\/g, '/');
-  }
-
-  async listProjectImages(loadPreviews = true): Promise<ProjectImage[]> {
-    const project = requireProject(this.projectService.getCurrentProject());
-    const imagesRoot = this.projectService.getImagesFolderPath();
-    if (!(await this.electronService.fileExists(imagesRoot))) return [];
-
-    const scans = await Promise.all(
-      IMAGE_PATTERNS.map((pattern) => this.electronService.readDirectoryRecursive(imagesRoot, pattern))
-    );
-    const byPath = new Map<string, ProjectImage>();
-    for (const scan of scans) {
-      for (const file of scan.files || []) {
-        const insideImages = file.relativePath.replace(/\\/g, '/');
-        const imagesFolder = project.metadata.settings.imagesFolder?.trim() || 'img';
-        const relativePath = `${imagesFolder.replace(/^\/+|\/+$/g, '')}/${insideImages}`;
-        byPath.set(relativePath, {
-          relativePath,
-          absolutePath: file.absolutePath,
-        });
-      }
-    }
-
-    const images = [...byPath.values()].sort((a, b) => a.relativePath.localeCompare(b.relativePath));
-    if (loadPreviews) {
-      await Promise.all(
-        images.map(async (image) => {
-          image.previewUrl = await this.electronService.getImageAsDataUrl(image.absolutePath);
-        })
-      );
-    }
-    return images;
   }
 
   async browseProjectImageDirectory(

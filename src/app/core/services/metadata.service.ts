@@ -419,14 +419,6 @@ export class MetadataService {
   }
 
   /**
-   * Gets a book by ID
-   */
-  getBookById(id: string): Book | undefined {
-    const books = this.getBooks();
-    return books.find((book) => book.id === id);
-  }
-
-  /**
    * Adds a new book
    */
   async addBook(bookData: Omit<Book, 'id'>): Promise<Book> {
@@ -856,15 +848,6 @@ export class MetadataService {
 
   // Series Management
 
-  getSeries(): Series[] {
-    const metadata = this.metadataSubject.value;
-    return metadata?.series || [];
-  }
-
-  getSeriesById(id: string): Series | undefined {
-    return this.getSeries().find((s) => s.id === id);
-  }
-
   async addSeries(seriesData: Omit<Series, 'id'>): Promise<Series> {
     const metadata = this.metadataSubject.value;
     if (!metadata) {
@@ -982,15 +965,6 @@ export class MetadataService {
 
   // Saga Management
 
-  getSagas(): Saga[] {
-    const metadata = this.metadataSubject.value;
-    return metadata?.sagas || [];
-  }
-
-  getSagaById(id: string): Saga | undefined {
-    return this.getSagas().find((s) => s.id === id);
-  }
-
   async addSaga(sagaData: Omit<Saga, 'id'>): Promise<Saga> {
     const metadata = this.metadataSubject.value;
     if (!metadata) {
@@ -1096,33 +1070,6 @@ export class MetadataService {
       ...metadata,
       sagas: sagasList.filter((s) => s.id !== id),
       books,
-    });
-  }
-
-  async reorderSagas(orderedIds: string[]): Promise<void> {
-    const metadata = this.metadataSubject.value;
-    if (!metadata) {
-      throw new Error('No metadata loaded');
-    }
-
-    const sagasList = metadata.sagas || [];
-    if (orderedIds.length !== sagasList.length) {
-      throw new Error('Saga reorder list length mismatch');
-    }
-
-    const byId = new Map(sagasList.map((s) => [s.id, s]));
-    const reordered: Saga[] = [];
-    for (const id of orderedIds) {
-      const item = byId.get(id);
-      if (!item) {
-        throw new Error(`Saga with ID '${id}' not found`);
-      }
-      reordered.push(item);
-    }
-
-    await this.saveMetadata({
-      ...metadata,
-      sagas: reordered,
     });
   }
 
@@ -1367,47 +1314,6 @@ export class MetadataService {
     };
   }
 
-  /**
-   * Gets available category options for character forms
-   */
-  getCategoryOptions(): { id: string; name: string; color: string }[] {
-    return this.getCategories().map((cat) => ({
-      id: cat.id,
-      name: cat.name,
-      color: cat.color,
-    }));
-  }
-
-  /**
-   * Gets available tag options for character forms
-   */
-  getTagOptions(): { id: string; name: string; color: string }[] {
-    return this.getTags().map((tag) => ({
-      id: tag.id,
-      name: tag.name,
-      color: tag.color,
-    }));
-  }
-
-  /**
-   * Gets available book options for character forms
-   */
-  getBookOptions(): { id: string; name: string; color: string }[] {
-    return this.getBooks().map((book) => ({
-      id: book.id,
-      name: getBookDisplayName(book),
-      color: book.color,
-    }));
-  }
-
-  /**
-   * Gets the default category ID
-   */
-  getDefaultCategoryId(): string | null {
-    const settings = this.getSettings();
-    return settings?.defaultCategory || null;
-  }
-
   // Utility Methods
 
   /**
@@ -1596,92 +1502,6 @@ export class MetadataService {
         this.logger.warn(`Failed to update ${label} file ${filePath}:`, writeResult.error);
       }
     }
-  }
-
-  /**
-   * Parses frontmatter from markdown content
-   */
-  private parseFrontmatter(content: string): { frontmatter: any; body: string } {
-    const lines = content.split('\n');
-    
-    if (lines[0] !== '---') {
-      return { frontmatter: {}, body: content };
-    }
-
-    let endIndex = -1;
-    for (let i = 1; i < lines.length; i++) {
-      if (lines[i] === '---') {
-        endIndex = i;
-        break;
-      }
-    }
-
-    if (endIndex === -1) {
-      return { frontmatter: {}, body: content };
-    }
-
-    const frontmatterLines = lines.slice(1, endIndex);
-    const body = lines.slice(endIndex + 1).join('\n');
-    
-    // Simple YAML parsing for our use case
-    const frontmatter: any = {};
-    for (const line of frontmatterLines) {
-      const colonIndex = line.indexOf(':');
-      if (colonIndex === -1) continue;
-      
-      const key = line.substring(0, colonIndex).trim();
-      const value = line.substring(colonIndex + 1).trim();
-      
-      // Handle arrays (simple case for books and tags)
-      if (value.startsWith('[') && value.endsWith(']')) {
-        const arrayContent = value.slice(1, -1);
-        if (arrayContent.trim()) {
-          frontmatter[key] = arrayContent.split(',').map(item => item.trim().replace(/['"]/g, ''));
-        } else {
-          frontmatter[key] = [];
-        }
-      } else {
-        // Remove quotes if present
-        frontmatter[key] = value.replace(/^["']|["']$/g, '');
-      }
-    }
-
-    return { frontmatter, body };
-  }
-
-  /**
-   * Generates markdown content with updated frontmatter
-   */
-  private generateMarkdownWithFrontmatter(frontmatter: any, originalContent: string): string {
-    const lines = originalContent.split('\n');
-    
-    // Find the end of existing frontmatter
-    let endIndex = -1;
-    if (lines[0] === '---') {
-      for (let i = 1; i < lines.length; i++) {
-        if (lines[i] === '---') {
-          endIndex = i;
-          break;
-        }
-      }
-    }
-
-    // Get the body content (everything after frontmatter)
-    const body = endIndex !== -1 ? lines.slice(endIndex + 1).join('\n') : originalContent;
-
-    // Generate new frontmatter
-    const frontmatterLines = ['---'];
-    for (const [key, value] of Object.entries(frontmatter)) {
-      if (Array.isArray(value)) {
-        const arrayStr = value.length > 0 ? `[${value.map(v => `"${v}"`).join(', ')}]` : '[]';
-        frontmatterLines.push(`${key}: ${arrayStr}`);
-      } else {
-        frontmatterLines.push(`${key}: "${value}"`);
-      }
-    }
-    frontmatterLines.push('---');
-
-    return frontmatterLines.join('\n') + '\n' + body;
   }
 
   /**

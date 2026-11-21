@@ -265,7 +265,10 @@ Location ID is stable in frontmatter. Locations use project books and a single `
 
 ### IPC Security Model
 
-- **No `contextIsolation`**: Uses legacy Electron security model (for development speed)
+- **No `contextIsolation`**: Uses legacy Electron security model (for development speed). Any HTML injection in the renderer is code execution, so never bypass Angular's sanitizer (`bypassSecurityTrust*`) and never put unescaped project text into `innerHTML`
+- The window is locked to the app (`lib/window.js`): navigation to other documents is blocked and `window.open` / `target="_blank"` links open in the system browser (http, https, mailto only)
+- `openFileInEditor` only hands document types to the OS (`EDITABLE_EXTENSIONS` in `lib/fs-handlers.js`); project files choose those paths, and the OS runs programs it "opens"
+- File IPC is limited to the work folder plus dialog-picked paths (`lib/path-guard.js`). It catches bad paths, not a hostile renderer
 - All file operations go through Electron main process
 - `main.js` contains all IPC handlers (`ipcMain.handle()`)
 - Angular accesses via `window.require('electron').ipcRenderer`

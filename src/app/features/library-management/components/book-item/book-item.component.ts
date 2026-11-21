@@ -1,5 +1,5 @@
 import { Component, EventEmitter, Input, Output } from "@angular/core";
-import { Book } from "@app/core";
+import { Book } from "@app/core/interfaces/project.interface";
 import { LoggingService } from "@app/core/services/logging.service";
 import {
   getBookCoverTitle,

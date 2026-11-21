@@ -1,4 +1,4 @@
-import { buildWikiLinkTargets, extractWikiLinks, renderWikiLinkMarkdown, resolveWikiLink, resolveWikiLinkTarget, WikiLinkCollection, wikiLinkRecordName } from './wiki-links.utils';
+import { buildWikiLinkTargets, extractWikiLinks, resolveWikiLinkTarget, WikiLinkCollection, wikiLinkRecordName } from './wiki-links.utils';
 
 describe('buildWikiLinkTargets', () => {
   const characters = (targets: any[]): WikiLinkCollection =>
@@ -86,29 +86,66 @@ describe('buildWikiLinkTargets', () => {
   });
 });
 
+describe('resolveWikiLinkTarget', () => {
+  const harbor = { id: 'harbor-id', name: 'Grey Harbor', relativePath: 'grey-harbor/grey-harbor.md' };
+  const woods = { id: 'woods-id', name: 'Woods', relativePath: 'north/_woods.md' };
+  const otherWoods = { ...woods, id: 'other', relativePath: 'south/_woods.md' };
+  const characters = (targets: any[], folder = 'characters'): WikiLinkCollection =>
+    ({ targets, folder, route: 'character', singular: 'Character' });
+  const houses: WikiLinkCollection = { targets: [{ id: 'house-id', name: 'Bulanco', relativePath: 'bulanco/bulanco.md' }], folder: 'houses', route: 'house', singular: 'House' };
+  const locations: WikiLinkCollection = { targets: [{ id: 'location-id', name: 'Harbor', relativePath: '_harbor.md' }], folder: 'locations', route: 'location', singular: 'Location' };
+  const idOf = (target: string, collections: WikiLinkCollection[]) => {
+    const link = resolveWikiLinkTarget(target, collections);
+    return link.state === 'resolved' ? link.id : link.state;
+  };
+
+  it('resolves display names and file paths with optional extensions, folder prefixes and Windows separators', () => {
+    for (const target of ['Grey Harbor', 'grey harbor', 'grey-harbor', 'grey-harbor.md', 'grey-harbor/grey-harbor.md', 'characters/grey-harbor/grey-harbor.md']) {
+      expect(idOf(target, [characters([harbor])])).withContext(target).toBe('harbor-id');
+    }
+    expect(idOf('places/north/_woods.md', [characters([woods], 'places')])).toBe('woods-id');
+    expect(idOf('_woods', [characters([woods])])).toBe('woods-id');
+    expect(idOf('world\\places\\_harbor.md', [characters([]), { ...locations, folder: 'world/places' }])).toBe('location-id');
+  });
+
+  it('does not guess between duplicates or across types; paths and folders disambiguate', () => {
+    expect(idOf('Woods', [characters([woods, otherWoods])])).toBe('ambiguous');
+    expect(idOf('_woods', [characters([woods, otherWoods])])).toBe('ambiguous');
+    expect(idOf('Woods#History', [characters([woods, otherWoods])])).toBe('ambiguous');
+    expect(idOf('north/_woods', [characters([woods, otherWoods])])).toBe('woods-id');
+    const all = [characters([{ id: 'character-id', name: 'Bulanco', relativePath: 'bulanco/bulanco.md' }]), houses, locations];
+    expect(idOf('Bulanco', all)).toBe('ambiguous');
+    expect(idOf('houses/bulanco/bulanco.md', all)).toBe('house-id');
+    expect(idOf('characters/bulanco/bulanco', all)).toBe('character-id');
+    expect(idOf('locations/_harbor.md', all)).toBe('location-id');
+    expect(idOf('Harbor', all)).toBe('location-id');
+  });
+
+  it('sends missing links to the creation page of their folder, named by target or filename', () => {
+    const collections = [characters([]), houses, locations];
+    expect(resolveWikiLinkTarget('Cove & Bay?fromLink=0', collections).href).toBe('#/character?name=Cove%20%26%20Bay%3FfromLink%3D0&fromLink=1');
+    expect(resolveWikiLinkTarget('houses/new-house/new-house.md', collections).href).toBe('#/house?name=new-house&fromLink=1');
+    expect(resolveWikiLinkTarget('locations/_cove.md', collections).href).toBe('#/location?name=_cove&fromLink=1');
+  });
+});
+
 describe('heading wiki-links', () => {
   const targets = [{ id: 'mara', name: 'Mara Vell', relativePath: 'mara.md' }];
   const options = { folder: 'characters', route: 'character', singular: 'Character' };
   for (const fragment of ['History', '^block']) {
     for (const label of ['', '|the keeper']) {
-      it(`resolves and renders ${fragment}${label}`, () => {
-        const target = `Mara Vell#${fragment}`;
-        expect(resolveWikiLink(target, targets, options.folder)).toEqual(targets[0]);
-        expect(buildWikiLinkTargets([{ ...options, targets }]).resolve(target)).toEqual(
+      it(`resolves ${fragment}${label}`, () => {
+        const [span] = extractWikiLinks(`[[Mara Vell#${fragment}${label}]]`);
+        expect(buildWikiLinkTargets([{ ...options, targets }]).resolve(span.target)).toEqual(
           jasmine.objectContaining({ state: 'resolved', id: 'mara', href: '#/character/mara', fragment }));
-        const rendered = renderWikiLinkMarkdown(`[[${target}${label}]]`, targets, options);
-        expect(rendered.html).toContain(`<a href="#/character/mara" title="${target}">${label ? 'the keeper' : target}</a>`);
-        expect(rendered.missingLinks).toEqual([]);
       });
     }
   }
-  it('keeps local fragments unattributed and ordinary renderer output unchanged', () => {
+  it('keeps local fragments unattributed', () => {
     const { resolve } = buildWikiLinkTargets([{ ...options, targets }]);
     expect(resolve('#Local heading').state).toBe('ambiguous');
     expect(resolve('#^block').state).toBe('ambiguous');
-    expect(renderWikiLinkMarkdown('[[Mara Vell|keeper]]', targets, options).html)
-      .toBe('<p><a href="#/character/mara" title="Mara Vell">keeper</a></p>');
-    expect(renderWikiLinkMarkdown('[[Ghost]]', targets, options).missingLinks).toEqual(['Ghost']);
+    expect(resolve('Ghost').state).toBe('missing');
   });
 });
 
@@ -146,20 +183,16 @@ describe('names containing #', () => {
     const { resolve } = buildWikiLinkTargets([characters(targets)]);
     expect(resolve('Unit #7')).toEqual(jasmine.objectContaining({ state: 'resolved', id: 'unit-7', href: '#/character/unit-7' }));
     expect(resolve('Unit #7').fragment).toBeUndefined();
-    expect(resolveWikiLink('Unit #7', targets, 'characters')).toEqual(unit7);
-    expect(renderWikiLinkMarkdown('[[Unit #7]]', targets, characters([])).html)
-      .toBe('<p><a href="#/character/unit-7" title="Unit #7">Unit #7</a></p>');
   });
 
   it('resolves [[Unit #7]] to Unit #7, never to a record named like its prefix', () => {
     const targets = [unit, unit7];
     const { resolve } = buildWikiLinkTargets([characters(targets)]);
     expect(resolve('Unit #7')).toEqual(jasmine.objectContaining({ state: 'resolved', id: 'unit-7' }));
-    expect(resolveWikiLink('unit #7', targets, 'characters')).toEqual(unit7);
+    expect(resolve('unit #7')).toEqual(jasmine.objectContaining({ state: 'resolved', id: 'unit-7' }));
     // A heading inside Unit #7, and a real heading link to Unit.
     expect(resolve('Unit #7#Origins')).toEqual(jasmine.objectContaining({ state: 'resolved', id: 'unit-7', fragment: 'Origins' }));
     expect(resolve('Unit#Origins')).toEqual(jasmine.objectContaining({ state: 'resolved', id: 'unit', fragment: 'Origins' }));
-    expect(resolveWikiLink('Unit#Origins', targets, 'characters')).toEqual(unit);
   });
 
   it('prefers Unit #7 in another collection over a character named Unit', () => {
@@ -197,7 +230,6 @@ describe('wiki-link alias fallback precedence', () => {
     const links = buildWikiLinkTargets([characters(entries)]);
     for (const target of ['Ilse', 'ilse/ilse', 'characters/ilse/ilse.md', 'Ilse#History']) {
       expect(links.resolve(target)).toEqual(jasmine.objectContaining({ state: 'resolved', id: 'ilse' }));
-      expect(resolveWikiLink(target, entries, 'characters')).toBe(ilse);
     }
     expect(links.resolve('Ilse#History').fragment).toBe('History');
     expect(links.suggestions.find(entry => entry.label === 'Ilse' && entry.detail === 'Character')?.target).toBe('Ilse');

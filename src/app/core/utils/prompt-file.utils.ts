@@ -41,16 +41,6 @@ export function emptyPromptFileData(): PromptFileData {
   return { characters: [], locations: [], tags: [], extra: {}, sections: [emptyPromptSection()] };
 }
 
-/** True when a section carries anything worth showing. */
-export function isPromptSectionEmpty(section: PromptSection): boolean {
-  return (
-    !section.notes.trim() &&
-    section.prompt === null &&
-    section.negative === null &&
-    section.images.length === 0
-  );
-}
-
 /** Sections that hold a prompt block, i.e. the variants a user can copy. */
 export function promptVariants(file: Pick<PromptFileData, 'sections'>): PromptSection[] {
   return file.sections.filter((section) => section.prompt !== null);

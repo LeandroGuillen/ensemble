@@ -162,16 +162,6 @@ export class ProjectService {
   }
 
   /**
-   * Returns the relative characters folder name from project settings (e.g. 'characters' or 'personas').
-   */
-  getCharactersFolderName(): string {
-    const project = this.currentProjectSubject.value;
-    const folder = project?.metadata?.settings?.charactersFolder?.trim();
-    if (!folder) return DEFAULT_CHARACTERS_FOLDER;
-    return normalizeRelativeFolder(folder, DEFAULT_CHARACTERS_FOLDER);
-  }
-
-  /**
    * Opens Electron folder selection dialog
    */
   async selectProject(): Promise<string | null> {
@@ -787,14 +777,6 @@ export class ProjectService {
     // Don't emit a new project update to avoid triggering unnecessary re-renders
   }
 
-  /**
-   * Gets the filter expanded state from lastSession
-   */
-  getFilterExpandedState(): boolean {
-    const project = this.currentProjectSubject.value;
-    return project?.metadata.lastSession?.lastCharacterListFilterExpanded ?? false;
-  }
-
   getCharacterStyles(): CharacterStyle[] {
     const project = this.currentProjectSubject.value;
     const styles = project?.metadata.settings?.characterStyles;
@@ -987,31 +969,11 @@ export class ProjectService {
   }
 
   /**
-   * Creates a new pinboard
-   */
-  async createPinboard(name: string, duplicateFromId?: string): Promise<Pinboard> {
-    const project = requireProject(this.currentProjectSubject.value);
-    const newPinboard = await this.pinboardStore.create(project, name, duplicateFromId);
-    this.currentProjectSubject.next({ ...project });
-
-    return newPinboard;
-  }
-
-  /**
    * Updates pinboard data (nodes and edges) for a specific pinboard by ID
    */
   async updatePinboardById(id: string, data: { nodes: PinboardPin[]; edges: PinboardConnection[] }): Promise<void> {
     const project = requireProject(this.currentProjectSubject.value);
     await this.pinboardStore.updateData(project, id, data);
-    this.currentProjectSubject.next({ ...project });
-  }
-
-  /**
-   * Updates pinboard name
-   */
-  async updatePinboardName(id: string, name: string): Promise<void> {
-    const project = requireProject(this.currentProjectSubject.value);
-    await this.pinboardStore.updateName(project, id, name);
     this.currentProjectSubject.next({ ...project });
   }
 
@@ -1039,20 +1001,6 @@ export class ProjectService {
       }
       metadata.pinboards = pinboards;
     });
-  }
-
-  /**
-   * Gets pinboard data from the current active pinboard
-   */
-  getPinboard(): { nodes: PinboardPin[]; edges: PinboardConnection[] } {
-    const currentPinboard = this.getCurrentPinboard();
-    if (currentPinboard) {
-      return {
-        nodes: currentPinboard.nodes,
-        edges: currentPinboard.edges,
-      };
-    }
-    return { nodes: [], edges: [] };
   }
 
   /**

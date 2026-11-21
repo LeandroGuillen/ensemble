@@ -26,7 +26,6 @@ export class PinboardNetworkService {
   private nodes: DataSet<Node> = new DataSet([]);
   private edges: DataSet<Edge> = new DataSet([]);
   private containerElement: HTMLElement | null = null;
-  private lastMousePosition: { x: number; y: number } | null = null;
   private middleClickPanCleanup: (() => void) | null = null;
   private wheelZoomCleanup: (() => void) | null = null;
 
@@ -38,10 +37,6 @@ export class PinboardNetworkService {
 
   getNetwork(): Network | null {
     return this.network;
-  }
-
-  getNodes(): DataSet<Node> {
-    return this.nodes;
   }
 
   initialize(container: HTMLElement): void {
@@ -419,14 +414,6 @@ export class PinboardNetworkService {
     const canvas = this.containerElement.querySelector('canvas');
     if (!canvas) return;
 
-    const onMouseMove = (event: MouseEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      this.lastMousePosition = {
-        x: event.clientX - rect.left,
-        y: event.clientY - rect.top,
-      };
-    };
-
     const onWheel = (event: WheelEvent) => {
       event.preventDefault();
       const rect = canvas.getBoundingClientRect();
@@ -442,11 +429,9 @@ export class PinboardNetworkService {
       }
     };
 
-    canvas.addEventListener('mousemove', onMouseMove);
     canvas.addEventListener('wheel', onWheel, { passive: false });
 
     this.wheelZoomCleanup = () => {
-      canvas.removeEventListener('mousemove', onMouseMove);
       canvas.removeEventListener('wheel', onWheel);
     };
   }

@@ -33,10 +33,8 @@ export function plotBoardFileSuffix(filename: string): '.pinboard.md' | '.plotbo
 })
 export class PlotBoardService {
   private plotBoardSubject = new BehaviorSubject<PlotBoard | null>(null);
-  public plotBoard$ = this.plotBoardSubject.asObservable();
 
   private currentRelativePathSubject = new BehaviorSubject<string | null>(null);
-  public currentRelativePath$ = this.currentRelativePathSubject.asObservable();
 
   constructor(
     private electronService: ElectronService,

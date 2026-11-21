@@ -5,7 +5,7 @@ const chokidar = require('chokidar');
 const IPC = require('./ipc-channels.json');
 
 const { ok, err } = require('./lib/ipc-result');
-const { guard } = require('./lib/path-guard');
+const { assertPathAllowed: assertPath } = require('./lib/path-guard');
 const { normalizeRelativeFolder } = require('./lib/normalize-relative-folder');
 const { createWindow, registerNavigationIpc } = require('./lib/window');
 const { createLifecycleController } = require('./lib/window-lifecycle');
@@ -42,8 +42,6 @@ function setInterceptBrowserNavigation(enabled) {
   interceptBrowserNavigation = enabled;
 }
 
-const assertPath = (filePath) => guard(filePath, app);
-
 const lifecycle = createLifecycleController({
   app,
   ipcMain,
@@ -77,6 +75,7 @@ const windowDeps = {
   BrowserWindow,
   path,
   app,
+  shell,
   IPC,
   isDev,
   getInterceptBrowserNavigation,

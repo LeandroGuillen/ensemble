@@ -29,7 +29,7 @@ import { aliasesMatchSearch } from "../../core/utils/character-alias.utils";
 import { CastEditorSessionService } from '../../core/services/cast-editor-session.service';
 import { PinboardViewComponent } from '../pinboard-view/pinboard-view.component';
 import { PageHeaderComponent } from "../../shared/page-header/page-header.component";
-import { isTrashStagingError } from '../../core/trash/trash-record-id';
+import { deleteFailureMessage } from '../../core/trash/trash-record-id';
 
 @Component({
     selector: "app-cast-detail",
@@ -86,7 +86,6 @@ export class CastDetailComponent implements OnInit, OnDestroy {
     private ngZone: NgZone,
     private cdr: ChangeDetectorRef,
     private logger: LoggingService,
-    private notificationService: NotificationService,
     private modalService: ModalService,
     private metadataHelper: MetadataHelperService
   ) {
@@ -475,11 +474,8 @@ export class CastDetailComponent implements OnInit, OnDestroy {
         this.router.navigate(["/casts"]);
       } catch (error) {
         this.logger.error("Failed to delete cast:", error);
-        // Staging/rollback toasts come from the service (TrashStagingError).
-        // Service already prefixes "Failed to delete cast:"; use its message once.
-        if (!isTrashStagingError(error)) {
-          this.toasts.showError(error instanceof Error ? error.message : `Failed to delete cast: ${error}`);
-        }
+        const message = deleteFailureMessage(error, 'cast');
+        if (message) this.toasts.showError(message);
       }
     }
   }

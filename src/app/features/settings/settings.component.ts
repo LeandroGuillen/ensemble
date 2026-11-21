@@ -11,7 +11,6 @@ import { ProjectService } from '../../core/services/project.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { ColorPaletteService } from '../../core/services/color-palette.service';
 import { ZoomService } from '../../core/services/zoom.service';
-import { AiService } from '../../core/services/ai.service';
 import { ImageGenerationService } from '../../core/services/image-generation/image-generation.service';
 import {
   DEFAULT_SETTINGS_SECTION,
@@ -145,7 +144,6 @@ export class SettingsComponent implements OnInit, OnDestroy {
     private themeService: ThemeService,
     private colorPaletteService: ColorPaletteService,
     private zoomService: ZoomService,
-    private aiService: AiService,
     private imageGenerationService: ImageGenerationService,
     private settingsSearch: SettingsSearchService
   ) {

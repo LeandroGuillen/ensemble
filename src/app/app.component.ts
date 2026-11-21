@@ -60,7 +60,8 @@ export class AppComponent implements OnInit {
     private skinService: SkinService,
     private logger: LoggingService,
     private modalService: ModalService,
-    private zoomService: ZoomService,
+    // Injected for its constructor: applies the saved zoom level at startup.
+    _zoom: ZoomService,
     private addNameCommandService: AddNameCommandService,
     private addConceptCommandService: AddConceptCommandService,
     private characterCommandService: CharacterCommandService,

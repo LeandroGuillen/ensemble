@@ -8,7 +8,6 @@ describe('FileWatcherService', () => {
   let service: FileWatcherService;
   let electronService: jasmine.SpyObj<ElectronService>;
   let loggingService: jasmine.SpyObj<LoggingService>;
-  let notificationService: jasmine.SpyObj<NotificationService>;
 
   beforeEach(() => {
     const electronSpy = jasmine.createSpyObj('ElectronService', [
@@ -33,13 +32,8 @@ describe('FileWatcherService', () => {
     service = TestBed.inject(FileWatcherService);
     electronService = TestBed.inject(ElectronService) as jasmine.SpyObj<ElectronService>;
     loggingService = TestBed.inject(LoggingService) as jasmine.SpyObj<LoggingService>;
-    notificationService = TestBed.inject(NotificationService) as jasmine.SpyObj<NotificationService>;
 
     electronService.isElectron.and.returnValue(true);
-  });
-
-  it('should be created', () => {
-    expect(service).toBeTruthy();
   });
 
   describe('startWatching', () => {

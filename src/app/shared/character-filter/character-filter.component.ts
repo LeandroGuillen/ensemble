@@ -8,17 +8,6 @@ import { contrastTextColor } from '../../core/utils/color-contrast.utils';
 import { CategoryToggleComponent, ToggleOption } from '../category-toggle/category-toggle.component';
 import { MultiSelectButtonsComponent, SelectableItem } from '../multi-select-buttons/multi-select-buttons.component';
 
-export interface FilterState {
-  searchTerm: string;
-  enabledCategoryIds: string[];
-  selectedTags: string[];
-  selectedCast: string;
-  selectedBook: string;
-  /** '' = all, 'with' = has portrait for active style, 'without' = missing portrait */
-  selectedPictureFilter: '' | 'with' | 'without';
-  povOnly: boolean;
-}
-
 @Component({
     selector: 'app-character-filter',
     imports: [

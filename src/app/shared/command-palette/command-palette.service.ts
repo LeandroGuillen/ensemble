@@ -117,27 +117,6 @@ export class CommandPaletteService {
     }
   }
 
-  addCommand(command: Command): void {
-    const idx = this.durableCommands.findIndex((cmd) => cmd.id === command.id);
-    if (idx >= 0) {
-      const next = [...this.durableCommands];
-      next[idx] = command;
-      this.durableCommands = next;
-    } else {
-      this.durableCommands = [...this.durableCommands, command];
-    }
-    if (!this.transientActive) {
-      this.publishDurable();
-    }
-  }
-
-  removeCommand(id: string): void {
-    this.durableCommands = this.durableCommands.filter((cmd) => cmd.id !== id);
-    if (!this.transientActive) {
-      this.publishDurable();
-    }
-  }
-
   /**
    * Opens the palette in picker mode with the given commands.
    * Returns the selected command, or null if the user cancelled.
@@ -190,10 +169,6 @@ export class CommandPaletteService {
     const trimmed = value.trim();
     if (!trimmed) return;
     this.resolvePrompt(trimmed);
-  }
-
-  isPromptMode(): boolean {
-    return this.promptModeSubject.value;
   }
 
   private publishDurable(): void {

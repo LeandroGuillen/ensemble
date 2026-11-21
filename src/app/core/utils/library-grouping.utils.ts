@@ -79,13 +79,6 @@ export function placementKey(placement: BookPlacement): string {
   return 'ungrouped';
 }
 
-export function bookPlacement(book: Book): BookPlacement {
-  return {
-    seriesId: book.seriesId,
-    sagaId: book.sagaId,
-  };
-}
-
 /**
  * Returns books that currently belong to the given placement,
  * in `books[]` order.

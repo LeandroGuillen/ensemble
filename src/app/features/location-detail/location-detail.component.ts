@@ -47,7 +47,7 @@ import { MarkdownEditorComponent } from '../../shared/markdown-editor/markdown-e
 import { MentionedInComponent } from '../../shared/mentioned-in/mentioned-in.component';
 import { getBookDisplayName } from '../../core/utils/book-display.utils';
 import { LocationTypeSelectComponent } from '../../shared/location-type-select/location-type-select.component';
-import { isTrashStagingError } from '../../core/trash/trash-record-id';
+import { deleteFailureMessage } from '../../core/trash/trash-record-id';
 import { buildDeleteReferencesMessage } from '../../shared/utils/reference-message.utils';
 
 @Component({
@@ -533,12 +533,9 @@ export class LocationDetailComponent implements OnInit, AfterViewInit, OnDestroy
       await this.router.navigate(['/locations'], { queryParamsHandling: 'preserve' });
     } catch (error) {
       this.logger.error('Failed to delete location:', error);
-      // Staging/rollback toasts come from the service (TrashStagingError).
-      // Service already prefixes "Failed to delete location:"; use its message once.
       this.deleting = false;
-      if (!isTrashStagingError(error)) {
-        this.toasts.showError(error instanceof Error ? error.message : `Failed to delete location: ${error}`);
-      }
+      const message = deleteFailureMessage(error, 'location');
+      if (message) this.toasts.showError(message);
     }
   }
 

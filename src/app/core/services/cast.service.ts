@@ -451,7 +451,7 @@ export class CastService {
    * Structure: casts/<cast-slug>/
    */
   async createCast(castData: Omit<Cast, 'id' | 'folderPath' | 'thumbnail'>): Promise<Cast> {
-    const project = requireProject(this.projectService.getCurrentProject());
+    requireProject(this.projectService.getCurrentProject());
 
     try {
       // Generate unique ID and slug
@@ -528,7 +528,7 @@ export class CastService {
    * Updates an existing cast and saves changes to disk
    */
   async updateCast(id: string, updates: Partial<Omit<Cast, 'id' | 'folderPath'>>): Promise<Cast | null> {
-    const project = requireProject(this.projectService.getCurrentProject());
+    requireProject(this.projectService.getCurrentProject());
 
     try {
       const casts = this.castsSubject.value;

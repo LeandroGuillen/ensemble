@@ -16,13 +16,6 @@ export function remapCharacterId(id: string, idMap: ReadonlyMap<string, string>)
   return idMap.get(id) ?? idMap.get(normalizeCharacterRelativePath(id)) ?? id;
 }
 
-export function remapCharacterIdList(ids: string[] | undefined, idMap: ReadonlyMap<string, string>): string[] | undefined {
-  if (!ids) {
-    return ids;
-  }
-  return ids.map((id) => remapCharacterId(id, idMap));
-}
-
 /**
  * Rewrites `/character/<legacy-path>` session/router URLs to the stable id.
  * Query/hash suffixes are preserved.

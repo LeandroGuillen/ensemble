@@ -38,7 +38,7 @@ import {
 import { resolveThumbnailForBookStyle } from '../../core/utils/thumbnail.utils';
 import { getBookDisplayName, getBookSpineLabel } from '../../core/utils/book-display.utils';
 import { resolvePinnedBooks } from '../../core/services/pinned-books.service';
-import { isTrashStagingError } from '../../core/trash/trash-record-id';
+import { deleteFailureMessage } from '../../core/trash/trash-record-id';
 import { buildCharacterDeleteMessage } from '../character-detail/character-delete-message.utils';
 import { CharacterFilterComponent } from '../../shared/character-filter/character-filter.component';
 import { ModalFrameComponent } from '../../shared/modal-frame/modal-frame.component';
@@ -898,13 +898,8 @@ export class CharacterListComponent implements OnInit {
         // Undo toast is shown by UndoDeleteService.register.
       } catch (error) {
         this.logger.error("Failed to delete character:", error);
-        // Staging/rollback toasts come from the service (TrashStagingError).
-        // Service already prefixes "Failed to delete character:"; use its message once.
-        if (!isTrashStagingError(error)) {
-          const message =
-            error instanceof Error ? error.message : `Failed to delete character: ${error}`;
-          this.notificationService.showError(message);
-        }
+        const message = deleteFailureMessage(error, 'character');
+        if (message) this.notificationService.showError(message);
       }
     }
   }
