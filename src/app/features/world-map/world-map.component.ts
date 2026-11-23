@@ -1082,11 +1082,13 @@ export class WorldMapComponent implements OnInit, AfterViewInit, OnDestroy {
     this.newLocationError = '';
   }
 
-  get newLocationDuplicate(): Location | undefined { return this.findByName(this.newLocationName); }
+  get newLocationDuplicate(): Location | undefined { return this.findByNameOrAlias(this.newLocationName); }
 
-  private findByName(value: string): Location | undefined {
+  private findByNameOrAlias(value: string): Location | undefined {
     const name = value.trim().toLowerCase();
-    return name ? this.locations.find(location => location.name.trim().toLowerCase() === name) : undefined;
+    if (!name) return undefined;
+    return this.locations.find(location => location.name.trim().toLowerCase() === name)
+      ?? this.locations.find(location => location.aliases?.some(alias => alias.trim().toLowerCase() === name));
   }
 
   private async createNamedLocation(name: string, typeValue: string): Promise<Location> {
@@ -1137,12 +1139,12 @@ export class WorldMapComponent implements OnInit, AfterViewInit, OnDestroy {
       .sort((a, b) => a.name.localeCompare(b.name));
   }
   get quickAddCandidates(): Location[] { return this.quickAddMatches.slice(0, WorldMapComponent.QUICK_ADD_LIMIT); }
-  /** Typed name that is not an existing location's name: offered as "Create". */
+  /** Offer to create only when the typed name matches neither a name nor an alias. */
   get quickAddNewName(): string {
     const name = this.quickAddSearch.trim();
-    return name && !this.findByName(name) ? name : '';
+    return name && !this.quickAddExisting ? name : '';
   }
-  get quickAddExisting(): Location | undefined { return this.findByName(this.quickAddSearch); }
+  get quickAddExisting(): Location | undefined { return this.findByNameOrAlias(this.quickAddSearch); }
 
   private stagePoint(clientX: number, clientY: number, width: number, height: number): { left: number; top: number } {
     const stage = this.canvasRef?.nativeElement.parentElement?.getBoundingClientRect();
@@ -1222,7 +1224,7 @@ export class WorldMapComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  /** Enter: the highlighted place, else an existing place with exactly that name, else a new one. */
+  /** Enter picks the highlighted place, an exact name or alias match, or a new place. */
   async submitQuickAdd(): Promise<void> {
     if (!this.quickAdd) return;
     const highlighted = this.quickAdd.mode === 'add' ? this.quickAddCandidates[this.quickAddIndex] : undefined;
@@ -1233,7 +1235,7 @@ export class WorldMapComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   async quickAddCreate(): Promise<void> {
-    const name = this.quickAddSearch.trim();
+    const name = this.quickAddNewName;
     if (!this.quickAdd || !name || this.quickAddBusy || this.readOnly) return;
     this.quickAddBusy = true;
     this.quickAddError = '';

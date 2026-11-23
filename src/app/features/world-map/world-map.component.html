@@ -99,7 +99,15 @@
             <div class="type-icons" role="group" aria-label="New location type">@for (type of locationTypes; track type.value) { <button type="button" class="icon-btn" [class.active]="newLocationType === type.value" [attr.aria-pressed]="newLocationType === type.value" [title]="type.label" [attr.aria-label]="type.label" [disabled]="newLocationBusy" (click)="newLocationType = newLocationType === type.value ? '' : type.value"><svg class="ui-icon" aria-hidden="true"><use [attr.href]="'assets/ui-icons.svg#' + type.icon" /></svg></button> }</div>
             <button type="submit" class="btn btn-primary btn-sm" [disabled]="newLocationBusy || !newLocationName.trim()">{{ newLocationBusy ? 'Creating…' : 'Create' }}</button>
             <button type="button" class="icon-btn" title="Cancel" aria-label="Cancel new location" [disabled]="newLocationBusy" (click)="closeNewLocation()"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#close" /></svg></button>
-            @if (newLocationDuplicate; as existing) { <small class="membership-create-note" role="status">{{ existing.name }} already exists.</small> }
+            @if (newLocationDuplicate; as existing) {
+              <small class="membership-create-note" role="status">
+                @if (newLocationName.trim().toLowerCase() === existing.name.trim().toLowerCase()) {
+                  {{ existing.name }} already exists.
+                } @else {
+                  “{{ newLocationName.trim() }}” is an alias for {{ existing.name }}.
+                }
+              </small>
+            }
             @if (newLocationError) { <small class="map-form-error" role="alert">{{ newLocationError }}</small> }
           </form>
         }
@@ -334,7 +342,7 @@
             </div>
           }
           @if (quickAddError) { <p class="map-form-error" role="alert">{{ quickAddError }}</p> }
-          @if (qa.mode === 'create' || quickAddNewName) {
+          @if (!quickAddExisting && (qa.mode === 'create' || quickAddNewName)) {
             <button class="btn btn-primary btn-sm quick-add-create" [disabled]="quickAddBusy || !quickAddNewName" (click)="quickAddCreate()"><svg class="ui-icon" aria-hidden="true"><use href="assets/ui-icons.svg#plus" /></svg>{{ quickAddBusy ? 'Creating…' : quickAddNewName ? 'Create “' + quickAddNewName + '”' + (qa.world ? ' here' : '') : 'Create' }}</button>
           }
           @if (qa.mode === 'create' && quickAddExisting; as existing) { <small class="quick-add-note">{{ existing.name }} already exists{{ hasPosition(existing.id) ? ' on this map' : '' }}.@if (!hasPosition(existing.id)) { <button class="quick-add-link" (click)="quickAddLocation(existing)">Add it here</button> }</small> }

@@ -801,6 +801,61 @@ describe('WorldMapComponent', () => {
     expect(state$.value!.map.pins.map(pin => pin.locationId)).toEqual(['a']);
   });
 
+  for (const [entry, mode, point] of [
+    ['double-click', 'add', { x: 1, y: 2 }],
+    ['right-click', 'create', { x: 1, y: 2 }],
+    ['toolbar or N', 'add', null],
+  ] as const) {
+    it(`Enter in quick add from ${entry} adds the location with the typed alias`, async () => {
+      const createLocation = stubCreate(loc('dup', 'Old Port'));
+      locations$.next([{ ...loc('a', 'Ashford'), aliases: ['Old Port'] }]);
+      setState(emptyWorldMap());
+      await render();
+
+      component.openQuickAdd(mode, point);
+      component.quickAddSearch = '  oLd PoRt  ';
+      expect(component.quickAddNewName).toBe('');
+      await component.submitQuickAdd();
+
+      expect(createLocation).not.toHaveBeenCalled();
+      if (point) {
+        expect(state$.value!.map.pins).toEqual([jasmine.objectContaining({ locationId: 'a', ...point })]);
+      } else {
+        expect(component.placementLocation?.id).toBe('a');
+      }
+    });
+  }
+
+  it('Enter reports when the location with the typed alias is already on the map', async () => {
+    const createLocation = stubCreate(loc('dup', 'Old Port'));
+    locations$.next([{ ...loc('a', 'Ashford'), aliases: ['Old Port'] }]);
+    setState({ ...emptyWorldMap(), pins: [{ locationId: 'a', x: 3, y: 4 }] });
+    await render();
+
+    component.openQuickAdd('add', { x: 1, y: 2 });
+    component.quickAddSearch = 'old port';
+    await component.submitQuickAdd();
+
+    expect(createLocation).not.toHaveBeenCalled();
+    expect(component.quickAddError).toBe('Ashford is already on this map.');
+    expect(state$.value!.map.pins).toEqual([{ locationId: 'a', x: 3, y: 4 }]);
+  });
+
+  it('Manage Locations warns that the proposed name is an existing location alias', async () => {
+    const existing = { ...loc('a', 'Ashford'), aliases: ['Old Port'] };
+    locations$.next([existing]);
+    setState(emptyWorldMap());
+    await render();
+
+    component.openMembership();
+    component.openNewLocation();
+    component.newLocationName = '  oLd PoRt  ';
+    await render();
+
+    expect(component.newLocationDuplicate).toBe(existing);
+    expect(query('.membership-create-note')?.textContent).toContain('is an alias for Ashford');
+  });
+
   it('right-click on empty map offers to create a location right there', async () => {
     const createLocation = stubCreate(loc('new', 'Tollbridge'));
     locations$.next([loc('p', 'Placed')]);
