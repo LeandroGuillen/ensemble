@@ -19,6 +19,7 @@ import {
   getBookDisplayName,
   normalizeBookCode,
   normalizeBookName,
+  UNTITLED_BOOK_NAME,
 } from '../utils/book-display.utils';
 import { BookPlacement, booksInPlacement } from '../utils/library-grouping.utils';
 import { ElectronService } from './electron.service';
@@ -31,6 +32,42 @@ import {
   isLegacyCharacterMainFile,
   parseCharacterMainFileLocation,
 } from '../utils/character-path.utils';
+
+function allocateMetadataId(slug: string, occupied: Iterable<string>): string {
+  const ids = new Set(occupied);
+  let id = slug;
+  for (let index = 2; ids.has(id); index++) {
+    const suffix = `-${index}`;
+    id = slug.slice(0, 100 - suffix.length).replace(/-+$/, '') + suffix;
+  }
+  return id;
+}
+
+function assertUniqueName(
+  kind: string,
+  name: string,
+  items: readonly { id: string; name: string }[],
+  previous?: { id: string; name: string }
+): void {
+  const normalized = name.trim().toLowerCase();
+  // Existing projects may already have duplicate names. Check newly introduced names.
+  if (previous?.name.trim().toLowerCase() === normalized) return;
+
+  const duplicate = items.find(
+    (item) => item.id !== previous?.id && item.name.trim().toLowerCase() === normalized
+  );
+  if (duplicate) {
+    throw new Error(`${kind} "${duplicate.name}" already exists`);
+  }
+}
+
+function assertUniqueBookName(books: Book[], book: Book, previous?: Book): void {
+  // Coded books may omit the title and share the stored placeholder.
+  if (book.code && book.name === UNTITLED_BOOK_NAME) return;
+  const namedBooks = books.filter((other) => !other.code || other.name !== UNTITLED_BOOK_NAME);
+  const previousTitle = previous?.code && previous.name === UNTITLED_BOOK_NAME ? undefined : previous;
+  assertUniqueName('Book', book.name, namedBooks, previousTitle);
+}
 
 @Injectable({
   providedIn: 'root',
@@ -146,8 +183,7 @@ export class MetadataService {
       throw new Error('No metadata loaded');
     }
 
-    // Generate unique ID
-    const id = slugify(categoryData.name);
+    const id = allocateMetadataId(slugify(categoryData.name), metadata.categories.map((item) => item.id));
     const newCategory: Category = { id, ...categoryData };
 
     // Validate the new category
@@ -157,11 +193,7 @@ export class MetadataService {
       throw new Error(`Invalid category: ${errorMessages}`);
     }
 
-    // Check for duplicate ID
-    const existingCategory = metadata.categories.find((cat) => cat.id === id);
-    if (existingCategory) {
-      throw new Error(`Category with ID '${id}' already exists`);
-    }
+    assertUniqueName('Category', newCategory.name, metadata.categories);
 
     // Add category and save
     const updatedMetadata = {
@@ -195,6 +227,8 @@ export class MetadataService {
       const errorMessages = validation.errors.map((e) => `${e.field}: ${e.message}`).join(', ');
       throw new Error(`Invalid category: ${errorMessages}`);
     }
+
+    assertUniqueName('Category', updatedCategory.name, metadata.categories, metadata.categories[categoryIndex]);
 
     // Update category and save
     const updatedCategories = [...metadata.categories];
@@ -269,8 +303,7 @@ export class MetadataService {
       throw new Error('No metadata loaded');
     }
 
-    // Generate unique ID
-    const id = slugify(tagData.name);
+    const id = allocateMetadataId(slugify(tagData.name), metadata.tags.map((item) => item.id));
     const newTag: Tag = { id, ...tagData };
 
     // Validate the new tag
@@ -280,11 +313,7 @@ export class MetadataService {
       throw new Error(`Invalid tag: ${errorMessages}`);
     }
 
-    // Check for duplicate ID
-    const existingTag = metadata.tags.find((tag) => tag.id === id);
-    if (existingTag) {
-      throw new Error(`Tag with ID '${id}' already exists`);
-    }
+    assertUniqueName('Tag', newTag.name, metadata.tags);
 
     // Add tag and save
     const updatedMetadata = {
@@ -318,6 +347,8 @@ export class MetadataService {
       const errorMessages = validation.errors.map((e) => `${e.field}: ${e.message}`).join(', ');
       throw new Error(`Invalid tag: ${errorMessages}`);
     }
+
+    assertUniqueName('Tag', updatedTag.name, metadata.tags, metadata.tags[tagIndex]);
 
     // Update tag and save
     const updatedTags = [...metadata.tags];
@@ -437,11 +468,17 @@ export class MetadataService {
     }
 
     const name = normalizeBookName(bookData.name);
-    // Prefer code for id when present (stable short identifier); fall back to title
-    const id = slugify(code || name);
-    if (!id) {
+    const slug = slugify(code || name);
+    if (!slug) {
       throw new Error('Either book code or title is required');
     }
+
+    const occupied = books.map((book) => book.id);
+    // A codeless book uses its ID for its character notes filename.
+    if (!code) {
+      occupied.push(...books.map(bookPageSuffix));
+    }
+    const id = allocateMetadataId(slug, occupied);
 
     const newBook: Book = {
       ...bookData,
@@ -461,13 +498,8 @@ export class MetadataService {
       throw new Error(`Invalid book: ${errorMessages}`);
     }
 
-    // Check for duplicate ID
-    const existingBook = books.find((book) => book.id === id);
-    if (existingBook) {
-      throw new Error(`Book with ID '${id}' already exists`);
-    }
-
     this.assertUniqueBookCode(books, code);
+    assertUniqueBookName(books, newBook);
     this.assertUniqueBookPageSuffix(books, newBook);
 
     // Add book and save
@@ -530,6 +562,7 @@ export class MetadataService {
     }
 
     this.assertUniqueBookCode(books, code, id);
+    assertUniqueBookName(books, updatedBook, books[bookIndex]);
     this.assertUniqueBookPageSuffix(books, updatedBook);
 
     // Update book and save
@@ -577,7 +610,7 @@ export class MetadataService {
         book.code?.trim().toLowerCase() === normalized
     );
     if (duplicate) {
-      throw new Error(`Book code '${code}' is already used by another book`);
+      throw new Error(`Book code '${code}' is already used by another book, "${getBookDisplayName(duplicate)}"`);
     }
   }
 
@@ -855,7 +888,7 @@ export class MetadataService {
     }
 
     const seriesList = metadata.series || [];
-    const id = slugify(seriesData.name);
+    const id = allocateMetadataId(slugify(seriesData.name), seriesList.map((item) => item.id));
     if (!id) {
       throw new Error('Series name is required');
     }
@@ -867,9 +900,7 @@ export class MetadataService {
       throw new Error(`Invalid series: ${errorMessages}`);
     }
 
-    if (seriesList.some((s) => s.id === id)) {
-      throw new Error(`Series with ID '${id}' already exists`);
-    }
+    assertUniqueName('Series', newSeries.name, seriesList);
 
     await this.saveMetadata({
       ...metadata,
@@ -897,6 +928,8 @@ export class MetadataService {
       const errorMessages = validation.errors.map((e) => `${e.field}: ${e.message}`).join(', ');
       throw new Error(`Invalid series: ${errorMessages}`);
     }
+
+    assertUniqueName('Series', updatedSeries.name, seriesList, seriesList[index]);
 
     seriesList[index] = updatedSeries;
     await this.saveMetadata({
@@ -977,7 +1010,7 @@ export class MetadataService {
     }
 
     const sagasList = metadata.sagas || [];
-    const id = slugify(sagaData.name);
+    const id = allocateMetadataId(slugify(sagaData.name), sagasList.map((item) => item.id));
     if (!id) {
       throw new Error('Saga name is required');
     }
@@ -989,9 +1022,7 @@ export class MetadataService {
       throw new Error(`Invalid saga: ${errorMessages}`);
     }
 
-    if (sagasList.some((s) => s.id === id)) {
-      throw new Error(`Saga with ID '${id}' already exists`);
-    }
+    assertUniqueName('Saga', newSaga.name, sagasList);
 
     await this.saveMetadata({
       ...metadata,
@@ -1024,6 +1055,8 @@ export class MetadataService {
       const errorMessages = validation.errors.map((e) => `${e.field}: ${e.message}`).join(', ');
       throw new Error(`Invalid saga: ${errorMessages}`);
     }
+
+    assertUniqueName('Saga', updatedSaga.name, sagasList, sagasList[index]);
 
     // If saga moves to another series, update book seriesIds that reference this saga
     const previous = sagasList[index];

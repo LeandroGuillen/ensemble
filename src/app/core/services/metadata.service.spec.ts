@@ -8,6 +8,7 @@ import { LoggingService } from './logging.service';
 import { NotificationService } from './notification.service';
 import { Project, ProjectMetadata } from '../interfaces/project.interface';
 import { Character, CharacterFormData } from '../interfaces/character.interface';
+import { bookPageSuffix } from '../utils/book-display.utils';
 
 describe('MetadataService', () => {
   let service: MetadataService;
@@ -64,6 +65,113 @@ describe('MetadataService', () => {
     projectService.getCharactersFolderPath.and.returnValue('/test/project/characters');
     projectService.getLocationsFolderPath.and.returnValue('/test/project/locations');
     electronService.readDirectoryRecursive.and.returnValue(Promise.resolve({ success: true, files: [] }));
+  });
+
+  describe('reusing metadata names after an edit', () => {
+    const color = '#123456';
+
+    beforeEach(async () => {
+      await service.loadMetadata('/test/project');
+    });
+
+    it('reuses a category name while the default category keeps its original ID', async () => {
+      await service.updateCategory('main-character', { name: 'Lead' });
+      const added = await service.addCategory({ name: 'Main Character', color });
+
+      expect(added.id).not.toBe('main-character');
+      expect(service.getCategoryById('main-character')?.name).toBe('Lead');
+      expect(service.getSettings()?.defaultCategory).toBe('main-character');
+      expect(electronService.writeFileAtomic).not.toHaveBeenCalled();
+      await expectAsync(service.addCategory({ name: 'lead', color }))
+        .toBeRejectedWithError(/Category.*Lead.*already exists/);
+    });
+
+    it('reuses a tag name while the old tag ID still resolves to the renamed tag', async () => {
+      await service.updateTag('magic-user', { name: 'Mage' });
+      const added = await service.addTag({ name: 'Magic User', color });
+
+      expect(added.id).not.toBe('magic-user');
+      expect(service.getTagById('magic-user')?.name).toBe('Mage');
+      expect(electronService.writeFileAtomic).not.toHaveBeenCalled();
+      await expectAsync(service.updateTag(added.id, { name: 'MAGE' }))
+        .toBeRejectedWithError(/Tag.*Mage.*already exists/);
+    });
+
+    it('allows Supporting when a differently named category already has the supporting ID', async () => {
+      const metadata = service.getCurrentMetadata()!;
+      metadata.categories.push(
+        { id: 'supporting', name: 'Secondary', color },
+        { id: 'supporting-2', name: 'Recurring', color }
+      );
+
+      const added = await service.addCategory({ name: 'Supporting', color });
+      expect(added.id).toBe('supporting-3');
+      await expectAsync(service.addCategory({ name: 'SUPPORTING', color }))
+        .toBeRejectedWithError(/Category.*Supporting.*already exists/);
+    });
+
+    it('reuses a series name while its saga and book keep their placement', async () => {
+      const original = await service.addSeries({ name: 'High Seas' });
+      const saga = await service.addSaga({ name: 'First Voyage', seriesId: original.id });
+      await service.addBook({ name: 'Departure', color, sagaId: saga.id });
+      const renamed = await service.updateSeries(original.id, { name: 'Open Seas' });
+      const added = await service.addSeries({ name: 'High Seas' });
+
+      expect(added.id).not.toBe(original.id);
+      expect(renamed.id).toBe(original.id);
+      expect(service.getCurrentMetadata()?.sagas?.[0].seriesId).toBe(original.id);
+      expect(service.getBooks()[0].seriesId).toBe(original.id);
+      await expectAsync(service.updateSeries(added.id, { name: 'OPEN SEAS' }))
+        .toBeRejectedWithError(/Series.*Open Seas.*already exists/);
+    });
+
+    it('reuses a saga name while its book keeps its placement', async () => {
+      const series = await service.addSeries({ name: 'High Seas' });
+      const original = await service.addSaga({ name: 'First Voyage', seriesId: series.id });
+      await service.addBook({ name: 'Departure', color, sagaId: original.id });
+      const renamed = await service.updateSaga(original.id, { name: 'Maiden Voyage' });
+      const added = await service.addSaga({ name: 'First Voyage', seriesId: series.id });
+
+      expect(added.id).not.toBe(original.id);
+      expect(renamed.id).toBe(original.id);
+      expect(service.getBooks()[0].sagaId).toBe(original.id);
+      await expectAsync(service.addSaga({ name: 'MAIDEN VOYAGE', seriesId: series.id }))
+        .toBeRejectedWithError(/Saga.*Maiden Voyage.*already exists/);
+    });
+
+    it('reuses an old code with a separate book ID for per-book overrides', async () => {
+      const original = await service.addBook({ name: 'Departure', code: 'B1', color });
+      const renamed = await service.updateBook(original.id, { code: 'B2' });
+      const added = await service.addBook({ name: 'Return', code: 'B1', color });
+
+      expect(renamed.id).toBe(original.id);
+      expect(added.id).not.toBe(original.id);
+      expect(bookPageSuffix(renamed)).toBe('b2');
+      expect(bookPageSuffix(added)).toBe('b1');
+      await expectAsync(service.addBook({ name: 'Third Voyage', code: 'b1', color }))
+        .toBeRejectedWithError(/Book code 'b1'.*Return/);
+    });
+
+    it('reuses a codeless title with a separate book ID and notes suffix', async () => {
+      const original = await service.addBook({ name: 'Departure', color });
+      const renamed = await service.updateBook(original.id, { name: 'Outbound' });
+      const added = await service.addBook({ name: 'Departure', color });
+
+      expect(renamed.id).toBe(original.id);
+      expect(added.id).not.toBe(original.id);
+      expect(bookPageSuffix(renamed)).toBe(bookPageSuffix(original));
+      expect(bookPageSuffix(added)).not.toBe(bookPageSuffix(original));
+      await expectAsync(service.addBook({ name: 'DEPARTURE', color }))
+        .toBeRejectedWithError(/Book.*Departure.*already exists/);
+    });
+
+    it('chooses a free notes suffix when a codeless book title slugs to another book code', async () => {
+      const original = await service.addBook({ name: 'Departure', code: 'B1', color });
+      const renamed = await service.updateBook(original.id, { code: 'B2' });
+      const added = await service.addBook({ name: 'B2', color });
+
+      expect(bookPageSuffix(added)).not.toBe(bookPageSuffix(renamed));
+    });
   });
 
   describe('getCurrentMetadata', () => {
@@ -553,8 +661,15 @@ describe('MetadataService', () => {
         expect(service.getBooks().map((book) => book.id)).toEqual(['b1']);
       });
 
-      it('strips the book from character books, bookThumbnails and other per-book overrides', async () => {
+      it('clears notes and character overrides before the deleted book code is reused', async () => {
         await service.removeBook('lc2');
+        const recreated = await service.addBook({ name: 'New Book Two', code: 'LC2', color: '#00FF00' });
+
+        expect(recreated.id).toBe('lc2');
+        const suffix = bookPageSuffix(recreated);
+        expect(files.has(`${C}/mara-vell/mara-vell.${suffix}.md`)).toBeFalse();
+        expect(files.has(`${C}/@drafts/saffi-reed/saffi-reed.${suffix}.md`)).toBeFalse();
+        expect(files.has(`${C}/_legacy-olm-${recreated.id}.md`)).toBeFalse();
 
         const mara = files.get(`${C}/mara-vell/mara-vell.md`)!;
         expect(mara).not.toContain('lc2');
