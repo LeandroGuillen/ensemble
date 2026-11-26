@@ -13,7 +13,7 @@ import { PromptImageComponent } from '../../../../shared/prompt-image/prompt-ima
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { Character, Tag, Category } from '../../../../core/interfaces';
 import { MetadataHelperService } from '../../../../core/services/metadata-helper.service';
-import { resolveEffectiveCategory } from '../../../../core/utils/character-category.utils';
+import { resolveEffectiveCategory, resolveEffectiveTags } from '../../../../core/utils/character-category.utils';
 import { getCharacterDisplayName } from '../../../../core/utils/character-display.utils';
 import { FadeOverflowDirective } from '../../../../shared/fade-overflow.directive';
 
@@ -39,7 +39,7 @@ export class CharacterListViewComponent implements OnInit {
   @Input() dndEnabled = false;
   @Input() selectedCharacterIds: string[] = [];
   @Input() thumbnailDataUrls: Map<string, string> = new Map();
-  /** When set, category labels use the book-specific override if present. */
+  /** When set, category and tags use book-specific overrides when present. */
   @Input() categoryContextBookId = '';
   /** Character IDs that are PoV under the current book filter context. */
   @Input() povCharacterIds: Set<string> = new Set();
@@ -142,8 +142,12 @@ export class CharacterListViewComponent implements OnInit {
     return this.metadataHelper.getCategoryColor(categoryId);
   }
 
-  getCharacterTagsInOrder(character: Character): Tag[] {
-    return this.tags.filter((tag) => character.tags.includes(tag.id));
+  getEffectiveTagIds(character: Character): string[] {
+    return resolveEffectiveTags(character, this.categoryContextBookId);
+  }
+
+  getCharacterTagsInOrder(tagIds: string[]): Tag[] {
+    return this.tags.filter((tag) => tagIds.includes(tag.id));
   }
 
   getCharacterThumbnailDataUrl(character: Character): string | null {

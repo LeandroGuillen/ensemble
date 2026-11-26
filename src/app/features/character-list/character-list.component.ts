@@ -23,6 +23,7 @@ import { PromptService } from '../../core/services/prompt.service';
 import {
   isEffectiveCategoryEnabled,
   resolveEffectiveCategory,
+  resolveEffectiveTags,
 } from '../../core/utils/character-category.utils';
 import { generateId } from '../../core/utils/id.utils';
 import { contrastTextColor } from '../../core/utils/color-contrast.utils';
@@ -1138,7 +1139,8 @@ export class CharacterListComponent implements OnInit {
         const categoryName = this.metadataHelper
           .getCategoryName(resolveEffectiveCategory(character, this.selectedBook))
           .toLowerCase();
-        const tagNames = character.tags.map((tagId) => this.metadataHelper.getTagName(tagId).toLowerCase());
+        const tagNames = resolveEffectiveTags(character, this.selectedBook)
+          .map((tagId) => this.metadataHelper.getTagName(tagId).toLowerCase());
         const bookNames = character.books.map((bookId) => this.metadataHelper.getBookName(bookId).toLowerCase());
 
         const matchesSearch =
@@ -1164,7 +1166,8 @@ export class CharacterListComponent implements OnInit {
 
       // Tags filter - character must have ALL selected tags
       if (this.selectedTags.length > 0) {
-        const hasAllSelectedTags = this.selectedTags.every((tagId) => character.tags.includes(tagId));
+        const effectiveTags = resolveEffectiveTags(character, this.selectedBook);
+        const hasAllSelectedTags = this.selectedTags.every((tagId) => effectiveTags.includes(tagId));
         if (!hasAllSelectedTags) return false;
       }
 
@@ -1294,11 +1297,6 @@ export class CharacterListComponent implements OnInit {
 
   getBookColor(bookId: string): string {
     return this.metadataHelper.getBookColor(bookId);
-  }
-
-  getCharacterTagsInOrder(character: Character): Tag[] {
-    // Return tags in the order they appear in the metadata, filtered by what the character has
-    return this.tags.filter((tag) => character.tags.includes(tag.id));
   }
 
   getCharacterThumbnailDataUrl(character: Character): string | null {
@@ -1912,7 +1910,8 @@ getFilterSummary(): string {
     // Tag ids missing from metadata (e.g. deleted in Settings) are ignored; a
     // character left with no known tag goes to Untagged instead of vanishing.
     for (const character of this.filteredCharacters) {
-      const knownTags = (character.tags ?? []).filter((tagId) => knownTagIds.has(tagId));
+      const knownTags = (resolveEffectiveTags(character, this.selectedBook) ?? [])
+        .filter((tagId) => knownTagIds.has(tagId));
       if (knownTags.length > 0) {
         for (const tagId of knownTags) {
           if (!grouped.has(tagId)) {

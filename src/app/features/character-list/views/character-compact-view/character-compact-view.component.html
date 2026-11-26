@@ -57,9 +57,10 @@
             {{ getCategoryName(getDisplayCategoryId(character)) }}
           </span>
         </div>
-        @if (character.tags.length > 0) {
+        @let tagIds = getEffectiveTagIds(character);
+        @if (tagIds.length > 0) {
           <div class="compact-item-tags" appCompactOverflowTags>
-            @for (tag of getCharacterTagsInOrder(character); track tag.id) {
+            @for (tag of getCharacterTagsInOrder(tagIds); track tag.id) {
               <span class="tag tag-xs tag-neutral"><span class="tag-dot" aria-hidden="true" [style.background-color]="tag.color"></span>{{ tag.name }}</span>
             }
             <span class="tag-overflow" hidden aria-hidden="true"></span>

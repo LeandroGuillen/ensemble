@@ -58,9 +58,10 @@
               {{ getCategoryName(getDisplayCategoryId(character)) }}
             </span>
           </div>
-          @if (character.tags.length > 0) {
+          @let tagIds = getEffectiveTagIds(character);
+          @if (tagIds.length > 0) {
             <div class="list-item-tags">
-              @for (tag of getCharacterTagsInOrder(character); track tag) {
+              @for (tag of getCharacterTagsInOrder(tagIds); track tag.id) {
                 <span class="tag tag-sm tag-neutral"><span class="tag-dot" aria-hidden="true" [style.background-color]="tag.color"></span>{{ tag.name }}</span>
               }
             </div>

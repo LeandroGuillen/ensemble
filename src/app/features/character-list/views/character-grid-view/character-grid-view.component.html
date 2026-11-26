@@ -54,9 +54,10 @@
           ></span>
           {{ getCategoryName(getDisplayCategoryId(character)) }}
         </p>
-        @if (character.tags.length > 0) {
+        @let tagIds = getEffectiveTagIds(character);
+        @if (tagIds.length > 0) {
           <ul class="character-tags" aria-label="Tags">
-            @for (tag of getCharacterTagsInOrder(character); track tag.id) {
+            @for (tag of getCharacterTagsInOrder(tagIds); track tag.id) {
               <li class="tag-chip">
                 <span class="tag-dot" aria-hidden="true" [style.background-color]="tag.color"></span>
                 {{ tag.name }}
